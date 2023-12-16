@@ -107,17 +107,15 @@ pub unsafe extern "C" fn Instructions() {
 				winch(stdscr)
 			}) as libc::c_char;
 			j += 1;
-			j;
 		}
 		buffer[row as usize][j as usize] = 0 as libc::c_int as libc::c_char;
 		if wmove(stdscr, row as libc::c_int, 0 as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
 		} else {
-			waddnstr(stdscr, (buffer[row as usize]).as_mut_ptr(), -(1 as libc::c_int));
+			waddnstr(stdscr, buffer[row as usize].as_mut_ptr(), -(1 as libc::c_int));
 		};
 		wclrtoeol(stdscr);
 		row += 1;
-		row;
 	}
 	wmove(stdscr, 0 as libc::c_int, 0 as libc::c_int);
 	i = 0 as libc::c_int;
@@ -125,15 +123,14 @@ pub unsafe extern "C" fn Instructions() {
 		wmove(stdscr, i, 0 as libc::c_int);
 		wclrtoeol(stdscr);
 		i += 1;
-		i;
 	}
 	wrefresh(stdscr);
 	i = 0 as libc::c_int;
 	while i < 24 as libc::c_int {
-		if (fgets(buf.as_mut_ptr(), 250 as libc::c_int, f)).is_null() {
+		if fgets(buf.as_mut_ptr(), 250 as libc::c_int, f).is_null() {
 			break;
 		}
-		if !(strchr(buf.as_mut_ptr(), '\n' as i32)).is_null() {
+		if !strchr(buf.as_mut_ptr(), '\n' as i32).is_null() {
 			*strchr(buf.as_mut_ptr(), '\n' as i32) = 0 as libc::c_int as libc::c_char;
 		}
 		wmove(stdscr, i, 0 as libc::c_int);
@@ -144,7 +141,6 @@ pub unsafe extern "C" fn Instructions() {
 			waddnstr(stdscr, buf.as_mut_ptr(), -(1 as libc::c_int));
 		};
 		i += 1;
-		i;
 	}
 	wrefresh(stdscr);
 	rgetchar();
@@ -155,7 +151,6 @@ pub unsafe extern "C" fn Instructions() {
 		wmove(stdscr, i, 0 as libc::c_int);
 		wclrtoeol(stdscr);
 		i += 1;
-		i;
 	}
 	wrefresh(stdscr);
 	i = 0 as libc::c_int;
@@ -163,10 +158,9 @@ pub unsafe extern "C" fn Instructions() {
 		if wmove(stdscr, i, 0 as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
 		} else {
-			waddnstr(stdscr, (buffer[i as usize]).as_mut_ptr(), -(1 as libc::c_int));
+			waddnstr(stdscr, buffer[i as usize].as_mut_ptr(), -(1 as libc::c_int));
 		};
 		i += 1;
-		i;
 	}
 	wrefresh(stdscr);
 }

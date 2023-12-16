@@ -137,7 +137,7 @@ pub static mut hunger_str: [libc::c_char; 8] = unsafe {
 
 #[no_mangle]
 pub unsafe extern "C" fn message(
-	mut msg: *mut libc::c_char,
+	mut msg: *const libc::c_char,
 	intrpt: libc::c_int,
 ) {
 	if save_is_interactive == 0 {
