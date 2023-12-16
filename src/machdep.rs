@@ -425,9 +425,8 @@ pub unsafe extern "C" fn md_getenv(mut name: *mut libc::c_char) -> *mut libc::c_
 
 #[no_mangle]
 pub unsafe extern "C" fn md_malloc(mut n: libc::c_int) -> *mut libc::c_char {
-	let mut t: *mut libc::c_char = 0 as *mut libc::c_char;
-	t = malloc(n);
-	return t;
+	let t = libc::malloc(n as libc::size_t);
+	return t as *mut libc::c_char;
 }
 
 #[no_mangle]
