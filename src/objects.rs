@@ -1,10 +1,5 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-use crate::{get_input_line, message, r_index};
-use crate::random::{coin_toss, get_rand, rand_percent};
-use crate::ring::gr_ring;
-use crate::room::gr_row_col;
-
 extern "C" {
 	pub type ldat;
 	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
@@ -21,6 +16,8 @@ extern "C" {
 	static mut error_file: *mut libc::c_char;
 	static mut is_wood: [libc::c_char; 0];
 }
+
+use crate::prelude::*;
 
 pub type chtype = libc::c_uint;
 
@@ -1711,7 +1708,7 @@ pub unsafe extern "C" fn put_stairs() -> libc::c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_armor_class(mut obj: *mut object) -> libc::c_int {
+pub unsafe extern "C" fn get_armor_class(mut obj: *mut obj) -> libc::c_int {
 	if !obj.is_null() {
 		return (*obj).class as libc::c_int + (*obj).d_enchant as libc::c_int;
 	}

@@ -1,11 +1,5 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-use crate::message;
-use crate::objects::get_armor_class;
-use crate::r#move::one_move_rogue;
-use crate::random::rand_percent;
-use crate::spec_hit::{check_gold_seeker, check_imitator, special_hit};
-
 extern "C" {
 	pub type ldat;
 	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
@@ -29,6 +23,8 @@ extern "C" {
 	static mut wizard: libc::c_char;
 	fn strlen(_: *const libc::c_char) -> libc::c_ulong;
 }
+
+use crate::prelude::*;
 
 pub type chtype = libc::c_uint;
 
@@ -77,37 +73,6 @@ pub struct pdat {
 
 pub type WINDOW = _win_st;
 pub type attr_t = chtype;
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct obj {
-	pub m_flags: libc::c_ulong,
-	pub damage: *mut libc::c_char,
-	pub quantity: libc::c_short,
-	pub ichar: libc::c_short,
-	pub kill_exp: libc::c_short,
-	pub is_protected: libc::c_short,
-	pub is_cursed: libc::c_short,
-	pub class: libc::c_short,
-	pub identified: libc::c_short,
-	pub which_kind: libc::c_ushort,
-	pub o_row: libc::c_short,
-	pub o_col: libc::c_short,
-	pub o: libc::c_short,
-	pub row: libc::c_short,
-	pub col: libc::c_short,
-	pub d_enchant: libc::c_short,
-	pub quiver: libc::c_short,
-	pub trow: libc::c_short,
-	pub tcol: libc::c_short,
-	pub hit_enchant: libc::c_short,
-	pub what_is: libc::c_ushort,
-	pub picked_up: libc::c_short,
-	pub in_use_flags: libc::c_ushort,
-	pub next_object: *mut obj,
-}
-
-pub type object = obj;
 
 #[derive(Copy, Clone)]
 #[repr(C)]

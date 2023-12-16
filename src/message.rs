@@ -46,46 +46,7 @@ pub struct __sbuf {
 	pub _size: libc::c_int,
 }
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct __sFILE {
-	pub _p: *mut libc::c_uchar,
-	pub _r: libc::c_int,
-	pub _w: libc::c_int,
-	pub _flags: libc::c_short,
-	pub _file: libc::c_short,
-	pub _bf: __sbuf,
-	pub _lbfsize: libc::c_int,
-	pub _cookie: *mut libc::c_void,
-	pub _close: Option::<unsafe extern "C" fn(*mut libc::c_void) -> libc::c_int>,
-	pub _read: Option::<
-		unsafe extern "C" fn(
-			*mut libc::c_void,
-			*mut libc::c_char,
-			libc::c_int,
-		) -> libc::c_int,
-	>,
-	pub _seek: Option::<
-		unsafe extern "C" fn(*mut libc::c_void, fpos_t, libc::c_int) -> fpos_t,
-	>,
-	pub _write: Option::<
-		unsafe extern "C" fn(
-			*mut libc::c_void,
-			*const libc::c_char,
-			libc::c_int,
-		) -> libc::c_int,
-	>,
-	pub _ub: __sbuf,
-	pub _extra: *mut __sFILEX,
-	pub _ur: libc::c_int,
-	pub _ubuf: [libc::c_uchar; 3],
-	pub _nbuf: [libc::c_uchar; 1],
-	pub _lb: __sbuf,
-	pub _blksize: libc::c_int,
-	pub _offset: fpos_t,
-}
 
-pub type FILE = __sFILE;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -135,37 +96,6 @@ pub type attr_t = chtype;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct obj {
-	pub m_flags: libc::c_ulong,
-	pub damage: *mut libc::c_char,
-	pub quantity: libc::c_short,
-	pub ichar: libc::c_short,
-	pub kill_exp: libc::c_short,
-	pub is_protected: libc::c_short,
-	pub is_cursed: libc::c_short,
-	pub class: libc::c_short,
-	pub identified: libc::c_short,
-	pub which_kind: libc::c_ushort,
-	pub o_row: libc::c_short,
-	pub o_col: libc::c_short,
-	pub o: libc::c_short,
-	pub row: libc::c_short,
-	pub col: libc::c_short,
-	pub d_enchant: libc::c_short,
-	pub quiver: libc::c_short,
-	pub trow: libc::c_short,
-	pub tcol: libc::c_short,
-	pub hit_enchant: libc::c_short,
-	pub what_is: libc::c_ushort,
-	pub picked_up: libc::c_short,
-	pub in_use_flags: libc::c_ushort,
-	pub next_object: *mut obj,
-}
-
-pub type object = obj;
-
-#[derive(Copy, Clone)]
-#[repr(C)]
 pub struct fight {
 	pub armor: *mut object,
 	pub weapon: *mut object,
@@ -208,8 +138,8 @@ pub static mut hunger_str: [libc::c_char; 8] = unsafe {
 #[no_mangle]
 pub unsafe extern "C" fn message(
 	mut msg: *mut libc::c_char,
-	mut intrpt: libc::c_char,
-) -> libc::c_int {
+	intrpt: libc::c_int,
+) {
 	if save_is_interactive == 0 {
 		return;
 	}
@@ -260,6 +190,20 @@ pub unsafe extern "C" fn remessage() -> libc::c_int {
 		message(msg_line.as_mut_ptr(), 0 as libc::c_int);
 	}
 	panic!("Reached end of non-void function without returning");
+}
+
+pub unsafe fn check_message() {
+	if msg_cleared == 1 {
+		return;
+	}
+	wmove(
+		stdscr,
+		1 as libc::c_int - 1 as libc::c_int,
+		0 as libc::c_int,
+	);
+	wclrtoeol(stdscr);
+	wrefresh(stdscr);
+	msg_cleared = 1;
 }
 
 #[no_mangle]
@@ -358,6 +302,23 @@ pub unsafe extern "C" fn get_input_line(
 	return i as libc::c_int;
 }
 
+const SAVE_SCREEN_CHAR: libc::c_int = 'X' as libc::c_int;
+const REFRESH_SCREEN_CHAR: libc::c_int = 0o022 as libc::c_int;
+
+pub unsafe fn rgetchar() -> libc::c_int {
+	let mut done = false;
+	let mut ch: libc::c_int = 0;
+	while !done {
+		ch = libc::getchar();
+		match ch {
+			REFRESH_SCREEN_CHAR => { wrefresh(curscr); }
+			SAVE_SCREEN_CHAR => { save_screen(); }
+			_ => { done = true; }
+		}
+	}
+	return ch;
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn print_stats(mut stat_mask: libc::c_int) -> libc::c_int {
 	let mut buf: [libc::c_char; 16] = [0; 16];
@@ -390,7 +351,7 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: libc::c_int) -> libc::c_int 
 		} else {
 			waddnstr(stdscr, buf.as_mut_ptr(), -(1 as libc::c_int));
 		};
-		pad(buf.as_mut_ptr(), 2 as libc::c_int);
+		pad(buf.as_mut_ptr(), 2);
 	}
 	if stat_mask & 0o2 as libc::c_int != 0 {
 		if label != 0 {
@@ -417,7 +378,7 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: libc::c_int) -> libc::c_int 
 		} else {
 			waddnstr(stdscr, buf.as_mut_ptr(), -(1 as libc::c_int));
 		};
-		pad(buf.as_mut_ptr(), 6 as libc::c_int);
+		pad(buf.as_mut_ptr(), 6);
 	}
 	if stat_mask & 0o4 as libc::c_int != 0 {
 		if label != 0 {
@@ -449,7 +410,7 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: libc::c_int) -> libc::c_int 
 		} else {
 			waddnstr(stdscr, buf.as_mut_ptr(), -(1 as libc::c_int));
 		};
-		pad(buf.as_mut_ptr(), 8 as libc::c_int);
+		pad(buf.as_mut_ptr(), 8);
 	}
 	if stat_mask & 0o10 as libc::c_int != 0 {
 		if label != 0 {
@@ -480,7 +441,7 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: libc::c_int) -> libc::c_int 
 		} else {
 			waddnstr(stdscr, buf.as_mut_ptr(), -(1 as libc::c_int));
 		};
-		pad(buf.as_mut_ptr(), 6 as libc::c_int);
+		pad(buf.as_mut_ptr(), 6);
 	}
 	if stat_mask & 0o20 as libc::c_int != 0 {
 		if label != 0 {
@@ -494,7 +455,7 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: libc::c_int) -> libc::c_int 
 				);
 			};
 		}
-		if !(rogue.armor).is_null()
+		if !rogue.armor.is_null()
 			&& (*rogue.armor).d_enchant as libc::c_int > 99 as libc::c_int
 		{
 			(*rogue.armor).d_enchant = 99 as libc::c_int as libc::c_short;
@@ -509,7 +470,7 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: libc::c_int) -> libc::c_int 
 		} else {
 			waddnstr(stdscr, buf.as_mut_ptr(), -(1 as libc::c_int));
 		};
-		pad(buf.as_mut_ptr(), 2 as libc::c_int);
+		pad(buf.as_mut_ptr(), 2);
 	}
 	if stat_mask & 0o40 as libc::c_int != 0 {
 		if label != 0 {
@@ -534,7 +495,7 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: libc::c_int) -> libc::c_int 
 		} else {
 			waddnstr(stdscr, buf.as_mut_ptr(), -(1 as libc::c_int));
 		};
-		pad(buf.as_mut_ptr(), 11 as libc::c_int);
+		pad(buf.as_mut_ptr(), 11);
 	}
 	if stat_mask & 0o100 as libc::c_int != 0 {
 		if wmove(stdscr, row, 73 as libc::c_int) == -(1 as libc::c_int) {
@@ -546,6 +507,47 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: libc::c_int) -> libc::c_int 
 	}
 	wrefresh(stdscr);
 	panic!("Reached end of non-void function without returning");
+}
+
+pub unsafe fn pad(s: *const libc::c_char, n: libc::size_t) {
+	for _ in libc::strlen(s)..n {
+		waddch(stdscr, ' ' as chtype);
+	}
+}
+
+pub fn save_screen() {
+	// TODO
+	// FILE *fp;
+	// short i, j, row, col;
+	// char buf[DCOLS+2];
+	// boolean found_non_blank;
+	//
+	//
+	// if ((fp = fopen("rogue.screen", "w")) != NULL) {
+	// 	for (i = 0; i < DROWS; i++) {
+	// 		found_non_blank = 0;
+	// 		for (j = (DCOLS - 1); j >= 0; j--) {
+	// 			buf[j] = mvinch(i, j);
+	// 			if (!found_non_blank) {
+	// 				if ((buf[j] != ' ') || (j == 0)) {
+	// 					buf[j + ((j == 0) ? 0 : 1)] = 0;
+	// 					found_non_blank = 1;
+	// 				}
+	// 			}
+	// 		}
+	// 		fputs(buf, fp);
+	// 		putc('\n', fp);
+	// 	}
+	// 	fclose(fp);
+	// } else {
+	// 	sound_bell();
+	// }
+}
+
+pub fn sound_bell() {
+	// TODO
+	// putchar(7);
+	// fflush(stdout);
 }
 
 #[no_mangle]
@@ -562,13 +564,12 @@ pub unsafe extern "C" fn r_index(
 ) -> libc::c_int {
 	let mut i: libc::c_int = 0 as libc::c_int;
 	if last != 0 {
-		i = (strlen(str)).wrapping_sub(1 as libc::c_int as libc::c_ulong) as libc::c_int;
+		i = strlen(str).wrapping_sub(1 as libc::c_int as libc::c_ulong) as libc::c_int;
 		while i >= 0 as libc::c_int {
 			if *str.offset(i as isize) as libc::c_int == ch {
 				return i;
 			}
 			i -= 1;
-			i;
 		}
 	} else {
 		i = 0 as libc::c_int;
@@ -577,7 +578,6 @@ pub unsafe extern "C" fn r_index(
 				return i;
 			}
 			i += 1;
-			i;
 		}
 	}
 	return -(1 as libc::c_int);
