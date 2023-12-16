@@ -1,5 +1,13 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
-#![feature(extern_types)]
+
+use crate::hit::rogue_hit;
+use crate::{message, mv_mons, print_stats, wake_room, wanderer};
+use crate::r#use::hallucinate;
+use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::room::{darken_room, light_passage, light_up_room};
+use crate::score::killed_by;
+use crate::trap::{search, trap_player};
+
 extern "C" {
     pub type ldat;
     fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;

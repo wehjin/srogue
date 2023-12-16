@@ -1,4 +1,8 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
+
+use crate::{get_input_line, message, mv_aquatars, print_stats};
+use crate::objects::place_at;
+
 extern "C" {
     fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
     static mut rogue: fighter;

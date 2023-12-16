@@ -1,4 +1,8 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
+
+use crate::message;
+use crate::random::{coin_toss, get_rand};
+
 extern "C" {
     static mut rogue: fighter;
     fn strcpy(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;

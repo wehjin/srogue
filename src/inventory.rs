@@ -1,5 +1,9 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
-#![feature(extern_types)]
+
+use crate::message;
+use crate::pack::wait_for_ack;
+use crate::random::get_rand;
+
 extern "C" {
     pub type ldat;
     fn waddnstr(_: *mut WINDOW, _: *const libc::c_char, _: libc::c_int) -> libc::c_int;

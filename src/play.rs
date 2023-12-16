@@ -1,5 +1,20 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
-#![feature(extern_types)]
+
+use crate::instruct::Instructions;
+use crate::inventory::{inv_armor_weapon, inventory, single_inv};
+use crate::{check_up, drop_check, hit, message, remessage, show_average_hp, show_monsters};
+use crate::objects::{new_object_for_wizard, show_objects};
+use crate::pack::{call_it, drop_0, kick_into_pack, take_off, wear, wield};
+use crate::r#move::{move_onto, multiple_move_rogue, one_move_rogue, rest};
+use crate::r#use::{eat, quaff, read_scroll};
+use crate::ring::{put_on_ring, remove_ring};
+use crate::room::draw_magic_map;
+use crate::save::save_game;
+use crate::score::quit;
+use crate::throw::throw;
+use crate::trap::{id_trap, search, show_traps};
+use crate::zap::{wizardize, zapp};
+
 extern "C" {
     pub type ldat;
     fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
@@ -159,11 +174,11 @@ pub unsafe extern "C" fn play_level() -> libc::c_int {
                     break;
                 }
                 102 => {
-                    fight(0 as libc::c_int);
+                    hit::fight(0 as libc::c_int);
                     break;
                 }
                 70 => {
-                    fight(1 as libc::c_int);
+                    hit::fight(1 as libc::c_int);
                     break;
                 }
                 104 | 106 | 107 | 108 | 121 | 117 | 110 | 98 => {
