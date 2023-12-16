@@ -22,6 +22,9 @@ pub use crate::r#use::*;
 pub use crate::zap::*;
 
 
+pub const DROWS: libc::c_int = 80;
+pub const DCOLS: libc::c_int = 24;
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct __sFILE {

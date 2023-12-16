@@ -82,7 +82,7 @@ unsafe fn main_0(
 				put_stairs();
 				add_traps();
 				put_mons();
-				put_player(party_room as libc::c_int);
+				put_player(party_room);
 				print_stats(0o377 as libc::c_int);
 				current_block = 12396777863944641605;
 			}

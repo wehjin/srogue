@@ -182,9 +182,9 @@ pub static mut did_int: libc::c_char = 0 as libc::c_int as libc::c_char;
 #[no_mangle]
 pub static mut score_only: libc::c_char = 0;
 #[no_mangle]
-pub static mut init_curses: libc::c_char = 0 as libc::c_int as libc::c_char;
+pub static mut init_curses: bool = false;
 #[no_mangle]
-pub static mut save_is_interactive: libc::c_char = 1 as libc::c_int as libc::c_char;
+pub static mut save_is_interactive: bool = true;
 #[no_mangle]
 pub static mut ask_quit: libc::c_char = 1 as libc::c_int as libc::c_char;
 #[no_mangle]
@@ -252,11 +252,29 @@ pub unsafe extern "C" fn init(
 	return 0 as libc::c_int;
 }
 
+pub unsafe fn clean_up(estr: *const libc::c_char) {
+	if save_is_interactive {
+		if init_curses {
+			wmove(stdscr, DROWS - 1, 0);
+			wrefresh(stdscr);
+			stop_window();
+		}
+		printf(b"\n%s\n" as *const u8 as *const libc::c_char, estr);
+	}
+	endwin();
+	md_exit(0);
+}
+
+pub unsafe fn stop_window() {
+	endwin();
+	md_control_keybord(1);
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn byebye() -> libc::c_int {
 	md_ignore_signals();
 	if ask_quit != 0 {
-		quit(1 as libc::c_int);
+		quit(1 as libc::c_char);
 	} else {
 		clean_up(byebye_string);
 	}
