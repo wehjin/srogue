@@ -118,8 +118,8 @@ pub unsafe extern "C" fn get_rand(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rand_percent(mut percentage: libc::c_int) -> libc::c_int {
-	return (get_rand(1 as libc::c_int, 100 as libc::c_int) <= percentage) as libc::c_int;
+pub unsafe extern "C" fn rand_percent(mut percentage: libc::c_int) -> bool {
+	get_rand(1 as libc::c_int, 100 as libc::c_int) <= percentage
 }
 
 #[no_mangle]

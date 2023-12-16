@@ -1,3 +1,4 @@
+use libc::c_ushort;
 pub use crate::message::*;
 pub use crate::level::*;
 pub use crate::monster::*;
@@ -22,8 +23,18 @@ pub use crate::r#use::*;
 pub use crate::zap::*;
 
 
-pub const DROWS: libc::c_int = 80;
-pub const DCOLS: libc::c_int = 24;
+pub const BIG_ROOM: usize = 10;
+pub const R_ROOM: c_ushort = 2;
+pub const HORWALL: c_ushort = 0o010;
+pub const VERTWALL: c_ushort = 0o020;
+pub const FLOOR: c_ushort = 0o100;
+pub const MIN_ROW: libc::c_int = 1;
+pub const DCOLS: libc::c_int = 80;
+pub const DROWS: libc::c_int = 24;
+pub const COL1: libc::c_int = 26;
+pub const COL2: libc::c_int = 52;
+pub const ROW1: libc::c_int = 7;
+pub const ROW2: libc::c_int = 15;
 
 #[derive(Copy, Clone)]
 #[repr(C)]

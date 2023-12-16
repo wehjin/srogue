@@ -1,5 +1,6 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
+use std::os::raw::c_int;
 use crate::message::{message, print_stats};
 use crate::monster::wake_room;
 use crate::objects::put_amulet;
@@ -239,7 +240,7 @@ pub unsafe extern "C" fn make_level() -> libc::c_int {
 		_ => {}
 	}
 	big_room = (cur_level as libc::c_int == party_counter as libc::c_int
-		&& rand_percent(1 as libc::c_int) != 0) as libc::c_int as libc::c_char;
+		&& rand_percent(1 as libc::c_int)) as libc::c_int as libc::c_char;
 	if big_room != 0 {
 		make_room(
 			10 as libc::c_int,
@@ -322,6 +323,68 @@ pub unsafe extern "C" fn make_level() -> libc::c_int {
 		put_amulet();
 	}
 	panic!("Reached end of non-void function without returning");
+}
+
+pub unsafe fn make_room(rn: libc::c_int, r1: libc::c_int, r2: libc::c_int, r3: libc::c_int) {
+	let rn: usize = rn as usize;
+	let (left, right, top, bottom, do_shrink, room_index) =
+		match rn {
+			0 => (0 as c_int, COL1 - 1 as c_int, MIN_ROW, ROW1 - 1 as c_int, true, rn),
+			1 => (COL1 + 1, COL2 - 1, MIN_ROW, ROW1 - 1, true, rn),
+			2 => (COL2 + 1, DCOLS - 1, MIN_ROW, ROW1 - 1, true, rn),
+			3 => (0, COL1 - 1, ROW1 + 1, ROW2 - 1, true, rn),
+			4 => (COL1 + 1, COL2 - 1, ROW1 + 1, ROW2 - 1, true, rn),
+			5 => (COL2 + 1, DCOLS - 1, ROW1 + 1, ROW2 - 1, true, rn),
+			6 => (0, COL1 - 1, ROW2 + 1, DROWS - 2, true, rn),
+			7 => (COL1 + 1, COL2 - 1, ROW2 + 1, DROWS - 2, true, rn),
+			8 => (COL2 + 1, DCOLS - 1, ROW2 + 1, DROWS - 2, true, rn),
+			BIG_ROOM => {
+				let top = get_rand(MIN_ROW, MIN_ROW + 5);
+				let bottom = get_rand(DROWS - 7, DROWS - 2);
+				let left = get_rand(0, 10);
+				let right = get_rand(DCOLS - 11, DCOLS - 1);
+				(left, right, top, bottom, false, 0)
+			}
+			_ => panic!("Invalid value in parameter rn")
+		};
+	let (left, right, top, bottom, fill_dungeon) = if do_shrink {
+		let height = get_rand(4, bottom - top + 1);
+		let width = get_rand(7, (right - left) - 2);
+		let row_offset = get_rand(0, (bottom - top) - height + 1);
+		let col_offset = get_rand(0, (right - left) - width + 1);
+		let top = top + row_offset;
+		let bottom = top + height - 1 as c_int;
+		let left = left + col_offset;
+		let right = left + width - 1;
+		let skip_walls = (room_index != r1 as usize) && (room_index != r2 as usize) && (room_index != r3 as usize) && rand_percent(40 as c_int);
+		(left, right, top, bottom, !skip_walls)
+	} else {
+		(left, right, top, bottom, true)
+	};
+	let (left, right, top, bottom) = (left as usize, right as usize, top as usize, bottom as usize);
+	if fill_dungeon {
+		rooms[room_index].is_room = R_ROOM;
+		for i in top..(bottom + 1) {
+			let top_border = i == top;
+			let bottom_border = i == bottom;
+			for j in left..(right + 1) {
+				let left_border = j == left;
+				let right_border = j == right;
+				let ch = if top_border || bottom_border {
+					HORWALL
+				} else if !top_border && !bottom_border && (left_border || right_border) {
+					VERTWALL
+				} else {
+					FLOOR
+				};
+				dungeon[i][j] = ch;
+			}
+		}
+	}
+	rooms[rn].top_row = top as libc::c_char;
+	rooms[rn].bottom_row = bottom as libc::c_char;
+	rooms[rn].left_col = left as libc::c_char;
+	rooms[rn].right_col = right as libc::c_char;
 }
 
 #[no_mangle]
@@ -417,10 +480,10 @@ pub unsafe extern "C" fn put_player(mut nr: libc::c_short) -> libc::c_int {
 		gr_row_col(
 			&mut row,
 			&mut col,
-			0o100 as libc::c_int as libc::c_ushort as libc::c_int
+			(0o100 as libc::c_int as libc::c_ushort as libc::c_int
 				| 0o200 as libc::c_int as libc::c_ushort as libc::c_int
 				| 0o1 as libc::c_int as libc::c_ushort as libc::c_int
-				| 0o4 as libc::c_int as libc::c_ushort as libc::c_int,
+				| 0o4 as libc::c_int as libc::c_ushort as libc::c_int) as libc::c_ushort,
 		);
 		rn = get_room_number(row as libc::c_int, col as libc::c_int) as libc::c_short;
 		misses += 1;
