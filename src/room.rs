@@ -18,6 +18,8 @@ extern "C" {
 }
 
 use crate::prelude::*;
+use crate::prelude::DoorDirection::{Left, Right};
+use crate::room::DoorDirection::{Up, Down};
 
 pub type chtype = libc::c_uint;
 
@@ -94,24 +96,66 @@ pub type fighter = fight;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct dr {
-	pub oth_room: libc::c_short,
-	pub oth_row: libc::c_short,
-	pub oth_col: libc::c_short,
+	pub oth_room: Option<usize>,
+	pub oth_row: Option<usize>,
+	pub oth_col: Option<usize>,
 	pub door_row: libc::c_short,
 	pub door_col: libc::c_short,
 }
 
 pub type door = dr;
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum RoomType {
+	Nothing,
+	Room,
+	Maze,
+	DeadEnd,
+	Cross,
+}
+
+impl RoomType {
+	pub fn is_nothing(&self) -> bool {
+		self == RoomType::Nothing
+	}
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum DoorDirection {
+	Up,
+	Down,
+	Left,
+	Right,
+}
+
+impl DoorDirection {
+	pub fn to_index(&self) -> usize {
+		match self {
+			DoorDirection::Up => 0,
+			DoorDirection::Right => 1,
+			DoorDirection::Down => 2,
+			DoorDirection::Left => 3,
+		}
+	}
+	pub fn to_inverse(&self) -> DoorDirection {
+		match self {
+			DoorDirection::Up => Down,
+			DoorDirection::Right => Left,
+			DoorDirection::Down => Up,
+			DoorDirection::Left => Right,
+		}
+	}
+}
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct rm {
-	pub bottom_row: libc::c_char,
-	pub right_col: libc::c_char,
-	pub left_col: libc::c_char,
-	pub top_row: libc::c_char,
+	pub bottom_row: libc::c_int,
+	pub right_col: libc::c_int,
+	pub left_col: libc::c_int,
+	pub top_row: libc::c_int,
 	pub doors: [door; 4],
-	pub is_room: libc::c_ushort,
+	pub room_type: RoomType,
 }
 
 pub type room = rm;
@@ -123,13 +167,13 @@ pub static mut rooms: [room; 9] = [rm {
 	left_col: 0,
 	top_row: 0,
 	doors: [dr {
-		oth_room: 0,
-		oth_row: 0,
-		oth_col: 0,
+		oth_room: None,
+		oth_row: None,
+		oth_col: None,
 		door_row: 0,
 		door_col: 0,
 	}; 4],
-	is_room: 0,
+	room_type: RoomType::Nothing,
 }; 9];
 #[no_mangle]
 pub static mut rooms_visited: [libc::c_char; 9] = [0; 9];
@@ -324,7 +368,7 @@ pub unsafe extern "C" fn gr_row_col(
 			|| dungeon[r as usize][c as usize] as libc::c_int & mask as libc::c_int == 0
 			|| dungeon[r as usize][c as usize] as libc::c_int & !(mask as libc::c_int)
 			!= 0
-			|| rooms[rn as usize].is_room as libc::c_int
+			|| rooms[rn as usize].room_type as libc::c_int
 			& (0o2 as libc::c_int as libc::c_ushort as libc::c_int
 			| 0o4 as libc::c_int as libc::c_ushort as libc::c_int) == 0
 			|| r as libc::c_int == rogue.row as libc::c_int
@@ -344,7 +388,7 @@ pub unsafe extern "C" fn gr_room() -> libc::c_int {
 	loop {
 		i = get_rand(0 as libc::c_int, 9 as libc::c_int - 1 as libc::c_int)
 			as libc::c_short;
-		if !(rooms[i as usize].is_room as libc::c_int
+		if !(rooms[i as usize].room_type as libc::c_int
 			& (0o2 as libc::c_int as libc::c_ushort as libc::c_int
 			| 0o4 as libc::c_int as libc::c_ushort as libc::c_int) == 0)
 		{
@@ -409,6 +453,19 @@ pub unsafe extern "C" fn party_objects(mut rn: libc::c_int) -> libc::c_int {
 	return nf as libc::c_int;
 }
 
+pub unsafe fn get_room_number(row: libc::c_int, col: libc::c_int) -> libc::c_int {
+	for i in 0..MAXROOMS {
+		let below_top_wall = row >= rooms[i].top_row;
+		let above_bottom_wall = row <= rooms[i].bottom_row;
+		let right_of_left_wall = col >= rooms[i].left_col;
+		let left_of_right_wall = col <= rooms[i].right_col;
+		if below_top_wall && above_bottom_wall && right_of_left_wall && left_of_right_wall {
+			return i;
+		}
+	}
+	return NO_ROOM;
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn is_all_connected() -> libc::c_int {
 	let mut i: libc::c_short = 0;
@@ -416,7 +473,7 @@ pub unsafe extern "C" fn is_all_connected() -> libc::c_int {
 	i = 0 as libc::c_int as libc::c_short;
 	while (i as libc::c_int) < 9 as libc::c_int {
 		rooms_visited[i as usize] = 0 as libc::c_int as libc::c_char;
-		if rooms[i as usize].is_room as libc::c_int
+		if rooms[i as usize].room_type as libc::c_int
 			& (0o2 as libc::c_int as libc::c_ushort as libc::c_int
 			| 0o4 as libc::c_int as libc::c_ushort as libc::c_int) != 0
 		{
@@ -428,7 +485,7 @@ pub unsafe extern "C" fn is_all_connected() -> libc::c_int {
 	visit_rooms(starting_room as libc::c_int);
 	i = 0 as libc::c_int as libc::c_short;
 	while (i as libc::c_int) < 9 as libc::c_int {
-		if rooms[i as usize].is_room as libc::c_int
+		if rooms[i as usize].room_type as libc::c_int
 			& (0o2 as libc::c_int as libc::c_ushort as libc::c_int
 			| 0o4 as libc::c_int as libc::c_ushort as libc::c_int) != 0
 			&& rooms_visited[i as usize] == 0
@@ -577,7 +634,7 @@ pub unsafe extern "C" fn dr_course(
 		while (i as libc::c_int) < 9 as libc::c_int {
 			rr = ((r as libc::c_int + i as libc::c_int) % 9 as libc::c_int)
 				as libc::c_short;
-			if !(rooms[rr as usize].is_room as libc::c_int
+			if !(rooms[rr as usize].room_type as libc::c_int
 				& (0o2 as libc::c_int as libc::c_ushort as libc::c_int
 				| 0o4 as libc::c_int as libc::c_ushort as libc::c_int) == 0
 				|| rr as libc::c_int == rn as libc::c_int)

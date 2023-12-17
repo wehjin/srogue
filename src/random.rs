@@ -123,12 +123,12 @@ pub unsafe extern "C" fn rand_percent(mut percentage: libc::c_int) -> bool {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn coin_toss() -> libc::c_int {
-	return if rrandom() & 0o1 as libc::c_int as libc::c_long != 0 {
-		1 as libc::c_int
+pub unsafe extern "C" fn coin_toss() -> bool {
+	if rrandom() & 0o1 as libc::c_int as libc::c_long != 0 {
+		true
 	} else {
-		0 as libc::c_int
-	};
+		false
+	}
 }
 
 unsafe extern "C" fn run_static_initializers() {

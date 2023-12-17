@@ -105,18 +105,6 @@ pub struct dr {
 
 pub type door = dr;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct rm {
-	pub bottom_row: libc::c_char,
-	pub right_col: libc::c_char,
-	pub left_col: libc::c_char,
-	pub top_row: libc::c_char,
-	pub doors: [door; 4],
-	pub is_room: libc::c_ushort,
-}
-
-pub type room = rm;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
