@@ -35,8 +35,8 @@ extern "C" {
 }
 
 use crate::prelude::*;
+use crate::prelude::SpotFlag::{HorWall, Tunnel, VertWall};
 
-pub type chtype = libc::c_uint;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -106,19 +106,6 @@ pub struct fight {
 }
 
 pub type fighter = fight;
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct dr {
-	pub oth_room: c_short,
-	pub oth_row: c_short,
-	pub oth_col: c_short,
-	pub door_row: c_short,
-	pub door_col: c_short,
-}
-
-pub type door = dr;
-
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -451,7 +438,7 @@ pub unsafe fn put_door(room: &mut room, door_dir: DoorDirection) -> DungeonSpot 
 			let mut col;
 			loop {
 				col = get_rand(room.left_col + wall_width, room.right_col - wall_width) as usize;
-				if SpotFlag::is_horwall_or_tunnel(dungeon[row][col]) {
+				if SpotFlag::is_any_set(&vec![HorWall, Tunnel], dungeon[row][col]) {
 					break;
 				}
 			}
@@ -462,7 +449,7 @@ pub unsafe fn put_door(room: &mut room, door_dir: DoorDirection) -> DungeonSpot 
 			let mut row;
 			loop {
 				row = get_rand(room.top_row + wall_width, room.bottom_row - wall_width) as usize;
-				if SpotFlag::is_vertwall_or_tunnel(dungeon[row][col]) {
+				if SpotFlag::is_any_set(&vec![VertWall, Tunnel], dungeon[row][col]) {
 					break;
 				}
 			}
@@ -833,10 +820,10 @@ pub unsafe extern "C" fn put_player(mut nr: c_short) -> libc::c_int {
 		light_passage(rogue.row as libc::c_int, rogue.col as libc::c_int);
 	}
 	wake_room(
-		get_room_number(rogue.row as libc::c_int, rogue.col as libc::c_int) as c_short,
-		1 as libc::c_char,
-		rogue.row as c_short,
-		rogue.col as c_short,
+		get_room_number(rogue.row as c_int, rogue.col as libc::c_int) as usize,
+		true,
+		rogue.row as usize,
+		rogue.col as usize,
 	);
 	if !new_level_message.is_null() {
 		message(new_level_message, 0 as libc::c_int);

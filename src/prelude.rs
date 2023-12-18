@@ -11,7 +11,6 @@ pub use crate::r#move::*;
 pub use crate::objects::*;
 pub use crate::pack::*;
 pub use crate::play::*;
-use crate::prelude::SpotFlag::{HorWall, Tunnel, VertWall};
 pub use crate::random::*;
 pub use crate::ring::*;
 pub use crate::room::*;
@@ -37,13 +36,15 @@ pub const ROW1: libc::c_int = 7;
 pub const ROW2: libc::c_int = 15;
 pub const HIDE_PERCENT: c_int = 12;
 
+pub type chtype = ncurses::chtype;
+
 #[derive(Copy, Clone)]
 pub struct DungeonSpot {
 	pub col: usize,
 	pub row: usize,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum SpotFlag {
 	Nothing = 0x0,
 	Object = 0o1,
@@ -59,11 +60,35 @@ pub enum SpotFlag {
 }
 
 impl SpotFlag {
-	pub fn is_horwall_or_tunnel(value: c_ushort) -> bool {
-		(value & (HorWall as i32 | Tunnel as i32)) != 0
+	pub fn union(flags: &Vec<SpotFlag>) -> c_ushort {
+		flags.iter().fold(0, |it, more| it & more.code())
 	}
-	pub fn is_vertwall_or_tunnel(value: c_ushort) -> bool {
-		(value & (VertWall as i32 | Tunnel as i32)) != 0
+	pub fn is_any_set(flags: &Vec<SpotFlag>, value: c_ushort) -> bool {
+		for flag in flags {
+			if flag.is_set(value) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	pub fn is_set(&self, value: c_ushort) -> bool {
+		if self == &SpotFlag::Nothing {
+			value == 0
+		} else {
+			(value & self.code()) != 0
+		}
+	}
+	pub fn is_only(&self, value: c_ushort) -> bool {
+		value == self.code()
+	}
+	pub fn clear(&self, value: &mut c_ushort) {
+		let code = self.code();
+		*value &= !code;
+	}
+	pub fn set(&self, value: &mut c_ushort) {
+		let code = self.code();
+		*value |= code;
 	}
 	pub fn code(&self) -> c_ushort {
 		match self {
@@ -80,6 +105,35 @@ impl SpotFlag {
 			SpotFlag::Hidden => 0o1000,
 		}
 	}
+}
+
+pub mod object_what {
+	pub const ARMOR: u16 = 0o1;
+	pub const WEAPON: u16 = 0o2;
+	pub const SCROLL: u16 = 0o4;
+	pub const POTION: u16 = 0o10;
+	pub const GOLD: u16 = 0o20;
+	pub const FOOD: u16 = 0o40;
+	pub const WAND: u16 = 0o100;
+	pub const RING: u16 = 0o200;
+	pub const AMULET: u16 = 0o400;
+	pub const ALL_OBJECTS: u16 = 0o777;
+}
+
+pub mod object_kind {
+	pub const PROTECT_ARMOR: u16 = 0;
+	pub const HOLD_MONSTER: u16 = 1;
+	pub const ENCH_WEAPON: u16 = 2;
+	pub const ENCH_ARMOR: u16 = 3;
+	pub const IDENTIFY: u16 = 4;
+	pub const TELEPORT: u16 = 5;
+	pub const SLEEP: u16 = 6;
+	pub const SCARE_MONSTER: u16 = 7;
+	pub const REMOVE_CURSE: u16 = 8;
+	pub const CREATE_MONSTER: u16 = 9;
+	pub const AGGRAVATE_MONSTER: u16 = 10;
+	pub const MAGIC_MAPPING: u16 = 11;
+	pub const SCROLLS: u16 = 12;
 }
 
 #[derive(Copy, Clone)]

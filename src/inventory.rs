@@ -35,7 +35,6 @@ extern "C" {
 
 use crate::prelude::*;
 
-pub type chtype = libc::c_uint;
 
 #[derive(Copy, Clone)]
 #[repr(C)]

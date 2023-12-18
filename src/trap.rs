@@ -21,7 +21,6 @@ extern "C" {
 
 use crate::prelude::*;
 
-pub type chtype = libc::c_uint;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -92,18 +91,6 @@ pub struct fight {
 }
 
 pub type fighter = fight;
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct dr {
-	pub oth_room: libc::c_short,
-	pub oth_row: libc::c_short,
-	pub oth_col: libc::c_short,
-	pub door_row: libc::c_short,
-	pub door_col: libc::c_short,
-}
-
-pub type door = dr;
 
 
 #[derive(Copy, Clone)]

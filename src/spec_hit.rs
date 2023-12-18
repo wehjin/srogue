@@ -33,7 +33,6 @@ extern "C" {
 
 use crate::prelude::*;
 
-pub type chtype = libc::c_uint;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -104,18 +103,6 @@ pub struct fight {
 }
 
 pub type fighter = fight;
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct dr {
-	pub oth_room: libc::c_short,
-	pub oth_row: libc::c_short,
-	pub oth_col: libc::c_short,
-	pub door_row: libc::c_short,
-	pub door_col: libc::c_short,
-}
-
-pub type door = dr;
 
 
 #[no_mangle]
@@ -238,7 +225,7 @@ pub unsafe extern "C" fn cough_up(mut monster: *mut object) -> libc::c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn seek_gold(mut monster: *mut object) -> libc::c_int {
+pub unsafe extern "C" fn seek_gold(mut monster: *mut object) -> bool {
 	let mut i: libc::c_short = 0;
 	let mut j: libc::c_short = 0;
 	let mut rn: libc::c_short = 0;
@@ -246,7 +233,7 @@ pub unsafe extern "C" fn seek_gold(mut monster: *mut object) -> libc::c_int {
 	rn = get_room_number((*monster).row as libc::c_int, (*monster).col as libc::c_int)
 		as libc::c_short;
 	if (rn as libc::c_int) < 0 as libc::c_int {
-		return 0 as libc::c_int;
+		return false;
 	}
 	i = ((*rooms.as_mut_ptr().offset(rn as isize)).top_row as libc::c_int
 		+ 1 as libc::c_int) as libc::c_short;
@@ -272,14 +259,14 @@ pub unsafe extern "C" fn seek_gold(mut monster: *mut object) -> libc::c_int {
 					(*monster).m_flags
 						&= !(0o20 as libc::c_long | 0o1000000 as libc::c_long)
 						as libc::c_ulong;
-					return 1 as libc::c_int;
+					return true;
 				}
 				(*monster).m_flags &= !(0o1000000 as libc::c_long) as libc::c_ulong;
 				(*monster).m_flags |= 0o400 as libc::c_long as libc::c_ulong;
 				mv_monster(monster, i as libc::c_int, j as libc::c_int);
 				(*monster).m_flags &= !(0o400 as libc::c_long) as libc::c_ulong;
 				(*monster).m_flags |= 0o1000000 as libc::c_long as libc::c_ulong;
-				return 1 as libc::c_int;
+				return true;
 			}
 			j += 1;
 			j;
@@ -287,13 +274,11 @@ pub unsafe extern "C" fn seek_gold(mut monster: *mut object) -> libc::c_int {
 		i += 1;
 		i;
 	}
-	return 0 as libc::c_int;
+	return false;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn check_gold_seeker(mut monster: *mut object) -> libc::c_int {
-	(*monster).m_flags &= !(0o1000000 as libc::c_long) as libc::c_ulong;
-	panic!("Reached end of non-void function without returning");
+pub fn check_gold_seeker(monster: &mut object) {
+	monster.m_flags.seeks_gold = false;
 }
 
 #[no_mangle]
@@ -351,14 +336,14 @@ pub unsafe extern "C" fn imitating(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn m_confuse(mut monster: *mut object) -> libc::c_int {
+pub unsafe extern "C" fn m_confuse(mut monster: *mut object) -> bool {
 	let mut msg: [libc::c_char; 80] = [0; 80];
 	if rogue_can_see((*monster).row as libc::c_int, (*monster).col as libc::c_int) == 0 {
-		return 0 as libc::c_int;
+		return false;
 	}
 	if rand_percent(45 as libc::c_int) != 0 {
 		(*monster).m_flags &= !(0o10000000 as libc::c_long) as libc::c_ulong;
-		return 0 as libc::c_int;
+		return false;
 	}
 	if rand_percent(55 as libc::c_int) != 0 {
 		(*monster).m_flags &= !(0o10000000 as libc::c_long) as libc::c_ulong;
@@ -369,19 +354,17 @@ pub unsafe extern "C" fn m_confuse(mut monster: *mut object) -> libc::c_int {
 		);
 		message(msg.as_mut_ptr(), 1 as libc::c_int);
 		confuse();
-		return 1 as libc::c_int;
+		return true;
 	}
-	return 0 as libc::c_int;
+	return false;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn flame_broil(mut monster: *mut object) -> libc::c_int {
+pub unsafe extern "C" fn flame_broil(mut monster: *mut object) -> bool {
 	let mut row: libc::c_short = 0;
 	let mut col: libc::c_short = 0;
-	if mon_sees(monster, rogue.row as libc::c_int, rogue.col as libc::c_int) == 0
-		|| coin_toss() != 0
-	{
-		return 0 as libc::c_int;
+	if mon_sees(monster, rogue.row as libc::c_int, rogue.col as libc::c_int) == 0 || coin_toss() {
+		return false;
 	}
 	row = (rogue.row as libc::c_int - (*monster).row as libc::c_int) as libc::c_short;
 	col = (rogue.col as libc::c_int - (*monster).col as libc::c_int) as libc::c_short;
@@ -396,7 +379,7 @@ pub unsafe extern "C" fn flame_broil(mut monster: *mut object) -> libc::c_int {
 		|| (row as libc::c_int > 7 as libc::c_int
 		|| col as libc::c_int > 7 as libc::c_int)
 	{
-		return 0 as libc::c_int;
+		return false;
 	}
 	if blind == 0
 		&& rogue_is_around((*monster).row as libc::c_int, (*monster).col as libc::c_int)
@@ -473,5 +456,5 @@ pub unsafe extern "C" fn flame_broil(mut monster: *mut object) -> libc::c_int {
 		}
 	}
 	mon_hit(monster, flame_name, 1 as libc::c_int);
-	return 1 as libc::c_int;
+	return true;
 }

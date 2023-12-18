@@ -36,7 +36,6 @@ use crate::prelude::*;
 
 pub type __int64_t = libc::c_longlong;
 pub type __darwin_off_t = __int64_t;
-pub type chtype = libc::c_uint;
 pub type fpos_t = __darwin_off_t;
 
 #[derive(Copy, Clone)]
@@ -45,7 +44,6 @@ pub struct __sbuf {
 	pub _base: *mut libc::c_uchar,
 	pub _size: libc::c_int,
 }
-
 
 
 #[derive(Copy, Clone)]

@@ -58,7 +58,6 @@ use crate::prelude::*;
 
 pub type __int64_t = libc::c_longlong;
 pub type __darwin_off_t = __int64_t;
-pub type chtype = libc::c_uint;
 pub type fpos_t = __darwin_off_t;
 
 #[derive(Copy, Clone)]

@@ -24,9 +24,8 @@ extern "C" {
 	fn strlen(_: *const libc::c_char) -> libc::c_ulong;
 }
 
+use crate::monster;
 use crate::prelude::*;
-
-pub type chtype = libc::c_uint;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -140,13 +139,13 @@ pub unsafe extern "C" fn mon_hit(
 	if fight_monster.is_null() {
 		interrupted = 1 as libc::c_int as libc::c_char;
 	}
-	mn = mon_name(monster);
+	mn = monster::mon_name(monster);
 	if !other.is_null() {
 		hit_chance = (hit_chance as libc::c_int
 			- (rogue.exp as libc::c_int + ring_exp as libc::c_int
 			- r_rings as libc::c_int)) as libc::c_short;
 	}
-	if rand_percent(hit_chance as libc::c_int) == 0 {
+	if !rand_percent(hit_chance as libc::c_int) {
 		if fight_monster.is_null() {
 			sprintf(
 				hit_message
@@ -251,7 +250,7 @@ pub unsafe extern "C" fn rogue_hit(
 				}
 			}
 		}
-		check_gold_seeker(monster);
+		check_gold_seeker(monster.borrow_mut());
 		wake_up(monster);
 	}
 	panic!("Reached end of non-void function without returning");

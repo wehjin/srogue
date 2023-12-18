@@ -37,6 +37,7 @@ mod prelude;
 
 use libc::{setuid, perror, geteuid, getuid};
 
+pub mod odds;
 
 #[no_mangle]
 pub unsafe extern "C" fn turn_into_games(saved_uid: uid_t) {

@@ -17,9 +17,8 @@ extern "C" {
 	static mut is_wood: [libc::c_char; 0];
 }
 
+use libc::{c_int, c_short};
 use crate::prelude::*;
-
-pub type chtype = libc::c_uint;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -79,7 +78,7 @@ pub struct id {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct obj {
-	pub m_flags: libc::c_ulong,
+	pub m_flags: MonsterFlags,
 	pub damage: *mut libc::c_char,
 	pub quantity: libc::c_short,
 	pub ichar: libc::c_short,
@@ -103,6 +102,65 @@ pub struct obj {
 	pub picked_up: libc::c_short,
 	pub in_use_flags: libc::c_ushort,
 	pub next_object: *mut obj,
+}
+
+impl obj {
+	pub fn m_char(&self) -> chtype {
+		self.ichar as chtype
+	}
+	pub fn first_level(&self) -> c_short {
+		self.is_protected
+	}
+	pub fn set_first_level(&mut self, value: c_short) {
+		self.is_protected = value;
+	}
+	pub fn set_trail_char(&mut self, ch: ncurses::chtype) {
+		self.d_enchant = ch as c_short;
+	}
+	pub fn trail_char(&self) -> chtype {
+		self.d_enchant as chtype
+	}
+	pub fn disguise(&self) -> chtype {
+		self.what_is as chtype
+	}
+	pub fn nap_length(&self) -> c_short {
+		self.picked_up
+	}
+	pub fn set_nap_length(&mut self, value: c_short) {
+		self.picked_up = value;
+	}
+	pub fn decrement_nap(&mut self) {
+		self.set_nap_length(self.nap_length() - 1);
+		if self.nap_length() <= 0 {
+			self.m_flags.napping = false;
+			self.m_flags.asleep = false;
+		}
+	}
+	pub fn moves_confused(&self) -> c_short {
+		self.hit_enchant
+	}
+	pub fn decrement_moves_confused(&mut self) {
+		self.hit_enchant -= 1;
+		if self.hit_enchant <= 0 {
+			self.m_flags.confuses = false;
+		}
+	}
+
+	pub fn slowed_toggled(&self) -> bool {
+		self.quiver == 1
+	}
+
+	pub fn flip_slowed_toggle(&mut self) {
+		if self.quiver == 1 {
+			self.quiver = 0;
+		} else {
+			self.quiver = 1;
+		}
+	}
+	pub fn in_room(&self, rn: usize) -> bool {
+		let object_rn = get_room_number(self.row as c_int, self.col as c_int);
+		object_rn != NO_ROOM && object_rn as usize == rn
+	}
 }
 
 pub type object = obj;
@@ -130,22 +188,9 @@ pub struct fight {
 
 pub type fighter = fight;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct dr {
-	pub oth_room: libc::c_short,
-	pub oth_row: libc::c_short,
-	pub oth_col: libc::c_short,
-	pub door_row: libc::c_short,
-	pub door_col: libc::c_short,
-}
-
-pub type door = dr;
-
-
 #[no_mangle]
 pub static mut level_objects: object = obj {
-	m_flags: 0,
+	m_flags: MonsterFlags::default(),
 	damage: 0 as *const libc::c_char as *mut libc::c_char,
 	quantity: 0,
 	ichar: 0,
@@ -194,7 +239,7 @@ pub static mut rogue: fighter = {
 		str_max: 16 as libc::c_int as libc::c_short,
 		pack: {
 			let mut init = obj {
-				m_flags: 0 as libc::c_int as libc::c_ulong,
+				m_flags: MonsterFlags::default(),
 				damage: 0 as *const libc::c_char as *mut libc::c_char,
 				quantity: 0,
 				ichar: 0,
@@ -1729,6 +1774,11 @@ pub unsafe extern "C" fn alloc_object() -> *mut object {
 	(*obj).identified = 0 as libc::c_int as libc::c_ushort as libc::c_short;
 	(*obj).damage = b"1d1\0" as *const u8 as *const libc::c_char as *mut libc::c_char;
 	return obj;
+}
+
+pub unsafe fn free_object(obj: *mut object) {
+	(*obj).next_object = free_list;
+	free_list = obj;
 }
 
 #[no_mangle]

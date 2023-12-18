@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 libc = "0.2.151"
+ncurses = { version = "5.101.0", features = ["wide"] }

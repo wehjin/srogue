@@ -28,8 +28,6 @@ extern "C" {
 
 use crate::prelude::*;
 
-pub type chtype = libc::c_uint;
-
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct _win_st {
@@ -41,7 +39,7 @@ pub struct _win_st {
 	pub _begx: libc::c_short,
 	pub _flags: libc::c_short,
 	pub _attrs: attr_t,
-	pub _bkgd: chtype,
+	pub _bkgd: ncurses::chtype,
 	pub _notimeout: libc::c_int,
 	pub _clear: libc::c_int,
 	pub _leaveok: libc::c_int,

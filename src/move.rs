@@ -34,7 +34,6 @@ extern "C" {
 
 use crate::prelude::*;
 
-pub type chtype = libc::c_uint;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -354,11 +353,11 @@ pub unsafe extern "C" fn multiple_move_rogue(mut dirch: libc::c_int) -> libc::c_
 pub unsafe extern "C" fn is_passable(
 	mut row: libc::c_int,
 	mut col: libc::c_int,
-) -> libc::c_int {
+) -> bool {
 	if row < 1 as libc::c_int || row > 24 as libc::c_int - 2 as libc::c_int
 		|| col < 0 as libc::c_int || col > 80 as libc::c_int - 1 as libc::c_int
 	{
-		return 0 as libc::c_int;
+		return false;
 	}
 	if dungeon[row as usize][col as usize] as libc::c_int
 		& 0o1000 as libc::c_int as libc::c_ushort as libc::c_int != 0
@@ -366,17 +365,13 @@ pub unsafe extern "C" fn is_passable(
 		return if dungeon[row as usize][col as usize] as libc::c_int
 			& 0o400 as libc::c_int as libc::c_ushort as libc::c_int != 0
 		{
-			1 as libc::c_int
+			true
 		} else {
-			0 as libc::c_int
+			false
 		};
 	}
-	return dungeon[row as usize][col as usize] as libc::c_int
-		& (0o100 as libc::c_int as libc::c_ushort as libc::c_int
-		| 0o200 as libc::c_int as libc::c_ushort as libc::c_int
-		| 0o40 as libc::c_int as libc::c_ushort as libc::c_int
-		| 0o4 as libc::c_int as libc::c_ushort as libc::c_int
-		| 0o400 as libc::c_int as libc::c_ushort as libc::c_int);
+	const flags: Vec<SpotFlag> = vec![SpotFlag::Floor, SpotFlag::Tunnel, SpotFlag::Door, SpotFlag::Stairs, SpotFlag::Trap];
+	return SpotFlag::is_any_set(&flags, dungeon[row as usize][col as usize]);
 }
 
 #[no_mangle]

@@ -21,7 +21,6 @@ use crate::prelude::*;
 use crate::prelude::DoorDirection::{Left, Right};
 use crate::room::DoorDirection::{Up, Down};
 
-pub type chtype = libc::c_uint;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -453,14 +452,16 @@ pub unsafe extern "C" fn party_objects(mut rn: libc::c_int) -> libc::c_int {
 	return nf as libc::c_int;
 }
 
-pub unsafe fn get_room_number(row: libc::c_int, col: libc::c_int) -> libc::c_int {
-	for i in 0..MAXROOMS {
-		let below_top_wall = row >= rooms[i].top_row;
-		let above_bottom_wall = row <= rooms[i].bottom_row;
-		let right_of_left_wall = col >= rooms[i].left_col;
-		let left_of_right_wall = col <= rooms[i].right_col;
-		if below_top_wall && above_bottom_wall && right_of_left_wall && left_of_right_wall {
-			return i;
+pub fn get_room_number(row: libc::c_int, col: libc::c_int) -> libc::c_int {
+	unsafe {
+		for i in 0..MAXROOMS {
+			let below_top_wall = row >= rooms[i].top_row;
+			let above_bottom_wall = row <= rooms[i].bottom_row;
+			let right_of_left_wall = col >= rooms[i].left_col;
+			let left_of_right_wall = col <= rooms[i].right_col;
+			if below_top_wall && above_bottom_wall && right_of_left_wall && left_of_right_wall {
+				return i;
+			}
 		}
 	}
 	return NO_ROOM;
@@ -610,7 +611,7 @@ pub unsafe extern "C" fn draw_magic_map() -> libc::c_int {
 #[no_mangle]
 pub unsafe extern "C" fn dr_course(
 	mut monster: *mut object,
-	mut entering: libc::c_char,
+	entering: bool,
 	mut row: libc::c_short,
 	mut col: libc::c_short,
 ) -> libc::c_int {
@@ -627,7 +628,7 @@ pub unsafe extern "C" fn dr_course(
 		return;
 	}
 	rn = get_room_number(row as libc::c_int, col as libc::c_int) as libc::c_short;
-	if entering != 0 {
+	if entering {
 		r = get_rand(0 as libc::c_int, 9 as libc::c_int - 1 as libc::c_int)
 			as libc::c_short;
 		i = 0 as libc::c_int as libc::c_short;

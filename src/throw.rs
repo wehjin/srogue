@@ -22,8 +22,8 @@ extern "C" {
 }
 
 use crate::prelude::*;
+use crate::throw::Move::{Up, UpLeft, UpRight, Left, Right, Same, Down, DownLeft, DownRight};
 
-pub type chtype = libc::c_uint;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -277,4 +277,57 @@ pub unsafe extern "C" fn get_thrown_at_monster(
 		i;
 	}
 	return 0 as *mut object;
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum Move {
+	DownRight,
+	DownLeft,
+	UpRight,
+	UpLeft,
+	Right,
+	Down,
+	Same,
+	Up,
+	Left,
+}
+
+impl Move {
+	pub fn delta(&self) -> (isize, isize) {
+		match self {
+			DownRight => (1, 1),
+			DownLeft => (1, -1),
+			UpRight => (-1, 1),
+			UpLeft => (-1, -1),
+			Right => (0, 1),
+			Down => (1, 0),
+			Same => (0, 0),
+			Up => (-1, 0),
+			Left => (0, -1),
+		}
+	}
+	pub fn apply(&self, row: isize, col: isize) -> (isize, isize) {
+		let (r_delta, c_delta) = self.delta();
+		(row + r_delta, col + c_delta)
+	}
+}
+
+pub unsafe fn rand_around(i: u8, r: isize, c: isize) -> (isize, isize) {
+	static mut moves: [Move; 9] = [Left, Up, DownLeft, UpLeft, Right, Down, UpRight, Same, DownRight];
+	static mut row: usize = 0;
+	static mut col: usize = 0;
+
+	if i == 0 {
+		row = *r;
+		col = *c;
+		let o = get_rand(1, 8);
+		for _j in 0..5 {
+			let x = get_rand(0, 8) as usize;
+			let y = (x + o) % 9;
+			let t = moves[x];
+			moves[x] = moves[y];
+			moves[y] = t;
+		}
+	}
+	moves[i as usize].apply(r, c)
 }
