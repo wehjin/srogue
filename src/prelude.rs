@@ -20,7 +20,6 @@ pub use crate::spec_hit::*;
 pub use crate::throw::*;
 pub use crate::trap::*;
 pub use crate::r#use::*;
-use crate::room::RoomType::Nothing;
 pub use crate::zap::*;
 
 
@@ -75,7 +74,7 @@ impl SpotFlag {
 
 	pub fn is_set(&self, value: c_ushort) -> bool {
 		match self {
-			Nothing => value == 0,
+			SpotFlag::Nothing => value == 0,
 			_ => (value & self.code()) != 0,
 		}
 	}
