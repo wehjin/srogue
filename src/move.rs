@@ -33,6 +33,7 @@ extern "C" {
 }
 
 use crate::prelude::*;
+use crate::prelude::SpotFlag::{Door, Nothing};
 
 
 #[derive(Copy, Clone)]
@@ -114,10 +115,7 @@ pub static mut you_can_move_again: *mut libc::c_char = b"you can move again\0"
 	as *const u8 as *const libc::c_char as *mut libc::c_char;
 
 #[no_mangle]
-pub unsafe extern "C" fn one_move_rogue(
-	mut dirch: libc::c_short,
-	mut pickup: libc::c_short,
-) -> libc::c_int {
+pub unsafe extern "C" fn one_move_rogue(mut dirch: libc::c_short, pickup: bool) -> libc::c_int {
 	let mut current_block: u64;
 	let mut row: libc::c_short = 0;
 	let mut col: libc::c_short = 0;
@@ -130,14 +128,8 @@ pub unsafe extern "C" fn one_move_rogue(
 	if confused != 0 {
 		dirch = gr_dir() as libc::c_short;
 	}
-	get_dir_rc(dirch as libc::c_int, &mut row, &mut col, 1 as libc::c_int);
-	if can_move(
-		rogue.row as libc::c_int,
-		rogue.col as libc::c_int,
-		row as libc::c_int,
-		col as libc::c_int,
-	) == 0
-	{
+	get_dir_rc(dirch, &mut row, &mut col, true);
+	if can_move(rogue.row as usize, rogue.col as usize, row as usize, col as usize) == false {
 		return -(1 as libc::c_int);
 	}
 	if being_held as libc::c_int != 0 || bear_trap as libc::c_int != 0 {
@@ -372,6 +364,22 @@ pub unsafe extern "C" fn is_passable(
 	}
 	const flags: Vec<SpotFlag> = vec![SpotFlag::Floor, SpotFlag::Tunnel, SpotFlag::Door, SpotFlag::Stairs, SpotFlag::Trap];
 	return SpotFlag::is_any_set(&flags, dungeon[row as usize][col as usize]);
+}
+
+pub unsafe fn can_move(row1: usize, col1: usize, row2: usize, col2: usize) -> bool {
+	if is_passable(row2 as libc::c_int, col2 as libc::c_int) {
+		if row1 != row2 && col1 != col2 {
+			if Door.is_set(dungeon[row1][col1]) || Door::is_set(dungeon[row2][col2]) {
+				return false;
+			}
+			if Nothing.is_set(dungeon[row1][col2]) || Nothing.is_set(dungeon[row2][col1]) {
+				return false;
+			}
+		}
+		return true;
+	} else {
+		return false;
+	}
 }
 
 #[no_mangle]

@@ -20,6 +20,7 @@ pub use crate::spec_hit::*;
 pub use crate::throw::*;
 pub use crate::trap::*;
 pub use crate::r#use::*;
+use crate::room::RoomType::Nothing;
 pub use crate::zap::*;
 
 
@@ -73,10 +74,9 @@ impl SpotFlag {
 	}
 
 	pub fn is_set(&self, value: c_ushort) -> bool {
-		if self == &SpotFlag::Nothing {
-			value == 0
-		} else {
-			(value & self.code()) != 0
+		match self {
+			Nothing => value == 0,
+			_ => (value & self.code()) != 0,
 		}
 	}
 	pub fn is_only(&self, value: c_ushort) -> bool {
@@ -134,6 +134,18 @@ pub mod object_kind {
 	pub const AGGRAVATE_MONSTER: u16 = 10;
 	pub const MAGIC_MAPPING: u16 = 11;
 	pub const SCROLLS: u16 = 12;
+}
+
+pub mod stat_const {
+	pub const STAT_LEVEL: libc::c_int = 0o1;
+	pub const STAT_GOLD: libc::c_int = 0o2;
+	pub const STAT_HP: libc::c_int = 0o4;
+	pub const STAT_STRENGTH: libc::c_int = 0o10;
+	pub const STAT_ARMOR: libc::c_int = 0o20;
+	pub const STAT_EXP: libc::c_int = 0o40;
+	pub const STAT_HUNGER: libc::c_int = 0o100;
+	pub const STAT_LABEL: libc::c_int = 0o200;
+	pub const STAT_ALL: libc::c_int = 0o377;
 }
 
 #[derive(Copy, Clone)]

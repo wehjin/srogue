@@ -139,7 +139,7 @@ pub static mut level_monsters: object = obj {
 		napping: false,
 		already_moved: false,
 	},
-	damage: 0 as *const libc::c_char as *mut libc::c_char,
+	damage: "",
 	quantity: 0,
 	ichar: 0,
 	kill_exp: 0,
@@ -199,7 +199,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::a(),
-			damage: b"0d0\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "0d0",
 			quantity: 25 as libc::c_int as libc::c_short,
 			ichar: 'A' as i32 as libc::c_short,
 			kill_exp: 20 as libc::c_int as libc::c_short,
@@ -228,7 +228,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::b(),
-			damage: b"1d3\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "1d3",
 			quantity: 10 as libc::c_int as libc::c_short,
 			ichar: 'B' as i32 as libc::c_short,
 			kill_exp: 2 as libc::c_int as libc::c_short,
@@ -257,8 +257,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::c(),
-			damage: b"3d3/2d5\0" as *const u8 as *const libc::c_char
-				as *mut libc::c_char,
+			damage: "3d3/2d5",
 			quantity: 32 as libc::c_int as libc::c_short,
 			ichar: 'C' as i32 as libc::c_short,
 			kill_exp: 15 as libc::c_int as libc::c_short,
@@ -287,8 +286,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::d(),
-			damage: b"4d6/4d9\0" as *const u8 as *const libc::c_char
-				as *mut libc::c_char,
+			damage: "4d6/4d9",
 			quantity: 145 as libc::c_int as libc::c_short,
 			ichar: 'D' as i32 as libc::c_short,
 			kill_exp: 5000 as libc::c_int as libc::c_short,
@@ -317,7 +315,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::e(),
-			damage: b"1d3\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "1d3",
 			quantity: 11 as libc::c_int as libc::c_short,
 			ichar: 'E' as i32 as libc::c_short,
 			kill_exp: 2 as libc::c_int as libc::c_short,
@@ -346,7 +344,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::f(),
-			damage: b"5d5\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "5d5",
 			quantity: 73 as libc::c_int as libc::c_short,
 			ichar: 'F' as i32 as libc::c_short,
 			kill_exp: 91 as libc::c_int as libc::c_short,
@@ -375,8 +373,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::g(),
-			damage: b"5d5/5d5\0" as *const u8 as *const libc::c_char
-				as *mut libc::c_char,
+			damage: "5d5/5d5",
 			quantity: 115 as libc::c_int as libc::c_short,
 			ichar: 'G' as i32 as libc::c_short,
 			kill_exp: 2000 as libc::c_int as libc::c_short,
@@ -405,8 +402,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::h(),
-			damage: b"1d3/1d2\0" as *const u8 as *const libc::c_char
-				as *mut libc::c_char,
+			damage: "1d3/1d2",
 			quantity: 15 as libc::c_int as libc::c_short,
 			ichar: 'H' as i32 as libc::c_short,
 			kill_exp: 3 as libc::c_int as libc::c_short,
@@ -435,7 +431,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::i(),
-			damage: b"0d0\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "0d0",
 			quantity: 15 as libc::c_int as libc::c_short,
 			ichar: 'I' as i32 as libc::c_short,
 			kill_exp: 5 as libc::c_int as libc::c_short,
@@ -464,8 +460,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::j(),
-			damage: b"3d10/4d5\0" as *const u8 as *const libc::c_char
-				as *mut libc::c_char,
+			damage: "3d10/4d5",
 			quantity: 132 as libc::c_int as libc::c_short,
 			ichar: 'J' as i32 as libc::c_short,
 			kill_exp: 3000 as libc::c_int as libc::c_short,
@@ -494,7 +489,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::k(),
-			damage: b"1d4\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "1d4",
 			quantity: 10 as libc::c_int as libc::c_short,
 			ichar: 'K' as i32 as libc::c_short,
 			kill_exp: 2 as libc::c_int as libc::c_short,
@@ -523,7 +518,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::l(),
-			damage: b"0d0\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "0d0",
 			quantity: 25 as libc::c_int as libc::c_short,
 			ichar: 'L' as i32 as libc::c_short,
 			kill_exp: 21 as libc::c_int as libc::c_short,
@@ -552,8 +547,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::m(),
-			damage: b"4d4/3d7\0" as *const u8 as *const libc::c_char
-				as *mut libc::c_char,
+			damage: "4d4/3d7",
 			quantity: 97 as libc::c_int as libc::c_short,
 			ichar: 'M' as i32 as libc::c_short,
 			kill_exp: 250 as libc::c_int as libc::c_short,
@@ -582,7 +576,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::n(),
-			damage: b"0d0\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "0d0",
 			quantity: 25 as libc::c_int as libc::c_short,
 			ichar: 'N' as i32 as libc::c_short,
 			kill_exp: 39 as libc::c_int as libc::c_short,
@@ -611,7 +605,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::o(),
-			damage: b"1d6\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "1d6",
 			quantity: 25 as libc::c_int as libc::c_short,
 			ichar: 'O' as i32 as libc::c_short,
 			kill_exp: 5 as libc::c_int as libc::c_short,
@@ -640,7 +634,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::p(),
-			damage: b"5d4\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "5d4",
 			quantity: 76 as libc::c_int as libc::c_short,
 			ichar: 'P' as i32 as libc::c_short,
 			kill_exp: 120 as libc::c_int as libc::c_short,
@@ -669,7 +663,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::q(),
-			damage: b"3d5\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "3d5",
 			quantity: 30 as libc::c_int as libc::c_short,
 			ichar: 'Q' as i32 as libc::c_short,
 			kill_exp: 20 as libc::c_int as libc::c_short,
@@ -698,7 +692,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::r(),
-			damage: b"2d5\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "2d5",
 			quantity: 19 as libc::c_int as libc::c_short,
 			ichar: 'R' as i32 as libc::c_short,
 			kill_exp: 10 as libc::c_int as libc::c_short,
@@ -727,7 +721,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::s(),
-			damage: b"1d3\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "1d3",
 			quantity: 8 as libc::c_int as libc::c_short,
 			ichar: 'S' as i32 as libc::c_short,
 			kill_exp: 2 as libc::c_int as libc::c_short,
@@ -756,8 +750,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::t(),
-			damage: b"4d6/1d4\0" as *const u8 as *const libc::c_char
-				as *mut libc::c_char,
+			damage: "4d6/1d4",
 			quantity: 75 as libc::c_int as libc::c_short,
 			ichar: 'T' as i32 as libc::c_short,
 			kill_exp: 125 as libc::c_int as libc::c_short,
@@ -786,7 +779,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::u(),
-			damage: b"4d10\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "4d10",
 			quantity: 90 as libc::c_int as libc::c_short,
 			ichar: 'U' as i32 as libc::c_short,
 			kill_exp: 200 as libc::c_int as libc::c_short,
@@ -815,8 +808,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::v(),
-			damage: b"1d14/1d4\0" as *const u8 as *const libc::c_char
-				as *mut libc::c_char,
+			damage: "1d14/1d4",
 			quantity: 55 as libc::c_int as libc::c_short,
 			ichar: 'V' as i32 as libc::c_short,
 			kill_exp: 350 as libc::c_int as libc::c_short,
@@ -845,7 +837,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::w(),
-			damage: b"2d8\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "2d8",
 			quantity: 45 as libc::c_int as libc::c_short,
 			ichar: 'W' as i32 as libc::c_short,
 			kill_exp: 55 as libc::c_int as libc::c_short,
@@ -874,7 +866,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::x(),
-			damage: b"4d6\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "4d6",
 			quantity: 42 as libc::c_int as libc::c_short,
 			ichar: 'X' as i32 as libc::c_short,
 			kill_exp: 110 as libc::c_int as libc::c_short,
@@ -903,7 +895,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::y(),
-			damage: b"3d6\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "3d6",
 			quantity: 35 as libc::c_int as libc::c_short,
 			ichar: 'Y' as i32 as libc::c_short,
 			kill_exp: 50 as libc::c_int as libc::c_short,
@@ -932,7 +924,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::z(),
-			damage: b"1d7\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+			damage: "1d7",
 			quantity: 21 as libc::c_int as libc::c_short,
 			ichar: 'Z' as i32 as libc::c_short,
 			kill_exp: 8 as libc::c_int as libc::c_short,
@@ -1083,29 +1075,24 @@ pub unsafe extern "C" fn party_monsters(rn: usize, n: usize) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn gmc_row_col(
-	mut row: libc::c_int,
-	mut col: libc::c_int,
-) -> libc::c_int {
-	let mut monster: *mut object = 0 as *mut object;
-	let mut retval: libc::c_short = 0;
-	monster = objects::object_at(&mut level_monsters, row as c_short, col as c_short);
+pub unsafe extern "C" fn gmc_row_col(row: usize, col: usize) -> ncurses::chtype {
+	let monster = objects::object_at(&mut level_monsters, row as c_short, col as c_short);
 	if !monster.is_null() {
-		if !(detect_monster as libc::c_int != 0 || see_invisible as libc::c_int != 0
-			|| r_see_invisible as libc::c_int != 0)
-			&& (*monster).m_flags.invisible
-			|| blind as libc::c_int != 0
-		{
-			retval = (*monster).d_enchant;
-			return retval as libc::c_int;
+		let invisible = (*monster).m_flags.invisible;
+		let bypass_invisible = detect_monster != 0 || see_invisible != 0 || r_see_invisible != 0;
+		let is_blind = blind != 0;
+		if (invisible && !bypass_invisible) || is_blind {
+			(*monster).trail_char()
+		} else {
+			if (*monster).m_flags.imitates {
+				(*monster).disguise()
+			} else {
+				(*monster).m_char()
+			}
 		}
-		if (*monster).m_flags.imitates {
-			return (*monster).what_is as libc::c_int;
-		}
-		return (*monster).ichar as libc::c_int;
 	} else {
-		return '&' as i32;
-	};
+		ncurses::chtype::from('&')
+	}
 }
 
 #[no_mangle]

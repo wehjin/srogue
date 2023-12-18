@@ -17,8 +17,10 @@ extern "C" {
 	static mut detect_monster: libc::c_char;
 }
 
+use crate::objects;
 use crate::prelude::*;
 use crate::prelude::DoorDirection::{Left, Right};
+use crate::prelude::SpotFlag::{Door, Floor, Hidden, HorWall, Monster, Object, Stairs, Trap, Tunnel, VertWall};
 use crate::room::DoorDirection::{Up, Down};
 
 
@@ -346,6 +348,53 @@ pub unsafe extern "C" fn darken_room(mut rn: libc::c_short) -> libc::c_int {
 		i;
 	}
 	panic!("Reached end of non-void function without returning");
+}
+
+pub unsafe fn get_dungeon_char(row: usize, col: usize) -> ncurses::chtype {
+	let mask = dungeon[row][col];
+	if Monster.is_set(mask) {
+		return gmc_row_col(row as libc::c_int, col as libc::c_int);
+	}
+	if Object.is_set(mask) {
+		let obj = objects::object_at(&mut level_objects, row as libc::c_short, col as libc::c_short);
+		return get_mask_char((*obj).what_is);
+	}
+	if SpotFlag::is_any_set(&vec![Tunnel, Stairs, HorWall, VertWall, Floor, Door], mask) {
+		if SpotFlag::is_any_set(&vec![Tunnel, Stairs], mask) && !Hidden.is_set(mask) {
+			return if Stairs.is_set(mask) {
+				ncurses::chtype::from('%')
+			} else {
+				ncurses::chtype::from('#')
+			};
+		}
+		if HorWall.is_set(mask) {
+			return ncurses::chtype::from('-');
+		}
+		if VertWall.is_set(mask) {
+			return ncurses::chtype::from('|');
+		}
+		if Floor.is_set(mask) {
+			if Trap.is_set(mask) {
+				if !Hidden.is_set(mask) {
+					return ncurses::chtype::from('^');
+				}
+			}
+			return ncurses::chtype::from('.');
+		}
+		if Door.is_set(mask) {
+			return if Hidden.is_set(mask) {
+				if (col > 0 && HorWall.is_set(dungeon[row][col - 1]))
+					|| (col < (DCOLS - 1) as usize && HorWall.is_set(dungeon[row][col + 1])) {
+					ncurses::chtype::from('-')
+				} else {
+					ncurses::chtype::from('|')
+				}
+			} else {
+				ncurses::chtype::from('+')
+			};
+		}
+	}
+	return ncurses::chtype::from(' ');
 }
 
 #[no_mangle]

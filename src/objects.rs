@@ -79,7 +79,7 @@ pub struct id {
 #[repr(C)]
 pub struct obj {
 	pub m_flags: MonsterFlags,
-	pub damage: *mut libc::c_char,
+	pub damage: &'static str,
 	pub quantity: libc::c_short,
 	pub ichar: libc::c_short,
 	pub kill_exp: libc::c_short,
@@ -105,12 +105,16 @@ pub struct obj {
 }
 
 impl obj {
+	pub fn hp_to_kill(&self) -> c_short { self.quantity }
+	pub fn set_hp_to_kill(&mut self, value: c_short) { self.quantity = value }
 	pub fn m_char(&self) -> chtype {
 		self.ichar as chtype
 	}
 	pub fn first_level(&self) -> c_short {
 		self.is_protected
 	}
+
+	pub fn stationary_damage(&self) -> usize { self.identified as usize }
 	pub fn set_first_level(&mut self, value: c_short) {
 		self.is_protected = value;
 	}
@@ -191,7 +195,7 @@ pub type fighter = fight;
 #[no_mangle]
 pub static mut level_objects: object = obj {
 	m_flags: MonsterFlags::default(),
-	damage: 0 as *const libc::c_char as *mut libc::c_char,
+	damage: "",
 	quantity: 0,
 	ichar: 0,
 	kill_exp: 0,
@@ -240,7 +244,7 @@ pub static mut rogue: fighter = {
 		pack: {
 			let mut init = obj {
 				m_flags: MonsterFlags::default(),
-				damage: 0 as *const libc::c_char as *mut libc::c_char,
+				damage: "",
 				quantity: 0,
 				ichar: 0,
 				kill_exp: 0,
@@ -1539,8 +1543,7 @@ pub unsafe extern "C" fn object_at(
 	mut row: libc::c_short,
 	mut col: libc::c_short,
 ) -> *mut object {
-	let mut obj: *mut object = 0 as *mut object;
-	obj = (*pack).next_object;
+	let mut obj: *mut object = (*pack).next_object;
 	while !obj.is_null()
 		&& ((*obj).row as libc::c_int != row as libc::c_int
 		|| (*obj).col as libc::c_int != col as libc::c_int)
@@ -1772,7 +1775,7 @@ pub unsafe extern "C" fn alloc_object() -> *mut object {
 	(*obj).picked_up = (*obj).is_cursed;
 	(*obj).in_use_flags = 0 as libc::c_int as libc::c_ushort;
 	(*obj).identified = 0 as libc::c_int as libc::c_ushort as libc::c_short;
-	(*obj).damage = b"1d1\0" as *const u8 as *const libc::c_char as *mut libc::c_char;
+	(*obj).damage = "1d1";
 	return obj;
 }
 

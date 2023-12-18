@@ -5,15 +5,12 @@ extern "C" {
 	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
 	fn winch(_: *mut WINDOW) -> chtype;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
 	static mut stdscr: *mut WINDOW;
 	static mut rogue: fighter;
 	static mut dungeon: [[libc::c_ushort; 80]; 24];
 	static mut level_monsters: object;
 	fn strcpy(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
 	fn mon_name() -> *mut libc::c_char;
-	fn is_direction() -> libc::c_char;
-	fn object_at() -> *mut object;
 	static mut cur_level: libc::c_short;
 	static mut add_strength: libc::c_short;
 	static mut ring_exp: libc::c_short;
@@ -24,6 +21,7 @@ extern "C" {
 	fn strlen(_: *const libc::c_char) -> libc::c_ulong;
 }
 
+use libc::{c_char, c_short};
 use crate::monster;
 use crate::prelude::*;
 
@@ -101,21 +99,14 @@ pub static mut fight_monster: *mut object = 0 as *const object as *mut object;
 #[no_mangle]
 pub static mut detect_monster: libc::c_char = 0;
 #[no_mangle]
-pub static mut hit_message: [libc::c_char; 80] = unsafe {
-	*::core::mem::transmute::<
-		&[u8; 80],
-		&mut [libc::c_char; 80],
-	>(
-		b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",
-	)
-};
+pub static mut hit_message: [libc::c_char; 80] = [0; 80];
 
 #[no_mangle]
 pub unsafe extern "C" fn mon_hit(
 	mut monster: *mut object,
 	mut other: *mut libc::c_char,
 	mut flame: libc::c_char,
-) -> libc::c_int {
+) {
 	let mut damage: libc::c_short = 0;
 	let mut hit_chance: libc::c_short = 0;
 	let mut mn: *mut libc::c_char = 0 as *mut libc::c_char;
@@ -147,7 +138,7 @@ pub unsafe extern "C" fn mon_hit(
 	}
 	if !rand_percent(hit_chance as libc::c_int) {
 		if fight_monster.is_null() {
-			sprintf(
+			libc::sprintf(
 				hit_message
 					.as_mut_ptr()
 					.offset(strlen(hit_message.as_mut_ptr()) as isize),
@@ -160,7 +151,7 @@ pub unsafe extern "C" fn mon_hit(
 		return;
 	}
 	if fight_monster.is_null() {
-		sprintf(
+		libc::sprintf(
 			hit_message.as_mut_ptr().offset(strlen(hit_message.as_mut_ptr()) as isize),
 			b"the %s hit\0" as *const u8 as *const libc::c_char,
 			if !other.is_null() { other } else { mn },
@@ -168,8 +159,8 @@ pub unsafe extern "C" fn mon_hit(
 		message(hit_message.as_mut_ptr(), 1 as libc::c_int);
 		hit_message[0 as libc::c_int as usize] = 0 as libc::c_int as libc::c_char;
 	}
-	if (*monster).m_flags & 0o100000000 as libc::c_long as libc::c_ulong == 0 {
-		damage = get_damage((*monster).damage, 1 as libc::c_int) as libc::c_short;
+	if !(*monster).m_flags.stationary {
+		damage = get_damage((*monster).damage, DamageEffect::Roll) as libc::c_short;
 		if !other.is_null() {
 			if flame != 0 {
 				damage = (damage as libc::c_int - get_armor_class(rogue.armor))
@@ -197,94 +188,62 @@ pub unsafe extern "C" fn mon_hit(
 		damage = (damage as libc::c_int / 3 as libc::c_int) as libc::c_short;
 	}
 	if damage as libc::c_int > 0 as libc::c_int {
-		rogue_damage(damage as libc::c_int, monster);
+		rogue_damage(damage as usize, &mut *monster);
 	}
-	if (*monster).m_flags
-		& (0o2000 as libc::c_long | 0o4000 as libc::c_long | 0o10000 as libc::c_long
-		| 0o20000 as libc::c_long | 0o40000 as libc::c_long
-		| 0o100000 as libc::c_long | 0o200000 as libc::c_long
-		| 0o400000 as libc::c_long) as libc::c_ulong != 0
-	{
+	if (*monster).m_flags.special_hit() {
 		special_hit(monster);
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rogue_hit(
-	mut monster: *mut object,
-	mut force_hit: libc::c_char,
-) -> libc::c_int {
-	let mut damage: libc::c_short = 0;
-	let mut hit_chance: libc::c_short = 0;
+pub unsafe extern "C" fn rogue_hit(mut monster: *mut object, force_hit: bool) {
 	if !monster.is_null() {
-		if check_imitator(monster) != 0 {
+		if check_imitator(monster) {
 			return;
 		}
-		hit_chance = (if force_hit as libc::c_int != 0 {
-			100 as libc::c_int
-		} else {
-			get_hit_chance(rogue.weapon)
-		}) as libc::c_short;
-		if wizard != 0 {
-			hit_chance = (hit_chance as libc::c_int * 2 as libc::c_int) as libc::c_short;
-		}
-		if rand_percent(hit_chance as libc::c_int) == 0 {
+		let hit_chance = if force_hit { 100 } else { get_hit_chance(&mut *rogue.weapon) };
+		let hit_chance = if wizard != 0 { hit_chance * 2 } else { hit_chance };
+		if !rand_percent(hit_chance as libc::c_int) {
 			if fight_monster.is_null() {
-				strcpy(
-					hit_message.as_mut_ptr(),
-					b"you miss  \0" as *const u8 as *const libc::c_char,
-				);
+				strcpy(hit_message.as_mut_ptr(), b"you miss  \0" as *const u8 as *const libc::c_char);
 			}
 		} else {
-			damage = get_weapon_damage(rogue.weapon) as libc::c_short;
-			if wizard != 0 {
-				damage = (damage as libc::c_int * 3 as libc::c_int) as libc::c_short;
-			}
-			if mon_damage(monster, damage as libc::c_int) != 0 {
+			let damage = get_weapon_damage(&mut *rogue.weapon);
+			let damage = if wizard != 0 { damage * 3 } else { damage };
+			if mon_damage(&mut *monster, damage as usize) {
 				if fight_monster.is_null() {
-					strcpy(
-						hit_message.as_mut_ptr(),
-						b"you hit  \0" as *const u8 as *const libc::c_char,
-					);
+					strcpy(hit_message.as_mut_ptr(), b"you hit  \0" as *const u8 as *const libc::c_char);
 				}
 			}
 		}
-		check_gold_seeker(monster.borrow_mut());
-		wake_up(monster);
+		check_gold_seeker(&mut *monster);
+		wake_up(&mut *monster);
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn get_w_damage(mut obj: *mut object) -> libc::c_int {
-	let mut new_damage: [libc::c_char; 12] = [0; 12];
-	let mut to_hit_0: libc::c_int = 0;
-	let mut damage: libc::c_int = 0;
-	let mut i: libc::c_int = 0 as libc::c_int;
-	if obj.is_null()
-		|| (*obj).what_is as libc::c_int
-		!= 0o2 as libc::c_int as libc::c_ushort as libc::c_int
-	{
-		return -(1 as libc::c_int);
+pub unsafe fn rogue_damage(d: usize, monster: &mut object) {
+	let d = d as libc::c_short;
+	if d >= rogue.hp_current {
+		rogue.hp_current = 0;
+		print_stats(STAT_HP);
+		killed_by(monster, 0);
 	}
-	to_hit_0 = get_number((*obj).damage) + (*obj).hit_enchant as libc::c_int;
+	rogue.hp_current -= d;
+	print_stats(STAT_HP);
+}
+
+pub unsafe fn get_number(s: *const c_char) -> usize {
+	let mut total = 0;
+	let mut i = 0 as isize;
 	loop {
-		let fresh1 = i;
-		i = i + 1;
-		if !(*((*obj).damage).offset(fresh1 as isize) as libc::c_int != 'd' as i32) {
+		let c = *s.offset(i) as u8 as char;
+		if c < '0' || c > '9' {
 			break;
 		}
+		total = (10 * total) + c.to_digit(10).expect("digit") as usize;
+		i += 1;
 	}
-	damage = get_number(((*obj).damage).offset(i as isize))
-		+ (*obj).d_enchant as libc::c_int;
-	sprintf(
-		new_damage.as_mut_ptr(),
-		b"%dd%d\0" as *const u8 as *const libc::c_char,
-		to_hit_0,
-		damage,
-	);
-	return get_damage(new_damage.as_mut_ptr(), 1 as libc::c_int);
+	return total;
 }
 
 #[no_mangle]
@@ -297,17 +256,17 @@ pub unsafe extern "C" fn lget_number(mut s: *mut libc::c_char) -> libc::c_long {
 		total = 10 as libc::c_int as libc::c_long * total
 			+ (*s.offset(i as isize) as libc::c_int - '0' as i32) as libc::c_long;
 		i += 1;
-		i;
 	}
 	return total;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn to_hit(mut obj: *mut object) -> libc::c_int {
+pub unsafe extern "C" fn to_hit(mut obj: *mut object) -> usize {
 	if obj.is_null() {
-		return 1 as libc::c_int;
+		return 1;
 	}
-	return get_number((*obj).damage) + (*obj).hit_enchant as libc::c_int;
+	let hits = DamageStat::parse_first((*obj).damage).hits;
+	return hits + (*obj).hit_enchant as usize;
 }
 
 #[no_mangle]
@@ -339,15 +298,39 @@ pub unsafe extern "C" fn damage_for_strength() -> libc::c_int {
 	return 8 as libc::c_int;
 }
 
+pub unsafe fn mon_damage(monster: &mut object, damage: usize) -> bool {
+	monster.set_hp_to_kill(monster.hp_to_kill() - damage as libc::c_short);
+	if monster.hp_to_kill() <= 0 {
+		let row = monster.row as usize;
+		let col = monster.col as usize;
+		SpotFlag::Monster.clear(&mut dungeon[row][col]);
+		ncurses::mvaddch(row as i32, col as i32, get_dungeon_char(row, col));
+
+		fight_monster = 0 as *const object as *mut object;
+		cough_up(monster);
+		let mn = monster::mon_name(monster);
+		libc::sprintf(hit_message.as_mut_ptr().offset(strlen(hit_message.as_mut_ptr()) as isize),
+		              b"defeated the %s\0" as *const u8 as *const libc::c_char,
+		              mn);
+		message(hit_message.as_ptr(), 1);
+		hit_message[0] = 0;
+		add_exp(monster.kill_exp as libc::c_int, 1);
+		take_from_pack(monster, &mut level_monsters);
+
+		if monster.m_flags.holds {
+			being_held = 0;
+		}
+		free_object(monster);
+		return false;
+	}
+	return true;
+}
+
 #[no_mangle]
-pub unsafe extern "C" fn fight(mut to_the_death: libc::c_char) -> libc::c_int {
-	let mut ch: libc::c_short = 0;
-	let mut c: libc::c_short = 0;
-	let mut row: libc::c_short = 0;
-	let mut col: libc::c_short = 0;
+pub unsafe extern "C" fn fight(to_the_death: bool) {
 	let mut first_miss: libc::c_char = 1 as libc::c_int as libc::c_char;
-	let mut possible_damage: libc::c_short = 0;
 	let mut monster: *mut object = 0 as *mut object;
+	let mut ch: libc::c_short = 0;
 	loop {
 		ch = rgetchar() as libc::c_short;
 		if !(is_direction(ch as libc::c_int) == 0) {
@@ -366,63 +349,109 @@ pub unsafe extern "C" fn fight(mut to_the_death: libc::c_char) -> libc::c_int {
 	if ch as libc::c_int == '\u{1b}' as i32 {
 		return;
 	}
-	row = rogue.row;
-	col = rogue.col;
-	get_dir_rc(ch as libc::c_int, &mut row, &mut col, 0 as libc::c_int);
-	c = (if wmove(stdscr, row as libc::c_int, col as libc::c_int) == -(1 as libc::c_int)
+	let mut row = rogue.row;
+	let mut col = rogue.col;
+	get_dir_rc(ch, &mut row, &mut col, false);
+	let c = ncurses::mvinch(row as i32, col as i32);
 	{
-		-(1 as libc::c_int) as chtype
-	} else {
-		winch(stdscr)
-	}) as libc::c_short;
-	if (c as libc::c_int) < 'A' as i32 || c as libc::c_int > 'Z' as i32
-		|| can_move(
-		rogue.row as libc::c_int,
-		rogue.col as libc::c_int,
-		row as libc::c_int,
-		col as libc::c_int,
-	) == 0
-	{
-		message(
-			b"I see no monster there\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
-		);
-		return;
+		let not_a_monster = (c as libc::c_int) < 'A' as i32 || c as libc::c_int > 'Z' as i32;
+		let cannot_move = !can_move(rogue.row as usize, rogue.col as usize, row as usize, col as usize);
+		if not_a_monster || cannot_move {
+			message(b"I see no monster there\0" as *const u8 as *const libc::c_char, 0 as libc::c_int);
+			return;
+		}
 	}
-	fight_monster = object_at(
-		&mut level_monsters,
-		row as libc::c_int,
-		col as libc::c_int,
-	);
+	fight_monster = object_at(&mut level_monsters, row, col);
 	if fight_monster.is_null() {
 		return;
 	}
-	if (*fight_monster).m_flags & 0o100000000 as libc::c_long as libc::c_ulong == 0 {
-		possible_damage = (get_damage((*fight_monster).damage, 0 as libc::c_int)
-			* 2 as libc::c_int / 3 as libc::c_int) as libc::c_short;
+	let possible_damage = if !(*fight_monster).m_flags.stationary {
+		get_damage((*fight_monster).damage, DamageEffect::None) * 2 / 3
 	} else {
-		possible_damage = ((*fight_monster).identified as libc::c_int - 1 as libc::c_int)
-			as libc::c_short;
-	}
+		(*fight_monster).stationary_damage() - 1
+	};
 	while !fight_monster.is_null() {
-		one_move_rogue(ch as libc::c_int, 0 as libc::c_int);
-		if to_the_death == 0
-			&& rogue.hp_current as libc::c_int <= possible_damage as libc::c_int
-			|| interrupted as libc::c_int != 0
-			|| dungeon[row as usize][col as usize] as libc::c_int
-			& 0o2 as libc::c_int as libc::c_ushort as libc::c_int == 0
-		{
+		one_move_rogue(ch, false);
+		if (!to_the_death && rogue.hp_current <= possible_damage as i16)
+			|| interrupted != 0
+			|| !Monster.is_set(dungeon[row as usize][col as usize]) {
 			fight_monster = 0 as *mut object;
 		} else {
-			monster = object_at(
-				&mut level_monsters,
-				row as libc::c_int,
-				col as libc::c_int,
-			);
+			monster = object_at(&mut level_monsters, row, col);
 			if monster != fight_monster {
 				fight_monster = 0 as *mut object;
 			}
 		}
 	}
-	panic!("Reached end of non-void function without returning");
 }
+
+pub fn get_dir_rc(dir: c_short, row: &mut c_short, col: &mut c_short, allow_off_screen: bool) {
+	let dir = char::from(dir as u8);
+	match dir {
+		'h' => {
+			if allow_off_screen || (*col > 0) {
+				*col -= 1;
+			}
+		}
+		'j' => {
+			if allow_off_screen || (*row < (DROWS - 2) as i16) {
+				*row += 1
+			}
+		}
+		'k' => {
+			if allow_off_screen || (*row > MIN_ROW as i16) {
+				*row -= 1;
+			}
+		}
+		'l' => {
+			if allow_off_screen || (*col < (DCOLS - 1) as i16) {
+				*col += 1;
+			}
+		}
+		'y' => {
+			if allow_off_screen || ((*row > MIN_ROW as i16) && (*col > 0)) {
+				*row -= 1;
+				*col -= 1;
+			}
+		}
+		'u' => {
+			if allow_off_screen || ((*row > MIN_ROW as i16) & &(*col < (DCOLS - 1) as i16)) {
+				*row -= 1;
+				*col += 1;
+			}
+		}
+		'n' => {
+			if allow_off_screen || ((*row < (DROWS - 2) as i16) && (*col < (DCOLS - 1) as i16)) {
+				*row += 1;
+				*col += 1;
+			}
+		}
+		'b' => {
+			if allow_off_screen || ((*row < (DROWS - 2) as i16) && (*col > 0)) {
+				*row += 1;
+				*col -= 1;
+			}
+		}
+		_ => unreachable!("invalid direction"),
+	}
+}
+
+pub unsafe fn get_hit_chance(weapon: &mut object) -> c_short {
+	let mut hit_chance = 40isize;
+	hit_chance += 3 * to_hit(weapon) as isize;
+	hit_chance += ((2 * rogue.exp as isize) + (2 * ring_exp as isize)) - r_rings as isize;
+	hit_chance as c_short
+}
+
+pub unsafe fn get_weapon_damage(weapon: &mut object) -> c_short {
+	let mut damage = get_w_damage(weapon).expect("damage") as isize;
+	damage += damage_for_strength() as isize;
+	damage += (((rogue.exp as isize + ring_exp as isize) - r_rings as isize) + 1) / 2;
+	damage as c_short
+}
+
+mod safe;
+
+pub use safe::*;
+use crate::prelude::SpotFlag::Monster;
+use crate::prelude::stat_const::STAT_HP;

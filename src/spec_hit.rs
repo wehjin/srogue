@@ -282,7 +282,7 @@ pub fn check_gold_seeker(monster: &mut object) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn check_imitator(mut monster: *mut object) -> libc::c_int {
+pub unsafe extern "C" fn check_imitator(mut monster: *mut object) -> bool {
 	let mut msg: [libc::c_char; 80] = [0; 80];
 	if (*monster).m_flags & 0o20000000 as libc::c_long as libc::c_ulong != 0 {
 		wake_up(monster);
@@ -311,9 +311,9 @@ pub unsafe extern "C" fn check_imitator(mut monster: *mut object) -> libc::c_int
 			);
 			message(msg.as_mut_ptr(), 1 as libc::c_int);
 		}
-		return 1 as libc::c_int;
+		return true;
 	}
-	return 0 as libc::c_int;
+	return false;
 }
 
 #[no_mangle]
