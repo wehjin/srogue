@@ -2,17 +2,16 @@
 
 extern "C" {
 	pub type ldat;
-	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
+
 	fn wattrset(_: *mut WINDOW, _: libc::c_int) -> libc::c_int;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
+
 	static mut stdscr: *mut WINDOW;
 	static mut rogue: fighter;
 	static mut rooms: [room; 0];
 	static mut dungeon: [[libc::c_ushort; 80]; 24];
 	static mut level_objects: object;
 	static mut level_monsters: object;
-	fn strcpy(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
 	fn mon_name() -> *mut libc::c_char;
 	fn mon_sees() -> libc::c_char;
 	fn alloc_object() -> *mut object;

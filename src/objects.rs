@@ -2,7 +2,7 @@
 
 extern "C" {
 	pub type ldat;
-	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
+
 	fn winch(_: *mut WINDOW) -> chtype;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
 	static mut stdscr: *mut WINDOW;
@@ -18,6 +18,7 @@ extern "C" {
 }
 
 use libc::{c_int, c_short};
+use ncurses::addch;
 use crate::prelude::*;
 
 #[derive(Copy, Clone)]
@@ -70,7 +71,7 @@ pub type attr_t = chtype;
 #[repr(C)]
 pub struct id {
 	pub value: libc::c_short,
-	pub title: [libc::c_char; 128],
+	pub title: String,
 	pub real: [libc::c_char; 128],
 	pub id_status: libc::c_ushort,
 }
@@ -1572,94 +1573,24 @@ pub unsafe extern "C" fn free_stuff(mut objlist: *mut object) -> libc::c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn name_of(mut obj: *mut object) -> *mut libc::c_char {
-	let mut retstring: *mut libc::c_char = 0 as *mut libc::c_char;
-	match (*obj).what_is as libc::c_int {
-		4 => {
-			retstring = (if (*obj).quantity as libc::c_int > 1 as libc::c_int {
-				b"scrolls \0" as *const u8 as *const libc::c_char
-			} else {
-				b"scroll \0" as *const u8 as *const libc::c_char
-			}) as *mut libc::c_char;
-		}
-		8 => {
-			retstring = (if (*obj).quantity as libc::c_int > 1 as libc::c_int {
-				b"potions \0" as *const u8 as *const libc::c_char
-			} else {
-				b"potion \0" as *const u8 as *const libc::c_char
-			}) as *mut libc::c_char;
-		}
-		32 => {
-			if (*obj).which_kind as libc::c_int == 0 as libc::c_int {
-				retstring = b"food \0" as *const u8 as *const libc::c_char
-					as *mut libc::c_char;
-			} else {
-				retstring = fruit;
-			}
-		}
-		64 => {
-			retstring = (if *is_wood.as_mut_ptr().offset((*obj).which_kind as isize)
-				as libc::c_int != 0
-			{
-				b"staff \0" as *const u8 as *const libc::c_char
-			} else {
-				b"wand \0" as *const u8 as *const libc::c_char
-			}) as *mut libc::c_char;
-		}
-		2 => {
-			match (*obj).which_kind as libc::c_int {
-				1 => {
-					retstring = (if (*obj).quantity as libc::c_int > 1 as libc::c_int {
-						b"darts \0" as *const u8 as *const libc::c_char
-					} else {
-						b"dart \0" as *const u8 as *const libc::c_char
-					}) as *mut libc::c_char;
-				}
-				2 => {
-					retstring = (if (*obj).quantity as libc::c_int > 1 as libc::c_int {
-						b"arrows \0" as *const u8 as *const libc::c_char
-					} else {
-						b"arrow \0" as *const u8 as *const libc::c_char
-					}) as *mut libc::c_char;
-				}
-				3 => {
-					retstring = (if (*obj).quantity as libc::c_int > 1 as libc::c_int {
-						b"daggers \0" as *const u8 as *const libc::c_char
-					} else {
-						b"dagger \0" as *const u8 as *const libc::c_char
-					}) as *mut libc::c_char;
-				}
-				4 => {
-					retstring = (if (*obj).quantity as libc::c_int > 1 as libc::c_int {
-						b"shurikens \0" as *const u8 as *const libc::c_char
-					} else {
-						b"shuriken \0" as *const u8 as *const libc::c_char
-					}) as *mut libc::c_char;
-				}
-				_ => {
-					retstring = (id_weapons[(*obj).which_kind as usize].title)
-						.as_mut_ptr();
-				}
-			}
-		}
-		1 => {
-			retstring = b"armor \0" as *const u8 as *const libc::c_char
-				as *mut libc::c_char;
-		}
-		128 => {
-			retstring = b"ring \0" as *const u8 as *const libc::c_char
-				as *mut libc::c_char;
-		}
-		256 => {
-			retstring = b"amulet \0" as *const u8 as *const libc::c_char
-				as *mut libc::c_char;
-		}
-		_ => {
-			retstring = b"unknown \0" as *const u8 as *const libc::c_char
-				as *mut libc::c_char;
-		}
-	}
-	return retstring;
+pub unsafe extern "C" fn name_of(obj: &object, settings: &Settings) -> String {
+	match obj.what_is {
+		object_what::SCROLL => if obj.quantity > 1 { "scrolls " } else { "scroll " },
+		object_what::POTION => if obj.quantity > 1 { "potions " } else { "potion " },
+		object_what::FOOD => if obj.which_kind == food_kind::RATION { "food " } else { &settings.fruit; },
+		object_what::WAND => if *is_wood.as_mut_ptr().offset(obj.which_kind as isize) != 0 { "staff " } else { "wand " },
+		object_what::WEAPON => match obj.which_kind {
+			weapon_kind::DART => if obj.quantity > 1 { "darts " } else { "dart " },
+			weapon_kind::ARROW => (if obj.quantity > 1 { "arrows " } else { "arrow " }),
+			weapon_kind::DAGGER => if obj.quantity > 1 { "daggers " } else { "dagger " },
+			weapon_kind::SHURIKEN => if obj.quantity > 1 { "shurikens " } else { "shuriken " },
+			_ => &id_weapons[obj.which_kind as usize].title
+		},
+		object_what::ARMOR => "armor ",
+		object_what::RING => "ring ",
+		object_what::AMULET => "amulet ",
+		_ => "unknown ",
+	}.to_string()
 }
 
 #[no_mangle]
@@ -1822,7 +1753,7 @@ pub unsafe extern "C" fn show_objects() -> libc::c_int {
 			{
 				-(1 as libc::c_int);
 			} else {
-				waddch(stdscr, rc as chtype);
+				addch(rc as chtype);
 			};
 		}
 		obj = (*obj).next_object;
@@ -1838,7 +1769,7 @@ pub unsafe extern "C" fn show_objects() -> libc::c_int {
 			{
 				-(1 as libc::c_int);
 			} else {
-				waddch(stdscr, (*monster).what_is as libc::c_int as chtype);
+				addch((*monster).what_is as libc::c_int as chtype);
 			};
 		}
 		monster = (*monster).next_object;

@@ -14,10 +14,10 @@ use crate::score::win;
 
 extern "C" {
 	pub type ldat;
-	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
+
 	fn wclear(_: *mut WINDOW) -> libc::c_int;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
+
 	static mut stdscr: *mut WINDOW;
 	static mut rogue: fighter;
 	static mut rooms: [room; 0];
@@ -36,6 +36,7 @@ extern "C" {
 
 use crate::prelude::*;
 use crate::prelude::SpotFlag::{HorWall, Tunnel, VertWall};
+use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
 
 
 #[derive(Copy, Clone)]
@@ -123,9 +124,7 @@ pub static mut cur_level: c_short = 0 as libc::c_int as c_short;
 pub static mut max_level: c_short = 1 as libc::c_int as c_short;
 #[no_mangle]
 pub static mut cur_room: c_short = 0;
-#[no_mangle]
-pub static mut new_level_message: *mut libc::c_char = 0 as *const libc::c_char
-	as *mut libc::c_char;
+pub static mut new_level_message: Option<String> = None;
 #[no_mangle]
 pub static mut party_room: c_short = -(1 as libc::c_int) as c_short;
 #[no_mangle]
@@ -785,7 +784,7 @@ pub unsafe fn hide_boxed_passage(row1: c_int, col1: c_int, row2: c_int, col2: c_
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn put_player(mut nr: c_short) -> libc::c_int {
+pub unsafe extern "C" fn put_player(mut nr: c_short) {
 	let mut rn: c_short = nr;
 	let mut misses: c_short = 0;
 	let mut row: c_short = 0;
@@ -825,42 +824,29 @@ pub unsafe extern "C" fn put_player(mut nr: c_short) -> libc::c_int {
 		rogue.row as usize,
 		rogue.col as usize,
 	);
-	if !new_level_message.is_null() {
-		message(new_level_message, 0 as libc::c_int);
-		new_level_message = 0 as *mut libc::c_char;
+	if let Some(msg) = &new_level_message {
+		message(msg, 0);
+		new_level_message = None;
 	}
-	if wmove(stdscr, rogue.row as libc::c_int, rogue.col as libc::c_int)
-		== -(1 as libc::c_int)
-	{
-		-(1 as libc::c_int);
-	} else {
-		waddch(stdscr, rogue.fchar as chtype);
-	};
-	panic!("Reached end of non-void function without returning");
+	ncurses::mvaddch(rogue.row as i32, rogue.col as i32, rogue.fchar as chtype);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn drop_check() -> libc::c_int {
+pub unsafe extern "C" fn drop_check() -> bool {
 	if wizard != 0 {
-		return 1 as libc::c_int;
+		return true;
 	}
 	if dungeon[rogue.row as usize][rogue.col as usize] as libc::c_int
 		& 0o4 as libc::c_int as c_ushort as libc::c_int != 0
 	{
 		if levitate != 0 {
-			message(
-				b"you're floating in the air!\0" as *const u8 as *const libc::c_char,
-				0 as libc::c_int,
-			);
-			return 0 as libc::c_int;
+			message("you're floating in the air!", 0);
+			return false;
 		}
-		return 1 as libc::c_int;
+		return true;
 	}
-	message(
-		b"I see no way down\0" as *const u8 as *const libc::c_char,
-		0 as libc::c_int,
-	);
-	return 0 as libc::c_int;
+	message("I see no way down", 0);
+	return false;
 }
 
 #[no_mangle]
@@ -869,22 +855,15 @@ pub unsafe extern "C" fn check_up() -> libc::c_int {
 		if dungeon[rogue.row as usize][rogue.col as usize] as libc::c_int
 			& 0o4 as libc::c_int as c_ushort as libc::c_int == 0
 		{
-			message(
-				b"I see no way up\0" as *const u8 as *const libc::c_char,
-				0 as libc::c_int,
-			);
+			message("I see no way up", 0);
 			return 0 as libc::c_int;
 		}
 		if has_amulet() == 0 {
-			message(
-				b"Your way is magically blocked\0" as *const u8 as *const libc::c_char,
-				0 as libc::c_int,
-			);
+			message("Your way is magically blocked", 0);
 			return 0 as libc::c_int;
 		}
 	}
-	new_level_message = b"you feel a wrenching sensation in your gut\0" as *const u8
-		as *const libc::c_char as *mut libc::c_char;
+	new_level_message = Some("you feel a wrenching sensation in your gut".to_string());
 	if cur_level as libc::c_int == 1 as libc::c_int {
 		win();
 	} else {
@@ -894,48 +873,27 @@ pub unsafe extern "C" fn check_up() -> libc::c_int {
 	return 0 as libc::c_int;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn add_exp(
-	mut e: libc::c_int,
-	mut promotion: libc::c_char,
-) {
-	let mut mbuf: [libc::c_char; 40] = [0; 40];
-	let mut new_exp: c_short = 0;
-	let mut i: c_short = 0;
-	let mut hp: c_short = 0;
-	rogue.exp_points += e as c_long;
-	if rogue.exp_points
-		>= level_points[(rogue.exp as libc::c_int - 1 as libc::c_int) as usize]
-	{
-		new_exp = get_exp_level(rogue.exp_points) as c_short;
-		if rogue.exp_points > 10000000 as c_long {
-			rogue
-				.exp_points = 10000000 as c_long
-				+ 1 as libc::c_int as c_long;
+pub unsafe fn add_exp(e: libc::c_int, promotion: bool) {
+	rogue.exp_points += e;
+
+	if rogue.exp_points >= level_points[(rogue.exp - 1) as usize] {
+		let new_exp = get_exp_level(rogue.exp_points);
+		if rogue.exp_points > MAX_EXP as i64 {
+			rogue.exp_points = (MAX_EXP + 1) as c_long;
 		}
-		i = (rogue.exp as libc::c_int + 1 as libc::c_int) as c_short;
-		while i as libc::c_int <= new_exp as libc::c_int {
-			sprintf(
-				mbuf.as_mut_ptr(),
-				b"welcome to level %d\0" as *const u8 as *const libc::c_char,
-				i as libc::c_int,
-			);
-			message(mbuf.as_mut_ptr(), 0 as libc::c_int);
-			if promotion != 0 {
-				hp = hp_raise() as c_short;
-				rogue
-					.hp_current = (rogue.hp_current as libc::c_int + hp as libc::c_int)
-					as c_short;
-				rogue
-					.hp_max = (rogue.hp_max as libc::c_int + hp as libc::c_int)
-					as c_short;
+		for i in (rogue.exp + 1)..=new_exp {
+			let msg = format!("welcome to level {}", i);
+			message(&msg, 0);
+			if promotion {
+				let hp = hp_raise();
+				rogue.hp_current = rogue.hp_current + hp;
+				rogue.hp_max = rogue.hp_max + hp;
 			}
 			rogue.exp = i;
-			print_stats(0o4 as libc::c_int | 0o40 as libc::c_int);
-			i += 1;
+			print_stats(STAT_HP | STAT_EXP);
 		}
 	} else {
-		print_stats(0o40 as libc::c_int);
+		print_stats(STAT_EXP);
 	}
 }
 
@@ -958,30 +916,16 @@ pub unsafe fn hp_raise() -> usize {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn show_average_hp() -> libc::c_int {
-	let mut mbuf: [libc::c_char; 80] = [0; 80];
-	let mut real_average: libc::c_int = 0;
-	let mut effective_average: libc::c_int = 0;
-	if rogue.exp as libc::c_int == 1 as libc::c_int {
-		effective_average = 0.00f64 as libc::c_int;
-		real_average = effective_average;
+pub unsafe extern "C" fn show_average_hp() {
+	let (real_average, effective_average) = if rogue.exp == 1 {
+		(0.0, 0.0)
 	} else {
-		real_average = (rogue.hp_max as libc::c_int - extra_hp as libc::c_int
-			- 12 as libc::c_int + less_hp as libc::c_int)
-			/ (rogue.exp as libc::c_int - 1 as libc::c_int);
-		effective_average = (rogue.hp_max as libc::c_int - 12 as libc::c_int)
-			/ (rogue.exp as libc::c_int - 1 as libc::c_int);
-	}
-	sprintf(
-		mbuf.as_mut_ptr(),
-		b"R-Hp: %.2f, E-Hp: %.2f (!: %d, V: %d)\0" as *const u8 as *const libc::c_char,
-		real_average,
-		effective_average,
-		extra_hp as libc::c_int,
-		less_hp as libc::c_int,
-	);
-	message(mbuf.as_mut_ptr(), 0 as libc::c_int);
-	panic!("Reached end of non-void function without returning");
+		let real = (rogue.hp_max - extra_hp - INIT_HP + less_hp) / (rogue.exp - 1);
+		let average = (rogue.hp_max - INIT_HP) / (rogue.exp - 1);
+		(real, average)
+	};
+	let msg = format!("R-Hp: {:.2}, E-Hp: {:.2} (!: {}, V: {})", real_average, effective_average, extra_hp, less_hp);
+	message(&msg, 0);
 }
 
 pub unsafe fn mix_random_rooms() {

@@ -2,7 +2,7 @@
 
 extern "C" {
 	pub type ldat;
-	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
+
 	fn winch(_: *mut WINDOW) -> chtype;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
 	static mut stdscr: *mut WINDOW;
@@ -12,11 +12,11 @@ extern "C" {
 	static mut level_monsters: object;
 	fn mon_sees() -> libc::c_char;
 	fn gr_object() -> *mut object;
-	fn object_at() -> *mut object;
 	static mut blind: libc::c_short;
 	static mut detect_monster: libc::c_char;
 }
 
+use ncurses::addch;
 use crate::objects;
 use crate::prelude::*;
 use crate::prelude::DoorDirection::{Left, Right};
@@ -222,10 +222,7 @@ pub unsafe extern "C" fn light_up_room(mut rn: libc::c_int) -> libc::c_int {
 				{
 					-(1 as libc::c_int);
 				} else {
-					waddch(
-						stdscr,
-						get_dungeon_char(i as libc::c_int, j as libc::c_int) as chtype,
-					);
+					addch(get_dungeon_char(i as usize, j as usize) as chtype);
 				};
 				j += 1;
 				j;
@@ -238,7 +235,7 @@ pub unsafe extern "C" fn light_up_room(mut rn: libc::c_int) -> libc::c_int {
 		{
 			-(1 as libc::c_int);
 		} else {
-			waddch(stdscr, rogue.fchar as chtype);
+			addch(rogue.fchar as chtype);
 		};
 	}
 	panic!("Reached end of non-void function without returning");
@@ -272,17 +269,13 @@ pub unsafe extern "C" fn light_passage(
 		j = (if col > 0 as libc::c_int { -(1 as libc::c_int) } else { 0 as libc::c_int })
 			as libc::c_short;
 		while j as libc::c_int <= j_end as libc::c_int {
-			if can_move(row, col, row + i as libc::c_int, col + j as libc::c_int) != 0 {
+			if can_move(row as usize, col as usize, (row + i) as usize, (col + j) as usize) {
 				if wmove(stdscr, row + i as libc::c_int, col + j as libc::c_int)
 					== -(1 as libc::c_int)
 				{
 					-(1 as libc::c_int);
 				} else {
-					waddch(
-						stdscr,
-						get_dungeon_char(row + i as libc::c_int, col + j as libc::c_int)
-							as chtype,
-					);
+					addch(get_dungeon_char((row + i) as usize, (col + j) as usize) as chtype);
 				};
 			}
 			j += 1;
@@ -309,7 +302,7 @@ pub unsafe extern "C" fn darken_room(mut rn: libc::c_short) -> libc::c_int {
 				{
 					-(1 as libc::c_int);
 				} else {
-					waddch(stdscr, ' ' as i32 as chtype);
+					addch(' ' as i32 as chtype);
 				};
 			} else if dungeon[i as usize][j as usize] as libc::c_int
 				& (0o1 as libc::c_int as libc::c_ushort as libc::c_int
@@ -324,7 +317,7 @@ pub unsafe extern "C" fn darken_room(mut rn: libc::c_short) -> libc::c_int {
 					{
 						-(1 as libc::c_int);
 					} else {
-						waddch(stdscr, ' ' as i32 as chtype);
+						addch(' ' as i32 as chtype);
 					};
 				}
 				if dungeon[i as usize][j as usize] as libc::c_int
@@ -337,7 +330,7 @@ pub unsafe extern "C" fn darken_room(mut rn: libc::c_short) -> libc::c_int {
 					{
 						-(1 as libc::c_int);
 					} else {
-						waddch(stdscr, '^' as i32 as chtype);
+						addch('^' as i32 as chtype);
 					};
 				}
 			}
@@ -629,17 +622,13 @@ pub unsafe extern "C" fn draw_magic_map() -> libc::c_int {
 								& 0o2 as libc::c_int as libc::c_ushort as libc::c_int == 0
 								|| och as libc::c_int == ' ' as i32
 							{
-								waddch(stdscr, ch as chtype);
+								addch(ch as chtype);
 							}
 							if s as libc::c_int
 								& 0o2 as libc::c_int as libc::c_ushort as libc::c_int != 0
 							{
 								let mut monster: *mut object = 0 as *mut object;
-								monster = object_at(
-									&mut level_monsters,
-									i as libc::c_int,
-									j as libc::c_int,
-								);
+								monster = object_at(&mut level_monsters, i, j);
 								if !monster.is_null() {
 									(*monster).d_enchant = ch;
 								}

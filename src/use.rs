@@ -2,11 +2,11 @@
 
 extern "C" {
 	pub type ldat;
-	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
+
 	fn winch(_: *mut WINDOW) -> chtype;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
 	static mut stdscr: *mut WINDOW;
-	fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
+
 	static mut rogue: fighter;
 	static mut rooms: [room; 0];
 	static mut dungeon: [[libc::c_ushort; 80]; 24];

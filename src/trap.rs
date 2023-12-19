@@ -2,7 +2,7 @@
 
 extern "C" {
 	pub type ldat;
-	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
+
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
 	static mut stdscr: *mut WINDOW;
 	static mut rogue: fighter;
@@ -12,8 +12,6 @@ extern "C" {
 	fn reg_move() -> libc::c_char;
 	static mut cur_level: libc::c_short;
 	static mut party_room: libc::c_short;
-	static mut new_level_message: *mut libc::c_char;
-	static mut interrupted: libc::c_char;
 	static mut ring_exp: libc::c_short;
 	static mut sustain_strength: libc::c_char;
 	static mut blind: libc::c_short;

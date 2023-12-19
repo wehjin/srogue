@@ -30,11 +30,23 @@ pub const R_ROOM: c_ushort = 2;
 pub const MIN_ROW: libc::c_int = 1;
 pub const DCOLS: libc::c_int = 80;
 pub const DROWS: libc::c_int = 24;
+pub const MAX_TITLE_LENGTH: usize = 30;
+pub const MORE: &'static str = "-more-";
 pub const COL1: libc::c_int = 26;
 pub const COL2: libc::c_int = 52;
 pub const ROW1: libc::c_int = 7;
 pub const ROW2: libc::c_int = 15;
 pub const HIDE_PERCENT: c_int = 12;
+
+
+pub const MAX_EXP_LEVEL: usize = 21;
+pub const MAX_EXP: usize = 10000000;
+pub const MAX_GOLD: usize = 900000;
+pub const MAX_ARMOR: usize = 99;
+pub const MAX_HP: usize = 800;
+pub const MAX_STRENGTH: usize = 99;
+pub const LAST_DUNGEON: usize = 99;
+pub const INIT_HP: usize = 12;
 
 pub type chtype = ncurses::chtype;
 
@@ -106,6 +118,16 @@ impl SpotFlag {
 	}
 }
 
+pub mod item_usage {
+	pub const NOT_USED: u16 = 0o0;
+	pub const BEING_WIELDED: u16 = 0o1;
+	pub const BEING_WORN: u16 = 0o2;
+	pub const ON_LEFT_HAND: u16 = 0o4;
+	pub const ON_RIGHT_HAND: u16 = 0o10;
+	pub const ON_EITHER_HAND: u16 = 0o14;
+	pub const BEING_USED: u16 = 0o17;
+}
+
 pub mod object_what {
 	pub const ARMOR: u16 = 0o1;
 	pub const WEAPON: u16 = 0o2;
@@ -133,6 +155,23 @@ pub mod object_kind {
 	pub const AGGRAVATE_MONSTER: u16 = 10;
 	pub const MAGIC_MAPPING: u16 = 11;
 	pub const SCROLLS: u16 = 12;
+}
+
+pub mod food_kind {
+	pub const RATION: u16 = 0;
+	pub const FRUIT: u16 = 1;
+}
+
+pub mod weapon_kind {
+	pub const BOW: u16 = 0;
+	pub const DART: u16 = 1;
+	pub const ARROW: u16 = 2;
+	pub const DAGGER: u16 = 3;
+	pub const SHURIKEN: u16 = 4;
+	pub const MACE: u16 = 5;
+	pub const LONG_SWORD: u16 = 6;
+	pub const TWO_HANDED_SWORD: u16 = 7;
+	pub const WEAPONS: u16 = 8;
 }
 
 pub mod stat_const {

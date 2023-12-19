@@ -7,11 +7,11 @@ extern "C" {
 	static mut rogue: fighter;
 	static mut level_objects: object;
 	fn is_digit() -> libc::c_char;
-	static mut hit_message: [libc::c_char; 0];
 	static mut wizard: libc::c_char;
 	static mut trap_door: libc::c_char;
 }
 
+use libc::c_short;
 use crate::prelude::*;
 
 
@@ -86,25 +86,23 @@ pub struct fight {
 pub type fighter = fight;
 
 #[no_mangle]
-pub static mut interrupted: libc::c_char = 0 as libc::c_int as libc::c_char;
+pub static mut interrupted: bool = false;
 #[no_mangle]
 pub static mut unknown_command: *mut libc::c_char = b"unknown command\0" as *const u8
 	as *const libc::c_char as *mut libc::c_char;
 
 #[no_mangle]
-pub unsafe extern "C" fn play_level() -> libc::c_int {
+pub unsafe extern "C" fn play_level() {
 	let mut ch: libc::c_short = 0;
 	let mut count: libc::c_int = 0;
 	loop {
-		interrupted = 0 as libc::c_int as libc::c_char;
-		if *hit_message.as_mut_ptr().offset(0 as libc::c_int as isize) != 0 {
-			message(hit_message.as_mut_ptr(), 1 as libc::c_int);
-			*hit_message
-				.as_mut_ptr()
-				.offset(0 as libc::c_int as isize) = 0 as libc::c_int as libc::c_char;
+		interrupted = false;
+		if !hit_message.is_empty() {
+			message(&hit_message, 1);
+			hit_message.clear();
 		}
 		if trap_door != 0 {
-			trap_door = 0 as libc::c_int as libc::c_char;
+			trap_door = 0;
 			return;
 		}
 		wmove(stdscr, rogue.row as libc::c_int, rogue.col as libc::c_int);
@@ -125,10 +123,7 @@ pub unsafe extern "C" fn play_level() -> libc::c_int {
 					break;
 				}
 				115 => {
-					search(
-						if count > 0 as libc::c_int { count } else { 1 as libc::c_int },
-						0 as libc::c_int,
-					);
+					search(if count > 0 { count } else { 1 } as c_short, 0);
 					break;
 				}
 				105 => {

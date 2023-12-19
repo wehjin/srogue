@@ -165,34 +165,34 @@ pub static mut level_monsters: object = obj {
 };
 #[no_mangle]
 pub static mut mon_disappeared: libc::c_char = 0;
-#[no_mangle]
-pub static mut m_names: [*mut libc::c_char; 26] = [
-	b"aquator\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"bat\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"centaur\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"dragon\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"emu\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"venus fly-trap\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"griffin\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"hobgoblin\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"ice monster\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"jabberwock\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"kestrel\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"leprechaun\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"medusa\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"nymph\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"orc\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"phantom\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"quagga\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"rattlesnake\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"snake\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"troll\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"black unicorn\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"vampire\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"wraith\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"xeroc\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"yeti\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"zombie\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+
+pub static mut m_names: [&'static str; 26] = [
+	"aquator",
+	"bat",
+	"centaur",
+	"dragon",
+	"emu",
+	"venus fly-trap",
+	"griffin",
+	"hobgoblin",
+	"ice monster",
+	"jabberwock",
+	"kestrel",
+	"leprechaun",
+	"medusa",
+	"nymph",
+	"orc",
+	"phantom",
+	"quagga",
+	"rattlesnake",
+	"snake",
+	"troll",
+	"black unicorn",
+	"vampire",
+	"wraith",
+	"xeroc",
+	"yeti",
+	"zombie",
 ];
 #[no_mangle]
 pub static mut mon_tab: [object; 26] = [
@@ -1343,20 +1343,21 @@ pub unsafe extern "C" fn wake_room(rn: usize, entering: bool, row: usize, col: u
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn mon_name(mut monster: *mut object) -> *mut libc::c_char {
-	if blind != 0
-		&& ((*monster).m_flags.invisible && !(detect_monster != 0 || see_invisible != 0 || r_see_invisible != 0)) {
-		return b"something\0" as *const u8 as *const libc::c_char as *mut libc::c_char;
-	}
-	let mut ch: libc::c_short = 0;
-	if halluc != 0 {
-		ch = (get_rand('A' as i32, 'Z' as i32) - 'A' as i32) as libc::c_short;
-		return m_names[ch as usize];
-	}
-	ch = ((*monster).ichar as libc::c_int - 'A' as i32) as libc::c_short;
-	return m_names[ch as usize];
+pub unsafe extern "C" fn mon_name(monster: *mut object) -> String {
+	if player_is_blind() || ((*monster).m_flags.invisible && !bypass_invisibility()) {
+		"something"
+	} else if player_hallucinating() {
+		m_names[(get_rand('A' as i32, 'Z' as i32) - 'A' as i32) as usize]
+	} else {
+		m_names[((*monster).ichar as c_int - 'A' as i32) as usize]
+	}.to_string()
 }
+
+pub unsafe fn player_hallucinating() -> bool { halluc != 0 }
+
+pub unsafe fn player_is_blind() -> bool { blind != 0 }
+
+pub unsafe fn bypass_invisibility() -> bool { detect_monster != 0 || see_invisible != 0 || r_see_invisible != 0 }
 
 pub unsafe fn rogue_is_around(row: c_short, col: c_short) -> bool {
 	let rdif = row - rogue.row;

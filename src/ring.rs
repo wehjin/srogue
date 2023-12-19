@@ -2,14 +2,12 @@
 
 extern "C" {
 	static mut rogue: fighter;
-	fn strcpy(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
 	fn reg_move() -> libc::c_char;
 	fn get_letter_object() -> *mut object;
-	static mut curse_message: *mut libc::c_char;
 	static mut wizard: libc::c_char;
-	fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
 }
 
+use libc::strcpy;
 use crate::prelude::*;
 
 #[derive(Copy, Clone)]
@@ -36,11 +34,9 @@ pub struct fight {
 pub type fighter = fight;
 
 #[no_mangle]
-pub static mut left_or_right: *mut libc::c_char = b"left or right hand?\0" as *const u8
-	as *const libc::c_char as *mut libc::c_char;
+pub static left_or_right: &'static str = "left or right hand?";
 #[no_mangle]
-pub static mut no_ring: *mut libc::c_char = b"there's no ring on that hand\0"
-	as *const u8 as *const libc::c_char as *mut libc::c_char;
+pub static no_ring: &'static str = "there's no ring on that hand";
 #[no_mangle]
 pub static mut stealthy: libc::c_short = 0;
 #[no_mangle]
@@ -157,7 +153,6 @@ pub unsafe extern "C" fn remove_ring() -> libc::c_int {
 	let mut left: libc::c_char = 0 as libc::c_int as libc::c_char;
 	let mut right: libc::c_char = 0 as libc::c_int as libc::c_char;
 	let mut ch: libc::c_short = 0;
-	let mut buf: [libc::c_char; 80] = [0; 80];
 	let mut ring: *mut object = 0 as *mut object;
 	if r_rings as libc::c_int == 0 as libc::c_int {
 		inv_rings();
@@ -196,9 +191,7 @@ pub unsafe extern "C" fn remove_ring() -> libc::c_int {
 			message(curse_message, 0 as libc::c_int);
 		} else {
 			un_put_on(ring);
-			strcpy(buf.as_mut_ptr(), b"removed \0" as *const u8 as *const libc::c_char);
-			get_desc(ring, buf.as_mut_ptr().offset(8 as libc::c_int as isize));
-			message(buf.as_mut_ptr(), 0 as libc::c_int);
+			message(&format!("removed {}", get_desc(ring)), 0 as libc::c_int);
 			reg_move();
 		}
 	}

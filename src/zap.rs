@@ -2,7 +2,7 @@
 
 extern "C" {
 	pub type ldat;
-	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
+
 	fn winch(_: *mut WINDOW) -> chtype;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
 	static mut stdscr: *mut WINDOW;
@@ -17,7 +17,6 @@ extern "C" {
 	fn xxx() -> libc::c_long;
 	static mut being_held: libc::c_char;
 	static mut detect_monster: libc::c_char;
-	fn strlen(_: *const libc::c_char) -> libc::c_ulong;
 	fn strncmp(
 		_: *const libc::c_char,
 		_: *const libc::c_char,

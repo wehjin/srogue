@@ -3,7 +3,7 @@
 extern "C" {
 	pub type __sFILEX;
 	pub type ldat;
-	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
+
 	fn waddnstr(_: *mut WINDOW, _: *const libc::c_char, _: libc::c_int) -> libc::c_int;
 	fn wattrset(_: *mut WINDOW, _: libc::c_int) -> libc::c_int;
 	fn wclear(_: *mut WINDOW) -> libc::c_int;
@@ -23,7 +23,7 @@ extern "C" {
 		_: *mut FILE,
 	) -> libc::c_ulong;
 	fn rewind(_: *mut FILE);
-	fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
+
 	fn fclose(_: *mut FILE) -> libc::c_int;
 	static mut stdscr: *mut WINDOW;
 	static mut rogue: fighter;
@@ -33,7 +33,6 @@ extern "C" {
 	static mut id_rings: [id; 0];
 	static mut id_weapons: [id; 0];
 	static mut id_armors: [id; 0];
-	fn strcpy(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
 	fn strncpy(
 		_: *mut libc::c_char,
 		_: *const libc::c_char,
@@ -45,7 +44,6 @@ extern "C" {
 	static mut max_level: libc::c_short;
 	static mut msg_cleared: libc::c_char;
 	static mut byebye_string: *mut libc::c_char;
-	fn strlen(_: *const libc::c_char) -> libc::c_ulong;
 	fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> libc::c_int;
 }
 

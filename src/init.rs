@@ -15,7 +15,6 @@ extern "C" {
 	static mut rogue: fighter;
 	static mut level_objects: object;
 	static mut level_monsters: object;
-	fn strcpy(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
 	fn strncpy(
 		_: *mut libc::c_char,
 		_: *const libc::c_char,
@@ -26,7 +25,6 @@ extern "C" {
 	fn add_to_pack() -> *mut object;
 	fn alloc_object() -> *mut object;
 	static mut party_counter: libc::c_short;
-	fn strlen(_: *const libc::c_char) -> libc::c_ulong;
 	fn strncmp(
 		_: *const libc::c_char,
 		_: *const libc::c_char,
@@ -232,9 +230,9 @@ impl Settings {
 }
 
 #[no_mangle]
-pub static mut cant_int: libc::c_char = 0 as libc::c_int as libc::c_char;
+pub static mut cant_int: bool = false;
 #[no_mangle]
-pub static mut did_int: libc::c_char = 0 as libc::c_int as libc::c_char;
+pub static mut did_int: bool = false;
 #[no_mangle]
 pub static mut save_is_interactive: bool = true;
 #[no_mangle]
@@ -321,7 +319,7 @@ pub unsafe fn init() -> bool {
 	return false;
 }
 
-pub unsafe fn clean_up(estr: *const libc::c_char) {
+pub unsafe fn clean_up(estr: *const libc::c_char, init_curses: bool) {
 	if save_is_interactive {
 		if init_curses {
 			ncurses::wmove(ncurses::stdscr(), DROWS - 1, 0);
@@ -348,9 +346,9 @@ pub unsafe fn stop_window() {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn byebye() -> libc::c_int {
+pub unsafe extern "C" fn byebye(ask_quit: bool) -> libc::c_int {
 	md_ignore_signals();
-	if ask_quit != 0 {
+	if ask_quit {
 		quit(1 as libc::c_char);
 	} else {
 		clean_up(byebye_string);

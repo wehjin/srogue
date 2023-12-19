@@ -3,9 +3,8 @@
 extern "C" {
 	pub type __sFILEX;
 	pub type ldat;
-	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
 	fn waddnstr(_: *mut WINDOW, _: *const libc::c_char, _: libc::c_int) -> libc::c_int;
-	fn wclrtoeol(_: *mut WINDOW) -> libc::c_int;
+
 	fn winch(_: *mut WINDOW) -> chtype;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
 	static mut curscr: *mut WINDOW;
@@ -14,23 +13,20 @@ extern "C" {
 	static mut __stdoutp: *mut FILE;
 	fn fclose(_: *mut FILE) -> libc::c_int;
 	fn fflush(_: *mut FILE) -> libc::c_int;
-	fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
+
 	fn putchar(_: libc::c_int) -> libc::c_int;
 	fn putc(_: libc::c_int, _: *mut FILE) -> libc::c_int;
 	fn getchar() -> libc::c_int;
 	fn fputs(_: *const libc::c_char, _: *mut FILE) -> libc::c_int;
 	static mut rogue: fighter;
-	fn strcpy(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
 	fn onintr() -> libc::c_int;
-	static mut cant_int: libc::c_char;
-	static mut did_int: libc::c_char;
-	static mut interrupted: libc::c_char;
 	static mut save_is_interactive: libc::c_char;
 	static mut add_strength: libc::c_short;
 	static mut cur_level: libc::c_short;
-	fn strlen(_: *const libc::c_char) -> libc::c_ulong;
 }
 
+use libc::{c_int, sprintf};
+use ncurses::ll::mvaddstr;
 use crate::prelude::*;
 
 pub type __int64_t = libc::c_longlong;
@@ -114,197 +110,118 @@ pub struct fight {
 
 pub type fighter = fight;
 
-#[no_mangle]
-pub static mut msg_line: [libc::c_char; 80] = unsafe {
-	*::core::mem::transmute::<
-		&[u8; 80],
-		&mut [libc::c_char; 80],
-	>(
-		b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",
-	)
-};
-#[no_mangle]
-pub static mut msg_col: libc::c_short = 0 as libc::c_int as libc::c_short;
-#[no_mangle]
-pub static mut msg_cleared: libc::c_char = 1 as libc::c_int as libc::c_char;
-#[no_mangle]
+pub static mut msg_written: String = String::new();
+pub static mut msg_cleared: bool = true;
 pub static mut hunger_str: [libc::c_char; 8] = unsafe {
 	*::core::mem::transmute::<&[u8; 8], &mut [libc::c_char; 8]>(b"\0\0\0\0\0\0\0\0")
 };
 
-#[no_mangle]
-pub unsafe extern "C" fn message(
-	mut msg: *const libc::c_char,
-	intrpt: libc::c_int,
-) {
+pub unsafe extern "C" fn message(msg: &str, intrpt: libc::c_int) {
 	if save_is_interactive == 0 {
 		return;
 	}
 	if intrpt != 0 {
-		interrupted = 1 as libc::c_int as libc::c_char;
+		interrupted = true;
 		md_slurp();
 	}
-	cant_int = 1 as libc::c_int as libc::c_char;
-	if msg_cleared == 0 {
-		if wmove(stdscr, 1 as libc::c_int - 1 as libc::c_int, msg_col as libc::c_int)
-			== -(1 as libc::c_int)
-		{
-			-(1 as libc::c_int);
-		} else {
-			waddnstr(
-				stdscr,
-				b"-more-\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
-			);
-		};
+	cant_int = true;
+
+	if !msg_cleared {
+		ncurses::mvaddstr(MIN_ROW - 1, msg_written.len() as i32, MORE);
 		ncurses::refresh();
 		wait_for_ack();
 		check_message();
 	}
-	strcpy(msg_line.as_mut_ptr(), msg);
-	if wmove(stdscr, 1 as libc::c_int - 1 as libc::c_int, 0 as libc::c_int)
-		== -(1 as libc::c_int)
-	{
-		-(1 as libc::c_int);
-	} else {
-		waddnstr(stdscr, msg, -(1 as libc::c_int));
-	};
-	waddch(stdscr, ' ' as i32 as chtype);
+	ncurses::mvaddstr(MIN_ROW - 1, 0, msg);
+	ncurses::addch(chtype::from(' '));
 	ncurses::refresh();
-	msg_cleared = 0 as libc::c_int as libc::c_char;
-	msg_col = strlen(msg) as libc::c_short;
-	cant_int = 0 as libc::c_int as libc::c_char;
-	if did_int != 0 {
-		did_int = 0 as libc::c_int as libc::c_char;
+	msg_written = msg.to_string();
+	msg_cleared = false;
+	cant_int = false;
+	if did_int {
+		did_int = false;
 		onintr();
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn remessage() -> libc::c_int {
-	if msg_line[0 as libc::c_int as usize] != 0 {
-		message(msg_line.as_mut_ptr(), 0 as libc::c_int);
+pub unsafe extern "C" fn remessage() {
+	if !msg_written.is_empty() {
+		message(&msg_written, 0);
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
 pub unsafe fn check_message() {
-	if msg_cleared == 1 {
+	if msg_cleared {
 		return;
 	}
-	wmove(
-		stdscr,
-		1 as libc::c_int - 1 as libc::c_int,
-		0 as libc::c_int,
-	);
-	wclrtoeol(stdscr);
+	ncurses::mv(MIN_ROW - 1, 0);
+	ncurses::clrtoeol();
 	ncurses::refresh();
-	msg_cleared = 1;
+	msg_cleared = true;
 }
 
+pub const CANCEL: char = '\u{1b}';
+
 #[no_mangle]
-pub unsafe extern "C" fn get_input_line(
-	mut prompt: *mut libc::c_char,
-	mut insert: *mut libc::c_char,
-	mut buf: *mut libc::c_char,
-	mut if_cancelled: *mut libc::c_char,
-	mut add_blank: libc::c_char,
-	mut do_echo: libc::c_char,
-) -> libc::c_int {
-	let mut ch: libc::c_short = 0;
-	let mut i: libc::c_short = 0 as libc::c_int as libc::c_short;
-	let mut n: libc::c_short = 0;
-	message(prompt, 0 as libc::c_int);
-	n = strlen(prompt) as libc::c_short;
-	if *insert.offset(0 as libc::c_int as isize) != 0 {
-		if wmove(stdscr, 0 as libc::c_int, n as libc::c_int + 1 as libc::c_int)
-			== -(1 as libc::c_int)
-		{
-			-(1 as libc::c_int);
-		} else {
-			waddnstr(stdscr, insert, -(1 as libc::c_int));
-		};
-		strcpy(buf, insert);
-		i = strlen(insert) as libc::c_short;
-		wmove(
-			stdscr,
-			0 as libc::c_int,
-			n as libc::c_int + i as libc::c_int + 1 as libc::c_int,
-		);
+pub unsafe extern "C" fn get_input_line(prompt: &str, insert: Option<&str>, if_cancelled: Option<&str>, add_blank: bool, do_echo: bool) -> String {
+	message(prompt, 0);
+
+	let mut line: Vec<char> = Vec::new();
+	let n = prompt.len();
+	if let Some(insert) = &insert {
+		ncurses::mvaddstr(0, (n + 1) as i32, insert);
+		line.extend(insert.as_bytes());
+		ncurses::mv(0, (n + line.len() + 1) as i32);
 		ncurses::refresh();
 	}
+	let mut ch: char;
 	loop {
-		ch = rgetchar() as libc::c_short;
-		if !(ch as libc::c_int != '\r' as i32 && ch as libc::c_int != '\n' as i32
-			&& ch as libc::c_int != '\u{1b}' as i32)
-		{
+		ch = rgetchar() as u8 as char;
+		if ch == '\r' || ch == '\n' || ch == CANCEL {
 			break;
 		}
-		if ch as libc::c_int >= ' ' as i32 && ch as libc::c_int <= '~' as i32
-			&& (i as libc::c_int) < 30 as libc::c_int - 2 as libc::c_int
-		{
-			if ch as libc::c_int != ' ' as i32 || i as libc::c_int > 0 as libc::c_int {
-				let fresh0 = i;
-				i = i + 1;
-				*buf.offset(fresh0 as isize) = ch as libc::c_char;
-				if do_echo != 0 {
-					waddch(stdscr, ch as chtype);
+		if ch >= ' ' && ch <= '~' && line.len() < MAX_TITLE_LENGTH {
+			if ch != ' ' || line.len() > 0 {
+				line.push(ch);
+				if do_echo {
+					ncurses::addch(ch as chtype);
 				}
 			}
 		}
-		if ch as libc::c_int == '\u{8}' as i32 && i as libc::c_int > 0 as libc::c_int {
-			if do_echo != 0 {
-				if wmove(stdscr, 0 as libc::c_int, i as libc::c_int + n as libc::c_int)
-					== -(1 as libc::c_int)
-				{
-					-(1 as libc::c_int);
-				} else {
-					waddch(stdscr, ' ' as i32 as chtype);
-				};
-				wmove(
-					stdscr,
-					1 as libc::c_int - 1 as libc::c_int,
-					i as libc::c_int + n as libc::c_int,
-				);
+		const BACKSPACE: char = '\u{8}';
+		if ch == BACKSPACE && line.len() > 0 {
+			if do_echo {
+				ncurses::mvaddch(0, (line.len() + n) as i32, ' ' as chtype);
+				ncurses::mv(MIN_ROW - 1, (line.len() + n) as i32);
 			}
-			i -= 1;
-			i;
+			line.pop();
 		}
 		ncurses::refresh();
 	}
 	check_message();
-	if add_blank != 0 {
-		let fresh1 = i;
-		i = i + 1;
-		*buf.offset(fresh1 as isize) = ' ' as i32 as libc::c_char;
+	if add_blank {
+		line.push(' ');
 	} else {
-		while i as libc::c_int > 0 as libc::c_int
-			&& *buf.offset((i as libc::c_int - 1 as libc::c_int) as isize) as libc::c_int
-			== ' ' as i32
-		{
-			i -= 1;
-			i;
+		while let Some(' ') = line.last() {
+			line.pop()
 		}
 	}
-	*buf.offset(i as isize) = 0 as libc::c_int as libc::c_char;
-	if ch as libc::c_int == '\u{1b}' as i32 || i as libc::c_int == 0 as libc::c_int
-		|| i as libc::c_int == 1 as libc::c_int && add_blank as libc::c_int != 0
-	{
-		if !if_cancelled.is_null() {
-			message(if_cancelled, 0 as libc::c_int);
+	if ch == CANCEL || line.is_empty() || (line.len() == 1 && add_blank) {
+		if let Some(msg) = if_cancelled {
+			message(msg, 0);
 		}
-		return 0 as libc::c_int;
+		"".to_string()
+	} else {
+		line.iter().collect()
 	}
-	return i as libc::c_int;
 }
 
 const X_CHAR: libc::c_int = 'X' as libc::c_int;
 const CTRL_R_CHAR: libc::c_int = 0o022 as libc::c_int;
 
-pub unsafe fn rgetchar() -> libc::c_int {
+pub unsafe fn rgetchar() -> c_int {
 	let mut done = false;
-	let mut ch: libc::c_int = 0;
+	let mut ch = 0;
 	while !done {
 		ch = libc::getchar();
 		match ch {
@@ -500,7 +417,7 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: libc::c_int) -> libc::c_int 
 		} else {
 			waddnstr(stdscr, hunger_str.as_mut_ptr(), -(1 as libc::c_int));
 		};
-		wclrtoeol(stdscr);
+		ncurses::clrtoeol();
 	}
 	ncurses::refresh();
 	panic!("Reached end of non-void function without returning");
@@ -508,7 +425,7 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: libc::c_int) -> libc::c_int 
 
 pub unsafe fn pad(s: *const libc::c_char, n: libc::size_t) {
 	for _ in libc::strlen(s)..n {
-		waddch(stdscr, ' ' as chtype);
+		ncurses::addch(' ' as chtype);
 	}
 }
 
@@ -561,7 +478,7 @@ pub unsafe extern "C" fn r_index(
 ) -> libc::c_int {
 	let mut i: libc::c_int = 0 as libc::c_int;
 	if last != 0 {
-		i = strlen(str).wrapping_sub(1 as libc::c_int as libc::c_ulong) as libc::c_int;
+		i = libc::strlen(str).wrapping_sub(1) as libc::c_int;
 		while i >= 0 as libc::c_int {
 			if *str.offset(i as isize) as libc::c_int == ch {
 				return i;

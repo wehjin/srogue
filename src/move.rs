@@ -2,16 +2,13 @@
 
 extern "C" {
 	pub type ldat;
-	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
 	static mut stdscr: *mut WINDOW;
 	static mut rogue: fighter;
 	static mut dungeon: [[libc::c_ushort; 80]; 24];
 	static mut level_objects: object;
 	static mut level_monsters: object;
-	fn strcpy(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
 	fn object_at() -> *mut object;
-	fn pick_up() -> *mut object;
 	static mut cur_room: libc::c_short;
 	static mut halluc: libc::c_short;
 	static mut blind: libc::c_short;
@@ -26,11 +23,11 @@ extern "C" {
 	static mut auto_search: libc::c_short;
 	static mut hunger_str: [libc::c_char; 0];
 	static mut being_held: libc::c_char;
-	static mut interrupted: libc::c_char;
 	static mut r_teleport: libc::c_char;
-	fn strlen(_: *const libc::c_char) -> libc::c_ulong;
 }
 
+use libc::{strcpy, strlen};
+use ncurses::addch;
 use crate::prelude::*;
 use crate::prelude::SpotFlag::{Door, Nothing};
 
@@ -112,7 +109,7 @@ pub static mut you_can_move_again: *mut libc::c_char = b"you can move again\0"
 	as *const u8 as *const libc::c_char as *mut libc::c_char;
 
 #[no_mangle]
-pub unsafe extern "C" fn one_move_rogue(mut dirch: libc::c_short, pickup: bool) -> libc::c_int {
+pub unsafe extern "C" fn one_move_rogue(mut dirch: libc::c_short, pickup: bool, settings: &Settings) -> libc::c_int {
 	let mut current_block: u64;
 	let mut row: libc::c_short = 0;
 	let mut col: libc::c_short = 0;
@@ -205,18 +202,14 @@ pub unsafe extern "C" fn one_move_rogue(mut dirch: libc::c_short, pickup: bool) 
 	{
 		-(1 as libc::c_int);
 	} else {
-		waddch(
-			stdscr,
-			get_dungeon_char(rogue.row as libc::c_int, rogue.col as libc::c_int)
-				as chtype,
-		);
+		addch(get_dungeon_char(rogue.row as usize, rogue.col as usize) as chtype);
 	};
 	if wmove(stdscr, row as libc::c_int, col as libc::c_int) == -(1 as libc::c_int) {
 		-(1 as libc::c_int);
 	} else {
-		waddch(stdscr, rogue.fchar as chtype);
+		addch(rogue.fchar as chtype);
 	};
-	if jump == 0 {
+	if !settings.jump {
 		ncurses::refresh();
 	}
 	rogue.row = row;

@@ -1,5 +1,7 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
+use libc::{strcpy, strlen};
+use ncurses::{clrtoeol, refresh};
 use crate::message;
 use crate::pack::wait_for_ack;
 use crate::random::get_rand;
@@ -7,10 +9,10 @@ use crate::random::get_rand;
 extern "C" {
 	pub type ldat;
 	fn waddnstr(_: *mut WINDOW, _: *const libc::c_char, _: libc::c_int) -> libc::c_int;
-	fn wclrtoeol(_: *mut WINDOW) -> libc::c_int;
+
 	fn winch(_: *mut WINDOW) -> chtype;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
+
 	static mut stdscr: *mut WINDOW;
 	static mut rogue: fighter;
 	static mut id_scrolls: [id; 0];
@@ -19,12 +21,10 @@ extern "C" {
 	static mut id_rings: [id; 0];
 	static mut id_weapons: [id; 0];
 	static mut id_armors: [id; 0];
-	fn strcpy(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
 	fn strcat(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
 	fn name_of() -> *mut libc::c_char;
 	fn get_letter_object() -> *mut object;
 	static mut wizard: libc::c_char;
-	fn strlen(_: *const libc::c_char) -> libc::c_ulong;
 	fn strncmp(
 		_: *const libc::c_char,
 		_: *const libc::c_char,
@@ -249,7 +249,7 @@ pub unsafe extern "C" fn inventory(
 				obj,
 				(descs[i as usize]).as_mut_ptr().offset(4 as libc::c_int as isize),
 			);
-			n = strlen((descs[i as usize]).as_mut_ptr()) as libc::c_short;
+			n = strlen(descs[i as usize].as_mut_ptr()) as libc::c_short;
 			if n as libc::c_int > maxlen as libc::c_int {
 				maxlen = n;
 			}
@@ -297,14 +297,14 @@ pub unsafe extern "C" fn inventory(
 		} else {
 			waddnstr(stdscr, (descs[row as usize]).as_mut_ptr(), -(1 as libc::c_int));
 		};
-		wclrtoeol(stdscr);
+		clrtoeol();
 		row += 1;
 		row;
 	}
-	wrefresh(stdscr);
+	refresh();
 	wait_for_ack();
 	wmove(stdscr, 0 as libc::c_int, 0 as libc::c_int);
-	wclrtoeol(stdscr);
+	clrtoeol();
 	j = 1 as libc::c_int as libc::c_short;
 	while (j as libc::c_int) < i as libc::c_int && (j as libc::c_int) < 24 as libc::c_int
 	{

@@ -4,7 +4,7 @@ extern "C" {
 	pub type __sFILEX;
 	pub type ldat;
 	fn waddnstr(_: *mut WINDOW, _: *const libc::c_char, _: libc::c_int) -> libc::c_int;
-	fn wclrtoeol(_: *mut WINDOW) -> libc::c_int;
+
 	fn winch(_: *mut WINDOW) -> chtype;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
 	fn fgets(_: *mut libc::c_char, _: libc::c_int, _: *mut FILE) -> *mut libc::c_char;
@@ -13,6 +13,7 @@ extern "C" {
 	fn strchr(_: *const libc::c_char, _: libc::c_int) -> *mut libc::c_char;
 }
 
+use ncurses::{clrtoeol, refresh};
 use crate::prelude::*;
 
 pub type __int64_t = libc::c_longlong;
@@ -85,10 +86,7 @@ pub unsafe extern "C" fn Instructions() {
 	let mut j: libc::c_int = 0;
 	f = fopen(instructions, b"r\0" as *const u8 as *const libc::c_char);
 	if f.is_null() {
-		message(
-			b"Help file not on line.\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
-		);
+		message("Help file not on line.", 0);
 		return;
 	}
 	row = 0 as libc::c_int as libc::c_short;
@@ -112,17 +110,17 @@ pub unsafe extern "C" fn Instructions() {
 		} else {
 			waddnstr(stdscr, buffer[row as usize].as_mut_ptr(), -(1 as libc::c_int));
 		};
-		wclrtoeol(stdscr);
+		clrtoeol();
 		row += 1;
 	}
 	wmove(stdscr, 0 as libc::c_int, 0 as libc::c_int);
 	i = 0 as libc::c_int;
 	while i < 24 as libc::c_int {
 		wmove(stdscr, i, 0 as libc::c_int);
-		wclrtoeol(stdscr);
+		clrtoeol();
 		i += 1;
 	}
-	wrefresh(stdscr);
+	refresh();
 	i = 0 as libc::c_int;
 	while i < 24 as libc::c_int {
 		if fgets(buf.as_mut_ptr(), 250 as libc::c_int, f).is_null() {
@@ -132,7 +130,7 @@ pub unsafe extern "C" fn Instructions() {
 			*strchr(buf.as_mut_ptr(), '\n' as i32) = 0 as libc::c_int as libc::c_char;
 		}
 		wmove(stdscr, i, 0 as libc::c_int);
-		wclrtoeol(stdscr);
+		clrtoeol();
 		if wmove(stdscr, i, 0 as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
 		} else {
@@ -140,17 +138,17 @@ pub unsafe extern "C" fn Instructions() {
 		};
 		i += 1;
 	}
-	wrefresh(stdscr);
+	refresh();
 	rgetchar();
 	wmove(stdscr, 0 as libc::c_int, 0 as libc::c_int);
-	wclrtoeol(stdscr);
+	clrtoeol();
 	i = 0 as libc::c_int;
 	while i < 24 as libc::c_int {
 		wmove(stdscr, i, 0 as libc::c_int);
-		wclrtoeol(stdscr);
+		clrtoeol();
 		i += 1;
 	}
-	wrefresh(stdscr);
+	refresh();
 	i = 0 as libc::c_int;
 	while i < 24 as libc::c_int {
 		if wmove(stdscr, i, 0 as libc::c_int) == -(1 as libc::c_int) {
@@ -160,5 +158,5 @@ pub unsafe extern "C" fn Instructions() {
 		};
 		i += 1;
 	}
-	wrefresh(stdscr);
+	refresh();
 }

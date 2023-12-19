@@ -2,10 +2,10 @@
 
 extern "C" {
 	pub type ldat;
-	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
+
 	fn winch(_: *mut WINDOW) -> chtype;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
+
 	static mut stdscr: *mut WINDOW;
 	static mut rogue: fighter;
 	static mut dungeon: [[libc::c_ushort; 80]; 24];
@@ -16,8 +16,6 @@ extern "C" {
 	fn alloc_object() -> *mut object;
 	fn get_letter_object() -> *mut object;
 	fn object_at() -> *mut object;
-	static mut curse_message: *mut libc::c_char;
-	static mut hit_message: [libc::c_char; 0];
 }
 
 use crate::prelude::*;

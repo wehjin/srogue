@@ -3,7 +3,7 @@
 extern "C" {
 	pub type __sFILEX;
 	pub type ldat;
-	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
+
 	fn wclear(_: *mut WINDOW) -> libc::c_int;
 	fn winch(_: *mut WINDOW) -> chtype;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
@@ -32,7 +32,6 @@ extern "C" {
 	static mut id_wands: [id; 0];
 	static mut id_rings: [id; 0];
 	static mut level_monsters: object;
-	fn strcpy(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
 	fn strcat(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
 	fn md_getenv() -> *mut libc::c_char;
 	fn md_df() -> libc::c_char;
@@ -59,9 +58,9 @@ extern "C" {
 	static mut m_moves: libc::c_short;
 	static mut msg_cleared: libc::c_char;
 	fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> libc::c_int;
-	fn strlen(_: *const libc::c_char) -> libc::c_ulong;
 }
 
+use libc::strcpy;
 use crate::prelude::*;
 
 
@@ -222,27 +221,18 @@ pub struct rogue_time {
 pub static mut write_failed: libc::c_short = 0 as libc::c_int as libc::c_short;
 
 #[no_mangle]
-pub unsafe extern "C" fn save_game() -> libc::c_int {
-	let mut fname: [libc::c_char; 64] = [0; 64];
-	if get_input_line(
-		b"file name?\0" as *const u8 as *const libc::c_char,
-		save_file,
-		fname.as_mut_ptr(),
-		b"game not saved\0" as *const u8 as *const libc::c_char,
-		0 as libc::c_int,
-		1 as libc::c_int,
-	) == 0
-	{
+pub unsafe extern "C" fn save_game(settings: &Settings) {
+	let file_name = get_input_line("file name?", settings.save_file.map(|f| &f as &str), Some("game not saved"), false, true);
+	if file_name.is_empty() {
 		return;
 	}
 	check_message();
-	message(fname.as_mut_ptr(), 0 as libc::c_int);
-	save_into_file(fname.as_mut_ptr());
-	panic!("Reached end of non-void function without returning");
+	message(&file_name, 0);
+	save_into_file(&file_name);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn restore(fname: &str) -> libc::c_int {
+pub unsafe extern "C" fn restore(fname: &str, settings: &Settings) -> libc::c_int {
 	let mut fp: *mut FILE = 0 as *mut FILE;
 	let mut saved_time: rogue_time = rogue_time {
 		year: 0,
@@ -293,9 +283,9 @@ pub unsafe extern "C" fn restore(fname: &str) -> libc::c_int {
 		::core::mem::size_of::<libc::c_short>() as libc::c_ulong,
 	);
 	read_string(hunger_str.as_mut_ptr(), fp);
-	strcpy(tbuf.as_mut_ptr(), login_name.as_mut_ptr());
-	read_string(login_name.as_mut_ptr(), fp);
-	if strcmp(tbuf.as_mut_ptr(), login_name.as_mut_ptr()) != 0 {
+	strcpy(tbuf.as_mut_ptr(), &settings.login_name);
+	read_string(&settings.login_name, fp);
+	if strcmp(tbuf.as_mut_ptr(), &settings.login_name) != 0 {
 		clean_up(
 			b"you're not the original player\0" as *const u8 as *const libc::c_char,
 		);
