@@ -42,34 +42,6 @@ static mut rand_deg: libc::c_int = 31 as libc::c_int;
 static mut rand_sep: libc::c_int = 3 as libc::c_int;
 static mut end_ptr: *mut libc::c_long = 0 as *const libc::c_long as *mut libc::c_long;
 
-#[no_mangle]
-pub unsafe extern "C" fn srrandom(mut x: libc::c_int) -> libc::c_int {
-	let mut i: libc::c_int = 0;
-	*state.offset(0 as libc::c_int as isize) = x as libc::c_long;
-	if rand_type != 0 as libc::c_int {
-		i = 1 as libc::c_int;
-		while i < rand_deg {
-			*state
-				.offset(
-					i as isize,
-				) = 1103515245 as libc::c_int as libc::c_long
-				* *state.offset((i - 1 as libc::c_int) as isize)
-				+ 12345 as libc::c_int as libc::c_long;
-			i += 1;
-			i;
-		}
-		fptr = &mut *state.offset(rand_sep as isize) as *mut libc::c_long;
-		rptr = &mut *state.offset(0 as libc::c_int as isize) as *mut libc::c_long;
-		i = 0 as libc::c_int;
-		while i < 10 as libc::c_int * rand_deg {
-			rrandom();
-			i += 1;
-			i;
-		}
-	}
-	panic!("Reached end of non-void function without returning");
-}
-
 pub unsafe extern "C" fn rrandom() -> libc::c_long {
 	let mut i_0: libc::c_long = 0;
 	if rand_type == 0 as libc::c_int {

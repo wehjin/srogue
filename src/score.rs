@@ -9,7 +9,6 @@ extern "C" {
 	fn wclear(_: *mut WINDOW) -> libc::c_int;
 	fn winch(_: *mut WINDOW) -> chtype;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	fn wrefresh(_: *mut WINDOW) -> libc::c_int;
 	fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> *mut FILE;
 	fn fread(
 		_: *mut libc::c_void,
@@ -42,14 +41,10 @@ extern "C" {
 	) -> *mut libc::c_char;
 	fn strcat(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
 	fn lget_number() -> libc::c_long;
-	static mut login_name: [libc::c_char; 0];
 	static mut m_names: [*mut libc::c_char; 0];
 	static mut max_level: libc::c_short;
-	static mut score_only: libc::c_char;
-	static mut show_skull: libc::c_char;
 	static mut msg_cleared: libc::c_char;
 	static mut byebye_string: *mut libc::c_char;
-	static mut nick_name: *mut libc::c_char;
 	fn strlen(_: *const libc::c_char) -> libc::c_ulong;
 	fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> libc::c_int;
 }
@@ -557,7 +552,7 @@ pub unsafe extern "C" fn quit(mut from_intrpt: libc::c_char) -> libc::c_int {
 			}
 			msg_cleared = mc;
 			wmove(stdscr, orow as libc::c_int, ocol as libc::c_int);
-			wrefresh(stdscr);
+			ncurses::refresh();
 		}
 		return;
 	}

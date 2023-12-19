@@ -228,9 +228,6 @@ pub static mut party_counter: libc::c_short = 0;
 #[no_mangle]
 pub static mut free_list: *mut object = 0 as *const object as *mut object;
 #[no_mangle]
-pub static mut fruit: *mut libc::c_char = b"slime-mold \0" as *const u8
-	as *const libc::c_char as *mut libc::c_char;
-#[no_mangle]
 pub static mut rogue: fighter = {
 	let mut init = fight {
 		armor: 0 as *const object as *mut object,

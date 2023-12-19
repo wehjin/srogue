@@ -42,7 +42,6 @@ extern "C" {
 	static mut cur_level: libc::c_short;
 	static mut max_level: libc::c_short;
 	static mut hunger_str: [libc::c_char; 0];
-	static mut login_name: [libc::c_char; 0];
 	static mut party_room: libc::c_short;
 	static mut party_counter: libc::c_short;
 	static mut foods: libc::c_short;
@@ -57,7 +56,6 @@ extern "C" {
 	static mut haste_self: libc::c_short;
 	static mut see_invisible: libc::c_char;
 	static mut wizard: libc::c_char;
-	static mut score_only: libc::c_char;
 	static mut m_moves: libc::c_short;
 	static mut msg_cleared: libc::c_char;
 	fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> libc::c_int;
@@ -222,9 +220,6 @@ pub struct rogue_time {
 
 #[no_mangle]
 pub static mut write_failed: libc::c_short = 0 as libc::c_int as libc::c_short;
-#[no_mangle]
-pub static mut save_file: *mut libc::c_char = b"\0" as *const u8 as *const libc::c_char
-	as *mut libc::c_char;
 
 #[no_mangle]
 pub unsafe extern "C" fn save_game() -> libc::c_int {
@@ -247,7 +242,7 @@ pub unsafe extern "C" fn save_game() -> libc::c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn restore(mut fname: *mut libc::c_char) -> libc::c_int {
+pub unsafe extern "C" fn restore(fname: &str) -> libc::c_int {
 	let mut fp: *mut FILE = 0 as *mut FILE;
 	let mut saved_time: rogue_time = rogue_time {
 		year: 0,

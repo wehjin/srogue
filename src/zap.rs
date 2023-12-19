@@ -16,7 +16,6 @@ extern "C" {
 	fn object_at() -> *mut object;
 	fn xxx() -> libc::c_long;
 	static mut being_held: libc::c_char;
-	static mut score_only: libc::c_char;
 	static mut detect_monster: libc::c_char;
 	fn strlen(_: *const libc::c_char) -> libc::c_ulong;
 	fn strncmp(

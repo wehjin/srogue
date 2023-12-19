@@ -8,7 +8,6 @@ extern "C" {
 	fn wclrtoeol(_: *mut WINDOW) -> libc::c_int;
 	fn winch(_: *mut WINDOW) -> chtype;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	fn wrefresh(_: *mut WINDOW) -> libc::c_int;
 	static mut curscr: *mut WINDOW;
 	static mut stdscr: *mut WINDOW;
 	fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> *mut FILE;
@@ -158,7 +157,7 @@ pub unsafe extern "C" fn message(
 				-(1 as libc::c_int),
 			);
 		};
-		wrefresh(stdscr);
+		ncurses::refresh();
 		wait_for_ack();
 		check_message();
 	}
@@ -171,7 +170,7 @@ pub unsafe extern "C" fn message(
 		waddnstr(stdscr, msg, -(1 as libc::c_int));
 	};
 	waddch(stdscr, ' ' as i32 as chtype);
-	wrefresh(stdscr);
+	ncurses::refresh();
 	msg_cleared = 0 as libc::c_int as libc::c_char;
 	msg_col = strlen(msg) as libc::c_short;
 	cant_int = 0 as libc::c_int as libc::c_char;
@@ -200,7 +199,7 @@ pub unsafe fn check_message() {
 		0 as libc::c_int,
 	);
 	wclrtoeol(stdscr);
-	wrefresh(stdscr);
+	ncurses::refresh();
 	msg_cleared = 1;
 }
 
@@ -233,7 +232,7 @@ pub unsafe extern "C" fn get_input_line(
 			0 as libc::c_int,
 			n as libc::c_int + i as libc::c_int + 1 as libc::c_int,
 		);
-		wrefresh(stdscr);
+		ncurses::refresh();
 	}
 	loop {
 		ch = rgetchar() as libc::c_short;
@@ -272,7 +271,7 @@ pub unsafe extern "C" fn get_input_line(
 			i -= 1;
 			i;
 		}
-		wrefresh(stdscr);
+		ncurses::refresh();
 	}
 	check_message();
 	if add_blank != 0 {
@@ -300,8 +299,8 @@ pub unsafe extern "C" fn get_input_line(
 	return i as libc::c_int;
 }
 
-const SAVE_SCREEN_CHAR: libc::c_int = 'X' as libc::c_int;
-const REFRESH_SCREEN_CHAR: libc::c_int = 0o022 as libc::c_int;
+const X_CHAR: libc::c_int = 'X' as libc::c_int;
+const CTRL_R_CHAR: libc::c_int = 0o022 as libc::c_int;
 
 pub unsafe fn rgetchar() -> libc::c_int {
 	let mut done = false;
@@ -309,8 +308,8 @@ pub unsafe fn rgetchar() -> libc::c_int {
 	while !done {
 		ch = libc::getchar();
 		match ch {
-			REFRESH_SCREEN_CHAR => { wrefresh(curscr); }
-			SAVE_SCREEN_CHAR => { save_screen(); }
+			CTRL_R_CHAR => { ncurses::wrefresh(ncurses::curscr()); }
+			X_CHAR => { save_screen(); }
 			_ => { done = true; }
 		}
 	}
@@ -503,7 +502,7 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: libc::c_int) -> libc::c_int 
 		};
 		wclrtoeol(stdscr);
 	}
-	wrefresh(stdscr);
+	ncurses::refresh();
 	panic!("Reached end of non-void function without returning");
 }
 

@@ -5,17 +5,13 @@ extern "C" {
 	pub type ldat;
 	fn cbreak() -> libc::c_int;
 	fn endwin() -> libc::c_int;
-	fn initscr() -> *mut WINDOW;
 	fn noecho() -> libc::c_int;
 	fn nonl() -> libc::c_int;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	fn wrefresh(_: *mut WINDOW) -> libc::c_int;
 	fn printf(_: *const libc::c_char, _: ...) -> libc::c_int;
 	static mut __stdoutp: *mut FILE;
 	fn fflush(_: *mut FILE) -> libc::c_int;
 	static mut stdscr: *mut WINDOW;
-	static mut COLS: libc::c_int;
-	static mut LINES: libc::c_int;
 	static mut rogue: fighter;
 	static mut level_objects: object;
 	static mut level_monsters: object;
@@ -25,15 +21,11 @@ extern "C" {
 		_: *const libc::c_char,
 		_: libc::c_ulong,
 	) -> *mut libc::c_char;
-	fn md_gln() -> *mut libc::c_char;
 	fn md_getenv() -> *mut libc::c_char;
 	fn md_malloc() -> *mut libc::c_char;
 	fn add_to_pack() -> *mut object;
 	fn alloc_object() -> *mut object;
-	static mut fruit: *mut libc::c_char;
-	static mut save_file: *mut libc::c_char;
 	static mut party_counter: libc::c_short;
-	static mut jump: libc::c_char;
 	fn strlen(_: *const libc::c_char) -> libc::c_ulong;
 	fn strncmp(
 		_: *const libc::c_char,
@@ -42,6 +34,8 @@ extern "C" {
 	) -> libc::c_int;
 }
 
+use std::{env, io};
+use std::io::Write;
 use crate::prelude::*;
 
 pub type __int64_t = libc::c_longlong;
@@ -166,28 +160,83 @@ pub struct fight {
 
 pub type fighter = fight;
 
-#[no_mangle]
-pub static mut login_name: [libc::c_char; 30] = [0; 30];
-#[no_mangle]
-pub static mut nick_name: *mut libc::c_char = b"\0" as *const u8 as *const libc::c_char
-	as *mut libc::c_char;
-#[no_mangle]
-pub static mut rest_file: *mut libc::c_char = 0 as *const libc::c_char
-	as *mut libc::c_char;
+
+pub struct Settings {
+	pub score_only: bool,
+	pub rest_file: Option<String>,
+	pub fruit: String,
+	pub save_file: Option<String>,
+	pub jump: bool,
+	pub nick_name: Option<String>,
+	pub ask_quit: bool,
+	pub show_skull: bool,
+	pub login_name: String,
+}
+
+impl Settings {
+	pub fn load() -> Self {
+		let mut settings = Settings {
+			score_only: false,
+			rest_file: None,
+			fruit: "slime-mold ".to_string(),
+			save_file: None,
+			jump: true,
+			nick_name: None,
+			ask_quit: true,
+			show_skull: true,
+			login_name: "PLACEHOLDER".to_string(),
+		};
+		settings.do_args();
+		settings.do_opts();
+		settings
+	}
+
+	fn do_args(&mut self) {
+		let args = env::args();
+		for s in &args[1..] {
+			if s.starts_with('-') {
+				if s[1..].find('s').is_some() {
+					self.score_only = true;
+				}
+			} else {
+				self.rest_file = Some(s.clone());
+			}
+		}
+	}
+
+	fn do_opts(&mut self) {
+		const DIVIDER: char = ',';
+		if let Ok(opts) = std::env::var("ROGUEOPTS") {
+			const FRUIT_EQ: &'static str = "fruit=";
+			const FILE_EQ: &'static str = "file=";
+			const NAME: &'static str = "name=";
+
+			for opt in opts.split(DIVIDER) {
+				let opt = opt.trim();
+				if opt.starts_with(FRUIT_EQ) {
+					self.fruit = format!("{} ", opt[FRUIT_EQ.len()..].to_string());
+				} else if opt.starts_with(FILE_EQ) {
+					self.save_file = Some(opt[FILE_EQ.len()..].to_string());
+				} else if opt == "nojump" {
+					self.jump = false;
+				} else if opt.starts_with(NAME) {
+					self.nick_name = Some(opt[NAME.len()..].to_string())
+				} else if opt == "noaskquit" {
+					self.ask_quit = false;
+				} else if opt == "noskull" || opt == "notomb" {
+					self.show_skull = false;
+				}
+			}
+		}
+	}
+}
+
 #[no_mangle]
 pub static mut cant_int: libc::c_char = 0 as libc::c_int as libc::c_char;
 #[no_mangle]
 pub static mut did_int: libc::c_char = 0 as libc::c_int as libc::c_char;
 #[no_mangle]
-pub static mut score_only: libc::c_char = 0;
-#[no_mangle]
-pub static mut init_curses: bool = false;
-#[no_mangle]
 pub static mut save_is_interactive: bool = true;
-#[no_mangle]
-pub static mut ask_quit: libc::c_char = 1 as libc::c_int as libc::c_char;
-#[no_mangle]
-pub static mut show_skull: libc::c_char = 1 as libc::c_int as libc::c_char;
 #[no_mangle]
 pub static mut error_file: *mut libc::c_char = b"rogue.esave\0" as *const u8
 	as *const libc::c_char as *mut libc::c_char;
@@ -195,50 +244,71 @@ pub static mut error_file: *mut libc::c_char = b"rogue.esave\0" as *const u8
 pub static mut byebye_string: *mut libc::c_char = b"Okay, bye bye!\0" as *const u8
 	as *const libc::c_char as *mut libc::c_char;
 
-#[no_mangle]
-pub unsafe extern "C" fn init(
-	mut argc: libc::c_int,
-	mut argv: *mut *mut libc::c_char,
-) -> libc::c_int {
-	let mut pn: *mut libc::c_char = 0 as *mut libc::c_char;
-	let mut seed: libc::c_int = 0;
-	do_args(argc, argv);
-	do_opts();
-	pn = md_gln();
-	if pn.is_null() || strlen(pn) >= 30 as libc::c_int as libc::c_ulong {
-		clean_up(b"Hey!  Who are you?\0" as *const u8 as *const libc::c_char);
+pub struct GameState {
+	pub settings: Settings,
+	pub init_curses: bool,
+	seed: [u8; 32],
+}
+
+impl GameState {
+	pub fn new(settings: Settings) -> Self {
+		GameState {
+			settings,
+			init_curses: false,
+			seed: [1u8; 32],
+		}
 	}
-	strcpy(login_name.as_mut_ptr(), pn);
-	if score_only == 0 && rest_file.is_null() {
-		printf(
-			b"Hello %s, just a moment while I dig the dungeon...\0" as *const u8
-				as *const libc::c_char,
-			if *nick_name.offset(0 as libc::c_int as isize) as libc::c_int != 0 {
-				nick_name
-			} else {
-				login_name.as_mut_ptr()
-			},
-		);
-		fflush(__stdoutp);
+
+	pub fn set_seed(&mut self, seed: u32) {
+		let bytes = {
+			let mut parts: [u8; 4] = [0; 4];
+			for i in 0..4 {
+				parts[i] = (seed >> (i * 8)) as u8;
+			}
+			parts
+		};
+		for i in 0..self.seed.len() {
+			self.seed[i] = bytes[i % bytes.len()]
+		}
 	}
-	initscr();
-	if LINES < 24 as libc::c_int || COLS < 80 as libc::c_int {
-		clean_up(
-			b"must be played on 24 x 80 or better screen\0" as *const u8
-				as *const libc::c_char,
-		);
+}
+
+pub unsafe fn init() -> bool {
+	let mut settings = Settings::load();
+	match md_get_login_name() {
+		None => {
+			clean_up(b"Hey!  Who are you?\0" as *const u8 as *const libc::c_char);
+		}
+		Some(name) => {
+			settings.login_name = name;
+		}
 	}
+	if !settings.score_only && settings.rest_file.is_none() {
+		print!("Hello {}, just a moment while I dig the dungeon...", match &settings.nick_name {
+			None => &settings.login_name,
+			Some(name) => name,
+		});
+		io::stdout().flush().expect("flush stdout");
+	}
+
+	ncurses::initscr();
+	if ncurses::LINES() < 24 || ncurses::COLS() < 80 {
+		clean_up(b"must be played on 24 x 80 or better screen\0" as *const u8 as *const libc::c_char);
+	}
+
+	let mut game = GameState::new(settings);
 	start_window();
-	init_curses = 1 as libc::c_int as libc::c_char;
+	game.init_curses = true;
+
 	md_heed_signals();
-	if score_only != 0 {
+
+	if settings.score_only {
 		put_scores(0 as *mut object, 0 as libc::c_int);
 	}
-	seed = md_gseed();
-	srrandom(seed);
-	if !rest_file.is_null() {
+	game.set_seed(md_get_seed());
+	if let Some(rest_file) = &game.settings.rest_file {
 		restore(rest_file);
-		return 1 as libc::c_int;
+		return true;
 	}
 	mix_colors();
 	get_wand_and_ring_materials();
@@ -248,20 +318,28 @@ pub unsafe extern "C" fn init(
 	player_init();
 	party_counter = get_rand(1 as libc::c_int, 10 as libc::c_int) as libc::c_short;
 	ring_stats(0 as libc::c_int);
-	return 0 as libc::c_int;
+	return false;
 }
 
 pub unsafe fn clean_up(estr: *const libc::c_char) {
 	if save_is_interactive {
 		if init_curses {
-			wmove(stdscr, DROWS - 1, 0);
-			wrefresh(stdscr);
+			ncurses::wmove(ncurses::stdscr(), DROWS - 1, 0);
+			ncurses::refresh();
 			stop_window();
 		}
 		printf(b"\n%s\n" as *const u8 as *const libc::c_char, estr);
 	}
-	endwin();
+	ncurses::endwin();
 	md_exit(0);
+}
+
+
+pub fn start_window() {
+	ncurses::cbreak();
+	ncurses::noecho();
+	ncurses::nonl();
+	md_control_keybord(0);
 }
 
 pub unsafe fn stop_window() {

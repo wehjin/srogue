@@ -3,7 +3,6 @@
 extern "C" {
 	pub type ldat;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	fn wrefresh(_: *mut WINDOW) -> libc::c_int;
 	static mut stdscr: *mut WINDOW;
 	static mut rogue: fighter;
 	static mut level_objects: object;
@@ -109,7 +108,7 @@ pub unsafe extern "C" fn play_level() -> libc::c_int {
 			return;
 		}
 		wmove(stdscr, rogue.row as libc::c_int, rogue.col as libc::c_int);
-		wrefresh(stdscr);
+		ncurses::refresh();
 		ch = rgetchar() as libc::c_short;
 		check_message();
 		count = 0 as libc::c_int;
@@ -328,7 +327,7 @@ pub unsafe extern "C" fn play_level() -> libc::c_int {
 				}
 			}
 			wmove(stdscr, rogue.row as libc::c_int, rogue.col as libc::c_int);
-			wrefresh(stdscr);
+			ncurses::refresh();
 			loop {
 				if count < 100 as libc::c_int {
 					count = 10 as libc::c_int * count + (ch as libc::c_int - '0' as i32);

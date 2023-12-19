@@ -7,7 +7,6 @@ extern "C" {
 	fn wclrtoeol(_: *mut WINDOW) -> libc::c_int;
 	fn winch(_: *mut WINDOW) -> chtype;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	fn wrefresh(_: *mut WINDOW) -> libc::c_int;
 	fn fgets(_: *mut libc::c_char, _: libc::c_int, _: *mut FILE) -> *mut libc::c_char;
 	fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> *mut FILE;
 	static mut stdscr: *mut WINDOW;

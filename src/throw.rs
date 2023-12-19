@@ -5,7 +5,6 @@ extern "C" {
 	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
 	fn winch(_: *mut WINDOW) -> chtype;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	fn wrefresh(_: *mut WINDOW) -> libc::c_int;
 	fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
 	static mut stdscr: *mut WINDOW;
 	static mut rogue: fighter;
@@ -170,7 +169,7 @@ pub unsafe extern "C" fn throw() -> libc::c_int {
 	} else {
 		waddch(stdscr, rogue.fchar as chtype);
 	};
-	wrefresh(stdscr);
+	ncurses::refresh();
 	if rogue_can_see(row as libc::c_int, col as libc::c_int) != 0
 		&& (row as libc::c_int != rogue.row as libc::c_int
 		|| col as libc::c_int != rogue.col as libc::c_int)
@@ -253,7 +252,7 @@ pub unsafe extern "C" fn get_thrown_at_monster(
 					waddch(stdscr, ch as chtype);
 				};
 			}
-			wrefresh(stdscr);
+			ncurses::refresh();
 		}
 		orow = *row;
 		ocol = *col;

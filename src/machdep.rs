@@ -1,5 +1,7 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
+use std::process;
+
 extern "C" {
 	fn localtime(_: *const time_t) -> *mut tm;
 	fn stat(_: *const libc::c_char, _: *mut stat) -> libc::c_int;
@@ -15,8 +17,6 @@ extern "C" {
 	fn getuid() -> uid_t;
 	fn sleep(_: libc::c_uint) -> libc::c_uint;
 	fn unlink(_: *const libc::c_char) -> libc::c_int;
-	fn tcgetattr(_: libc::c_int, _: *mut termios) -> libc::c_int;
-	fn tcsetattr(_: libc::c_int, _: libc::c_int, _: *const termios) -> libc::c_int;
 	fn getpwuid(_: uid_t) -> *mut passwd;
 	fn malloc(_: libc::c_ulong) -> *mut libc::c_void;
 	fn exit(_: libc::c_int) -> !;
@@ -157,46 +157,9 @@ pub unsafe extern "C" fn md_slurp() -> libc::c_int {
 	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn md_control_keybord(mut mode: libc::c_short) -> libc::c_int {
-	static mut called_before: libc::c_char = 0 as libc::c_int as libc::c_char;
-	static mut tc_orig: termios = termios {
-		c_iflag: 0,
-		c_oflag: 0,
-		c_cflag: 0,
-		c_lflag: 0,
-		c_cc: [0; 20],
-		c_ispeed: 0,
-		c_ospeed: 0,
-	};
-	static mut tc_temp: termios = termios {
-		c_iflag: 0,
-		c_oflag: 0,
-		c_cflag: 0,
-		c_lflag: 0,
-		c_cc: [0; 20],
-		c_ispeed: 0,
-		c_ospeed: 0,
-	};
-	signal(
-		18 as libc::c_int,
-		::core::mem::transmute::<
-			libc::intptr_t,
-			Option::<unsafe extern "C" fn(libc::c_int) -> ()>,
-		>(1 as libc::c_int as libc::intptr_t),
-	);
-	if called_before == 0 {
-		called_before = 1 as libc::c_int as libc::c_char;
-		tcgetattr(0 as libc::c_int, &mut tc_orig);
-	}
-	tc_temp = tc_orig;
-	if mode == 0 {
-		tc_temp.c_cc[3 as libc::c_int as usize] = -(1 as libc::c_int) as cc_t;
-		tc_temp.c_cc[12 as libc::c_int as usize] = -(1 as libc::c_int) as cc_t;
-		tc_temp.c_cc[13 as libc::c_int as usize] = -(1 as libc::c_int) as cc_t;
-	}
-	tcsetattr(0 as libc::c_int, 0 as libc::c_int, &mut tc_temp);
-	panic!("Reached end of non-void function without returning");
+pub fn md_control_keybord(mut mode: libc::c_short) {
+	// Stubbing this out allows tty driver so steal some commands like ^Y.
+	// See machdep.c for more details
 }
 
 #[no_mangle]
@@ -401,14 +364,16 @@ pub unsafe extern "C" fn md_df(mut fname: *mut libc::c_char) -> libc::c_char {
 	return 1 as libc::c_int as libc::c_char;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn md_gln() -> *mut libc::c_char {
-	let mut p: *mut passwd = getpwuid(getuid());
-	if !p.is_null() {
-		return (*p).pw_name;
+
+pub fn md_get_login_name() -> Option<String> {
+	let username = whoami::username();
+	if username.is_empty() {
+		None
+	} else {
+		Some(username)
 	}
-	return 0 as *mut libc::c_char;
 }
+
 
 #[no_mangle]
 pub unsafe extern "C" fn md_sleep(mut nsecs: libc::c_int) -> libc::c_int {
@@ -429,12 +394,10 @@ pub unsafe extern "C" fn md_malloc(mut n: libc::c_int) -> *mut libc::c_char {
 	return t as *mut libc::c_char;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn md_gseed() -> libc::c_int {
-	return getpid();
+pub fn md_get_seed() -> u32 {
+	process::id()
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn md_exit(mut status: libc::c_int) -> libc::c_int {
-	exit(status);
+pub fn md_exit(status: i32) {
+	process::exit(status)
 }

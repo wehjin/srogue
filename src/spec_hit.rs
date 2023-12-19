@@ -5,7 +5,6 @@ extern "C" {
 	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
 	fn wattrset(_: *mut WINDOW, _: libc::c_int) -> libc::c_int;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	fn wrefresh(_: *mut WINDOW) -> libc::c_int;
 	fn sprintf(_: *mut libc::c_char, _: *const libc::c_char, _: ...) -> libc::c_int;
 	static mut stdscr: *mut WINDOW;
 	static mut rogue: fighter;

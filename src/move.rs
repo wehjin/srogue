@@ -4,7 +4,6 @@ extern "C" {
 	pub type ldat;
 	fn waddch(_: *mut WINDOW, _: chtype) -> libc::c_int;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	fn wrefresh(_: *mut WINDOW) -> libc::c_int;
 	static mut stdscr: *mut WINDOW;
 	static mut rogue: fighter;
 	static mut dungeon: [[libc::c_ushort; 80]; 24];
@@ -108,8 +107,6 @@ pub type fighter = fight;
 
 #[no_mangle]
 pub static mut m_moves: libc::c_short = 0 as libc::c_int as libc::c_short;
-#[no_mangle]
-pub static mut jump: libc::c_char = 1 as libc::c_int as libc::c_char;
 #[no_mangle]
 pub static mut you_can_move_again: *mut libc::c_char = b"you can move again\0"
 	as *const u8 as *const libc::c_char as *mut libc::c_char;
@@ -220,7 +217,7 @@ pub unsafe extern "C" fn one_move_rogue(mut dirch: libc::c_short, pickup: bool) 
 		waddch(stdscr, rogue.fchar as chtype);
 	};
 	if jump == 0 {
-		wrefresh(stdscr);
+		ncurses::refresh();
 	}
 	rogue.row = row;
 	rogue.col = col;

@@ -24,7 +24,6 @@ extern "C" {
 	static mut cur_room: libc::c_short;
 	static mut level_points: [libc::c_long; 0];
 	static mut being_held: libc::c_char;
-	static mut fruit: *mut libc::c_char;
 	static mut you_can_move_again: *mut libc::c_char;
 	static mut sustain_strength: libc::c_char;
 }
