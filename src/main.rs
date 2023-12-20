@@ -7,7 +7,7 @@ extern "C" {
 	static mut party_room: libc::c_short;
 }
 
-use std::process;
+use std::sync::OnceLock;
 use crate::prelude::*;
 
 mod message;
@@ -39,27 +39,40 @@ use libc::{setuid, perror, geteuid, getuid};
 
 pub mod odds;
 
+pub struct User {
+	pub saved_uid: uid_t,
+	pub true_uid: uid_t,
+}
+
+pub fn user() -> &'static User {
+	static USER: OnceLock<User> = OnceLock::new();
+	USER.get_or_init(|| unsafe {
+		User { saved_uid: geteuid(), true_uid: getuid() }
+	})
+}
+
 #[no_mangle]
-pub unsafe extern "C" fn turn_into_games(saved_uid: uid_t) {
-	if setuid(saved_uid) == -(1 as libc::c_int) {
+pub unsafe extern "C" fn turn_into_games() {
+	if setuid(user().saved_uid) == -1 {
 		perror(b"setuid(restore)\0" as *const u8 as *const libc::c_char);
 		clean_up(b"\0" as *const u8 as *const libc::c_char);
 	}
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn turn_into_user(true_uid: uid_t) {
-	if setuid(true_uid) == -(1 as libc::c_int) {
+pub unsafe extern "C" fn turn_into_user() {
+	if setuid(user().true_uid) == -1 {
 		perror(b"setuid(restore)\0" as *const u8 as *const libc::c_char);
 		clean_up(b"\0" as *const u8 as *const libc::c_char);
 	}
 }
+
+pub mod console;
+pub mod settings;
 
 pub fn main() {
 	unsafe {
-		let saved_uid = geteuid();
-		let true_uid = getuid();
-		setuid(true_uid);
+		setuid(user().true_uid);
 
 		let mut level_ready = init();
 		loop {

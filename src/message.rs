@@ -26,7 +26,6 @@ extern "C" {
 }
 
 use libc::{c_int, sprintf};
-use ncurses::ll::mvaddstr;
 use crate::prelude::*;
 
 pub type __int64_t = libc::c_longlong;
@@ -168,9 +167,9 @@ pub unsafe extern "C" fn get_input_line(prompt: &str, insert: Option<&str>, if_c
 
 	let mut line: Vec<char> = Vec::new();
 	let n = prompt.len();
-	if let Some(insert) = &insert {
+	if let Some(insert) = insert {
 		ncurses::mvaddstr(0, (n + 1) as i32, insert);
-		line.extend(insert.as_bytes());
+		line.extend(insert.chars());
 		ncurses::mv(0, (n + line.len() + 1) as i32);
 		ncurses::refresh();
 	}
@@ -203,7 +202,7 @@ pub unsafe extern "C" fn get_input_line(prompt: &str, insert: Option<&str>, if_c
 		line.push(' ');
 	} else {
 		while let Some(' ') = line.last() {
-			line.pop()
+			line.pop();
 		}
 	}
 	if ch == CANCEL || line.is_empty() || (line.len() == 1 && add_blank) {

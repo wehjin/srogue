@@ -1137,7 +1137,7 @@ pub unsafe fn mv_monster(monster: &mut object, row: isize, col: isize) {
 		return;
 	}
 	if mon_can_go(monster, rogue.row as usize, rogue.col as usize) {
-		mon_hit(monster, 0 as *mut libc::c_char, 0);
+		mon_hit(monster, None, 0);
 		return;
 	}
 	if monster.m_flags.flames && flame_broil(monster) {
@@ -1450,7 +1450,7 @@ pub unsafe extern "C" fn create_monster() {
 			wake_up(&mut *monster);
 		}
 	} else {
-		message(b"you hear a faint cry of anguish in the distance\0" as *const u8 as *const libc::c_char, 0);
+		message("you hear a faint cry of anguish in the distance", 0);
 	}
 }
 
@@ -1562,10 +1562,7 @@ pub unsafe fn no_room_for_monster(rn: usize) -> bool {
 #[no_mangle]
 pub unsafe extern "C" fn aggravate() {
 	let mut monster: *mut object = 0 as *mut object;
-	message(
-		b"you hear a high pitched humming noise\0" as *const u8 as *const libc::c_char,
-		0 as libc::c_int,
-	);
+	message("you hear a high pitched humming noise", 0 as libc::c_int);
 	monster = level_monsters.next_object;
 	while !monster.is_null() {
 		wake_up(&mut *monster);

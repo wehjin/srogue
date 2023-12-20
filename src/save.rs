@@ -62,6 +62,7 @@ extern "C" {
 
 use libc::strcpy;
 use crate::prelude::*;
+use crate::settings::{login_name, save_file, score_only};
 
 
 pub type __int64_t = libc::c_longlong;
@@ -211,8 +212,14 @@ pub struct rogue_time {
 pub static mut write_failed: libc::c_short = 0 as libc::c_int as libc::c_short;
 
 #[no_mangle]
-pub unsafe extern "C" fn save_game(settings: &Settings) {
-	let file_name = get_input_line("file name?", settings.save_file.map(|f| &f as &str), Some("game not saved"), false, true);
+pub unsafe extern "C" fn save_game() {
+	let file_name = get_input_line(
+		"file name?",
+		save_file().map(|f| &f as &str),
+		Some("game not saved"),
+		false,
+		true,
+	);
 	if file_name.is_empty() {
 		return;
 	}
@@ -222,7 +229,7 @@ pub unsafe extern "C" fn save_game(settings: &Settings) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn restore(fname: &str, settings: &Settings) -> libc::c_int {
+pub unsafe extern "C" fn restore(fname: &str) -> libc::c_int {
 	let mut fp: *mut FILE = 0 as *mut FILE;
 	let mut saved_time: rogue_time = rogue_time {
 		year: 0,
@@ -273,9 +280,9 @@ pub unsafe extern "C" fn restore(fname: &str, settings: &Settings) -> libc::c_in
 		::core::mem::size_of::<libc::c_short>() as libc::c_ulong,
 	);
 	read_string(hunger_str.as_mut_ptr(), fp);
-	strcpy(tbuf.as_mut_ptr(), &settings.login_name);
-	read_string(&settings.login_name, fp);
-	if strcmp(tbuf.as_mut_ptr(), &settings.login_name) != 0 {
+	strcpy(tbuf.as_mut_ptr(), &login_name());
+	read_string(&login_name(), fp);
+	if strcmp(tbuf.as_mut_ptr(), &login_name()) != 0 {
 		clean_up(
 			b"you're not the original player\0" as *const u8 as *const libc::c_char,
 		);
@@ -389,7 +396,7 @@ pub unsafe extern "C" fn restore(fname: &str, settings: &Settings) -> libc::c_in
 	);
 	r_read(
 		fp,
-		settings.score_only,
+		score_only(),
 		::core::mem::size_of::<libc::c_char>() as libc::c_ulong,
 	);
 	r_read(

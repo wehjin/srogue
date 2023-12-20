@@ -4,7 +4,6 @@ extern "C" {
 	pub type __sFILEX;
 	pub type ldat;
 	fn cbreak() -> libc::c_int;
-	fn endwin() -> libc::c_int;
 	fn noecho() -> libc::c_int;
 	fn nonl() -> libc::c_int;
 	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
@@ -32,9 +31,12 @@ extern "C" {
 	) -> libc::c_int;
 }
 
-use std::{env, io};
+use std::{io};
 use std::io::Write;
+use settings::nick_name;
+use crate::{console, settings};
 use crate::prelude::*;
+use crate::settings::{rest_file, score_only};
 
 pub type __int64_t = libc::c_longlong;
 pub type __darwin_off_t = __int64_t;
@@ -159,76 +161,6 @@ pub struct fight {
 pub type fighter = fight;
 
 
-pub struct Settings {
-	pub score_only: bool,
-	pub rest_file: Option<String>,
-	pub fruit: String,
-	pub save_file: Option<String>,
-	pub jump: bool,
-	pub nick_name: Option<String>,
-	pub ask_quit: bool,
-	pub show_skull: bool,
-	pub login_name: String,
-}
-
-impl Settings {
-	pub fn load() -> Self {
-		let mut settings = Settings {
-			score_only: false,
-			rest_file: None,
-			fruit: "slime-mold ".to_string(),
-			save_file: None,
-			jump: true,
-			nick_name: None,
-			ask_quit: true,
-			show_skull: true,
-			login_name: "PLACEHOLDER".to_string(),
-		};
-		settings.do_args();
-		settings.do_opts();
-		settings
-	}
-
-	fn do_args(&mut self) {
-		let args = env::args();
-		for s in &args[1..] {
-			if s.starts_with('-') {
-				if s[1..].find('s').is_some() {
-					self.score_only = true;
-				}
-			} else {
-				self.rest_file = Some(s.clone());
-			}
-		}
-	}
-
-	fn do_opts(&mut self) {
-		const DIVIDER: char = ',';
-		if let Ok(opts) = std::env::var("ROGUEOPTS") {
-			const FRUIT_EQ: &'static str = "fruit=";
-			const FILE_EQ: &'static str = "file=";
-			const NAME: &'static str = "name=";
-
-			for opt in opts.split(DIVIDER) {
-				let opt = opt.trim();
-				if opt.starts_with(FRUIT_EQ) {
-					self.fruit = format!("{} ", opt[FRUIT_EQ.len()..].to_string());
-				} else if opt.starts_with(FILE_EQ) {
-					self.save_file = Some(opt[FILE_EQ.len()..].to_string());
-				} else if opt == "nojump" {
-					self.jump = false;
-				} else if opt.starts_with(NAME) {
-					self.nick_name = Some(opt[NAME.len()..].to_string())
-				} else if opt == "noaskquit" {
-					self.ask_quit = false;
-				} else if opt == "noskull" || opt == "notomb" {
-					self.show_skull = false;
-				}
-			}
-		}
-	}
-}
-
 #[no_mangle]
 pub static mut cant_int: bool = false;
 #[no_mangle]
@@ -243,16 +175,12 @@ pub static mut byebye_string: *mut libc::c_char = b"Okay, bye bye!\0" as *const 
 	as *const libc::c_char as *mut libc::c_char;
 
 pub struct GameState {
-	pub settings: Settings,
-	pub init_curses: bool,
 	seed: [u8; 32],
 }
 
 impl GameState {
-	pub fn new(settings: Settings) -> Self {
+	pub fn new() -> Self {
 		GameState {
-			settings,
-			init_curses: false,
 			seed: [1u8; 32],
 		}
 	}
@@ -272,18 +200,17 @@ impl GameState {
 }
 
 pub unsafe fn init() -> bool {
-	let mut settings = Settings::load();
 	match md_get_login_name() {
 		None => {
 			clean_up(b"Hey!  Who are you?\0" as *const u8 as *const libc::c_char);
 		}
 		Some(name) => {
-			settings.login_name = name;
+			settings::set_login_name(&name);
 		}
 	}
-	if !settings.score_only && settings.rest_file.is_none() {
-		print!("Hello {}, just a moment while I dig the dungeon...", match &settings.nick_name {
-			None => &settings.login_name,
+	if !score_only() && rest_file().is_none() {
+		print!("Hello {}, just a moment while I dig the dungeon...", match nick_name() {
+			None => settings::login_name(),
 			Some(name) => name,
 		});
 		io::stdout().flush().expect("flush stdout");
@@ -293,18 +220,16 @@ pub unsafe fn init() -> bool {
 	if ncurses::LINES() < 24 || ncurses::COLS() < 80 {
 		clean_up(b"must be played on 24 x 80 or better screen\0" as *const u8 as *const libc::c_char);
 	}
+	console::up();
 
-	let mut game = GameState::new(settings);
-	start_window();
-	game.init_curses = true;
-
+	let mut game = GameState::new();
 	md_heed_signals();
 
-	if settings.score_only {
-		put_scores(0 as *mut object, 0 as libc::c_int);
+	if score_only() {
+		put_scores(None, 0);
 	}
 	game.set_seed(md_get_seed());
-	if let Some(rest_file) = &game.settings.rest_file {
+	if let Some(rest_file) = rest_file() {
 		restore(rest_file);
 		return true;
 	}
@@ -319,12 +244,12 @@ pub unsafe fn init() -> bool {
 	return false;
 }
 
-pub unsafe fn clean_up(estr: *const libc::c_char, init_curses: bool) {
+pub unsafe fn clean_up(estr: *const libc::c_char) {
 	if save_is_interactive {
-		if init_curses {
+		if console::is_up() {
 			ncurses::wmove(ncurses::stdscr(), DROWS - 1, 0);
 			ncurses::refresh();
-			stop_window();
+			console::down();
 		}
 		printf(b"\n%s\n" as *const u8 as *const libc::c_char, estr);
 	}
@@ -332,18 +257,6 @@ pub unsafe fn clean_up(estr: *const libc::c_char, init_curses: bool) {
 	md_exit(0);
 }
 
-
-pub fn start_window() {
-	ncurses::cbreak();
-	ncurses::noecho();
-	ncurses::nonl();
-	md_control_keybord(0);
-}
-
-pub unsafe fn stop_window() {
-	endwin();
-	md_control_keybord(1);
-}
 
 #[no_mangle]
 pub unsafe extern "C" fn byebye(ask_quit: bool) -> libc::c_int {
@@ -360,11 +273,11 @@ pub unsafe extern "C" fn byebye(ask_quit: bool) -> libc::c_int {
 #[no_mangle]
 pub unsafe extern "C" fn onintr() -> libc::c_int {
 	md_ignore_signals();
-	if cant_int != 0 {
-		did_int = 1 as libc::c_int as libc::c_char;
+	if cant_int {
+		did_int = true;
 	} else {
 		check_message();
-		message(b"interrupt\0" as *const u8 as *const libc::c_char, 1 as libc::c_int);
+		message("interrupt", 1 as libc::c_int);
 	}
 	md_heed_signals();
 	panic!("Reached end of non-void function without returning");
@@ -372,7 +285,7 @@ pub unsafe extern "C" fn onintr() -> libc::c_int {
 
 #[no_mangle]
 pub unsafe extern "C" fn error_save() -> libc::c_int {
-	save_is_interactive = 0 as libc::c_int as libc::c_char;
+	save_is_interactive = false;
 	save_into_file(error_file);
 	clean_up(b"\0" as *const u8 as *const libc::c_char as *mut libc::c_char);
 	panic!("Reached end of non-void function without returning");

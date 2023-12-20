@@ -874,22 +874,22 @@ pub unsafe extern "C" fn check_up() -> libc::c_int {
 }
 
 pub unsafe fn add_exp(e: libc::c_int, promotion: bool) {
-	rogue.exp_points += e;
+	rogue.exp_points += e as c_long;
 
 	if rogue.exp_points >= level_points[(rogue.exp - 1) as usize] {
 		let new_exp = get_exp_level(rogue.exp_points);
 		if rogue.exp_points > MAX_EXP as i64 {
 			rogue.exp_points = (MAX_EXP + 1) as c_long;
 		}
-		for i in (rogue.exp + 1)..=new_exp {
+		for i in (rogue.exp as usize + 1)..=new_exp {
 			let msg = format!("welcome to level {}", i);
 			message(&msg, 0);
 			if promotion {
 				let hp = hp_raise();
-				rogue.hp_current = rogue.hp_current + hp;
-				rogue.hp_max = rogue.hp_max + hp;
+				rogue.hp_current = (rogue.hp_current as usize + hp) as c_short;
+				rogue.hp_max = (rogue.hp_max as usize + hp) as c_short;
 			}
-			rogue.exp = i;
+			rogue.exp = i as c_short;
 			print_stats(STAT_HP | STAT_EXP);
 		}
 	} else {
@@ -920,8 +920,8 @@ pub unsafe extern "C" fn show_average_hp() {
 	let (real_average, effective_average) = if rogue.exp == 1 {
 		(0.0, 0.0)
 	} else {
-		let real = (rogue.hp_max - extra_hp - INIT_HP + less_hp) / (rogue.exp - 1);
-		let average = (rogue.hp_max - INIT_HP) / (rogue.exp - 1);
+		let real = (rogue.hp_max - extra_hp - INIT_HP as c_short + less_hp) as f32 / (rogue.exp - 1) as f32;
+		let average = (rogue.hp_max - INIT_HP as c_short) as f32 / (rogue.exp - 1) as f32;
 		(real, average)
 	};
 	let msg = format!("R-Hp: {:.2}, E-Hp: {:.2} (!: {}, V: {})", real_average, effective_average, extra_hp, less_hp);

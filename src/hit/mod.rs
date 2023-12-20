@@ -127,7 +127,7 @@ pub unsafe extern "C" fn mon_hit(mut monster: *mut object, other: Option<&str>, 
 	}
 
 	let base_monster_name = mon_name(monster);
-	let monster_name = if let Some(name) = other { name } else { &base_monster_name; };
+	let monster_name = if let Some(name) = other { name } else { &base_monster_name };
 	if !rand_percent(hit_chance as libc::c_int) {
 		if fight_monster.is_null() {
 			hit_message = format!("{}the {} misses", hit_message, monster_name);
@@ -143,7 +143,7 @@ pub unsafe extern "C" fn mon_hit(mut monster: *mut object, other: Option<&str>, 
 	}
 	if !(*monster).m_flags.stationary {
 		damage = get_damage((*monster).damage, DamageEffect::Roll) as libc::c_short;
-		if !other.is_null() {
+		if other.is_some() {
 			if flame != 0 {
 				damage = (damage as libc::c_int - get_armor_class(rogue.armor))
 					as libc::c_short;
@@ -228,15 +228,11 @@ pub unsafe fn get_number(s: *const c_char) -> usize {
 	return total;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn lget_number(mut s: *mut libc::c_char) -> libc::c_long {
-	let mut i: libc::c_long = 0 as libc::c_int as libc::c_long;
-	let mut total: libc::c_long = 0 as libc::c_int as libc::c_long;
-	while *s.offset(i as isize) as libc::c_int >= '0' as i32
-		&& *s.offset(i as isize) as libc::c_int <= '9' as i32
-	{
-		total = 10 as libc::c_int as libc::c_long * total
-			+ (*s.offset(i as isize) as libc::c_int - '0' as i32) as libc::c_long;
+pub fn lget_number(s: &[u8]) -> u64 {
+	let mut total: u64 = 0;
+	let mut i: usize = 0;
+	while s[i] >= '0' as u8 && s[i] <= '9' as u8 {
+		total = 10 * total + (s[i] - '0' as u8) as u64;
 		i += 1;
 	}
 	return total;
@@ -307,7 +303,7 @@ pub unsafe fn mon_damage(monster: &mut object, damage: usize) -> bool {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn fight(to_the_death: bool, settings: &Settings) {
+pub unsafe extern "C" fn fight(to_the_death: bool) {
 	let mut first_miss: libc::c_char = 1 as libc::c_int as libc::c_char;
 	let mut monster: *mut object = 0 as *mut object;
 	let mut ch: libc::c_short = 0;
@@ -348,7 +344,7 @@ pub unsafe extern "C" fn fight(to_the_death: bool, settings: &Settings) {
 		(*fight_monster).stationary_damage() - 1
 	};
 	while !fight_monster.is_null() {
-		one_move_rogue(ch, false, settings);
+		one_move_rogue(ch, false);
 		if (!to_the_death && rogue.hp_current <= possible_damage as i16)
 			|| interrupted
 			|| !Monster.is_set(dungeon[row as usize][col as usize]) {

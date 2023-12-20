@@ -7,7 +7,6 @@ extern "C" {
 	static mut wizard: libc::c_char;
 }
 
-use libc::strcpy;
 use crate::prelude::*;
 
 #[derive(Copy, Clone)]

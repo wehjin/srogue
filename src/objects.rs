@@ -20,6 +20,7 @@ extern "C" {
 use libc::{c_int, c_short};
 use ncurses::addch;
 use crate::prelude::*;
+use crate::settings::fruit;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -954,11 +955,11 @@ pub unsafe extern "C" fn free_stuff(mut objlist: *mut object) -> libc::c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn name_of(obj: &object, settings: &Settings) -> String {
+pub unsafe extern "C" fn name_of(obj: &object) -> String {
 	match obj.what_is {
 		object_what::SCROLL => if obj.quantity > 1 { "scrolls " } else { "scroll " },
 		object_what::POTION => if obj.quantity > 1 { "potions " } else { "potion " },
-		object_what::FOOD => if obj.which_kind == food_kind::RATION { "food " } else { &settings.fruit; },
+		object_what::FOOD => if obj.which_kind == food_kind::RATION { "food " } else { &fruit(); },
 		object_what::WAND => if *is_wood.as_mut_ptr().offset(obj.which_kind as isize) != 0 { "staff " } else { "wand " },
 		object_what::WEAPON => match obj.which_kind {
 			weapon_kind::DART => if obj.quantity > 1 { "darts " } else { "dart " },

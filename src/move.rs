@@ -30,6 +30,7 @@ use libc::{strcpy, strlen};
 use ncurses::addch;
 use crate::prelude::*;
 use crate::prelude::SpotFlag::{Door, Nothing};
+use crate::settings::jump;
 
 
 #[derive(Copy, Clone)]
@@ -109,7 +110,7 @@ pub static mut you_can_move_again: *mut libc::c_char = b"you can move again\0"
 	as *const u8 as *const libc::c_char as *mut libc::c_char;
 
 #[no_mangle]
-pub unsafe extern "C" fn one_move_rogue(mut dirch: libc::c_short, pickup: bool, settings: &Settings) -> libc::c_int {
+pub unsafe extern "C" fn one_move_rogue(mut dirch: libc::c_short, pickup: bool) -> libc::c_int {
 	let mut current_block: u64;
 	let mut row: libc::c_short = 0;
 	let mut col: libc::c_short = 0;
@@ -209,7 +210,7 @@ pub unsafe extern "C" fn one_move_rogue(mut dirch: libc::c_short, pickup: bool, 
 	} else {
 		addch(rogue.fchar as chtype);
 	};
-	if !settings.jump {
+	if !jump() {
 		ncurses::refresh();
 	}
 	rogue.row = row;

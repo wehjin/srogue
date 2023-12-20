@@ -27,6 +27,7 @@ extern "C" {
 
 use ncurses::addch;
 use crate::prelude::*;
+use crate::settings::fruit;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -119,7 +120,7 @@ pub static mut strange_feeling: *mut libc::c_char = b"you have a strange feeling
 	as *const u8 as *const libc::c_char as *mut libc::c_char;
 
 #[no_mangle]
-pub unsafe extern "C" fn quaff(settings: &Settings) -> libc::c_int {
+pub unsafe extern "C" fn quaff() -> libc::c_int {
 	let mut ch: libc::c_short = 0;
 	let mut buf: [libc::c_char; 80] = [0; 80];
 	let mut obj: *mut object = 0 as *mut object;
@@ -268,7 +269,7 @@ pub unsafe extern "C" fn quaff(settings: &Settings) -> libc::c_int {
 			}
 		}
 		13 => {
-			let buf = format!("hmm, this potion tastes like {}juice", settings.fruit);
+			let buf = format!("hmm, this potion tastes like {}juice", fruit());
 			message(&buf, 0 as libc::c_int);
 			if blind != 0 {
 				unblind();
@@ -432,7 +433,7 @@ pub unsafe extern "C" fn read_scroll() -> libc::c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn eat(settings: &Settings) {
+pub unsafe extern "C" fn eat() {
 	let mut ch: libc::c_short = 0;
 	let mut moves: libc::c_short = 0;
 	let mut obj: *mut object = 0 as *mut object;
@@ -462,7 +463,7 @@ pub unsafe extern "C" fn eat(settings: &Settings) {
 		if (*obj).which_kind as libc::c_int == 0 as libc::c_int {
 			message("yum, that tasted good", 0 as libc::c_int);
 		} else {
-			let buf = format!("my, that was a yummy {}", &settings.fruit);
+			let buf = format!("my, that was a yummy {}", &fruit());
 			message(&buf, 0 as libc::c_int);
 		}
 	} else {

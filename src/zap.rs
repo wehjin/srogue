@@ -24,6 +24,7 @@ extern "C" {
 
 use libc::strlen;
 use crate::prelude::*;
+use crate::settings::set_score_only;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -208,7 +209,7 @@ pub unsafe extern "C" fn get_zapped_monster(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn wizardize(settings: &mut Settings) {
+pub unsafe extern "C" fn wizardize() {
 	let mut buf: [libc::c_char; 100] = [0; 100];
 	if wizard != 0 {
 		wizard = 0 as libc::c_int as libc::c_char;
@@ -216,7 +217,7 @@ pub unsafe extern "C" fn wizardize(settings: &mut Settings) {
 	} else {
 		let line = get_input_line("wizard's password:", None, None, false, false);
 		if !line.is_empty() {
-			xxx(1);
+			xxx(true);
 			xxxx(buf.as_mut_ptr(), strlen(buf.as_mut_ptr()));
 			if strncmp(
 				buf.as_mut_ptr(),
@@ -225,7 +226,7 @@ pub unsafe extern "C" fn wizardize(settings: &mut Settings) {
 			) == 0
 			{
 				wizard = 1 as libc::c_int as libc::c_char;
-				settings.score_only = true;
+				set_score_only(true);
 				message("Welcome, mighty wizard!", 0 as libc::c_int);
 			} else {
 				message("sorry", 0 as libc::c_int);
