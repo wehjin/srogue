@@ -17,6 +17,7 @@ extern "C" {
 	static mut blind: libc::c_short;
 }
 
+use ncurses::addch;
 use crate::prelude::*;
 
 
@@ -193,7 +194,7 @@ pub unsafe extern "C" fn trap_player(
 			{
 				-(1 as libc::c_int);
 			} else {
-				waddch(stdscr, '^' as i32 as chtype);
+				addch('^' as i32 as chtype);
 			};
 			tele();
 		}
@@ -387,7 +388,7 @@ pub unsafe extern "C" fn show_traps() -> libc::c_int {
 				{
 					-(1 as libc::c_int);
 				} else {
-					waddch(stdscr, '^' as i32 as chtype);
+					addch('^' as i32 as chtype);
 				};
 			}
 			j += 1;
@@ -473,11 +474,7 @@ pub unsafe extern "C" fn search(
 								{
 									-(1 as libc::c_int);
 								} else {
-									waddch(
-										stdscr,
-										get_dungeon_char(row as libc::c_int, col as libc::c_int)
-											as chtype,
-									);
+									addch(get_dungeon_char(row as usize, col as usize) as chtype);
 								};
 							}
 							shown += 1;

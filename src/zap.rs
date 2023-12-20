@@ -13,8 +13,6 @@ extern "C" {
 	fn reg_move() -> libc::c_char;
 	fn get_letter_object() -> *mut object;
 	fn gr_monster() -> *mut object;
-	fn object_at() -> *mut object;
-	fn xxx() -> libc::c_long;
 	static mut being_held: libc::c_char;
 	static mut detect_monster: libc::c_char;
 	fn strncmp(
@@ -24,6 +22,7 @@ extern "C" {
 	) -> libc::c_int;
 }
 
+use libc::strlen;
 use crate::prelude::*;
 
 #[derive(Copy, Clone)]
@@ -209,40 +208,28 @@ pub unsafe extern "C" fn get_zapped_monster(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn wizardize() -> libc::c_int {
+pub unsafe extern "C" fn wizardize(settings: &mut Settings) {
 	let mut buf: [libc::c_char; 100] = [0; 100];
 	if wizard != 0 {
 		wizard = 0 as libc::c_int as libc::c_char;
-		message(
-			b"not wizard anymore\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
-		);
-	} else if get_input_line(
-		b"wizard's password:\0" as *const u8 as *const libc::c_char,
-		b"\0" as *const u8 as *const libc::c_char,
-		buf.as_mut_ptr(),
-		b"\0" as *const u8 as *const libc::c_char,
-		0 as libc::c_int,
-		0 as libc::c_int,
-	) != 0
-	{
-		xxx(1 as libc::c_int);
-		xxxx(buf.as_mut_ptr(), strlen(buf.as_mut_ptr()));
-		if strncmp(
-			buf.as_mut_ptr(),
-			b"\xA7DV\xBAM\xA3\x17\0" as *const u8 as *const libc::c_char,
-			7 as libc::c_int as libc::c_ulong,
-		) == 0
-		{
-			wizard = 1 as libc::c_int as libc::c_char;
-			score_only = 1 as libc::c_int as libc::c_char;
-			message(
-				b"Welcome, mighty wizard!\0" as *const u8 as *const libc::c_char,
-				0 as libc::c_int,
-			);
-		} else {
-			message(b"sorry\0" as *const u8 as *const libc::c_char, 0 as libc::c_int);
+		message("not wizard anymore", 0 as libc::c_int);
+	} else {
+		let line = get_input_line("wizard's password:", None, None, false, false);
+		if !line.is_empty() {
+			xxx(1);
+			xxxx(buf.as_mut_ptr(), strlen(buf.as_mut_ptr()));
+			if strncmp(
+				buf.as_mut_ptr(),
+				b"\xA7DV\xBAM\xA3\x17\0" as *const u8 as *const libc::c_char,
+				7 as libc::c_int as libc::c_ulong,
+			) == 0
+			{
+				wizard = 1 as libc::c_int as libc::c_char;
+				settings.score_only = true;
+				message("Welcome, mighty wizard!", 0 as libc::c_int);
+			} else {
+				message("sorry", 0 as libc::c_int);
+			}
 		}
 	}
-	panic!("Reached end of non-void function without returning");
 }

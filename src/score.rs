@@ -47,6 +47,8 @@ extern "C" {
 	fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> libc::c_int;
 }
 
+use libc::{sprintf, strcpy, strlen};
+use ncurses::addch;
 use crate::prelude::*;
 
 pub type __int64_t = libc::c_longlong;
@@ -149,15 +151,6 @@ pub type attr_t = chtype;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct id {
-	pub value: libc::c_short,
-	pub title: [libc::c_char; 128],
-	pub real: [libc::c_char; 128],
-	pub id_status: libc::c_ushort,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
 pub struct fight {
 	pub armor: *mut object,
 	pub weapon: *mut object,
@@ -187,6 +180,7 @@ pub static mut score_file: *mut libc::c_char = b"/usr/games/rogue.scores\0" as *
 pub unsafe extern "C" fn killed_by(
 	mut monster: *mut object,
 	mut other: libc::c_short,
+	settings: &Settings,
 ) -> libc::c_int {
 	let mut buf: [libc::c_char; 80] = [0; 80];
 	md_ignore_signals();
@@ -198,22 +192,13 @@ pub unsafe extern "C" fn killed_by(
 	if other != 0 {
 		match other as libc::c_int {
 			1 => {
-				strcpy(
-					buf.as_mut_ptr(),
-					b"died of hypothermia\0" as *const u8 as *const libc::c_char,
-				);
+				strcpy(buf.as_mut_ptr(), b"died of hypothermia\0" as *const u8 as *const libc::c_char);
 			}
 			2 => {
-				strcpy(
-					buf.as_mut_ptr(),
-					b"died of starvation\0" as *const u8 as *const libc::c_char,
-				);
+				strcpy(buf.as_mut_ptr(), b"died of starvation\0" as *const u8 as *const libc::c_char);
 			}
 			3 => {
-				strcpy(
-					buf.as_mut_ptr(),
-					b"killed by a dart\0" as *const u8 as *const libc::c_char,
-				);
+				strcpy(buf.as_mut_ptr(), b"killed by a dart\0" as *const u8 as *const libc::c_char);
 			}
 			4 => {
 				strcpy(buf.as_mut_ptr(), b"quit\0" as *const u8 as *const libc::c_char);
@@ -246,7 +231,7 @@ pub unsafe extern "C" fn killed_by(
 		b"%ld gold\0" as *const u8 as *const libc::c_char,
 		rogue.gold,
 	);
-	if other == 0 && show_skull as libc::c_int != 0 {
+	if other == 0 && settings.show_skull as libc::c_int != 0 {
 		wclear(stdscr);
 		if wmove(stdscr, 4 as libc::c_int, 32 as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
@@ -394,10 +379,10 @@ pub unsafe extern "C" fn killed_by(
 		};
 		center(
 			21 as libc::c_int,
-			if *nick_name.offset(0 as libc::c_int as isize) as libc::c_int != 0 {
-				nick_name
+			if let Some(name) = &settings.nick_name {
+				&name as &str
 			} else {
-				login_name.as_mut_ptr()
+				&settings.login_name as &str
 			},
 		);
 		center(22 as libc::c_int, buf.as_mut_ptr());
@@ -531,7 +516,7 @@ pub unsafe extern "C" fn quit(mut from_intrpt: libc::c_char) -> libc::c_int {
 		}
 	}
 	check_message();
-	message(b"really quit?\0" as *const u8 as *const libc::c_char, 1 as libc::c_int);
+	message("really quit?", 1 as libc::c_int);
 	if rgetchar() != 'y' as i32 {
 		md_heed_signals();
 		check_message();
@@ -543,7 +528,7 @@ pub unsafe extern "C" fn quit(mut from_intrpt: libc::c_char) -> libc::c_int {
 				{
 					-(1 as libc::c_int);
 				} else {
-					waddch(stdscr, buf[i as usize] as chtype);
+					addch(buf[i as usize] as chtype);
 				};
 				i += 1;
 				i;

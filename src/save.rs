@@ -164,16 +164,6 @@ pub type attr_t = chtype;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct id {
-	pub value: libc::c_short,
-	pub title: [libc::c_char; 128],
-	pub real: [libc::c_char; 128],
-	pub id_status: libc::c_ushort,
-}
-
-
-#[derive(Copy, Clone)]
-#[repr(C)]
 pub struct fight {
 	pub armor: *mut object,
 	pub weapon: *mut object,
@@ -399,7 +389,7 @@ pub unsafe extern "C" fn restore(fname: &str, settings: &Settings) -> libc::c_in
 	);
 	r_read(
 		fp,
-		&mut score_only as *mut libc::c_char,
+		settings.score_only,
 		::core::mem::size_of::<libc::c_char>() as libc::c_ulong,
 	);
 	r_read(

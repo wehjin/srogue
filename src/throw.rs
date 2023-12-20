@@ -15,9 +15,9 @@ extern "C" {
 	fn is_direction() -> libc::c_char;
 	fn alloc_object() -> *mut object;
 	fn get_letter_object() -> *mut object;
-	fn object_at() -> *mut object;
 }
 
+use ncurses::addch;
 use crate::prelude::*;
 use crate::throw::Move::{Up, UpLeft, UpRight, Left, Right, Same, Down, DownLeft, DownRight};
 
@@ -165,7 +165,7 @@ pub unsafe extern "C" fn throw() -> libc::c_int {
 	{
 		-(1 as libc::c_int);
 	} else {
-		waddch(stdscr, rogue.fchar as chtype);
+		addch(rogue.fchar as chtype);
 	};
 	ncurses::refresh();
 	if rogue_can_see(row as libc::c_int, col as libc::c_int) != 0
@@ -175,10 +175,7 @@ pub unsafe extern "C" fn throw() -> libc::c_int {
 		if wmove(stdscr, row as libc::c_int, col as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
 		} else {
-			waddch(
-				stdscr,
-				get_dungeon_char(row as libc::c_int, col as libc::c_int) as chtype,
-			);
+			addch(get_dungeon_char(row as usize, col as usize) as chtype);
 		};
 	}
 	if !monster.is_null() {
@@ -232,10 +229,7 @@ pub unsafe extern "C" fn get_thrown_at_monster(
 			{
 				-(1 as libc::c_int);
 			} else {
-				waddch(
-					stdscr,
-					get_dungeon_char(orow as libc::c_int, ocol as libc::c_int) as chtype,
-				);
+				addch(get_dungeon_char(orow as usize, ocol as usize) as chtype);
 			};
 		}
 		if rogue_can_see(*row as libc::c_int, *col as libc::c_int) != 0 {
@@ -247,7 +241,7 @@ pub unsafe extern "C" fn get_thrown_at_monster(
 				{
 					-(1 as libc::c_int);
 				} else {
-					waddch(stdscr, ch as chtype);
+					addch(ch as chtype);
 				};
 			}
 			ncurses::refresh();
@@ -257,12 +251,8 @@ pub unsafe extern "C" fn get_thrown_at_monster(
 		if dungeon[*row as usize][*col as usize] as libc::c_int
 			& 0o2 as libc::c_int as libc::c_ushort as libc::c_int != 0
 		{
-			if imitating(*row as libc::c_int, *col as libc::c_int) == 0 {
-				return object_at(
-					&mut level_monsters,
-					*row as libc::c_int,
-					*col as libc::c_int,
-				);
+			if imitating(*row, *col) == 0 {
+				return object_at(&mut level_monsters, *row, *col);
 			}
 		}
 		if dungeon[*row as usize][*col as usize] as libc::c_int

@@ -83,15 +83,6 @@ pub type attr_t = chtype;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct id {
-	pub value: libc::c_short,
-	pub title: [libc::c_char; 128],
-	pub real: [libc::c_char; 128],
-	pub id_status: libc::c_ushort,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
 pub struct fight {
 	pub armor: *mut object,
 	pub weapon: *mut object,

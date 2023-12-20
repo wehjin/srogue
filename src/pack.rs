@@ -1,6 +1,6 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-use libc::{c_short, sprintf, strcpy, strlen};
+use libc::{c_short, strcpy, strlen};
 use crate::{get_input_line, message, mv_aquatars, print_stats};
 use crate::objects::place_at;
 
@@ -17,15 +17,6 @@ extern "C" {
 use crate::prelude::*;
 use crate::prelude::item_usage::BEING_WIELDED;
 use crate::prelude::object_what::{ARMOR, RING, WEAPON};
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct id {
-	pub value: libc::c_short,
-	pub title: [libc::c_char; 128],
-	pub real: [libc::c_char; 128],
-	pub id_status: libc::c_ushort,
-}
 
 #[derive(Copy, Clone)]
 #[repr(C)]

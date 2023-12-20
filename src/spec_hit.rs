@@ -12,11 +12,9 @@ extern "C" {
 	static mut dungeon: [[libc::c_ushort; 80]; 24];
 	static mut level_objects: object;
 	static mut level_monsters: object;
-	fn mon_name() -> *mut libc::c_char;
 	fn mon_sees() -> libc::c_char;
 	fn alloc_object() -> *mut object;
 	fn gr_object() -> *mut object;
-	fn object_at() -> *mut object;
 	static mut cur_level: libc::c_short;
 	static mut max_level: libc::c_short;
 	static mut blind: libc::c_short;
@@ -29,6 +27,8 @@ extern "C" {
 	static mut you_can_move_again: *mut libc::c_char;
 }
 
+use libc::sprintf;
+use ncurses::{addch, refresh};
 use crate::prelude::*;
 
 
@@ -281,7 +281,6 @@ pub fn check_gold_seeker(monster: &mut object) {
 
 #[no_mangle]
 pub unsafe extern "C" fn check_imitator(mut monster: *mut object) -> bool {
-	let mut msg: [libc::c_char; 80] = [0; 80];
 	if (*monster).m_flags & 0o20000000 as libc::c_long as libc::c_ulong != 0 {
 		wake_up(monster);
 		if blind == 0 {
@@ -293,21 +292,11 @@ pub unsafe extern "C" fn check_imitator(mut monster: *mut object) -> bool {
 			{
 				-(1 as libc::c_int);
 			} else {
-				waddch(
-					stdscr,
-					get_dungeon_char(
-						(*monster).row as libc::c_int,
-						(*monster).col as libc::c_int,
-					) as chtype,
-				);
+				addch(get_dungeon_char((*monster).row as usize, (*monster).col as usize) as chtype);
 			};
 			check_message();
-			sprintf(
-				msg.as_mut_ptr(),
-				b"wait, that's a %s!\0" as *const u8 as *const libc::c_char,
-				mon_name(monster),
-			);
-			message(msg.as_mut_ptr(), 1 as libc::c_int);
+			let msg = format!("wait, that's a {}!", mon_name(monster));
+			message(&msg, 1 as libc::c_int);
 		}
 		return true;
 	}
@@ -323,7 +312,7 @@ pub unsafe extern "C" fn imitating(
 		& 0o2 as libc::c_int as libc::c_ushort as libc::c_int != 0
 	{
 		let mut monster: *mut object = 0 as *mut object;
-		monster = object_at(&mut level_monsters, row as libc::c_int, col as libc::c_int);
+		monster = object_at(&mut level_monsters, row, col);
 		if !monster.is_null() {
 			if (*monster).m_flags & 0o20000000 as libc::c_long as libc::c_ulong != 0 {
 				return 1 as libc::c_int;
@@ -401,9 +390,9 @@ pub unsafe extern "C" fn flame_broil(mut monster: *mut object) -> bool {
 			{
 				-(1 as libc::c_int);
 			} else {
-				waddch(stdscr, '~' as i32 as chtype);
+				addch('~' as i32 as chtype);
 			};
-			wrefresh(stdscr);
+			refresh();
 			get_closer(
 				&mut row,
 				&mut col,
@@ -434,12 +423,9 @@ pub unsafe extern "C" fn flame_broil(mut monster: *mut object) -> bool {
 			{
 				-(1 as libc::c_int);
 			} else {
-				waddch(
-					stdscr,
-					get_dungeon_char(row as libc::c_int, col as libc::c_int) as chtype,
-				);
+				addch(get_dungeon_char(row as usize, col as usize) as chtype);
 			};
-			wrefresh(stdscr);
+			refresh();
 			get_closer(
 				&mut row,
 				&mut col,
