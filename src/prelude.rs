@@ -1,4 +1,4 @@
-use libc::{c_int, c_ushort};
+use libc::{c_ushort};
 pub use crate::message::*;
 pub use crate::level::*;
 pub use crate::monster::*;
@@ -23,20 +23,20 @@ pub use crate::r#use::*;
 pub use crate::zap::*;
 
 
-pub const MAXROOMS: c_int = 9;
-pub const NO_ROOM: c_int = -1;
+pub const MAXROOMS: usize = 9;
+pub const NO_ROOM: i64 = -1;
 pub const BIG_ROOM: usize = 10;
 pub const R_ROOM: c_ushort = 2;
-pub const MIN_ROW: libc::c_int = 1;
-pub const DCOLS: libc::c_int = 80;
-pub const DROWS: libc::c_int = 24;
+pub const MIN_ROW: i64 = 1;
+pub const DCOLS: usize = 80;
+pub const DROWS: usize = 24;
 pub const MAX_TITLE_LENGTH: usize = 30;
 pub const MORE: &'static str = "-more-";
-pub const COL1: libc::c_int = 26;
-pub const COL2: libc::c_int = 52;
-pub const ROW1: libc::c_int = 7;
-pub const ROW2: libc::c_int = 15;
-pub const HIDE_PERCENT: c_int = 12;
+pub const COL1: i64 = 26;
+pub const COL2: i64 = 52;
+pub const ROW1: i64 = 7;
+pub const ROW2: i64 = 15;
+pub const HIDE_PERCENT: i64 = 12;
 
 
 pub const MAX_EXP_LEVEL: usize = 21;
@@ -47,8 +47,6 @@ pub const MAX_HP: usize = 800;
 pub const MAX_STRENGTH: usize = 99;
 pub const LAST_DUNGEON: usize = 99;
 pub const INIT_HP: usize = 12;
-
-pub type chtype = ncurses::chtype;
 
 #[derive(Copy, Clone)]
 pub struct DungeonSpot {
@@ -141,7 +139,7 @@ pub mod object_what {
 	pub const ALL_OBJECTS: u16 = 0o777;
 }
 
-pub mod object_kind {
+pub mod scroll_kind {
 	pub const PROTECT_ARMOR: u16 = 0;
 	pub const HOLD_MONSTER: u16 = 1;
 	pub const ENCH_WEAPON: u16 = 2;
@@ -154,7 +152,21 @@ pub mod object_kind {
 	pub const CREATE_MONSTER: u16 = 9;
 	pub const AGGRAVATE_MONSTER: u16 = 10;
 	pub const MAGIC_MAPPING: u16 = 11;
-	pub const SCROLLS: u16 = 12;
+	pub const SCROLLS: usize = 12;
+}
+
+pub mod wand_kind {
+	pub const TELE_AWAY: u16 = 0;
+	pub const SLOW_MONSTER: u16 = 1;
+	pub const CONFUSE_MONSTER: u16 = 2;
+	pub const INVISIBILITY: u16 = 3;
+	pub const POLYMORPH: u16 = 4;
+	pub const HASTE_MONSTER: u16 = 5;
+	pub const PUT_TO_SLEEP: u16 = 6;
+	pub const MAGIC_MISSILE: u16 = 7;
+	pub const CANCELLATION: u16 = 8;
+	pub const DO_NOTHING: u16 = 9;
+	pub const WANDS: usize = 10;
 }
 
 pub mod food_kind {
@@ -183,6 +195,24 @@ pub mod armor_kind {
 	pub const SPLINT: u16 = 5;
 	pub const PLATE: u16 = 6;
 	pub const ARMORS: u16 = 7;
+}
+
+pub mod potion_kind {
+	pub const INCREASE_STRENGTH: u16 = 0;
+	pub const RESTORE_STRENGTH: u16 = 1;
+	pub const HEALING: u16 = 2;
+	pub const EXTRA_HEALING: u16 = 3;
+	pub const POISON: u16 = 4;
+	pub const RAISE_LEVEL: u16 = 5;
+	pub const BLINDNESS: u16 = 6;
+	pub const HALLUCINATION: u16 = 7;
+	pub const DETECT_MONSTER: u16 = 8;
+	pub const DETECT_OBJECTS: u16 = 9;
+	pub const CONFUSION: u16 = 10;
+	pub const LEVITATION: u16 = 11;
+	pub const HASTE_SELF: u16 = 12;
+	pub const SEE_INVISIBLE: u16 = 13;
+	pub const POTIONS: usize = 14;
 }
 
 pub mod ring_kind;

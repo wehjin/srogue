@@ -3,29 +3,23 @@
 extern "C" {
 	pub type __sFILEX;
 	pub type ldat;
-	fn waddnstr(_: *mut WINDOW, _: *const libc::c_char, _: libc::c_int) -> libc::c_int;
-
-	fn winch(_: *mut WINDOW) -> chtype;
-	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
 	static mut curscr: *mut WINDOW;
-	static mut stdscr: *mut WINDOW;
 	fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> *mut FILE;
 	static mut __stdoutp: *mut FILE;
-	fn fclose(_: *mut FILE) -> libc::c_int;
-	fn fflush(_: *mut FILE) -> libc::c_int;
+	fn fclose(_: *mut FILE) -> i64;
+	fn fflush(_: *mut FILE) -> i64;
 
-	fn putchar(_: libc::c_int) -> libc::c_int;
-	fn putc(_: libc::c_int, _: *mut FILE) -> libc::c_int;
-	fn getchar() -> libc::c_int;
-	fn fputs(_: *const libc::c_char, _: *mut FILE) -> libc::c_int;
-	static mut rogue: fighter;
-	fn onintr() -> libc::c_int;
+	fn putchar(_: i64) -> i64;
+	fn putc(_: i64, _: *mut FILE) -> i64;
+	fn getchar() -> i64;
+	fn fputs(_: *const libc::c_char, _: *mut FILE) -> i64;
+	fn onintr() -> i64;
 	static mut save_is_interactive: libc::c_char;
 	static mut add_strength: libc::c_short;
-	static mut cur_level: libc::c_short;
 }
 
 use libc::{c_int, sprintf};
+use ncurses::{chtype, waddnstr};
 use crate::prelude::*;
 
 pub type __int64_t = libc::c_longlong;
@@ -36,41 +30,9 @@ pub type fpos_t = __darwin_off_t;
 #[repr(C)]
 pub struct __sbuf {
 	pub _base: *mut libc::c_uchar,
-	pub _size: libc::c_int,
+	pub _size: i64,
 }
 
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _win_st {
-	pub _cury: libc::c_short,
-	pub _curx: libc::c_short,
-	pub _maxy: libc::c_short,
-	pub _maxx: libc::c_short,
-	pub _begy: libc::c_short,
-	pub _begx: libc::c_short,
-	pub _flags: libc::c_short,
-	pub _attrs: attr_t,
-	pub _bkgd: chtype,
-	pub _notimeout: libc::c_int,
-	pub _clear: libc::c_int,
-	pub _leaveok: libc::c_int,
-	pub _scroll: libc::c_int,
-	pub _idlok: libc::c_int,
-	pub _idcok: libc::c_int,
-	pub _immed: libc::c_int,
-	pub _sync: libc::c_int,
-	pub _use_keypad: libc::c_int,
-	pub _delay: libc::c_int,
-	pub _line: *mut ldat,
-	pub _regtop: libc::c_short,
-	pub _regbottom: libc::c_short,
-	pub _parx: libc::c_int,
-	pub _pary: libc::c_int,
-	pub _parent: *mut WINDOW,
-	pub _pad: pdat,
-	pub _yoffset: libc::c_short,
-}
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -84,38 +46,14 @@ pub struct pdat {
 }
 
 pub type WINDOW = _win_st;
-pub type attr_t = chtype;
+pub type attr_t = ncurses::chtype;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct fight {
-	pub armor: *mut object,
-	pub weapon: *mut object,
-	pub left_ring: *mut object,
-	pub right_ring: *mut object,
-	pub hp_current: libc::c_short,
-	pub hp_max: libc::c_short,
-	pub str_current: libc::c_short,
-	pub str_max: libc::c_short,
-	pub pack: object,
-	pub gold: libc::c_long,
-	pub exp: libc::c_short,
-	pub exp_points: libc::c_long,
-	pub row: libc::c_short,
-	pub col: libc::c_short,
-	pub fchar: libc::c_short,
-	pub moves_left: libc::c_short,
-}
-
-pub type fighter = fight;
 
 pub static mut msg_written: String = String::new();
 pub static mut msg_cleared: bool = true;
-pub static mut hunger_str: [libc::c_char; 8] = unsafe {
-	*::core::mem::transmute::<&[u8; 8], &mut [libc::c_char; 8]>(b"\0\0\0\0\0\0\0\0")
-};
+pub static mut hunger_str: String = "".to_string();
 
-pub unsafe extern "C" fn message(msg: &str, intrpt: libc::c_int) {
+pub unsafe extern "C" fn message(msg: &str, intrpt: i64) {
 	if save_is_interactive == 0 {
 		return;
 	}
@@ -126,12 +64,12 @@ pub unsafe extern "C" fn message(msg: &str, intrpt: libc::c_int) {
 	cant_int = true;
 
 	if !msg_cleared {
-		ncurses::mvaddstr(MIN_ROW - 1, msg_written.len() as i32, MORE);
+		ncurses::mvaddstr((MIN_ROW - 1) as i32, msg_written.len() as i32, MORE);
 		ncurses::refresh();
 		wait_for_ack();
 		check_message();
 	}
-	ncurses::mvaddstr(MIN_ROW - 1, 0, msg);
+	ncurses::mvaddstr((MIN_ROW - 1) as i32, 0, msg);
 	ncurses::addch(chtype::from(' '));
 	ncurses::refresh();
 	msg_written = msg.to_string();
@@ -153,7 +91,7 @@ pub unsafe fn check_message() {
 	if msg_cleared {
 		return;
 	}
-	ncurses::mv(MIN_ROW - 1, 0);
+	ncurses::mv((MIN_ROW - 1) as i32, 0);
 	ncurses::clrtoeol();
 	ncurses::refresh();
 	msg_cleared = true;
@@ -183,15 +121,15 @@ pub unsafe extern "C" fn get_input_line(prompt: &str, insert: Option<&str>, if_c
 			if ch != ' ' || line.len() > 0 {
 				line.push(ch);
 				if do_echo {
-					ncurses::addch(ch as chtype);
+					ncurses::addch(ch as ncurses::chtype);
 				}
 			}
 		}
 		const BACKSPACE: char = '\u{8}';
 		if ch == BACKSPACE && line.len() > 0 {
 			if do_echo {
-				ncurses::mvaddch(0, (line.len() + n) as i32, ' ' as chtype);
-				ncurses::mv(MIN_ROW - 1, (line.len() + n) as i32);
+				ncurses::mvaddch(0, (line.len() + n) as i32, ' ' as ncurses::chtype);
+				ncurses::mv((MIN_ROW - 1) as i32, (line.len() + n) as i32);
 			}
 			line.pop();
 		}
@@ -215,8 +153,8 @@ pub unsafe extern "C" fn get_input_line(prompt: &str, insert: Option<&str>, if_c
 	}
 }
 
-const X_CHAR: libc::c_int = 'X' as libc::c_int;
-const CTRL_R_CHAR: libc::c_int = 0o022 as libc::c_int;
+const X_CHAR: c_int = 'X' as c_int;
+const CTRL_R_CHAR: c_int = 0o022 as c_int;
 
 pub unsafe fn rgetchar() -> c_int {
 	let mut done = false;
@@ -233,51 +171,51 @@ pub unsafe fn rgetchar() -> c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn print_stats(mut stat_mask: libc::c_int) -> libc::c_int {
+pub unsafe extern "C" fn print_stats(mut stat_mask: i64) -> i64 {
 	let mut buf: [libc::c_char; 16] = [0; 16];
 	let mut label: libc::c_char = 0;
-	let mut row: libc::c_int = 24 as libc::c_int - 1 as libc::c_int;
-	label = (if stat_mask & 0o200 as libc::c_int != 0 {
-		1 as libc::c_int
+	let mut row: i64 = 24 as i64 - 1;
+	label = (if stat_mask & 0o200 as i64 != 0 {
+		1
 	} else {
-		0 as libc::c_int
+		0 as i64
 	}) as libc::c_char;
-	if stat_mask & 0o1 as libc::c_int != 0 {
+	if stat_mask & 0o1 != 0 {
 		if label != 0 {
-			if wmove(stdscr, row, 0 as libc::c_int) == -(1 as libc::c_int) {
-				-(1 as libc::c_int);
+			if ncurses::wmove(ncurses::stdscr(), row as i32, 0 as i32) == -1 {
+				-1;
 			} else {
 				waddnstr(
-					stdscr,
-					b"Level: \0" as *const u8 as *const libc::c_char,
-					-(1 as libc::c_int),
+					ncurses::stdscr(),
+					"Level: ",
+					-1,
 				);
 			};
 		}
 		sprintf(
 			buf.as_mut_ptr(),
 			b"%d\0" as *const u8 as *const libc::c_char,
-			cur_level as libc::c_int,
+			cur_level as i64,
 		);
-		if wmove(stdscr, row, 7 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
+		if ncurses::wmove(ncurses::stdscr(), row as i32, 7) == -1 {
+			-1;
 		} else {
-			waddnstr(stdscr, buf.as_mut_ptr(), -(1 as libc::c_int));
+			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -1);
 		};
 		pad(buf.as_mut_ptr(), 2);
 	}
-	if stat_mask & 0o2 as libc::c_int != 0 {
+	if stat_mask & 0o2 as i64 != 0 {
 		if label != 0 {
-			if rogue.gold > 900000 as libc::c_int as libc::c_long {
-				rogue.gold = 900000 as libc::c_int as libc::c_long;
+			if rogue.gold > 900000 as i64 as libc::c_long {
+				rogue.gold = 900000 as i64 as libc::c_long;
 			}
-			if wmove(stdscr, row, 10 as libc::c_int) == -(1 as libc::c_int) {
-				-(1 as libc::c_int);
+			if ncurses::wmove(ncurses::stdscr(), row, 10) == -(1) {
+				-(1);
 			} else {
 				waddnstr(
-					stdscr,
-					b"Gold: \0" as *const u8 as *const libc::c_char,
-					-(1 as libc::c_int),
+					ncurses::stdscr(),
+					"Gold: ",
+					-(1),
 				);
 			};
 		}
@@ -286,135 +224,135 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: libc::c_int) -> libc::c_int 
 			b"%ld\0" as *const u8 as *const libc::c_char,
 			rogue.gold,
 		);
-		if wmove(stdscr, row, 16 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
+		if ncurses::wmove(ncurses::stdscr(), row, 16) == -(1) {
+			-(1);
 		} else {
-			waddnstr(stdscr, buf.as_mut_ptr(), -(1 as libc::c_int));
+			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -(1));
 		};
 		pad(buf.as_mut_ptr(), 6);
 	}
-	if stat_mask & 0o4 as libc::c_int != 0 {
+	if stat_mask & 0o4 as i64 != 0 {
 		if label != 0 {
-			if wmove(stdscr, row, 23 as libc::c_int) == -(1 as libc::c_int) {
-				-(1 as libc::c_int);
+			if ncurses::wmove(ncurses::stdscr(), row, 23 as i64) == -(1) {
+				-(1);
 			} else {
 				waddnstr(
-					stdscr,
+					ncurses::stdscr(),
 					b"Hp: \0" as *const u8 as *const libc::c_char,
-					-(1 as libc::c_int),
+					-(1),
 				);
 			};
-			if rogue.hp_max as libc::c_int > 800 as libc::c_int {
+			if rogue.hp_max as i64 > 800 as i64 {
 				rogue
-					.hp_current = (rogue.hp_current as libc::c_int
-					- (rogue.hp_max as libc::c_int - 800 as libc::c_int))
+					.hp_current = (rogue.hp_current as i64
+					- (rogue.hp_max as i64 - 800 as i64))
 					as libc::c_short;
-				rogue.hp_max = 800 as libc::c_int as libc::c_short;
+				rogue.hp_max = 800 as i64 as libc::c_short;
 			}
 		}
 		sprintf(
 			buf.as_mut_ptr(),
 			b"%d(%d)\0" as *const u8 as *const libc::c_char,
-			rogue.hp_current as libc::c_int,
-			rogue.hp_max as libc::c_int,
+			rogue.hp_current as i64,
+			rogue.hp_max as i64,
 		);
-		if wmove(stdscr, row, 27 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
+		if ncurses::wmove(ncurses::stdscr(), row, 27 as i64) == -(1) {
+			-(1);
 		} else {
-			waddnstr(stdscr, buf.as_mut_ptr(), -(1 as libc::c_int));
+			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -(1));
 		};
 		pad(buf.as_mut_ptr(), 8);
 	}
-	if stat_mask & 0o10 as libc::c_int != 0 {
+	if stat_mask & 0o10 as i64 != 0 {
 		if label != 0 {
-			if wmove(stdscr, row, 36 as libc::c_int) == -(1 as libc::c_int) {
-				-(1 as libc::c_int);
+			if ncurses::wmove(ncurses::stdscr(), row, 36 as i64) == -(1) {
+				-(1);
 			} else {
 				waddnstr(
-					stdscr,
+					ncurses::stdscr(),
 					b"Str: \0" as *const u8 as *const libc::c_char,
-					-(1 as libc::c_int),
+					-(1),
 				);
 			};
 		}
-		if rogue.str_max as libc::c_int > 99 as libc::c_int {
+		if rogue.str_max as i64 > 99 as i64 {
 			rogue
-				.str_current = (rogue.str_current as libc::c_int
-				- (rogue.str_max as libc::c_int - 99 as libc::c_int)) as libc::c_short;
-			rogue.str_max = 99 as libc::c_int as libc::c_short;
+				.str_current = (rogue.str_current as i64
+				- (rogue.str_max as i64 - 99 as i64)) as libc::c_short;
+			rogue.str_max = 99 as i64 as libc::c_short;
 		}
 		sprintf(
 			buf.as_mut_ptr(),
 			b"%d(%d)\0" as *const u8 as *const libc::c_char,
-			rogue.str_current as libc::c_int + add_strength as libc::c_int,
-			rogue.str_max as libc::c_int,
+			rogue.str_current as i64 + add_strength as i64,
+			rogue.str_max as i64,
 		);
-		if wmove(stdscr, row, 41 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
+		if ncurses::wmove(ncurses::stdscr(), row, 41) == -(1) {
+			-(1);
 		} else {
-			waddnstr(stdscr, buf.as_mut_ptr(), -(1 as libc::c_int));
+			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -(1));
 		};
 		pad(buf.as_mut_ptr(), 6);
 	}
-	if stat_mask & 0o20 as libc::c_int != 0 {
+	if stat_mask & 0o20 as i64 != 0 {
 		if label != 0 {
-			if wmove(stdscr, row, 48 as libc::c_int) == -(1 as libc::c_int) {
-				-(1 as libc::c_int);
+			if ncurses::wmove(ncurses::stdscr(), row, 48 as i64) == -(1) {
+				-(1);
 			} else {
 				waddnstr(
-					stdscr,
+					ncurses::stdscr(),
 					b"Arm: \0" as *const u8 as *const libc::c_char,
-					-(1 as libc::c_int),
+					-(1),
 				);
 			};
 		}
 		if !rogue.armor.is_null()
-			&& (*rogue.armor).d_enchant as libc::c_int > 99 as libc::c_int
+			&& (*rogue.armor).d_enchant as i64 > 99 as i64
 		{
-			(*rogue.armor).d_enchant = 99 as libc::c_int as libc::c_short;
+			(*rogue.armor).d_enchant = 99 as i64 as libc::c_short;
 		}
 		sprintf(
 			buf.as_mut_ptr(),
 			b"%d\0" as *const u8 as *const libc::c_char,
 			get_armor_class(rogue.armor),
 		);
-		if wmove(stdscr, row, 53 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
+		if ncurses::wmove(ncurses::stdscr(), row, 53 as i64) == -(1) {
+			-(1);
 		} else {
-			waddnstr(stdscr, buf.as_mut_ptr(), -(1 as libc::c_int));
+			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -(1));
 		};
 		pad(buf.as_mut_ptr(), 2);
 	}
-	if stat_mask & 0o40 as libc::c_int != 0 {
+	if stat_mask & 0o40 as i64 != 0 {
 		if label != 0 {
-			if wmove(stdscr, row, 56 as libc::c_int) == -(1 as libc::c_int) {
-				-(1 as libc::c_int);
+			if ncurses::wmove(ncurses::stdscr(), row, 56 as i64) == -(1) {
+				-(1);
 			} else {
 				waddnstr(
-					stdscr,
+					ncurses::stdscr(),
 					b"Exp: \0" as *const u8 as *const libc::c_char,
-					-(1 as libc::c_int),
+					-(1),
 				);
 			};
 		}
 		sprintf(
 			buf.as_mut_ptr(),
 			b"%d/%ld\0" as *const u8 as *const libc::c_char,
-			rogue.exp as libc::c_int,
+			rogue.exp as i64,
 			rogue.exp_points,
 		);
-		if wmove(stdscr, row, 61 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
+		if ncurses::wmove(ncurses::stdscr(), row, 61) == -(1) {
+			-(1);
 		} else {
-			waddnstr(stdscr, buf.as_mut_ptr(), -(1 as libc::c_int));
+			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -(1));
 		};
 		pad(buf.as_mut_ptr(), 11);
 	}
-	if stat_mask & 0o100 as libc::c_int != 0 {
-		if wmove(stdscr, row, 73 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
+	if stat_mask & 0o100 as i64 != 0 {
+		if ncurses::wmove(ncurses::stdscr(), row, 73 as i64) == -(1) {
+			-(1);
 		} else {
-			waddnstr(stdscr, hunger_str.as_mut_ptr(), -(1 as libc::c_int));
+			waddnstr(ncurses::stdscr(), hunger_str.as_mut_ptr(), -(1));
 		};
 		ncurses::clrtoeol();
 	}
@@ -424,7 +362,7 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: libc::c_int) -> libc::c_int 
 
 pub unsafe fn pad(s: *const libc::c_char, n: libc::size_t) {
 	for _ in libc::strlen(s)..n {
-		ncurses::addch(' ' as chtype);
+		ncurses::addch(' ' as ncurses::chtype);
 	}
 }
 
@@ -465,33 +403,33 @@ pub fn sound_bell() {
 
 #[no_mangle]
 pub unsafe extern "C" fn is_digit(mut ch: libc::c_short) -> libc::c_char {
-	return (ch as libc::c_int >= '0' as i32 && ch as libc::c_int <= '9' as i32)
-		as libc::c_int as libc::c_char;
+	return (ch as i64 >= '0' as i32 && ch as i64 <= '9' as i32)
+		as i64 as libc::c_char;
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn r_index(
 	mut str: *mut libc::c_char,
-	mut ch: libc::c_int,
+	mut ch: i64,
 	mut last: libc::c_char,
-) -> libc::c_int {
-	let mut i: libc::c_int = 0 as libc::c_int;
+) -> i64 {
+	let mut i: i64 = 0 as i64;
 	if last != 0 {
-		i = libc::strlen(str).wrapping_sub(1) as libc::c_int;
-		while i >= 0 as libc::c_int {
-			if *str.offset(i as isize) as libc::c_int == ch {
+		i = libc::strlen(str).wrapping_sub(1) as i64;
+		while i >= 0 as i64 {
+			if *str.offset(i as isize) as i64 == ch {
 				return i;
 			}
 			i -= 1;
 		}
 	} else {
-		i = 0 as libc::c_int;
+		i = 0 as i64;
 		while *str.offset(i as isize) != 0 {
-			if *str.offset(i as isize) as libc::c_int == ch {
+			if *str.offset(i as isize) as i64 == ch {
 				return i;
 			}
 			i += 1;
 		}
 	}
-	return -(1 as libc::c_int);
+	return -(1);
 }

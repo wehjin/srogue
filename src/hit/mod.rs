@@ -3,54 +3,14 @@
 extern "C" {
 	pub type ldat;
 
-	fn winch(_: *mut WINDOW) -> chtype;
-	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	static mut stdscr: *mut WINDOW;
-	static mut rogue: fighter;
-	static mut dungeon: [[libc::c_ushort; 80]; 24];
-	static mut level_monsters: object;
-	static mut cur_level: libc::c_short;
 	static mut add_strength: libc::c_short;
 	static mut ring_exp: libc::c_short;
-	static mut being_held: libc::c_char;
-	static mut wizard: libc::c_char;
 }
 
 use libc::{c_char, c_short};
 use crate::monster;
 use crate::prelude::*;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _win_st {
-	pub _cury: libc::c_short,
-	pub _curx: libc::c_short,
-	pub _maxy: libc::c_short,
-	pub _maxx: libc::c_short,
-	pub _begy: libc::c_short,
-	pub _begx: libc::c_short,
-	pub _flags: libc::c_short,
-	pub _attrs: attr_t,
-	pub _bkgd: chtype,
-	pub _notimeout: libc::c_int,
-	pub _clear: libc::c_int,
-	pub _leaveok: libc::c_int,
-	pub _scroll: libc::c_int,
-	pub _idlok: libc::c_int,
-	pub _idcok: libc::c_int,
-	pub _immed: libc::c_int,
-	pub _sync: libc::c_int,
-	pub _use_keypad: libc::c_int,
-	pub _delay: libc::c_int,
-	pub _line: *mut ldat,
-	pub _regtop: libc::c_short,
-	pub _regbottom: libc::c_short,
-	pub _parx: libc::c_int,
-	pub _pary: libc::c_int,
-	pub _parent: *mut WINDOW,
-	pub _pad: pdat,
-	pub _yoffset: libc::c_short,
-}
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -64,70 +24,47 @@ pub struct pdat {
 }
 
 pub type WINDOW = _win_st;
-pub type attr_t = chtype;
+pub type attr_t = ncurses::chtype;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct fight {
-	pub armor: *mut object,
-	pub weapon: *mut object,
-	pub left_ring: *mut object,
-	pub right_ring: *mut object,
-	pub hp_current: libc::c_short,
-	pub hp_max: libc::c_short,
-	pub str_current: libc::c_short,
-	pub str_max: libc::c_short,
-	pub pack: object,
-	pub gold: libc::c_long,
-	pub exp: libc::c_short,
-	pub exp_points: libc::c_long,
-	pub row: libc::c_short,
-	pub col: libc::c_short,
-	pub fchar: libc::c_short,
-	pub moves_left: libc::c_short,
-}
-
-pub type fighter = fight;
 
 #[no_mangle]
 pub static mut fight_monster: *mut object = 0 as *const object as *mut object;
-#[no_mangle]
-pub static mut detect_monster: libc::c_char = 0;
+pub static mut detect_monster: bool = false;
 pub static mut hit_message: String = String::new();
 
 #[no_mangle]
 pub unsafe extern "C" fn mon_hit(mut monster: *mut object, other: Option<&str>, mut flame: libc::c_char) {
 	let mut damage: libc::c_short = 0;
 	let mut hit_chance: libc::c_short = 0;
-	let mut minus: libc::c_int = 0;
+	let mut minus: i64 = 0;
 	if !fight_monster.is_null() && monster != fight_monster {
 		fight_monster = 0 as *mut object;
 	}
-	(*monster).trow = -(1 as libc::c_int) as libc::c_short;
-	if cur_level as libc::c_int >= 26 as libc::c_int * 2 as libc::c_int {
-		hit_chance = 100 as libc::c_int as libc::c_short;
+	(*monster).trow = -(1) as libc::c_short;
+	if cur_level as i64 >= 26 as i64 * 2 as i64 {
+		hit_chance = 100 as i64 as libc::c_short;
 	} else {
 		hit_chance = (*monster).class;
-		hit_chance = (hit_chance as libc::c_int
-			- (2 as libc::c_int * rogue.exp as libc::c_int
-			+ 2 as libc::c_int * ring_exp as libc::c_int - r_rings as libc::c_int)
+		hit_chance = (hit_chance as i64
+			- (2 as i64 * rogue.exp as i64
+			+ 2 as i64 * ring_exp as i64 - r_rings as i64)
 		) as c_short;
 	}
-	if wizard != 0 {
-		hit_chance = (hit_chance as libc::c_int / 2 as libc::c_int) as libc::c_short;
+	if wizard {
+		hit_chance = (hit_chance as i64 / 2 as i64) as libc::c_short;
 	}
 	if fight_monster.is_null() {
 		interrupted = true;
 	}
 	if other.is_some() {
-		hit_chance = (hit_chance as libc::c_int
-			- (rogue.exp as libc::c_int + ring_exp as libc::c_int
-			- r_rings as libc::c_int)) as libc::c_short;
+		hit_chance = (hit_chance as i64
+			- (rogue.exp as i64 + ring_exp as i64
+			- r_rings as i64)) as libc::c_short;
 	}
 
 	let base_monster_name = mon_name(monster);
 	let monster_name = if let Some(name) = other { name } else { &base_monster_name };
-	if !rand_percent(hit_chance as libc::c_int) {
+	if !rand_percent(hit_chance as i64) {
 		if fight_monster.is_null() {
 			hit_message = format!("{}the {} misses", hit_message, monster_name);
 			message(&hit_message, 1);
@@ -144,31 +81,31 @@ pub unsafe extern "C" fn mon_hit(mut monster: *mut object, other: Option<&str>, 
 		damage = get_damage((*monster).damage, DamageEffect::Roll) as libc::c_short;
 		if other.is_some() {
 			if flame != 0 {
-				damage = (damage as libc::c_int - get_armor_class(rogue.armor))
+				damage = (damage as i64 - get_armor_class(rogue.armor))
 					as libc::c_short;
-				if (damage as libc::c_int) < 0 as libc::c_int {
-					damage = 1 as libc::c_int as libc::c_short;
+				if (damage as i64) < 0 as i64 {
+					damage = 1 as libc::c_short;
 				}
 			}
 		}
-		if cur_level as libc::c_int >= 26 as libc::c_int * 2 as libc::c_int {
-			minus = 26 as libc::c_int * 2 as libc::c_int - cur_level as libc::c_int;
+		if cur_level as i64 >= 26 as i64 * 2 as i64 {
+			minus = 26 as i64 * 2 as i64 - cur_level as i64;
 		} else {
 			minus = (get_armor_class(rogue.armor) as libc::c_double * 3.00f64)
-				as libc::c_int;
-			minus = minus / 100 as libc::c_int * damage as libc::c_int;
+				as i64;
+			minus = minus / 100 as i64 * damage as i64;
 		}
-		damage = (damage as libc::c_int - minus as libc::c_short as libc::c_int)
+		damage = (damage as i64 - minus as libc::c_short as i64)
 			as libc::c_short;
 	} else {
 		let fresh0 = (*monster).identified;
 		(*monster).identified = (*monster).identified + 1;
 		damage = fresh0;
 	}
-	if wizard != 0 {
-		damage = (damage as libc::c_int / 3 as libc::c_int) as libc::c_short;
+	if wizard {
+		damage = (damage as i64 / 3 as i64) as libc::c_short;
 	}
-	if damage as libc::c_int > 0 as libc::c_int {
+	if damage as i64 > 0 as i64 {
 		rogue_damage(damage as usize, &mut *monster);
 	}
 	if (*monster).m_flags.special_hit() {
@@ -183,14 +120,14 @@ pub unsafe extern "C" fn rogue_hit(mut monster: *mut object, force_hit: bool) {
 			return;
 		}
 		let hit_chance = if force_hit { 100 } else { get_hit_chance(&mut *rogue.weapon) };
-		let hit_chance = if wizard != 0 { hit_chance * 2 } else { hit_chance };
-		if !rand_percent(hit_chance as libc::c_int) {
+		let hit_chance = if wizard { hit_chance * 2 } else { hit_chance };
+		if !rand_percent(hit_chance as i64) {
 			if fight_monster.is_null() {
 				hit_message = "you miss  ".to_string();
 			}
 		} else {
 			let damage = get_weapon_damage(&mut *rogue.weapon);
-			let damage = if wizard != 0 { damage * 3 } else { damage };
+			let damage = if wizard { damage * 3 } else { damage };
 			if mon_damage(&mut *monster, damage as usize) {
 				if fight_monster.is_null() {
 					hit_message = "you hit  ".to_string();
@@ -247,32 +184,32 @@ pub unsafe extern "C" fn to_hit(mut obj: *mut object) -> usize {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn damage_for_strength() -> libc::c_int {
+pub unsafe extern "C" fn damage_for_strength() -> i64 {
 	let mut strength: libc::c_short = 0;
-	strength = (rogue.str_current as libc::c_int + add_strength as libc::c_int)
+	strength = (rogue.str_current as i64 + add_strength as i64)
 		as libc::c_short;
-	if strength as libc::c_int <= 6 as libc::c_int {
-		return strength as libc::c_int - 5 as libc::c_int;
+	if strength as i64 <= 6 as i64 {
+		return strength as i64 - 5 as i64;
 	}
-	if strength as libc::c_int <= 14 as libc::c_int {
-		return 1 as libc::c_int;
+	if strength as i64 <= 14 as i64 {
+		return 1;
 	}
-	if strength as libc::c_int <= 17 as libc::c_int {
-		return 3 as libc::c_int;
+	if strength as i64 <= 17 as i64 {
+		return 3 as i64;
 	}
-	if strength as libc::c_int <= 18 as libc::c_int {
-		return 4 as libc::c_int;
+	if strength as i64 <= 18 as i64 {
+		return 4 as i64;
 	}
-	if strength as libc::c_int <= 20 as libc::c_int {
-		return 5 as libc::c_int;
+	if strength as i64 <= 20 as i64 {
+		return 5 as i64;
 	}
-	if strength as libc::c_int <= 21 as libc::c_int {
-		return 6 as libc::c_int;
+	if strength as i64 <= 21 {
+		return 6 as i64;
 	}
-	if strength as libc::c_int <= 30 as libc::c_int {
-		return 7 as libc::c_int;
+	if strength as i64 <= 30 as i64 {
+		return 7 as i64;
 	}
-	return 8 as libc::c_int;
+	return 8 as i64;
 }
 
 pub unsafe fn mon_damage(monster: &mut object, damage: usize) -> bool {
@@ -289,11 +226,11 @@ pub unsafe fn mon_damage(monster: &mut object, damage: usize) -> bool {
 		hit_message = format!("{}defeated the {}", hit_message, mn);
 		message(&hit_message, 1);
 		hit_message.clear();
-		add_exp(monster.kill_exp as libc::c_int, true);
+		add_exp(monster.kill_exp as i64, true);
 		take_from_pack(monster, &mut level_monsters);
 
 		if monster.m_flags.holds {
-			being_held = 0;
+			being_held = false;
 		}
 		free_object(monster);
 		return false;
@@ -303,22 +240,22 @@ pub unsafe fn mon_damage(monster: &mut object, damage: usize) -> bool {
 
 #[no_mangle]
 pub unsafe extern "C" fn fight(to_the_death: bool) {
-	let mut first_miss: libc::c_char = 1 as libc::c_int as libc::c_char;
+	let mut first_miss: libc::c_char = 1 as libc::c_char;
 	let mut monster: *mut object = 0 as *mut object;
 	let mut ch: libc::c_short = 0;
 	loop {
 		ch = rgetchar() as libc::c_short;
-		if !(is_direction(ch as libc::c_int) == 0) {
+		if !(is_direction(ch as i64) == 0) {
 			break;
 		}
 		sound_bell();
 		if first_miss != 0 {
 			message("direction?", 0);
-			first_miss = 0 as libc::c_int as libc::c_char;
+			first_miss = 0 as i64 as libc::c_char;
 		}
 	}
 	check_message();
-	if ch as libc::c_int == '\u{1b}' as i32 {
+	if ch as i64 == '\u{1b}' as i32 {
 		return;
 	}
 	let mut row = rogue.row;
@@ -326,7 +263,7 @@ pub unsafe extern "C" fn fight(to_the_death: bool) {
 	get_dir_rc(ch, &mut row, &mut col, false);
 	let c = ncurses::mvinch(row as i32, col as i32);
 	{
-		let not_a_monster = (c as libc::c_int) < 'A' as i32 || c as libc::c_int > 'Z' as i32;
+		let not_a_monster = (c as i64) < 'A' as i32 || c as i64 > 'Z' as i32;
 		let cannot_move = !can_move(rogue.row as usize, rogue.col as usize, row as usize, col as usize);
 		if not_a_monster || cannot_move {
 			message("I see no monster there", 0);

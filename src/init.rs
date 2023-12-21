@@ -3,17 +3,12 @@
 extern "C" {
 	pub type __sFILEX;
 	pub type ldat;
-	fn cbreak() -> libc::c_int;
-	fn noecho() -> libc::c_int;
-	fn nonl() -> libc::c_int;
-	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	fn printf(_: *const libc::c_char, _: ...) -> libc::c_int;
+	fn cbreak() -> i64;
+	fn noecho() -> i64;
+	fn nonl() -> i64;
+	fn printf(_: *const libc::c_char, _: ...) -> i64;
 	static mut __stdoutp: *mut FILE;
-	fn fflush(_: *mut FILE) -> libc::c_int;
-	static mut stdscr: *mut WINDOW;
-	static mut rogue: fighter;
-	static mut level_objects: object;
-	static mut level_monsters: object;
+	fn fflush(_: *mut FILE) -> i64;
 	fn strncpy(
 		_: *mut libc::c_char,
 		_: *const libc::c_char,
@@ -22,12 +17,11 @@ extern "C" {
 	fn md_getenv() -> *mut libc::c_char;
 	fn md_malloc() -> *mut libc::c_char;
 	fn alloc_object() -> *mut object;
-	static mut party_counter: libc::c_short;
 	fn strncmp(
 		_: *const libc::c_char,
 		_: *const libc::c_char,
 		_: libc::c_ulong,
-	) -> libc::c_int;
+	) -> i64;
 }
 
 use std::{io};
@@ -49,81 +43,50 @@ pub type fpos_t = __darwin_off_t;
 #[repr(C)]
 pub struct __sbuf {
 	pub _base: *mut libc::c_uchar,
-	pub _size: libc::c_int,
+	pub _size: i64,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct __sFILE {
 	pub _p: *mut libc::c_uchar,
-	pub _r: libc::c_int,
-	pub _w: libc::c_int,
+	pub _r: i64,
+	pub _w: i64,
 	pub _flags: libc::c_short,
 	pub _file: libc::c_short,
 	pub _bf: __sbuf,
-	pub _lbfsize: libc::c_int,
+	pub _lbfsize: i64,
 	pub _cookie: *mut libc::c_void,
-	pub _close: Option::<unsafe extern "C" fn(*mut libc::c_void) -> libc::c_int>,
+	pub _close: Option::<unsafe extern "C" fn(*mut libc::c_void) -> i64>,
 	pub _read: Option::<
 		unsafe extern "C" fn(
 			*mut libc::c_void,
 			*mut libc::c_char,
-			libc::c_int,
-		) -> libc::c_int,
+			i64,
+		) -> i64,
 	>,
 	pub _seek: Option::<
-		unsafe extern "C" fn(*mut libc::c_void, fpos_t, libc::c_int) -> fpos_t,
+		unsafe extern "C" fn(*mut libc::c_void, fpos_t, i64) -> fpos_t,
 	>,
 	pub _write: Option::<
 		unsafe extern "C" fn(
 			*mut libc::c_void,
 			*const libc::c_char,
-			libc::c_int,
-		) -> libc::c_int,
+			i64,
+		) -> i64,
 	>,
 	pub _ub: __sbuf,
 	pub _extra: *mut __sFILEX,
-	pub _ur: libc::c_int,
+	pub _ur: i64,
 	pub _ubuf: [libc::c_uchar; 3],
 	pub _nbuf: [libc::c_uchar; 1],
 	pub _lb: __sbuf,
-	pub _blksize: libc::c_int,
+	pub _blksize: i64,
 	pub _offset: fpos_t,
 }
 
 pub type FILE = __sFILE;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _win_st {
-	pub _cury: libc::c_short,
-	pub _curx: libc::c_short,
-	pub _maxy: libc::c_short,
-	pub _maxx: libc::c_short,
-	pub _begy: libc::c_short,
-	pub _begx: libc::c_short,
-	pub _flags: libc::c_short,
-	pub _attrs: attr_t,
-	pub _bkgd: chtype,
-	pub _notimeout: libc::c_int,
-	pub _clear: libc::c_int,
-	pub _leaveok: libc::c_int,
-	pub _scroll: libc::c_int,
-	pub _idlok: libc::c_int,
-	pub _idcok: libc::c_int,
-	pub _immed: libc::c_int,
-	pub _sync: libc::c_int,
-	pub _use_keypad: libc::c_int,
-	pub _delay: libc::c_int,
-	pub _line: *mut ldat,
-	pub _regtop: libc::c_short,
-	pub _regbottom: libc::c_short,
-	pub _parx: libc::c_int,
-	pub _pary: libc::c_int,
-	pub _parent: *mut WINDOW,
-	pub _pad: pdat,
-	pub _yoffset: libc::c_short,
-}
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -137,42 +100,12 @@ pub struct pdat {
 }
 
 pub type WINDOW = _win_st;
-pub type attr_t = chtype;
+pub type attr_t = ncurses::chtype;
 
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct fight {
-	pub armor: *mut object,
-	pub weapon: *mut object,
-	pub left_ring: *mut object,
-	pub right_ring: *mut object,
-	pub hp_current: libc::c_short,
-	pub hp_max: libc::c_short,
-	pub str_current: libc::c_short,
-	pub str_max: libc::c_short,
-	pub pack: object,
-	pub gold: libc::c_long,
-	pub exp: libc::c_short,
-	pub exp_points: libc::c_long,
-	pub row: libc::c_short,
-	pub col: libc::c_short,
-	pub fchar: libc::c_short,
-	pub moves_left: libc::c_short,
-}
-
-pub type fighter = fight;
-
-
-#[no_mangle]
 pub static mut cant_int: bool = false;
-#[no_mangle]
 pub static mut did_int: bool = false;
-#[no_mangle]
 pub static mut save_is_interactive: bool = true;
-#[no_mangle]
-pub static mut error_file: *mut libc::c_char = b"rogue.esave\0" as *const u8
-	as *const libc::c_char as *mut libc::c_char;
+pub static mut error_file: &'static str = "rogue.esave";
 #[no_mangle]
 pub static mut byebye_string: *mut libc::c_char = b"Okay, bye bye!\0" as *const u8
 	as *const libc::c_char as *mut libc::c_char;
@@ -242,7 +175,7 @@ pub unsafe fn init() -> bool {
 	level_objects.next_object = 0 as *mut obj;
 	level_monsters.next_object = 0 as *mut obj;
 	player_init();
-	party_counter = get_rand(1 as libc::c_int, 10 as libc::c_int) as libc::c_short;
+	party_counter = get_rand(1, 10 as i64) as libc::c_short;
 	ring_stats(false);
 	return false;
 }
@@ -308,7 +241,7 @@ unsafe fn player_init() {
 pub unsafe fn clean_up(estr: *const libc::c_char) {
 	if save_is_interactive {
 		if console::is_up() {
-			ncurses::wmove(ncurses::stdscr(), DROWS - 1, 0);
+			ncurses::wmove(ncurses::stdscr(), (DROWS - 1) as i32, 0);
 			ncurses::refresh();
 			console::down();
 		}
@@ -320,7 +253,7 @@ pub unsafe fn clean_up(estr: *const libc::c_char) {
 
 
 #[no_mangle]
-pub unsafe extern "C" fn byebye(ask_quit: bool) -> libc::c_int {
+pub unsafe extern "C" fn byebye(ask_quit: bool) -> i64 {
 	md_ignore_signals();
 	if ask_quit {
 		quit(1 as libc::c_char);
@@ -332,20 +265,20 @@ pub unsafe extern "C" fn byebye(ask_quit: bool) -> libc::c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn onintr() -> libc::c_int {
+pub unsafe extern "C" fn onintr() -> i64 {
 	md_ignore_signals();
 	if cant_int {
 		did_int = true;
 	} else {
 		check_message();
-		message("interrupt", 1 as libc::c_int);
+		message("interrupt", 1);
 	}
 	md_heed_signals();
 	panic!("Reached end of non-void function without returning");
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn error_save() -> libc::c_int {
+pub unsafe extern "C" fn error_save() -> i64 {
 	save_is_interactive = false;
 	save_into_file(error_file);
 	clean_up(b"\0" as *const u8 as *const libc::c_char as *mut libc::c_char);

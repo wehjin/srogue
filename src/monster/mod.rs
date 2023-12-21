@@ -1,32 +1,17 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
 use libc::{c_int, c_short};
+use ncurses::chtype;
 use crate::message::message;
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::room::gr_row_col;
 
 extern "C" {
 	pub type ldat;
-	fn waddch(_: *mut WINDOW, _: ncurses::chtype) -> libc::c_int;
-	fn winch(_: *mut WINDOW) -> chtype;
-	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	static mut stdscr: *mut WINDOW;
-	static mut rogue: fighter;
-	static mut rooms: [room; 0];
-	static mut dungeon: [[libc::c_ushort; 80]; 24];
-	static mut level_objects: object;
+	fn waddch(_: *mut WINDOW, _: ncurses::chtype) -> i64;
 	fn add_to_pack() -> *mut object;
 	fn alloc_object() -> *mut object;
 	fn object_at() -> *mut object;
-	static mut cur_level: libc::c_short;
-	static mut cur_room: libc::c_short;
-	static mut party_room: libc::c_short;
-	static mut blind: libc::c_short;
-	static mut halluc: libc::c_short;
-	static mut haste_self: libc::c_short;
-	static mut detect_monster: libc::c_char;
-	static mut see_invisible: libc::c_char;
-	static mut r_see_invisible: libc::c_char;
 	static mut stealthy: libc::c_short;
 }
 
@@ -39,37 +24,6 @@ use crate::{objects, odds, pack};
 use crate::prelude::flags::MONSTERS;
 use crate::prelude::SpotFlag::{Floor, Object, Stairs, Tunnel};
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _win_st {
-	pub _cury: libc::c_short,
-	pub _curx: libc::c_short,
-	pub _maxy: libc::c_short,
-	pub _maxx: libc::c_short,
-	pub _begy: libc::c_short,
-	pub _begx: libc::c_short,
-	pub _flags: libc::c_short,
-	pub _attrs: attr_t,
-	pub _bkgd: chtype,
-	pub _notimeout: libc::c_int,
-	pub _clear: libc::c_int,
-	pub _leaveok: libc::c_int,
-	pub _scroll: libc::c_int,
-	pub _idlok: libc::c_int,
-	pub _idcok: libc::c_int,
-	pub _immed: libc::c_int,
-	pub _sync: libc::c_int,
-	pub _use_keypad: libc::c_int,
-	pub _delay: libc::c_int,
-	pub _line: *mut ldat,
-	pub _regtop: libc::c_short,
-	pub _regbottom: libc::c_short,
-	pub _parx: libc::c_int,
-	pub _pary: libc::c_int,
-	pub _parent: *mut WINDOW,
-	pub _pad: pdat,
-	pub _yoffset: libc::c_short,
-}
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -83,62 +37,33 @@ pub struct pdat {
 }
 
 pub type WINDOW = _win_st;
-pub type attr_t = chtype;
+pub type attr_t = ncurses::chtype;
 
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct fight {
 	pub armor: *mut object,
 	pub weapon: *mut object,
 	pub left_ring: *mut object,
 	pub right_ring: *mut object,
-	pub hp_current: libc::c_short,
-	pub hp_max: libc::c_short,
-	pub str_current: libc::c_short,
-	pub str_max: libc::c_short,
+	pub hp_current: i16,
+	pub hp_max: i16,
+	pub str_current: i16,
+	pub str_max: i16,
 	pub pack: object,
-	pub gold: libc::c_long,
-	pub exp: libc::c_short,
-	pub exp_points: libc::c_long,
-	pub row: libc::c_short,
-	pub col: libc::c_short,
-	pub fchar: libc::c_short,
-	pub moves_left: libc::c_short,
+	pub gold: i64,
+	pub exp: i16,
+	pub exp_points: i64,
+	pub row: i16,
+	pub col: i16,
+	pub fchar: i16,
+	pub moves_left: i16,
 }
 
 pub type fighter = fight;
 
 #[no_mangle]
 pub static mut level_monsters: object = obj {
-	m_flags: MonsterFlags {
-		hasted: false,
-		slowed: false,
-		invisible: false,
-		asleep: false,
-		wakens: false,
-		wanders: false,
-		flies: false,
-		flits: false,
-		can_flit: false,
-		confused: false,
-		rusts: false,
-		holds: false,
-		freezes: false,
-		steals_gold: false,
-		steals_item: false,
-		stings: false,
-		drains_life: false,
-		drops_level: false,
-		seeks_gold: false,
-		freezing_rogue: false,
-		RUST_VANISHED: false,
-		confuses: false,
-		imitates: false,
-		flames: false,
-		stationary: false,
-		napping: false,
-		already_moved: false,
-	},
+	m_flags: MonsterFlags::default(),
 	damage: "",
 	quantity: 0,
 	ichar: 0,
@@ -200,17 +125,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::a(),
 			damage: "0d0",
-			quantity: 25 as libc::c_int as libc::c_short,
+			quantity: 25 as i64 as libc::c_short,
 			ichar: 'A' as i32 as libc::c_short,
-			kill_exp: 20 as libc::c_int as libc::c_short,
-			is_protected: 9 as libc::c_int as libc::c_short,
-			is_cursed: 18 as libc::c_int as libc::c_short,
-			class: 100 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 0 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 20 as i64 as libc::c_short,
+			is_protected: 9 as i64 as libc::c_short,
+			is_cursed: 18 as i64 as libc::c_short,
+			class: 100 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 0 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -229,17 +154,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::b(),
 			damage: "1d3",
-			quantity: 10 as libc::c_int as libc::c_short,
+			quantity: 10 as i64 as libc::c_short,
 			ichar: 'B' as i32 as libc::c_short,
-			kill_exp: 2 as libc::c_int as libc::c_short,
-			is_protected: 1 as libc::c_int as libc::c_short,
-			is_cursed: 8 as libc::c_int as libc::c_short,
-			class: 60 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 0 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 2 as i64 as libc::c_short,
+			is_protected: 1 as libc::c_short,
+			is_cursed: 8 as i64 as libc::c_short,
+			class: 60 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 0 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -258,17 +183,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::c(),
 			damage: "3d3/2d5",
-			quantity: 32 as libc::c_int as libc::c_short,
+			quantity: 32 as i64 as libc::c_short,
 			ichar: 'C' as i32 as libc::c_short,
-			kill_exp: 15 as libc::c_int as libc::c_short,
-			is_protected: 7 as libc::c_int as libc::c_short,
-			is_cursed: 16 as libc::c_int as libc::c_short,
-			class: 85 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 10 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 15 as i64 as libc::c_short,
+			is_protected: 7 as i64 as libc::c_short,
+			is_cursed: 16 as i64 as libc::c_short,
+			class: 85 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 10 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -287,17 +212,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::d(),
 			damage: "4d6/4d9",
-			quantity: 145 as libc::c_int as libc::c_short,
+			quantity: 145 as i64 as libc::c_short,
 			ichar: 'D' as i32 as libc::c_short,
-			kill_exp: 5000 as libc::c_int as libc::c_short,
-			is_protected: 21 as libc::c_int as libc::c_short,
-			is_cursed: 126 as libc::c_int as libc::c_short,
-			class: 100 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 90 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 5000 as i64 as libc::c_short,
+			is_protected: 21 as libc::c_short,
+			is_cursed: 126 as i64 as libc::c_short,
+			class: 100 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 90 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -316,17 +241,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::e(),
 			damage: "1d3",
-			quantity: 11 as libc::c_int as libc::c_short,
+			quantity: 11 as libc::c_short,
 			ichar: 'E' as i32 as libc::c_short,
-			kill_exp: 2 as libc::c_int as libc::c_short,
-			is_protected: 1 as libc::c_int as libc::c_short,
-			is_cursed: 7 as libc::c_int as libc::c_short,
-			class: 65 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 0 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 2 as i64 as libc::c_short,
+			is_protected: 1 as libc::c_short,
+			is_cursed: 7 as i64 as libc::c_short,
+			class: 65 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 0 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -345,17 +270,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::f(),
 			damage: "5d5",
-			quantity: 73 as libc::c_int as libc::c_short,
+			quantity: 73 as i64 as libc::c_short,
 			ichar: 'F' as i32 as libc::c_short,
-			kill_exp: 91 as libc::c_int as libc::c_short,
-			is_protected: 12 as libc::c_int as libc::c_short,
-			is_cursed: 126 as libc::c_int as libc::c_short,
-			class: 80 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 0 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 91 as libc::c_short,
+			is_protected: 12 as i64 as libc::c_short,
+			is_cursed: 126 as i64 as libc::c_short,
+			class: 80 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 0 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -374,17 +299,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::g(),
 			damage: "5d5/5d5",
-			quantity: 115 as libc::c_int as libc::c_short,
+			quantity: 115 as i64 as libc::c_short,
 			ichar: 'G' as i32 as libc::c_short,
-			kill_exp: 2000 as libc::c_int as libc::c_short,
-			is_protected: 20 as libc::c_int as libc::c_short,
-			is_cursed: 126 as libc::c_int as libc::c_short,
-			class: 85 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 10 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 2000 as i64 as libc::c_short,
+			is_protected: 20 as i64 as libc::c_short,
+			is_cursed: 126 as i64 as libc::c_short,
+			class: 85 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 10 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -403,17 +328,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::h(),
 			damage: "1d3/1d2",
-			quantity: 15 as libc::c_int as libc::c_short,
+			quantity: 15 as i64 as libc::c_short,
 			ichar: 'H' as i32 as libc::c_short,
-			kill_exp: 3 as libc::c_int as libc::c_short,
-			is_protected: 1 as libc::c_int as libc::c_short,
-			is_cursed: 10 as libc::c_int as libc::c_short,
-			class: 67 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 0 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 3 as i64 as libc::c_short,
+			is_protected: 1 as libc::c_short,
+			is_cursed: 10 as i64 as libc::c_short,
+			class: 67 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 0 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -432,17 +357,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::i(),
 			damage: "0d0",
-			quantity: 15 as libc::c_int as libc::c_short,
+			quantity: 15 as i64 as libc::c_short,
 			ichar: 'I' as i32 as libc::c_short,
-			kill_exp: 5 as libc::c_int as libc::c_short,
-			is_protected: 2 as libc::c_int as libc::c_short,
-			is_cursed: 11 as libc::c_int as libc::c_short,
-			class: 68 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 0 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 5 as i64 as libc::c_short,
+			is_protected: 2 as i64 as libc::c_short,
+			is_cursed: 11 as libc::c_short,
+			class: 68 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 0 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -461,17 +386,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::j(),
 			damage: "3d10/4d5",
-			quantity: 132 as libc::c_int as libc::c_short,
+			quantity: 132 as i64 as libc::c_short,
 			ichar: 'J' as i32 as libc::c_short,
-			kill_exp: 3000 as libc::c_int as libc::c_short,
-			is_protected: 21 as libc::c_int as libc::c_short,
-			is_cursed: 126 as libc::c_int as libc::c_short,
-			class: 100 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 0 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 3000 as i64 as libc::c_short,
+			is_protected: 21 as libc::c_short,
+			is_cursed: 126 as i64 as libc::c_short,
+			class: 100 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 0 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -490,17 +415,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::k(),
 			damage: "1d4",
-			quantity: 10 as libc::c_int as libc::c_short,
+			quantity: 10 as i64 as libc::c_short,
 			ichar: 'K' as i32 as libc::c_short,
-			kill_exp: 2 as libc::c_int as libc::c_short,
-			is_protected: 1 as libc::c_int as libc::c_short,
-			is_cursed: 6 as libc::c_int as libc::c_short,
-			class: 60 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 0 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 2 as i64 as libc::c_short,
+			is_protected: 1 as libc::c_short,
+			is_cursed: 6 as i64 as libc::c_short,
+			class: 60 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 0 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -519,17 +444,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::l(),
 			damage: "0d0",
-			quantity: 25 as libc::c_int as libc::c_short,
+			quantity: 25 as i64 as libc::c_short,
 			ichar: 'L' as i32 as libc::c_short,
-			kill_exp: 21 as libc::c_int as libc::c_short,
-			is_protected: 6 as libc::c_int as libc::c_short,
-			is_cursed: 16 as libc::c_int as libc::c_short,
-			class: 75 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 0 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 21 as libc::c_short,
+			is_protected: 6 as i64 as libc::c_short,
+			is_cursed: 16 as i64 as libc::c_short,
+			class: 75 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 0 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -548,17 +473,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::m(),
 			damage: "4d4/3d7",
-			quantity: 97 as libc::c_int as libc::c_short,
+			quantity: 97 as i64 as libc::c_short,
 			ichar: 'M' as i32 as libc::c_short,
-			kill_exp: 250 as libc::c_int as libc::c_short,
-			is_protected: 18 as libc::c_int as libc::c_short,
-			is_cursed: 126 as libc::c_int as libc::c_short,
-			class: 85 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 25 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 250 as i64 as libc::c_short,
+			is_protected: 18 as i64 as libc::c_short,
+			is_cursed: 126 as i64 as libc::c_short,
+			class: 85 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 25 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -577,17 +502,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::n(),
 			damage: "0d0",
-			quantity: 25 as libc::c_int as libc::c_short,
+			quantity: 25 as i64 as libc::c_short,
 			ichar: 'N' as i32 as libc::c_short,
-			kill_exp: 39 as libc::c_int as libc::c_short,
-			is_protected: 10 as libc::c_int as libc::c_short,
-			is_cursed: 19 as libc::c_int as libc::c_short,
-			class: 75 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 100 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 39 as i64 as libc::c_short,
+			is_protected: 10 as i64 as libc::c_short,
+			is_cursed: 19 as i64 as libc::c_short,
+			class: 75 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 100 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -606,17 +531,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::o(),
 			damage: "1d6",
-			quantity: 25 as libc::c_int as libc::c_short,
+			quantity: 25 as i64 as libc::c_short,
 			ichar: 'O' as i32 as libc::c_short,
-			kill_exp: 5 as libc::c_int as libc::c_short,
-			is_protected: 4 as libc::c_int as libc::c_short,
-			is_cursed: 13 as libc::c_int as libc::c_short,
-			class: 70 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 10 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 5 as i64 as libc::c_short,
+			is_protected: 4 as i64 as libc::c_short,
+			is_cursed: 13 as i64 as libc::c_short,
+			class: 70 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 10 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -635,17 +560,17 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::p(),
 			damage: "5d4",
-			quantity: 76 as libc::c_int as libc::c_short,
+			quantity: 76 as i64 as libc::c_short,
 			ichar: 'P' as i32 as libc::c_short,
-			kill_exp: 120 as libc::c_int as libc::c_short,
-			is_protected: 15 as libc::c_int as libc::c_short,
-			is_cursed: 24 as libc::c_int as libc::c_short,
-			class: 80 as libc::c_int as libc::c_short,
-			identified: 0 as libc::c_int as libc::c_short,
-			which_kind: 50 as libc::c_int as libc::c_ushort,
-			o_row: 0 as libc::c_int as libc::c_short,
-			o_col: 0 as libc::c_int as libc::c_short,
-			o: 0 as libc::c_int as libc::c_short,
+			kill_exp: 120 as i64 as libc::c_short,
+			is_protected: 15 as i64 as libc::c_short,
+			is_cursed: 24 as i64 as libc::c_short,
+			class: 80 as i64 as libc::c_short,
+			identified: 0 as i64 as libc::c_short,
+			which_kind: 50 as i64 as libc::c_ushort,
+			o_row: 0 as i64 as libc::c_short,
+			o_col: 0 as i64 as libc::c_short,
+			o: 0 as i64 as libc::c_short,
 			row: 0,
 			col: 0,
 			d_enchant: 0,
@@ -664,7 +589,7 @@ pub static mut mon_tab: [object; 26] = [
 		let mut init = obj {
 			m_flags: MonsterFlags::q(),
 			damage: "3d5",
-			quantity: 30 as libc::c_int as libc::c_short,
+			quantity: 30 as i64 as libc::c_short,
 			ichar: 'Q' as i32 as libc::c_short,
 			kill_exp: 20 as libc::c_int as libc::c_short,
 			is_protected: 8 as libc::c_int as libc::c_short,
@@ -1051,7 +976,7 @@ pub unsafe extern "C" fn party_monsters(rn: usize, n: usize) {
 		if no_room_for_monster(rn as usize) {
 			break;
 		}
-		let mut found: Option<(c_int, c_int)> = None;
+		let mut found: Option<(i64, i64)> = None;
 		for _j in 0..250 {
 			let row = get_rand(rooms[rn].top_row + 1, rooms[rn].bottom_row - 1);
 			let col = get_rand(rooms[rn].left_col + 1, rooms[rn].right_col - 1);
@@ -1079,8 +1004,8 @@ pub unsafe extern "C" fn gmc_row_col(row: usize, col: usize) -> ncurses::chtype 
 	let monster = objects::object_at(&mut level_monsters, row as c_short, col as c_short);
 	if !monster.is_null() {
 		let invisible = (*monster).m_flags.invisible;
-		let bypass_invisible = detect_monster != 0 || see_invisible != 0 || r_see_invisible != 0;
-		let is_blind = blind != 0;
+		let bypass_invisible = detect_monster || see_invisible || r_see_invisible;
+		let is_blind = blind;
 		if (invisible && !bypass_invisible) || is_blind {
 			(*monster).trail_char()
 		} else {
@@ -1097,8 +1022,8 @@ pub unsafe extern "C" fn gmc_row_col(row: usize, col: usize) -> ncurses::chtype 
 
 #[no_mangle]
 pub unsafe extern "C" fn gmc(mut monster: *mut object) -> chtype {
-	let defeat_invisibility = detect_monster != 0 || see_invisible != 0 || r_see_invisible != 0;
-	if ((*monster).m_flags.invisible && !defeat_invisibility) || (blind != 0) {
+	let defeat_invisibility = detect_monster || see_invisible || r_see_invisible;
+	if ((*monster).m_flags.invisible && !defeat_invisibility) || (blind) {
 		(*monster).trail_char()
 	} else if (*monster).m_flags.imitates {
 		(*monster).disguise()
@@ -1203,8 +1128,8 @@ pub unsafe fn mv_monster(monster: &mut object, row: isize, col: isize) {
 		monster.o += 1;
 		if monster.o > 4 {
 			if monster.trow == NO_ROOM as i16 && !mon_sees(monster, rogue.row as c_int, rogue.col as c_int) {
-				monster.trow = get_rand(1, DROWS - 2) as c_short;
-				monster.tcol = get_rand(0, DCOLS - 1) as c_short;
+				monster.trow = get_rand(1, (DROWS - 2) as c_int) as c_short;
+				monster.tcol = get_rand(0, (DCOLS - 1) as c_int) as c_short;
 			} else {
 				monster.trow = NO_ROOM as c_short;
 				monster.o = 0;
@@ -1235,7 +1160,7 @@ pub unsafe fn move_mon_to(monster: &mut object, row: usize, col: usize) {
 	if (c >= chtype::from('A')) && (c <= chtype::from('Z'))
 	{
 		let (mrow, mcol) = (mrow as i32, mcol as i32);
-		let no_detect_monster = detect_monster == 0;
+		let no_detect_monster = !detect_monster;
 		if no_detect_monster {
 			ncurses::mvaddch(mrow, mcol, monster.trail_char());
 		} else {
@@ -1250,17 +1175,16 @@ pub unsafe fn move_mon_to(monster: &mut object, row: usize, col: usize) {
 		}
 	}
 	monster.set_trail_char(ncurses::mvinch(row as i32, col as i32));
-	let not_blind = blind == 0;
-	if not_blind && ((detect_monster != 0) || rogue_can_see(row, col)) {
-		let bypass_invisibility = (detect_monster != 0) || (see_invisible != 0) || (r_see_invisible != 0);
+	if !blind && ((detect_monster) || rogue_can_see(row, col)) {
+		let bypass_invisibility = (detect_monster) || (see_invisible) || (r_see_invisible);
 		if !monster.m_flags.invisible || bypass_invisibility {
 			ncurses::mvaddch(row as i32, col as i32, gmc(monster));
 		}
 	}
 	if Door.is_set(dungeon[row][col])
-		&& (get_room_number(row as c_int, col as c_int) != cur_room as i32)
+		&& (get_room_number(row as i64, col as i64) != cur_room as i64)
 		&& Floor.is_only(dungeon[mrow][mcol])
-		&& (blind == 0) {
+		&& !blind {
 		ncurses::mvaddch(mrow as i32, mcol as i32, chtype::from(' '));
 	}
 	if Door.is_set(dungeon[row][col]) {
@@ -1281,7 +1205,7 @@ pub unsafe fn mon_can_go(monster: &obj, row: usize, col: usize) -> bool {
 	if (dc >= 2) || (dc <= -2) {
 		return false;
 	}
-	if SpotFlag::Nothing.is_set(dungeon[monster.row as usize][col as usize]) || SpotFlag::Nothing.is_set(dungeon[row][monster.col as usize]) {
+	if SpotFlag::Nothing.is_set(dungeon[monster.row as usize][col]) || SpotFlag::Nothing.is_set(dungeon[row][monster.col as usize]) {
 		return false;
 	}
 	if !is_passable(row as c_int, col as c_int) || Monster.is_set(dungeon[row][col]) {
@@ -1301,9 +1225,9 @@ pub unsafe fn mon_can_go(monster: &obj, row: usize, col: usize) -> bool {
 		if (monster.col < rogue.col) && (col < monster.col as usize) { return false; }
 		if (monster.col > rogue.col) && (col > monster.col as usize) { return false; }
 	}
-	if SpotFlag::Object.is_set(dungeon[row][col]) {
+	if Object.is_set(dungeon[row][col]) {
 		let obj = objects::object_at(&mut level_objects, row as c_short, col as c_short);
-		if (*obj).what_is == object_what::SCROLL && (*obj).which_kind == object_kind::SCARE_MONSTER {
+		if (*obj).what_is == object_what::SCROLL && (*obj).which_kind == scroll_kind::SCARE_MONSTER {
 			return false;
 		}
 	}
@@ -1353,11 +1277,11 @@ pub unsafe extern "C" fn mon_name(monster: *mut object) -> String {
 	}.to_string()
 }
 
-pub unsafe fn player_hallucinating() -> bool { halluc != 0 }
+pub unsafe fn player_hallucinating() -> bool { halluc }
 
-pub unsafe fn player_is_blind() -> bool { blind != 0 }
+pub unsafe fn player_is_blind() -> bool { blind }
 
-pub unsafe fn bypass_invisibility() -> bool { detect_monster != 0 || see_invisible != 0 || r_see_invisible != 0 }
+pub unsafe fn bypass_invisibility() -> bool { detect_monster || see_invisible || r_see_invisible }
 
 pub unsafe fn rogue_is_around(row: c_short, col: c_short) -> bool {
 	let rdif = row - rogue.row;
@@ -1374,7 +1298,7 @@ pub unsafe extern "C" fn wanderer() {
 	{
 		let mut i: c_short = 0;
 		while i < 15 && !found {
-			monster = gr_monster(0 as *mut object, 0 as libc::c_int);
+			monster = gr_monster(0 as *mut object, 0 as c_int);
 			let monster_wanders_or_wakens = (*monster).m_flags.wakens || (*monster).m_flags.wanders;
 			if monster_wanders_or_wakens {
 				found = true;
@@ -1404,9 +1328,8 @@ pub unsafe extern "C" fn wanderer() {
 
 #[no_mangle]
 pub unsafe extern "C" fn show_monsters() {
-	detect_monster = 1;
-	let is_blind = blind != 0;
-	if is_blind {
+	detect_monster = true;
+	if blind {
 		return;
 	}
 	let mut monster: *mut object = level_monsters.next_object;
@@ -1464,11 +1387,10 @@ pub unsafe fn put_m_at(row: c_short, col: c_short, monster: &mut object) {
 }
 
 pub unsafe fn rogue_can_see(row: usize, col: usize) -> bool {
-	let not_blind = blind == 0;
-	let in_current_room = get_room_number(row as c_int, col as c_int) == cur_room as i32;
+	let in_current_room = get_room_number(row as i64, col as i64) == cur_room as i64;
 	let not_in_maze = rooms[cur_room as usize].room_type != RoomType::Maze;
 	let is_very_close = rogue_is_around(row as c_short, col as c_short);
-	not_blind && ((in_current_room && not_in_maze) || is_very_close)
+	!blind && ((in_current_room && not_in_maze) || is_very_close)
 }
 
 pub unsafe fn move_confused(monster: &mut object) -> bool {
@@ -1533,7 +1455,7 @@ pub unsafe fn gr_obj_char() -> u16 {
 }
 
 pub unsafe fn aim_monster(monster: &mut object) {
-	let rn = get_room_number(monster.row as libc::c_int, monster.col as libc::c_int) as usize;
+	let rn = get_room_number(monster.row as i64, monster.col as i64) as usize;
 	let r = get_rand(0, 12);
 
 	for i in 0..4 {
@@ -1562,7 +1484,7 @@ pub unsafe fn no_room_for_monster(rn: usize) -> bool {
 #[no_mangle]
 pub unsafe extern "C" fn aggravate() {
 	let mut monster: *mut object = 0 as *mut object;
-	message("you hear a high pitched humming noise", 0 as libc::c_int);
+	message("you hear a high pitched humming noise", 0);
 	monster = level_monsters.next_object;
 	while !monster.is_null() {
 		wake_up(&mut *monster);
@@ -1577,22 +1499,16 @@ pub unsafe extern "C" fn aggravate() {
 #[no_mangle]
 pub unsafe extern "C" fn mon_sees(
 	mut monster: *mut object,
-	mut row: libc::c_int,
-	mut col: libc::c_int,
+	mut row: c_int,
+	mut col: c_int,
 ) -> bool {
-	let mut rn: libc::c_short = 0;
+	let mut rn: i64 = 0;
 	let mut rdif: libc::c_short = 0;
 	let mut cdif: libc::c_short = 0;
-	rn = get_room_number(row, col) as libc::c_short;
-	if rn as libc::c_int != -(1 as libc::c_int)
-		&& rn as libc::c_int
-		== get_room_number(
-		(*monster).row as libc::c_int,
-		(*monster).col as libc::c_int,
-	)
-		&& (*rooms.as_mut_ptr().offset(rn as isize)).room_type as libc::c_int
-		& 0o4 as libc::c_int as libc::c_ushort as libc::c_int == 0
-	{
+	rn = get_room_number(row as i64, col as i64);
+	if rn != -1
+		&& rn == get_room_number((*monster).row as i64, (*monster).col as i64)
+		&& (*rooms.as_mut_ptr().offset(rn as isize)).room_type as i64 & 0o4i64 == 0 {
 		return true;
 	}
 	rdif = (row - (*monster).row as libc::c_int) as libc::c_short;

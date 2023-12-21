@@ -4,11 +4,7 @@ extern "C" {
 	pub type __sFILEX;
 	pub type ldat;
 
-	fn waddnstr(_: *mut WINDOW, _: *const libc::c_char, _: libc::c_int) -> libc::c_int;
-	fn wattrset(_: *mut WINDOW, _: libc::c_int) -> libc::c_int;
-	fn wclear(_: *mut WINDOW) -> libc::c_int;
-	fn winch(_: *mut WINDOW) -> chtype;
-	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
+	fn wattrset(_: *mut WINDOW, _: i64) -> i64;
 	fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> *mut FILE;
 	fn fread(
 		_: *mut libc::c_void,
@@ -24,13 +20,7 @@ extern "C" {
 	) -> libc::c_ulong;
 	fn rewind(_: *mut FILE);
 
-	fn fclose(_: *mut FILE) -> libc::c_int;
-	static mut stdscr: *mut WINDOW;
-	static mut rogue: fighter;
-	static mut id_scrolls: [id; 0];
-	static mut id_potions: [id; 0];
-	static mut id_wands: [id; 0];
-	static mut id_rings: [id; 0];
+	fn fclose(_: *mut FILE) -> i64;
 	static mut id_weapons: [id; 0];
 	static mut id_armors: [id; 0];
 	fn strncpy(
@@ -40,17 +30,16 @@ extern "C" {
 	) -> *mut libc::c_char;
 	fn strcat(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
 	static mut m_names: [*mut libc::c_char; 0];
-	static mut max_level: libc::c_short;
 	static mut msg_cleared: libc::c_char;
 	static mut byebye_string: *mut libc::c_char;
-	fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> libc::c_int;
+	fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> i64;
 }
 
 use std::fs::File;
 use std::io::{Read, Seek, Write};
 use std::sync::{RwLock};
 use libc::{sprintf, strcpy, strlen};
-use ncurses::{addch, clear, mvaddstr, refresh, standend, standout};
+use ncurses::{addch, clear, mvaddstr, refresh, standend, standout, waddnstr};
 use settings::score_only;
 use crate::prelude::*;
 use crate::{settings, turn_into_games, turn_into_user};
@@ -64,81 +53,50 @@ pub type fpos_t = __darwin_off_t;
 #[repr(C)]
 pub struct __sbuf {
 	pub _base: *mut libc::c_uchar,
-	pub _size: libc::c_int,
+	pub _size: i64,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct __sFILE {
 	pub _p: *mut libc::c_uchar,
-	pub _r: libc::c_int,
-	pub _w: libc::c_int,
+	pub _r: i64,
+	pub _w: i64,
 	pub _flags: libc::c_short,
 	pub _file: libc::c_short,
 	pub _bf: __sbuf,
-	pub _lbfsize: libc::c_int,
+	pub _lbfsize: i64,
 	pub _cookie: *mut libc::c_void,
-	pub _close: Option::<unsafe extern "C" fn(*mut libc::c_void) -> libc::c_int>,
+	pub _close: Option::<unsafe extern "C" fn(*mut libc::c_void) -> i64>,
 	pub _read: Option::<
 		unsafe extern "C" fn(
 			*mut libc::c_void,
 			*mut libc::c_char,
-			libc::c_int,
-		) -> libc::c_int,
+			i64,
+		) -> i64,
 	>,
 	pub _seek: Option::<
-		unsafe extern "C" fn(*mut libc::c_void, fpos_t, libc::c_int) -> fpos_t,
+		unsafe extern "C" fn(*mut libc::c_void, fpos_t, i64) -> fpos_t,
 	>,
 	pub _write: Option::<
 		unsafe extern "C" fn(
 			*mut libc::c_void,
 			*const libc::c_char,
-			libc::c_int,
-		) -> libc::c_int,
+			i64,
+		) -> i64,
 	>,
 	pub _ub: __sbuf,
 	pub _extra: *mut __sFILEX,
-	pub _ur: libc::c_int,
+	pub _ur: i64,
 	pub _ubuf: [libc::c_uchar; 3],
 	pub _nbuf: [libc::c_uchar; 1],
 	pub _lb: __sbuf,
-	pub _blksize: libc::c_int,
+	pub _blksize: i64,
 	pub _offset: fpos_t,
 }
 
 pub type FILE = __sFILE;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _win_st {
-	pub _cury: libc::c_short,
-	pub _curx: libc::c_short,
-	pub _maxy: libc::c_short,
-	pub _maxx: libc::c_short,
-	pub _begy: libc::c_short,
-	pub _begx: libc::c_short,
-	pub _flags: libc::c_short,
-	pub _attrs: attr_t,
-	pub _bkgd: chtype,
-	pub _notimeout: libc::c_int,
-	pub _clear: libc::c_int,
-	pub _leaveok: libc::c_int,
-	pub _scroll: libc::c_int,
-	pub _idlok: libc::c_int,
-	pub _idcok: libc::c_int,
-	pub _immed: libc::c_int,
-	pub _sync: libc::c_int,
-	pub _use_keypad: libc::c_int,
-	pub _delay: libc::c_int,
-	pub _line: *mut ldat,
-	pub _regtop: libc::c_short,
-	pub _regbottom: libc::c_short,
-	pub _parx: libc::c_int,
-	pub _pary: libc::c_int,
-	pub _parent: *mut WINDOW,
-	pub _pad: pdat,
-	pub _yoffset: libc::c_short,
-}
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -152,30 +110,8 @@ pub struct pdat {
 }
 
 pub type WINDOW = _win_st;
-pub type attr_t = chtype;
+pub type attr_t = ncurses::chtype;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct fight {
-	pub armor: *mut object,
-	pub weapon: *mut object,
-	pub left_ring: *mut object,
-	pub right_ring: *mut object,
-	pub hp_current: libc::c_short,
-	pub hp_max: libc::c_short,
-	pub str_current: libc::c_short,
-	pub str_max: libc::c_short,
-	pub pack: object,
-	pub gold: libc::c_long,
-	pub exp: libc::c_short,
-	pub exp_points: libc::c_long,
-	pub row: libc::c_short,
-	pub col: libc::c_short,
-	pub fchar: libc::c_short,
-	pub moves_left: libc::c_short,
-}
-
-pub type fighter = fight;
 
 pub const SCORE_FILE: &'static str = "/usr/games/rogue.scores";
 
@@ -183,16 +119,16 @@ pub const SCORE_FILE: &'static str = "/usr/games/rogue.scores";
 pub unsafe extern "C" fn killed_by(
 	mut monster: *mut object,
 	mut other: libc::c_short,
-) -> libc::c_int {
+) -> i64 {
 	let mut buf: [libc::c_char; 80] = [0; 80];
 	md_ignore_signals();
-	if other as libc::c_int != 4 as libc::c_int {
+	if other as i64 != 4 as i64 {
 		rogue
-			.gold = rogue.gold * 9 as libc::c_int as libc::c_long
-			/ 10 as libc::c_int as libc::c_long;
+			.gold = rogue.gold * 9 as i64 as libc::c_long
+			/ 10 as i64 as libc::c_long;
 	}
 	if other != 0 {
-		match other as libc::c_int {
+		match other as i64 {
 			1 => {
 				strcpy(buf.as_mut_ptr(), b"died of hypothermia\0" as *const u8 as *const libc::c_char);
 			}
@@ -212,8 +148,8 @@ pub unsafe extern "C" fn killed_by(
 		if is_vowel(
 			*(*m_names
 				.as_mut_ptr()
-				.offset(((*monster).ichar as libc::c_int - 'A' as i32) as isize))
-				.offset(0 as libc::c_int as isize) as libc::c_int,
+				.offset(((*monster).ichar as i64 - 'A' as i32) as isize))
+				.offset(0 as i64 as isize) as i64,
 		) != 0
 		{
 			strcat(buf.as_mut_ptr(), b"an \0" as *const u8 as *const libc::c_char);
@@ -224,7 +160,7 @@ pub unsafe extern "C" fn killed_by(
 			buf.as_mut_ptr(),
 			*m_names
 				.as_mut_ptr()
-				.offset(((*monster).ichar as libc::c_int - 'A' as i32) as isize),
+				.offset(((*monster).ichar as i64 - 'A' as i32) as isize),
 		);
 	}
 	strcat(buf.as_mut_ptr(), b" with \0" as *const u8 as *const libc::c_char);
@@ -233,148 +169,148 @@ pub unsafe extern "C" fn killed_by(
 		b"%ld gold\0" as *const u8 as *const libc::c_char,
 		rogue.gold,
 	);
-	if other == 0 && SETTINGS.get().show_skull as libc::c_int != 0 {
-		wclear(stdscr);
-		if wmove(stdscr, 4 as libc::c_int, 32 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
+	if other == 0 && SETTINGS.get().show_skull as i64 != 0 {
+		ncurses::wclear(ncurses::stdscr());
+		if ncurses::wmove(ncurses::stdscr(), 4 as i64, 32 as i64) == -(1) {
+			-(1);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"__---------__\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
+				-(1),
 			);
 		};
-		if wmove(stdscr, 5 as libc::c_int, 30 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
+		if ncurses::wmove(ncurses::stdscr(), 5 as i64, 30 as i64) == -(1) {
+			-(1);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"_~             ~_\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
+				-(1),
 			);
 		};
-		if wmove(stdscr, 6 as libc::c_int, 29 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
+		if ncurses::wmove(ncurses::stdscr(), 6 as i64, 29 as i64) == -(1) {
+			-(1);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"/                 \\\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
+				-(1),
 			);
 		};
-		if wmove(stdscr, 7 as libc::c_int, 28 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
+		if ncurses::wmove(ncurses::stdscr(), 7 as i64, 28 as i64) == -(1) {
+			-(1);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"~                   ~\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
+				-(1),
 			);
 		};
-		if wmove(stdscr, 8 as libc::c_int, 27 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
+		if ncurses::wmove(ncurses::stdscr(), 8 as i64, 27 as i64) == -(1) {
+			-(1);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"/                     \\\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
+				-(1),
 			);
 		};
-		if wmove(stdscr, 9 as libc::c_int, 27 as libc::c_int) == -(1 as libc::c_int) {
+		if ncurses::wmove(ncurses::stdscr(), 9 as libc::c_int, 27 as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"|    XXXX     XXXX    |\0" as *const u8 as *const libc::c_char,
 				-(1 as libc::c_int),
 			);
 		};
-		if wmove(stdscr, 10 as libc::c_int, 27 as libc::c_int) == -(1 as libc::c_int) {
+		if ncurses::wmove(ncurses::stdscr(), 10 as libc::c_int, 27 as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"|    XXXX     XXXX    |\0" as *const u8 as *const libc::c_char,
 				-(1 as libc::c_int),
 			);
 		};
-		if wmove(stdscr, 11 as libc::c_int, 27 as libc::c_int) == -(1 as libc::c_int) {
+		if ncurses::wmove(ncurses::stdscr(), 11 as libc::c_int, 27 as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"|    XXX       XXX    |\0" as *const u8 as *const libc::c_char,
 				-(1 as libc::c_int),
 			);
 		};
-		if wmove(stdscr, 12 as libc::c_int, 28 as libc::c_int) == -(1 as libc::c_int) {
+		if ncurses::wmove(ncurses::stdscr(), 12 as libc::c_int, 28 as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"\\         @         /\0" as *const u8 as *const libc::c_char,
 				-(1 as libc::c_int),
 			);
 		};
-		if wmove(stdscr, 13 as libc::c_int, 29 as libc::c_int) == -(1 as libc::c_int) {
+		if ncurses::wmove(ncurses::stdscr(), 13 as libc::c_int, 29 as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"--\\     @@@     /--\0" as *const u8 as *const libc::c_char,
 				-(1 as libc::c_int),
 			);
 		};
-		if wmove(stdscr, 14 as libc::c_int, 30 as libc::c_int) == -(1 as libc::c_int) {
+		if ncurses::wmove(ncurses::stdscr(), 14 as libc::c_int, 30 as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"| |    @@@    | |\0" as *const u8 as *const libc::c_char,
 				-(1 as libc::c_int),
 			);
 		};
-		if wmove(stdscr, 15 as libc::c_int, 30 as libc::c_int) == -(1 as libc::c_int) {
+		if ncurses::wmove(ncurses::stdscr(), 15 as libc::c_int, 30 as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"| |           | |\0" as *const u8 as *const libc::c_char,
 				-(1 as libc::c_int),
 			);
 		};
-		if wmove(stdscr, 16 as libc::c_int, 30 as libc::c_int) == -(1 as libc::c_int) {
+		if ncurses::wmove(ncurses::stdscr(), 16 as libc::c_int, 30 as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"| vvVvvvvvvvVvv |\0" as *const u8 as *const libc::c_char,
 				-(1 as libc::c_int),
 			);
 		};
-		if wmove(stdscr, 17 as libc::c_int, 30 as libc::c_int) == -(1 as libc::c_int) {
+		if ncurses::wmove(ncurses::stdscr(), 17 as libc::c_int, 30 as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"|  ^^^^^^^^^^^  |\0" as *const u8 as *const libc::c_char,
 				-(1 as libc::c_int),
 			);
 		};
-		if wmove(stdscr, 18 as libc::c_int, 31 as libc::c_int) == -(1 as libc::c_int) {
+		if ncurses::wmove(ncurses::stdscr(), 18 as libc::c_int, 31 as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"\\_           _/\0" as *const u8 as *const libc::c_char,
 				-(1 as libc::c_int),
 			);
 		};
-		if wmove(stdscr, 19 as libc::c_int, 33 as libc::c_int) == -(1 as libc::c_int) {
+		if ncurses::wmove(ncurses::stdscr(), 19 as libc::c_int, 33 as libc::c_int) == -(1 as libc::c_int) {
 			-(1 as libc::c_int);
 		} else {
 			waddnstr(
-				stdscr,
+				ncurses::stdscr(),
 				b"~---------~\0" as *const u8 as *const libc::c_char,
 				-(1 as libc::c_int),
 			);
@@ -403,82 +339,82 @@ pub unsafe extern "C" fn win() -> libc::c_int {
 	unwear(rogue.armor);
 	un_put_on(rogue.left_ring);
 	un_put_on(rogue.right_ring);
-	wclear(stdscr);
-	if wmove(stdscr, 10 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
+	ncurses::wclear(ncurses::stdscr());
+	if ncurses::wmove(ncurses::stdscr(), 10 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
 		-(1 as libc::c_int);
 	} else {
 		waddnstr(
-			stdscr,
+			ncurses::stdscr(),
 			b"@   @  @@@   @   @      @  @  @   @@@   @   @   @\0" as *const u8
 				as *const libc::c_char,
 			-(1 as libc::c_int),
 		);
 	};
-	if wmove(stdscr, 11 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
+	if ncurses::wmove(ncurses::stdscr(), 11 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
 		-(1 as libc::c_int);
 	} else {
 		waddnstr(
-			stdscr,
+			ncurses::stdscr(),
 			b" @ @  @   @  @   @      @  @  @  @   @  @@  @   @\0" as *const u8
 				as *const libc::c_char,
 			-(1 as libc::c_int),
 		);
 	};
-	if wmove(stdscr, 12 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
+	if ncurses::wmove(ncurses::stdscr(), 12 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
 		-(1 as libc::c_int);
 	} else {
 		waddnstr(
-			stdscr,
+			ncurses::stdscr(),
 			b"  @   @   @  @   @      @  @  @  @   @  @ @ @   @\0" as *const u8
 				as *const libc::c_char,
 			-(1 as libc::c_int),
 		);
 	};
-	if wmove(stdscr, 13 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
+	if ncurses::wmove(ncurses::stdscr(), 13 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
 		-(1 as libc::c_int);
 	} else {
 		waddnstr(
-			stdscr,
+			ncurses::stdscr(),
 			b"  @   @   @  @   @      @  @  @  @   @  @  @@\0" as *const u8
 				as *const libc::c_char,
 			-(1 as libc::c_int),
 		);
 	};
-	if wmove(stdscr, 14 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
+	if ncurses::wmove(ncurses::stdscr(), 14 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
 		-(1 as libc::c_int);
 	} else {
 		waddnstr(
-			stdscr,
+			ncurses::stdscr(),
 			b"  @    @@@    @@@        @@ @@    @@@   @   @   @\0" as *const u8
 				as *const libc::c_char,
 			-(1 as libc::c_int),
 		);
 	};
-	if wmove(stdscr, 17 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
+	if ncurses::wmove(ncurses::stdscr(), 17 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
 		-(1 as libc::c_int);
 	} else {
 		waddnstr(
-			stdscr,
+			ncurses::stdscr(),
 			b"Congratulations,  you have  been admitted  to  the\0" as *const u8
 				as *const libc::c_char,
 			-(1 as libc::c_int),
 		);
 	};
-	if wmove(stdscr, 18 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
+	if ncurses::wmove(ncurses::stdscr(), 18 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
 		-(1 as libc::c_int);
 	} else {
 		waddnstr(
-			stdscr,
+			ncurses::stdscr(),
 			b"Fighters' Guild.   You return home,  sell all your\0" as *const u8
 				as *const libc::c_char,
 			-(1 as libc::c_int),
 		);
 	};
-	if wmove(stdscr, 19 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
+	if ncurses::wmove(ncurses::stdscr(), 19 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
 		-(1 as libc::c_int);
 	} else {
 		waddnstr(
-			stdscr,
+			ncurses::stdscr(),
 			b"treasures at great profit and retire into comfort.\0" as *const u8
 				as *const libc::c_char,
 			-(1 as libc::c_int),
@@ -507,12 +443,12 @@ pub unsafe extern "C" fn quit(mut from_intrpt: libc::c_char) {
 		i = 0 as libc::c_int as libc::c_short;
 		while (i as libc::c_int) < 80 as libc::c_int {
 			buf[i
-				as usize] = (if wmove(stdscr, 0 as libc::c_int, i as libc::c_int)
+				as usize] = (if ncurses::wmove(ncurses::stdscr(), 0 as libc::c_int, i as libc::c_int)
 				== -(1 as libc::c_int)
 			{
-				-(1 as libc::c_int) as chtype
+				-(1 as libc::c_int) as ncurses::chtype
 			} else {
-				winch(stdscr)
+				ncurses::winch(ncurses::stdscr())
 			}) as libc::c_char;
 			i += 1;
 			i;
@@ -526,18 +462,18 @@ pub unsafe extern "C" fn quit(mut from_intrpt: libc::c_char) {
 		if from_intrpt != 0 {
 			i = 0 as libc::c_int as libc::c_short;
 			while (i as libc::c_int) < 80 as libc::c_int {
-				if wmove(stdscr, 0 as libc::c_int, i as libc::c_int)
+				if ncurses::wmove(ncurses::stdscr(), 0 as libc::c_int, i as libc::c_int)
 					== -(1 as libc::c_int)
 				{
 					-(1 as libc::c_int);
 				} else {
-					addch(buf[i as usize] as chtype);
+					addch(buf[i as usize] as ncurses::chtype);
 				};
 				i += 1;
 				i;
 			}
 			msg_cleared = mc;
-			wmove(stdscr, orow as libc::c_int, ocol as libc::c_int);
+			ncurses::wmove(ncurses::stdscr(), orow as libc::c_int, ocol as libc::c_int);
 			ncurses::refresh();
 		}
 		return;
@@ -609,7 +545,7 @@ pub unsafe fn put_scores(monster: Option<&object>, other: i16) {
 					&score[x..]
 				};
 				let s = lget_number(trimmed_score);
-				if rogue.gold < s as i64 {
+				if rogue.gold < s as i32 {
 					view_only = true;
 				} else {
 					found_player = Some(i);
@@ -634,7 +570,7 @@ pub unsafe fn put_scores(monster: Option<&object>, other: i16) {
 				&score[x..]
 			};
 			let s = lget_number(trimmed_score);
-			if rogue.gold >= s as i64 {
+			if rogue.gold >= s as i32 {
 				rank = i;
 				break;
 			}

@@ -3,58 +3,18 @@
 extern "C" {
 	pub type ldat;
 
-	fn winch(_: *mut WINDOW) -> chtype;
-	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	static mut stdscr: *mut WINDOW;
-	static mut rogue: fighter;
-	static mut dungeon: [[libc::c_ushort; 80]; 24];
-	static mut level_objects: object;
-	static mut level_monsters: object;
 	fn mon_sees() -> libc::c_char;
 	fn gr_object() -> *mut object;
-	static mut blind: libc::c_short;
-	static mut detect_monster: libc::c_char;
 }
 
-use ncurses::addch;
+use ncurses::{addch};
+use serde::Serialize;
 use crate::objects;
 use crate::prelude::*;
 use crate::prelude::DoorDirection::{Left, Right};
 use crate::prelude::SpotFlag::{Door, Floor, Hidden, HorWall, Monster, Object, Stairs, Trap, Tunnel, VertWall};
 use crate::room::DoorDirection::{Up, Down};
 
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _win_st {
-	pub _cury: libc::c_short,
-	pub _curx: libc::c_short,
-	pub _maxy: libc::c_short,
-	pub _maxx: libc::c_short,
-	pub _begy: libc::c_short,
-	pub _begx: libc::c_short,
-	pub _flags: libc::c_short,
-	pub _attrs: attr_t,
-	pub _bkgd: chtype,
-	pub _notimeout: libc::c_int,
-	pub _clear: libc::c_int,
-	pub _leaveok: libc::c_int,
-	pub _scroll: libc::c_int,
-	pub _idlok: libc::c_int,
-	pub _idcok: libc::c_int,
-	pub _immed: libc::c_int,
-	pub _sync: libc::c_int,
-	pub _use_keypad: libc::c_int,
-	pub _delay: libc::c_int,
-	pub _line: *mut ldat,
-	pub _regtop: libc::c_short,
-	pub _regbottom: libc::c_short,
-	pub _parx: libc::c_int,
-	pub _pary: libc::c_int,
-	pub _parent: *mut WINDOW,
-	pub _pad: pdat,
-	pub _yoffset: libc::c_short,
-}
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -68,45 +28,21 @@ pub struct pdat {
 }
 
 pub type WINDOW = _win_st;
-pub type attr_t = chtype;
+pub type attr_t = ncurses::chtype;
 
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct fight {
-	pub armor: *mut object,
-	pub weapon: *mut object,
-	pub left_ring: *mut object,
-	pub right_ring: *mut object,
-	pub hp_current: libc::c_short,
-	pub hp_max: libc::c_short,
-	pub str_current: libc::c_short,
-	pub str_max: libc::c_short,
-	pub pack: object,
-	pub gold: libc::c_long,
-	pub exp: libc::c_short,
-	pub exp_points: libc::c_long,
-	pub row: libc::c_short,
-	pub col: libc::c_short,
-	pub fchar: libc::c_short,
-	pub moves_left: libc::c_short,
-}
-
-pub type fighter = fight;
-
-#[derive(Copy, Clone)]
-#[repr(C)]
+#[derive(Copy, Clone, Default, Serialize)]
 pub struct dr {
 	pub oth_room: Option<usize>,
 	pub oth_row: Option<usize>,
 	pub oth_col: Option<usize>,
-	pub door_row: libc::c_short,
-	pub door_col: libc::c_short,
+	pub door_row: i16,
+	pub door_col: i16,
 }
 
 pub type door = dr;
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize)]
 pub enum RoomType {
 	Nothing,
 	Room,
@@ -148,81 +84,73 @@ impl DoorDirection {
 	}
 }
 
-#[derive(Copy, Clone)]
-#[repr(C)]
+#[derive(Copy, Clone, Serialize)]
 pub struct rm {
-	pub bottom_row: libc::c_int,
-	pub right_col: libc::c_int,
-	pub left_col: libc::c_int,
-	pub top_row: libc::c_int,
+	pub bottom_row: i64,
+	pub right_col: i64,
+	pub left_col: i64,
+	pub top_row: i64,
 	pub doors: [door; 4],
 	pub room_type: RoomType,
 }
 
 pub type room = rm;
 
-#[no_mangle]
-pub static mut rooms: [room; 9] = [rm {
+pub static mut rooms: [room; MAXROOMS] = [rm {
 	bottom_row: 0,
 	right_col: 0,
 	left_col: 0,
 	top_row: 0,
-	doors: [dr {
-		oth_room: None,
-		oth_row: None,
-		oth_col: None,
-		door_row: 0,
-		door_col: 0,
-	}; 4],
+	doors: [dr::default(); 4],
 	room_type: RoomType::Nothing,
-}; 9];
+}; MAXROOMS];
 #[no_mangle]
 pub static mut rooms_visited: [libc::c_char; 9] = [0; 9];
 
 #[no_mangle]
-pub unsafe extern "C" fn light_up_room(mut rn: libc::c_int) -> libc::c_int {
+pub unsafe extern "C" fn light_up_room(mut rn: i64) -> i64 {
 	let mut i: libc::c_short = 0;
 	let mut j: libc::c_short = 0;
 	if blind == 0 {
 		i = rooms[rn as usize].top_row as libc::c_short;
-		while i as libc::c_int <= rooms[rn as usize].bottom_row as libc::c_int {
+		while i as i64 <= rooms[rn as usize].bottom_row as i64 {
 			j = rooms[rn as usize].left_col as libc::c_short;
-			while j as libc::c_int <= rooms[rn as usize].right_col as libc::c_int {
-				if dungeon[i as usize][j as usize] as libc::c_int
-					& 0o2 as libc::c_int as libc::c_ushort as libc::c_int != 0
+			while j as i64 <= rooms[rn as usize].right_col as i64 {
+				if dungeon[i as usize][j as usize] as i64
+					& 0o2 as i64 as libc::c_ushort as i64 != 0
 				{
 					let mut monster: *mut object = 0 as *mut object;
 					monster = object_at(
 						&mut level_monsters,
-						i as libc::c_int,
-						j as libc::c_int,
+						i as i64,
+						j as i64,
 					);
 					if !monster.is_null() {
 						dungeon[(*monster).row
 							as usize][(*monster).col
 							as usize] = (dungeon[(*monster).row
-							as usize][(*monster).col as usize] as libc::c_int
-							& !(0o2 as libc::c_int as libc::c_ushort as libc::c_int))
+							as usize][(*monster).col as usize] as i64
+							& !(0o2 as i64 as libc::c_ushort as i64))
 							as libc::c_ushort;
 						(*monster)
 							.d_enchant = get_dungeon_char(
-							(*monster).row as libc::c_int,
-							(*monster).col as libc::c_int,
+							(*monster).row as i64,
+							(*monster).col as i64,
 						) as libc::c_short;
 						dungeon[(*monster).row
 							as usize][(*monster).col
 							as usize] = (dungeon[(*monster).row
-							as usize][(*monster).col as usize] as libc::c_int
-							| 0o2 as libc::c_int as libc::c_ushort as libc::c_int)
+							as usize][(*monster).col as usize] as i64
+							| 0o2 as i64 as libc::c_ushort as i64)
 							as libc::c_ushort;
 					}
 				}
-				if wmove(stdscr, i as libc::c_int, j as libc::c_int)
-					== -(1 as libc::c_int)
+				if ncurses::wmove(ncurses::stdscr(), i as i64, j as i64)
+					== -(1)
 				{
-					-(1 as libc::c_int);
+					-(1);
 				} else {
-					addch(get_dungeon_char(i as usize, j as usize) as chtype);
+					addch(get_dungeon_char(i as usize, j as usize) as ncurses::chtype);
 				};
 				j += 1;
 				j;
@@ -230,12 +158,12 @@ pub unsafe extern "C" fn light_up_room(mut rn: libc::c_int) -> libc::c_int {
 			i += 1;
 			i;
 		}
-		if wmove(stdscr, rogue.row as libc::c_int, rogue.col as libc::c_int)
-			== -(1 as libc::c_int)
+		if ncurses::wmove(ncurses::stdscr(), rogue.row as i64, rogue.col as i64)
+			== -(1)
 		{
-			-(1 as libc::c_int);
+			-(1);
 		} else {
-			addch(rogue.fchar as chtype);
+			addch(rogue.fchar as ncurses::chtype);
 		};
 	}
 	panic!("Reached end of non-void function without returning");
@@ -243,9 +171,9 @@ pub unsafe extern "C" fn light_up_room(mut rn: libc::c_int) -> libc::c_int {
 
 #[no_mangle]
 pub unsafe extern "C" fn light_passage(
-	mut row: libc::c_int,
-	mut col: libc::c_int,
-) -> libc::c_int {
+	mut row: i64,
+	mut col: i64,
+) -> i64 {
 	let mut i: libc::c_short = 0;
 	let mut j: libc::c_short = 0;
 	let mut i_end: libc::c_short = 0;
@@ -253,29 +181,29 @@ pub unsafe extern "C" fn light_passage(
 	if blind != 0 {
 		return;
 	}
-	i_end = (if row < 24 as libc::c_int - 2 as libc::c_int {
-		1 as libc::c_int
+	i_end = (if row < 24 as i64 - 2 as i64 {
+		1
 	} else {
-		0 as libc::c_int
+		0 as i64
 	}) as libc::c_short;
-	j_end = (if col < 80 as libc::c_int - 1 as libc::c_int {
-		1 as libc::c_int
+	j_end = (if col < 80 as i64 - 1 {
+		1
 	} else {
-		0 as libc::c_int
+		0 as i64
 	}) as libc::c_short;
-	i = (if row > 1 as libc::c_int { -(1 as libc::c_int) } else { 0 as libc::c_int })
+	i = (if row > 1 { -(1) } else { 0 as i64 })
 		as libc::c_short;
-	while i as libc::c_int <= i_end as libc::c_int {
-		j = (if col > 0 as libc::c_int { -(1 as libc::c_int) } else { 0 as libc::c_int })
+	while i as i64 <= i_end as i64 {
+		j = (if col > 0 as i64 { -(1) } else { 0 as i64 })
 			as libc::c_short;
-		while j as libc::c_int <= j_end as libc::c_int {
+		while j as i64 <= j_end as i64 {
 			if can_move(row as usize, col as usize, (row + i) as usize, (col + j) as usize) {
-				if wmove(stdscr, row + i as libc::c_int, col + j as libc::c_int)
-					== -(1 as libc::c_int)
+				if ncurses::wmove(ncurses::stdscr(), row + i as i64, col + j as i64)
+					== -(1)
 				{
-					-(1 as libc::c_int);
+					-(1);
 				} else {
-					addch(get_dungeon_char((row + i) as usize, (col + j) as usize) as chtype);
+					addch(get_dungeon_char((row + i) as usize, (col + j) as usize) as ncurses::chtype);
 				};
 			}
 			j += 1;
@@ -288,49 +216,49 @@ pub unsafe extern "C" fn light_passage(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn darken_room(mut rn: libc::c_short) -> libc::c_int {
+pub unsafe extern "C" fn darken_room(mut rn: libc::c_short) -> i64 {
 	let mut i: libc::c_short = 0;
 	let mut j: libc::c_short = 0;
-	i = (rooms[rn as usize].top_row as libc::c_int + 1 as libc::c_int) as libc::c_short;
-	while (i as libc::c_int) < rooms[rn as usize].bottom_row as libc::c_int {
-		j = (rooms[rn as usize].left_col as libc::c_int + 1 as libc::c_int)
+	i = (rooms[rn as usize].top_row as i64 + 1) as libc::c_short;
+	while (i as i64) < rooms[rn as usize].bottom_row as i64 {
+		j = (rooms[rn as usize].left_col as i64 + 1)
 			as libc::c_short;
-		while (j as libc::c_int) < rooms[rn as usize].right_col as libc::c_int {
+		while (j as i64) < rooms[rn as usize].right_col as i64 {
 			if blind != 0 {
-				if wmove(stdscr, i as libc::c_int, j as libc::c_int)
-					== -(1 as libc::c_int)
+				if ncurses::wmove(ncurses::stdscr(), i as i64, j as i64)
+					== -(1)
 				{
-					-(1 as libc::c_int);
+					-(1);
 				} else {
-					addch(' ' as i32 as chtype);
+					addch(' ' as i32 as ncurses::chtype);
 				};
-			} else if dungeon[i as usize][j as usize] as libc::c_int
-				& (0o1 as libc::c_int as libc::c_ushort as libc::c_int
-				| 0o4 as libc::c_int as libc::c_ushort as libc::c_int) == 0
-				&& !(detect_monster as libc::c_int != 0
-				&& dungeon[i as usize][j as usize] as libc::c_int
-				& 0o2 as libc::c_int as libc::c_ushort as libc::c_int != 0)
+			} else if dungeon[i as usize][j as usize] as i64
+				& (0o1 as libc::c_ushort as i64
+				| 0o4 as i64 as libc::c_ushort as i64) == 0
+				&& !(detect_monster as i64 != 0
+				&& dungeon[i as usize][j as usize] as i64
+				& 0o2 as i64 as libc::c_ushort as i64 != 0)
 			{
-				if imitating(i as libc::c_int, j as libc::c_int) == 0 {
-					if wmove(stdscr, i as libc::c_int, j as libc::c_int)
-						== -(1 as libc::c_int)
+				if imitating(i as i64, j as i64) == 0 {
+					if ncurses::wmove(ncurses::stdscr(), i as i64, j as i64)
+						== -(1)
 					{
-						-(1 as libc::c_int);
+						-(1);
 					} else {
-						addch(' ' as i32 as chtype);
+						addch(' ' as i32 as ncurses::chtype);
 					};
 				}
-				if dungeon[i as usize][j as usize] as libc::c_int
-					& 0o400 as libc::c_int as libc::c_ushort as libc::c_int != 0
-					&& dungeon[i as usize][j as usize] as libc::c_int
-					& 0o1000 as libc::c_int as libc::c_ushort as libc::c_int == 0
+				if dungeon[i as usize][j as usize] as i64
+					& 0o400 as i64 as libc::c_ushort as i64 != 0
+					&& dungeon[i as usize][j as usize] as i64
+					& 0o1000 as i64 as libc::c_ushort as i64 == 0
 				{
-					if wmove(stdscr, i as libc::c_int, j as libc::c_int)
-						== -(1 as libc::c_int)
+					if ncurses::wmove(ncurses::stdscr(), i as i64, j as i64)
+						== -(1)
 					{
-						-(1 as libc::c_int);
+						-(1);
 					} else {
-						addch('^' as i32 as chtype);
+						addch('^' as i32 as ncurses::chtype);
 					};
 				}
 			}
@@ -346,7 +274,7 @@ pub unsafe extern "C" fn darken_room(mut rn: libc::c_short) -> libc::c_int {
 pub unsafe fn get_dungeon_char(row: usize, col: usize) -> ncurses::chtype {
 	let mask = dungeon[row][col];
 	if Monster.is_set(mask) {
-		return gmc_row_col(row as libc::c_int, col as libc::c_int);
+		return gmc_row_col(row as i64, col as i64);
 	}
 	if Object.is_set(mask) {
 		let obj = objects::object_at(&mut level_objects, row as libc::c_short, col as libc::c_short);
@@ -395,25 +323,25 @@ pub unsafe extern "C" fn gr_row_col(
 	mut row: *mut libc::c_short,
 	mut col: *mut libc::c_short,
 	mut mask: libc::c_ushort,
-) -> libc::c_int {
+) -> i64 {
 	let mut rn: libc::c_short = 0;
 	let mut r: libc::c_short = 0;
 	let mut c: libc::c_short = 0;
 	loop {
-		r = get_rand(1 as libc::c_int, 24 as libc::c_int - 2 as libc::c_int)
+		r = get_rand(1, 24 as i64 - 2 as i64)
 			as libc::c_short;
-		c = get_rand(0 as libc::c_int, 80 as libc::c_int - 1 as libc::c_int)
+		c = get_rand(0 as i64, 80 as i64 - 1)
 			as libc::c_short;
-		rn = get_room_number(r as libc::c_int, c as libc::c_int) as libc::c_short;
-		if !(rn as libc::c_int == -(1 as libc::c_int)
-			|| dungeon[r as usize][c as usize] as libc::c_int & mask as libc::c_int == 0
-			|| dungeon[r as usize][c as usize] as libc::c_int & !(mask as libc::c_int)
+		rn = get_room_number(r as i64, c as i64) as libc::c_short;
+		if !(rn as i64 == -(1)
+			|| dungeon[r as usize][c as usize] as i64 & mask as i64 == 0
+			|| dungeon[r as usize][c as usize] as i64 & !(mask as i64)
 			!= 0
-			|| rooms[rn as usize].room_type as libc::c_int
-			& (0o2 as libc::c_int as libc::c_ushort as libc::c_int
-			| 0o4 as libc::c_int as libc::c_ushort as libc::c_int) == 0
-			|| r as libc::c_int == rogue.row as libc::c_int
-			&& c as libc::c_int == rogue.col as libc::c_int)
+			|| rooms[rn as usize].room_type as i64
+			& (0o2 as i64 as libc::c_ushort as i64
+			| 0o4 as i64 as libc::c_ushort as i64) == 0
+			|| r as i64 == rogue.row as i64
+			&& c as i64 == rogue.col as i64)
 		{
 			break;
 		}
@@ -424,79 +352,79 @@ pub unsafe extern "C" fn gr_row_col(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn gr_room() -> libc::c_int {
+pub unsafe extern "C" fn gr_room() -> i64 {
 	let mut i: libc::c_short = 0;
 	loop {
-		i = get_rand(0 as libc::c_int, 9 as libc::c_int - 1 as libc::c_int)
+		i = get_rand(0 as i64, 9 as i64 - 1)
 			as libc::c_short;
-		if !(rooms[i as usize].room_type as libc::c_int
-			& (0o2 as libc::c_int as libc::c_ushort as libc::c_int
-			| 0o4 as libc::c_int as libc::c_ushort as libc::c_int) == 0)
+		if !(rooms[i as usize].room_type as i64
+			& (0o2 as i64 as libc::c_ushort as i64
+			| 0o4 as i64 as libc::c_ushort as i64) == 0)
 		{
 			break;
 		}
 	}
-	return i as libc::c_int;
+	return i as i64;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn party_objects(mut rn: libc::c_int) -> libc::c_int {
+pub unsafe extern "C" fn party_objects(mut rn: i64) -> i64 {
 	let mut i: libc::c_short = 0;
 	let mut j: libc::c_short = 0;
-	let mut nf: libc::c_short = 0 as libc::c_int as libc::c_short;
+	let mut nf: libc::c_short = 0 as i64 as libc::c_short;
 	let mut obj: *mut object = 0 as *mut object;
 	let mut n: libc::c_short = 0;
 	let mut N: libc::c_short = 0;
 	let mut row: libc::c_short = 0;
 	let mut col: libc::c_short = 0;
 	let mut found: libc::c_char = 0;
-	N = ((rooms[rn as usize].bottom_row as libc::c_int
-		- rooms[rn as usize].top_row as libc::c_int - 1 as libc::c_int)
-		* (rooms[rn as usize].right_col as libc::c_int
-		- rooms[rn as usize].left_col as libc::c_int - 1 as libc::c_int))
+	N = ((rooms[rn as usize].bottom_row as i64
+		- rooms[rn as usize].top_row as i64 - 1)
+		* (rooms[rn as usize].right_col as i64
+		- rooms[rn as usize].left_col as i64 - 1))
 		as libc::c_short;
-	n = get_rand(5 as libc::c_int, 10 as libc::c_int) as libc::c_short;
-	if n as libc::c_int > N as libc::c_int {
-		n = (N as libc::c_int - 2 as libc::c_int) as libc::c_short;
+	n = get_rand(5 as i64, 10 as i64) as libc::c_short;
+	if n as i64 > N as i64 {
+		n = (N as i64 - 2 as i64) as libc::c_short;
 	}
-	i = 0 as libc::c_int as libc::c_short;
-	while (i as libc::c_int) < n as libc::c_int {
-		found = 0 as libc::c_int as libc::c_char;
+	i = 0 as i64 as libc::c_short;
+	while (i as i64) < n as i64 {
+		found = 0 as i64 as libc::c_char;
 		j = found as libc::c_short;
-		while found == 0 && (j as libc::c_int) < 250 as libc::c_int {
+		while found == 0 && (j as i64) < 250 as i64 {
 			row = get_rand(
-				rooms[rn as usize].top_row as libc::c_int + 1 as libc::c_int,
-				rooms[rn as usize].bottom_row as libc::c_int - 1 as libc::c_int,
+				rooms[rn as usize].top_row as i64 + 1,
+				rooms[rn as usize].bottom_row as i64 - 1,
 			) as libc::c_short;
 			col = get_rand(
-				rooms[rn as usize].left_col as libc::c_int + 1 as libc::c_int,
-				rooms[rn as usize].right_col as libc::c_int - 1 as libc::c_int,
+				rooms[rn as usize].left_col as i64 + 1,
+				rooms[rn as usize].right_col as i64 - 1,
 			) as libc::c_short;
-			if dungeon[row as usize][col as usize] as libc::c_int
-				== 0o100 as libc::c_int as libc::c_ushort as libc::c_int
-				|| dungeon[row as usize][col as usize] as libc::c_int
-				== 0o200 as libc::c_int as libc::c_ushort as libc::c_int
+			if dungeon[row as usize][col as usize] as i64
+				== 0o100 as i64 as libc::c_ushort as i64
+				|| dungeon[row as usize][col as usize] as i64
+				== 0o200 as i64 as libc::c_ushort as i64
 			{
-				found = 1 as libc::c_int as libc::c_char;
+				found = 1 as libc::c_char;
 			}
 			j += 1;
 			j;
 		}
 		if found != 0 {
 			obj = gr_object();
-			place_at(obj, row as libc::c_int, col as libc::c_int);
+			place_at(obj, row as i64, col as i64);
 			nf += 1;
 			nf;
 		}
 		i += 1;
 		i;
 	}
-	return nf as libc::c_int;
+	return nf as i64;
 }
 
-pub fn get_room_number(row: libc::c_int, col: libc::c_int) -> libc::c_int {
+pub fn get_room_number(row: i64, col: i64) -> i64 {
 	unsafe {
-		for i in 0..MAXROOMS {
+		for i in 0i64..MAXROOMS {
 			let below_top_wall = row >= rooms[i].top_row;
 			let above_bottom_wall = row <= rooms[i].bottom_row;
 			let right_of_left_wall = col >= rooms[i].left_col;
@@ -510,11 +438,11 @@ pub fn get_room_number(row: libc::c_int, col: libc::c_int) -> libc::c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn is_all_connected() -> libc::c_int {
+pub unsafe extern "C" fn is_all_connected() -> i64 {
 	let mut i: libc::c_short = 0;
 	let mut starting_room: libc::c_short = 0;
-	i = 0 as libc::c_int as libc::c_short;
-	while (i as libc::c_int) < 9 as libc::c_int {
+	i = 0 as i64 as libc::c_short;
+	while (i as i64) < 9 as libc::c_int {
 		rooms_visited[i as usize] = 0 as libc::c_int as libc::c_char;
 		if rooms[i as usize].room_type as libc::c_int
 			& (0o2 as libc::c_int as libc::c_ushort as libc::c_int
@@ -562,12 +490,12 @@ pub unsafe extern "C" fn draw_magic_map() -> libc::c_int {
 		while (j as libc::c_int) < 80 as libc::c_int {
 			s = dungeon[i as usize][j as usize];
 			if s as libc::c_int & mask as libc::c_int != 0 {
-				ch = (if wmove(stdscr, i as libc::c_int, j as libc::c_int)
+				ch = (if ncurses::wmove(ncurses::stdscr(), i as libc::c_int, j as libc::c_int)
 					== -(1 as libc::c_int)
 				{
-					-(1 as libc::c_int) as chtype
+					-(1 as libc::c_int) as ncurses::chtype
 				} else {
-					winch(stdscr)
+					ncurses::winch(ncurses::stdscr())
 				}) as libc::c_short;
 				if ch as libc::c_int == ' ' as i32
 					|| ch as libc::c_int >= 'A' as i32 && ch as libc::c_int <= 'Z' as i32
@@ -622,7 +550,7 @@ pub unsafe extern "C" fn draw_magic_map() -> libc::c_int {
 								& 0o2 as libc::c_int as libc::c_ushort as libc::c_int == 0
 								|| och as libc::c_int == ' ' as i32
 							{
-								addch(ch as chtype);
+								addch(ch as ncurses::chtype);
 							}
 							if s as libc::c_int
 								& 0o2 as libc::c_int as libc::c_ushort as libc::c_int != 0

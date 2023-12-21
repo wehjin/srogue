@@ -11,122 +11,20 @@ use crate::pack::has_amulet;
 use crate::random::{get_rand, rand_percent};
 use crate::room::{gr_row_col, is_all_connected, light_passage, light_up_room};
 use crate::score::win;
-
-extern "C" {
-	pub type ldat;
-
-	fn wclear(_: *mut WINDOW) -> libc::c_int;
-	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-
-	static mut stdscr: *mut WINDOW;
-	static mut rogue: fighter;
-	static mut rooms: [room; 0];
-	static mut traps: [trap; 0];
-	static mut dungeon: [[c_ushort; 80]; 24];
-	static mut being_held: libc::c_char;
-	static mut wizard: libc::c_char;
-	static mut detect_monster: libc::c_char;
-	static mut see_invisible: libc::c_char;
-	static mut bear_trap: c_short;
-	static mut levitate: c_short;
-	static mut extra_hp: c_short;
-	static mut less_hp: c_short;
-	static mut party_counter: c_short;
-}
-
 use crate::prelude::*;
 use crate::prelude::SpotFlag::{HorWall, Tunnel, VertWall};
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
 
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _win_st {
-	pub _cury: c_short,
-	pub _curx: c_short,
-	pub _maxy: c_short,
-	pub _maxx: c_short,
-	pub _begy: c_short,
-	pub _begx: c_short,
-	pub _flags: c_short,
-	pub _attrs: attr_t,
-	pub _bkgd: chtype,
-	pub _notimeout: libc::c_int,
-	pub _clear: libc::c_int,
-	pub _leaveok: libc::c_int,
-	pub _scroll: libc::c_int,
-	pub _idlok: libc::c_int,
-	pub _idcok: libc::c_int,
-	pub _immed: libc::c_int,
-	pub _sync: libc::c_int,
-	pub _use_keypad: libc::c_int,
-	pub _delay: libc::c_int,
-	pub _line: *mut ldat,
-	pub _regtop: c_short,
-	pub _regbottom: c_short,
-	pub _parx: libc::c_int,
-	pub _pary: libc::c_int,
-	pub _parent: *mut WINDOW,
-	pub _pad: pdat,
-	pub _yoffset: c_short,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct pdat {
-	pub _pad_y: c_short,
-	pub _pad_x: c_short,
-	pub _pad_top: c_short,
-	pub _pad_left: c_short,
-	pub _pad_bottom: c_short,
-	pub _pad_right: c_short,
-}
-
 pub type WINDOW = _win_st;
-pub type attr_t = chtype;
+pub type attr_t = ncurses::chtype;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct fight {
-	pub armor: *mut object,
-	pub weapon: *mut object,
-	pub left_ring: *mut object,
-	pub right_ring: *mut object,
-	pub hp_current: c_short,
-	pub hp_max: c_short,
-	pub str_current: c_short,
-	pub str_max: c_short,
-	pub pack: object,
-	pub gold: c_long,
-	pub exp: c_short,
-	pub exp_points: c_long,
-	pub row: c_short,
-	pub col: c_short,
-	pub fchar: c_short,
-	pub moves_left: c_short,
-}
-
-pub type fighter = fight;
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct tr {
-	pub trap_type: c_short,
-	pub trap_row: c_short,
-	pub trap_col: c_short,
-}
-
-pub type trap = tr;
-
-#[no_mangle]
-pub static mut cur_level: c_short = 0 as libc::c_int as c_short;
-#[no_mangle]
-pub static mut max_level: c_short = 1 as libc::c_int as c_short;
-#[no_mangle]
-pub static mut cur_room: c_short = 0;
+pub static mut cur_level: i16 = 0;
+pub static mut max_level: i16 = 1;
+pub static mut cur_room: i16 = 0;
 pub static mut new_level_message: Option<String> = None;
 #[no_mangle]
-pub static mut party_room: c_short = -(1 as libc::c_int) as c_short;
+pub static mut party_room: i16 = -1;
 #[no_mangle]
 pub static mut r_de: c_short = 0;
 #[no_mangle]
@@ -155,83 +53,83 @@ pub static mut level_points: [c_long; 21] = [
 ];
 #[no_mangle]
 pub static mut random_rooms: [libc::c_char; 10] = [
-	3 as libc::c_int as libc::c_char,
-	7 as libc::c_int as libc::c_char,
-	5 as libc::c_int as libc::c_char,
-	2 as libc::c_int as libc::c_char,
-	0 as libc::c_int as libc::c_char,
-	6 as libc::c_int as libc::c_char,
-	1 as libc::c_int as libc::c_char,
-	4 as libc::c_int as libc::c_char,
-	8 as libc::c_int as libc::c_char,
+	3 as i64 as libc::c_char,
+	7 as i64 as libc::c_char,
+	5 as i64 as libc::c_char,
+	2 as i64 as libc::c_char,
+	0 as i64 as libc::c_char,
+	6 as i64 as libc::c_char,
+	1 as libc::c_char,
+	4 as i64 as libc::c_char,
+	8 as i64 as libc::c_char,
 	0,
 ];
 
 #[no_mangle]
-pub unsafe extern "C" fn make_level() -> libc::c_int {
+pub unsafe extern "C" fn make_level() -> i64 {
 	let mut i: c_short = 0;
 	let mut j: c_short = 0;
 	let mut must_exist1: c_short = 0;
 	let mut must_exist2: c_short = 0;
 	let mut must_exist3: c_short = 0;
 	let mut big_room: libc::c_char = 0;
-	if (cur_level as libc::c_int) < 99 as libc::c_int {
+	if (cur_level as i64) < 99 as i64 {
 		cur_level += 1;
 	}
-	if cur_level as libc::c_int > max_level as libc::c_int {
+	if cur_level as i64 > max_level as i64 {
 		max_level = cur_level;
 	}
-	must_exist1 = get_rand(0 as libc::c_int, 5 as libc::c_int) as c_short;
-	match must_exist1 as libc::c_int {
+	must_exist1 = get_rand(0 as i64, 5 as i64) as c_short;
+	match must_exist1 {
 		0 => {
-			must_exist1 = 0 as libc::c_int as c_short;
-			must_exist2 = 1 as libc::c_int as c_short;
-			must_exist3 = 2 as libc::c_int as c_short;
+			must_exist1 = 0 as i64 as c_short;
+			must_exist2 = 1 as c_short;
+			must_exist3 = 2 as i64 as c_short;
 		}
 		1 => {
-			must_exist1 = 3 as libc::c_int as c_short;
-			must_exist2 = 4 as libc::c_int as c_short;
-			must_exist3 = 5 as libc::c_int as c_short;
+			must_exist1 = 3 as i64 as c_short;
+			must_exist2 = 4 as i64 as c_short;
+			must_exist3 = 5 as i64 as c_short;
 		}
 		2 => {
-			must_exist1 = 6 as libc::c_int as c_short;
-			must_exist2 = 7 as libc::c_int as c_short;
-			must_exist3 = 8 as libc::c_int as c_short;
+			must_exist1 = 6 as i64 as c_short;
+			must_exist2 = 7 as i64 as c_short;
+			must_exist3 = 8 as i64 as c_short;
 		}
 		3 => {
-			must_exist1 = 0 as libc::c_int as c_short;
-			must_exist2 = 3 as libc::c_int as c_short;
-			must_exist3 = 6 as libc::c_int as c_short;
+			must_exist1 = 0 as i64 as c_short;
+			must_exist2 = 3 as i64 as c_short;
+			must_exist3 = 6 as i64 as c_short;
 		}
 		4 => {
-			must_exist1 = 1 as libc::c_int as c_short;
-			must_exist2 = 4 as libc::c_int as c_short;
-			must_exist3 = 7 as libc::c_int as c_short;
+			must_exist1 = 1 as c_short;
+			must_exist2 = 4 as i64 as c_short;
+			must_exist3 = 7 as i64 as c_short;
 		}
 		5 => {
-			must_exist1 = 2 as libc::c_int as c_short;
-			must_exist2 = 5 as libc::c_int as c_short;
-			must_exist3 = 8 as libc::c_int as c_short;
+			must_exist1 = 2 as i64 as c_short;
+			must_exist2 = 5 as i64 as c_short;
+			must_exist3 = 8 as i64 as c_short;
 		}
 		_ => {}
 	}
-	big_room = (cur_level as libc::c_int == party_counter as libc::c_int
-		&& rand_percent(1 as libc::c_int)) as libc::c_int as libc::c_char;
+	big_room = (cur_level as i64 == party_counter as i64
+		&& rand_percent(1)) as i64 as libc::c_char;
 	if big_room != 0 {
 		make_room(
-			10 as libc::c_int,
-			0 as libc::c_int,
-			0 as libc::c_int,
-			0 as libc::c_int,
+			10 as i64,
+			0 as i64,
+			0 as i64,
+			0 as i64,
 		);
 	} else {
-		i = 0 as libc::c_int as c_short;
-		while (i as libc::c_int) < 9 as libc::c_int {
+		i = 0 as i64 as c_short;
+		while (i as i64) < 9 as i64 {
 			make_room(
-				i as libc::c_int,
-				must_exist1 as libc::c_int,
-				must_exist2 as libc::c_int,
-				must_exist3 as libc::c_int,
+				i as i64,
+				must_exist1 as i64,
+				must_exist2 as i64,
+				must_exist3 as i64,
 			);
 			i += 1;
 		}
@@ -239,41 +137,41 @@ pub unsafe extern "C" fn make_level() -> libc::c_int {
 	if big_room == 0 {
 		add_mazes();
 		mix_random_rooms();
-		j = 0 as libc::c_int as c_short;
-		while (j as libc::c_int) < 9 as libc::c_int {
+		j = 0 as i64 as c_short;
+		while (j as i64) < 9 as i64 {
 			i = random_rooms[j as usize] as c_short;
-			if (i as libc::c_int) < 9 as libc::c_int - 1 as libc::c_int {
-				connect_rooms(i as libc::c_int, i as libc::c_int + 1 as libc::c_int);
+			if (i as i64) < 9 as i64 - 1 {
+				connect_rooms(i as i64, i as i64 + 1);
 			}
-			if (i as libc::c_int) < 9 as libc::c_int - 3 as libc::c_int {
-				connect_rooms(i as libc::c_int, i as libc::c_int + 3 as libc::c_int);
+			if (i as i64) < 9 as i64 - 3 as i64 {
+				connect_rooms(i as i64, i as i64 + 3 as i64);
 			}
-			if (i as libc::c_int) < 9 as libc::c_int - 2 as libc::c_int {
+			if (i as i64) < 9 as i64 - 2 as i64 {
 				if (*rooms
 					.as_mut_ptr()
-					.offset((i as libc::c_int + 1 as libc::c_int) as isize))
-					.room_type as libc::c_int
-					& 0o1 as libc::c_int as c_ushort as libc::c_int != 0
+					.offset((i as i64 + 1) as isize))
+					.room_type as i64
+					& 0o1 as c_ushort as i64 != 0
 				{
-					if connect_rooms(i as libc::c_int, i as libc::c_int + 2 as libc::c_int) {
+					if connect_rooms(i as i64, i as i64 + 2 as i64) {
 						(*rooms
 							.as_mut_ptr()
-							.offset((i as libc::c_int + 1 as libc::c_int) as isize))
+							.offset((i as i64 + 1) as isize))
 							.room_type = RoomType::Room;
 					}
 				}
 			}
-			if (i as libc::c_int) < 9 as libc::c_int - 6 as libc::c_int {
+			if (i as i64) < 9 as i64 - 6 as i64 {
 				if (*rooms
 					.as_mut_ptr()
-					.offset((i as libc::c_int + 3 as libc::c_int) as isize))
-					.room_type as libc::c_int
-					& 0o1 as libc::c_int as c_ushort as libc::c_int != 0
+					.offset((i as i64 + 3 as i64) as isize))
+					.room_type as i64
+					& 0o1 as c_ushort as i64 != 0
 				{
-					if connect_rooms(i as libc::c_int, i as libc::c_int + 6 as libc::c_int) {
+					if connect_rooms(i as i64, i as i64 + 6 as i64) {
 						(*rooms
 							.as_mut_ptr()
-							.offset((i as libc::c_int + 3 as libc::c_int) as isize))
+							.offset((i as i64 + 3 as i64) as isize))
 							.room_type = RoomType::Room;
 					}
 				}
@@ -285,30 +183,30 @@ pub unsafe extern "C" fn make_level() -> libc::c_int {
 		}
 		fill_out_level();
 	}
-	if has_amulet() == 0 && cur_level as libc::c_int >= 26 as libc::c_int {
+	if has_amulet() == 0 && cur_level as i64 >= 26 as i64 {
 		put_amulet();
 	}
 	panic!("Reached end of non-void function without returning");
 }
 
-pub unsafe fn make_room(rn: libc::c_int, r1: libc::c_int, r2: libc::c_int, r3: libc::c_int) {
+pub unsafe fn make_room(rn: i64, r1: i64, r2: i64, r3: i64) {
 	let rn: usize = rn as usize;
 	let (left, right, top, bottom, do_shrink, room_index) =
 		match rn {
-			0 => (0 as c_int, COL1 - 1 as c_int, MIN_ROW, ROW1 - 1 as c_int, true, rn),
+			0 => (0, COL1 - 1, MIN_ROW, ROW1 - 1, true, rn),
 			1 => (COL1 + 1, COL2 - 1, MIN_ROW, ROW1 - 1, true, rn),
-			2 => (COL2 + 1, DCOLS - 1, MIN_ROW, ROW1 - 1, true, rn),
+			2 => (COL2 + 1, DCOLS as i64 - 1, MIN_ROW, ROW1 - 1, true, rn),
 			3 => (0, COL1 - 1, ROW1 + 1, ROW2 - 1, true, rn),
 			4 => (COL1 + 1, COL2 - 1, ROW1 + 1, ROW2 - 1, true, rn),
-			5 => (COL2 + 1, DCOLS - 1, ROW1 + 1, ROW2 - 1, true, rn),
-			6 => (0, COL1 - 1, ROW2 + 1, DROWS - 2, true, rn),
-			7 => (COL1 + 1, COL2 - 1, ROW2 + 1, DROWS - 2, true, rn),
-			8 => (COL2 + 1, DCOLS - 1, ROW2 + 1, DROWS - 2, true, rn),
+			5 => (COL2 + 1, DCOLS as i64 - 1, ROW1 + 1, ROW2 - 1, true, rn),
+			6 => (0, COL1 - 1, ROW2 + 1, DROWS as i64 - 2, true, rn),
+			7 => (COL1 + 1, COL2 - 1, ROW2 + 1, DROWS as i64 - 2, true, rn),
+			8 => (COL2 + 1, DCOLS as i64 - 1, ROW2 + 1, DROWS as i64 - 2, true, rn),
 			BIG_ROOM => {
 				let top = get_rand(MIN_ROW, MIN_ROW + 5);
-				let bottom = get_rand(DROWS - 7, DROWS - 2);
+				let bottom = get_rand(DROWS as i64 - 7, DROWS as i64 - 2);
 				let left = get_rand(0, 10);
-				let right = get_rand(DCOLS - 11, DCOLS - 1);
+				let right = get_rand(DCOLS as i64 - 11, DCOLS as i64 - 1);
 				(left, right, top, bottom, false, 0)
 			}
 			_ => panic!("Invalid value in parameter rn")
@@ -319,10 +217,10 @@ pub unsafe fn make_room(rn: libc::c_int, r1: libc::c_int, r2: libc::c_int, r3: l
 		let row_offset = get_rand(0, (bottom - top) - height + 1);
 		let col_offset = get_rand(0, (right - left) - width + 1);
 		let top = top + row_offset;
-		let bottom = top + height - 1 as c_int;
+		let bottom = top + height - 1;
 		let left = left + col_offset;
-		let right = left + width - 1 as c_int;
-		let skip_walls = (room_index != r1 as usize) && (room_index != r2 as usize) && (room_index != r3 as usize) && rand_percent(40 as c_int);
+		let right = left + width - 1;
+		let skip_walls = (room_index != r1 as usize) && (room_index != r2 as usize) && (room_index != r3 as usize) && rand_percent(40);
 		(left, right, top, bottom, !skip_walls)
 	} else {
 		(left, right, top, bottom, true)
@@ -337,9 +235,9 @@ pub unsafe fn make_room(rn: libc::c_int, r1: libc::c_int, r2: libc::c_int, r3: l
 				let left_border = j == left;
 				let right_border = j == right;
 				let ch = if top_border || bottom_border {
-					SpotFlag::HorWall as c_ushort
+					HorWall as c_ushort
 				} else if !top_border && !bottom_border && (left_border || right_border) {
-					SpotFlag::VertWall as c_ushort
+					VertWall as c_ushort
 				} else {
 					SpotFlag::Floor as c_ushort
 				};
@@ -347,13 +245,13 @@ pub unsafe fn make_room(rn: libc::c_int, r1: libc::c_int, r2: libc::c_int, r3: l
 			}
 		}
 	}
-	rooms[rn].top_row = top;
-	rooms[rn].bottom_row = bottom;
-	rooms[rn].left_col = left;
-	rooms[rn].right_col = right;
+	rooms[rn].top_row = top as i64;
+	rooms[rn].bottom_row = bottom as i64;
+	rooms[rn].left_col = left as i64;
+	rooms[rn].right_col = right as i64;
 }
 
-pub unsafe fn connect_rooms(room1: libc::c_int, room2: libc::c_int) -> bool {
+pub unsafe fn connect_rooms(room1: i64, room2: i64) -> bool {
 	let (room1, room2) = (room1 as usize, room2 as usize);
 	if rooms[room1].room_type.is_nothing() || rooms[room2].room_type.is_nothing() {
 		return false;
@@ -390,47 +288,47 @@ pub unsafe fn connect_rooms(room1: libc::c_int, room2: libc::c_int) -> bool {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn clear_level() -> libc::c_int {
+pub unsafe extern "C" fn clear_level() -> i64 {
 	let mut i: c_short = 0;
 	let mut j: c_short = 0;
-	i = 0 as libc::c_int as c_short;
-	while (i as libc::c_int) < 9 as libc::c_int {
+	i = 0 as i64 as c_short;
+	while (i as i64) < 9 as i64 {
 		(*rooms.as_mut_ptr().offset(i as isize)).room_type = RoomType::Nothing;
-		j = 0 as libc::c_int as c_short;
-		while (j as libc::c_int) < 4 as libc::c_int {
+		j = 0 as i64 as c_short;
+		while (j as i64) < 4 as i64 {
 			(*rooms.as_mut_ptr().offset(i as isize)).doors[j as usize].oth_room = None;
 			j += 1;
 		}
 		i += 1;
 	}
-	i = 0 as libc::c_int as c_short;
-	while (i as libc::c_int) < 10 as libc::c_int {
+	i = 0 as i64 as c_short;
+	while (i as i64) < 10 as i64 {
 		(*traps.as_mut_ptr().offset(i as isize))
-			.trap_type = -(1 as libc::c_int) as c_short;
+			.trap_type = -(1) as c_short;
 		i += 1;
 	}
-	i = 0 as libc::c_int as c_short;
-	while (i as libc::c_int) < 24 as libc::c_int {
-		j = 0 as libc::c_int as c_short;
-		while (j as libc::c_int) < 80 as libc::c_int {
-			dungeon[i as usize][j as usize] = 0 as libc::c_int as c_ushort;
+	i = 0 as i64 as c_short;
+	while (i as i64) < 24 as i64 {
+		j = 0 as i64 as c_short;
+		while (j as i64) < 80 as i64 {
+			dungeon[i as usize][j as usize] = 0 as i64 as c_ushort;
 			j += 1;
 		}
 		i += 1;
 	}
-	see_invisible = 0 as libc::c_int as libc::c_char;
+	see_invisible = false;
 	detect_monster = see_invisible;
-	bear_trap = 0 as libc::c_int as c_short;
-	being_held = bear_trap as libc::c_char;
-	party_room = -(1 as libc::c_int) as c_short;
-	rogue.col = -(1 as libc::c_int) as c_short;
+	bear_trap = false;
+	being_held = bear_trap;
+	party_room = -(1) as c_short;
+	rogue.col = -(1) as c_short;
 	rogue.row = rogue.col;
-	wclear(stdscr);
+	ncurses::wclear(ncurses::stdscr());
 	panic!("Reached end of non-void function without returning");
 }
 
 pub unsafe fn put_door(room: &mut room, door_dir: DoorDirection) -> DungeonSpot {
-	let wall_width = if RoomType::Maze == room.room_type { 0 as c_int } else { 1 };
+	let wall_width = if RoomType::Maze == room.room_type { 0 } else { 1 };
 	let door_spot = match door_dir {
 		DoorDirection::Up | DoorDirection::Down => {
 			let row = if door_dir == DoorDirection::Up { room.top_row } else { room.bottom_row } as usize;
@@ -447,7 +345,7 @@ pub unsafe fn put_door(room: &mut room, door_dir: DoorDirection) -> DungeonSpot 
 			let col = if door_dir == DoorDirection::Left { room.left_col } else { room.right_col } as usize;
 			let mut row;
 			loop {
-				row = get_rand(room.top_row + wall_width, room.bottom_row - wall_width) as usize;
+				row = get_rand((room.top_row + wall_width) as c_int, (room.bottom_row - wall_width) as c_int) as usize;
 				if SpotFlag::is_any_set(&vec![VertWall, Tunnel], dungeon[row][col]) {
 					break;
 				}
@@ -514,7 +412,7 @@ pub unsafe fn draw_simple_passage(spot1: &DungeonSpot, spot2: &DungeonSpot, dir:
 			}
 		};
 	if rand_percent(HIDE_PERCENT) {
-		hide_boxed_passage(row1 as c_int, col1 as c_int, row2 as c_int, col2 as c_int, 1);
+		hide_boxed_passage(row1 as i64, col1 as i64, row2 as i64, col2 as i64, 1);
 	}
 }
 
@@ -529,7 +427,7 @@ pub fn same_col(room1: usize, room2: usize) -> bool {
 
 pub unsafe fn add_mazes() {
 	if cur_level > 1 {
-		let start = get_rand(0, MAXROOMS - 1);
+		let start = get_rand(0, (MAXROOMS - 1) as c_int) as usize;
 		let maze_percent = {
 			let mut nominal_percent = (cur_level * 5) / 4;
 			if cur_level > 15 {
@@ -540,9 +438,9 @@ pub unsafe fn add_mazes() {
 		};
 
 		for i in 0..MAXROOMS {
-			let j = ((start + i) % MAXROOMS) as usize;
+			let j = (start + i) as usize % MAXROOMS;
 			if rooms[j].room_type.is_nothing() {
-				let do_maze = rand_percent(maze_percent as c_int);
+				let do_maze = rand_percent(maze_percent);
 				if do_maze {
 					rooms[j].room_type = RoomType::Maze;
 					make_maze(
@@ -551,9 +449,7 @@ pub unsafe fn add_mazes() {
 						rooms[j].top_row as usize, rooms[j].bottom_row as usize,
 						rooms[j].left_col as usize, rooms[j].right_col as usize,
 					);
-					hide_boxed_passage(rooms[j].top_row, rooms[j].left_col,
-					                   rooms[j].bottom_row, rooms[j].right_col,
-					                   get_rand(0, 2));
+					hide_boxed_passage(rooms[j].top_row, rooms[j].left_col, rooms[j].bottom_row, rooms[j].right_col, get_rand(0, 2));
 				}
 			}
 		}
@@ -565,7 +461,7 @@ pub unsafe fn fill_out_level() {
 	r_de = NO_ROOM as c_short;
 
 	for i in 0..MAXROOMS {
-		let rn = random_rooms[i as usize] as usize;
+		let rn = random_rooms[i] as usize;
 		// Note: original C uses (rooms[rn].is_room & R_NOTHING) for the
 		// first clause of the conditional. Since R_NOTHING is 0, the first clause would always evaluate
 		// to false.
@@ -598,7 +494,7 @@ pub unsafe fn fill_it(rn: usize, do_rec_de: bool) {
 		let target_room = (rn as isize + OFFSETS[i]) as usize;
 		let mut rooms_found: usize = 0;
 
-		if ((target_room < 0) || (target_room >= MAXROOMS as usize))
+		if ((target_room < 0) || (target_room >= MAXROOMS))
 			|| (!same_row(rn, target_room) && !same_col(rn, target_room))
 			|| (rooms[target_room].room_type != RoomType::Room && rooms[target_room].room_type != RoomType::Maze) {
 			continue;
@@ -609,7 +505,7 @@ pub unsafe fn fill_it(rn: usize, do_rec_de: bool) {
 			continue;
 		}
 		let (mut srow, mut scol) = (srow as c_short, scol as c_short);
-		if ((!do_rec_de) || did_this) || (!mask_room(rn as c_short, &mut srow, &mut scol, SpotFlag::Tunnel as c_ushort)) {
+		if ((!do_rec_de) || did_this) || (!mask_room(rn as c_short, &mut srow, &mut scol, Tunnel as c_ushort)) {
 			srow = ((rooms[rn].top_row + rooms[rn].bottom_row) / 2) as c_short;
 			scol = ((rooms[rn].left_col + rooms[rn].right_col) / 2) as c_short;
 		}
@@ -618,7 +514,7 @@ pub unsafe fn fill_it(rn: usize, do_rec_de: bool) {
 		let s_spot = DungeonSpot { col: scol as usize, row: srow as usize };
 		draw_simple_passage(&s_spot, &d_spot, tunnel_dir);
 		rooms[rn].room_type = RoomType::DeadEnd;
-		dungeon[srow as usize][scol as usize] = SpotFlag::Tunnel as c_ushort;
+		dungeon[srow as usize][scol as usize] = Tunnel as c_ushort;
 
 		if (i < 3) && !did_this {
 			did_this = true;
@@ -636,11 +532,11 @@ pub unsafe fn fill_it(rn: usize, do_rec_de: bool) {
 pub unsafe fn recursive_deadend(rn: usize, offsets: &[isize; 4], s_spot: &DungeonSpot)
 {
 	rooms[rn].room_type = RoomType::DeadEnd;
-	dungeon[s_spot.row][s_spot.col] = SpotFlag::Tunnel as c_ushort;
+	dungeon[s_spot.row][s_spot.col] = Tunnel as c_ushort;
 
 	for i in 0..4 {
 		let de = (rn as isize + offsets[i]) as usize;
-		if ((de < 0) || (de >= MAXROOMS as usize))
+		if ((de < 0) || (de >= MAXROOMS))
 			|| (!same_row(rn, de) && !same_col(rn, de)) {
 			continue;
 		}
@@ -677,14 +573,14 @@ pub unsafe extern "C" fn mask_room(
 	let mut i: c_short = 0;
 	let mut j: c_short = 0;
 	i = (*rooms.as_mut_ptr().offset(rn as isize)).top_row as c_short;
-	while i as libc::c_int
-		<= (*rooms.as_mut_ptr().offset(rn as isize)).bottom_row as libc::c_int
+	while i as i64
+		<= (*rooms.as_mut_ptr().offset(rn as isize)).bottom_row as i64
 	{
 		j = (*rooms.as_mut_ptr().offset(rn as isize)).left_col as c_short;
-		while j as libc::c_int
-			<= (*rooms.as_mut_ptr().offset(rn as isize)).right_col as libc::c_int
+		while j as i64
+			<= (*rooms.as_mut_ptr().offset(rn as isize)).right_col as i64
 		{
-			if dungeon[i as usize][j as usize] as libc::c_int & mask as libc::c_int != 0
+			if dungeon[i as usize][j as usize] as i64 & mask as i64 != 0
 			{
 				*row = i;
 				*col = j;
@@ -697,7 +593,7 @@ pub unsafe extern "C" fn mask_room(
 	return false;
 }
 
-const TUNNEL: c_ushort = SpotFlag::Tunnel as c_ushort;
+const TUNNEL: c_ushort = Tunnel as c_ushort;
 const HIDDEN: c_ushort = SpotFlag::Hidden as c_ushort;
 
 pub unsafe fn make_maze(r: usize, c: usize, tr: usize, br: usize, lc: usize, rc: usize) {
@@ -753,7 +649,7 @@ pub unsafe fn make_maze(r: usize, c: usize, tr: usize, br: usize, lc: usize, rc:
 	}
 }
 
-pub unsafe fn hide_boxed_passage(row1: c_int, col1: c_int, row2: c_int, col2: c_int, n: c_int) {
+pub unsafe fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: i64) {
 	if cur_level > 2 {
 		let (row1, row2) = if row1 > row2 { (row2, row1) } else { (row1, row2) };
 		let (col1, col2) = if col1 > col2 { (col2, col1) } else { (col1, col2) };
@@ -789,19 +685,19 @@ pub unsafe extern "C" fn put_player(mut nr: c_short) {
 	let mut misses: c_short = 0;
 	let mut row: c_short = 0;
 	let mut col: c_short = 0;
-	misses = 0 as libc::c_int as c_short;
-	while (misses as libc::c_int) < 2 as libc::c_int
-		&& rn as libc::c_int == nr as libc::c_int
+	misses = 0 as i64 as c_short;
+	while (misses as i64) < 2 as i64
+		&& rn as i64 == nr as i64
 	{
 		gr_row_col(
 			&mut row,
 			&mut col,
-			(0o100 as libc::c_int as c_ushort as libc::c_int
-				| 0o200 as libc::c_int as c_ushort as libc::c_int
-				| 0o1 as libc::c_int as c_ushort as libc::c_int
-				| 0o4 as libc::c_int as c_ushort as libc::c_int) as c_ushort,
+			(0o100 as c_ushort
+				| 0o200 as c_ushort
+				| 0o1 as c_ushort
+				| 0o4) as c_ushort,
 		);
-		rn = get_room_number(row as libc::c_int, col as libc::c_int) as c_short;
+		rn = get_room_number(row as i64, col as i64) as c_short;
 		misses += 1;
 	}
 	rogue.row = row;
@@ -814,12 +710,12 @@ pub unsafe extern "C" fn put_player(mut nr: c_short) {
 		cur_room = rn;
 	}
 	if cur_room as libc::c_int != -(3 as libc::c_int) {
-		light_up_room(cur_room as libc::c_int);
+		light_up_room(cur_room as i64);
 	} else {
-		light_passage(rogue.row as libc::c_int, rogue.col as libc::c_int);
+		light_passage(rogue.row as i64, rogue.col as i64);
 	}
 	wake_room(
-		get_room_number(rogue.row as c_int, rogue.col as libc::c_int) as usize,
+		get_room_number(rogue.row as i64, rogue.col as i64) as usize,
 		true,
 		rogue.row as usize,
 		rogue.col as usize,
@@ -828,18 +724,18 @@ pub unsafe extern "C" fn put_player(mut nr: c_short) {
 		message(msg, 0);
 		new_level_message = None;
 	}
-	ncurses::mvaddch(rogue.row as i32, rogue.col as i32, rogue.fchar as chtype);
+	ncurses::mvaddch(rogue.row as i32, rogue.col as i32, rogue.fchar as ncurses::chtype);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn drop_check() -> bool {
-	if wizard != 0 {
+	if wizard {
 		return true;
 	}
 	if dungeon[rogue.row as usize][rogue.col as usize] as libc::c_int
 		& 0o4 as libc::c_int as c_ushort as libc::c_int != 0
 	{
-		if levitate != 0 {
+		if levitate {
 			message("you're floating in the air!", 0);
 			return false;
 		}
@@ -851,7 +747,7 @@ pub unsafe extern "C" fn drop_check() -> bool {
 
 #[no_mangle]
 pub unsafe extern "C" fn check_up() -> libc::c_int {
-	if wizard == 0 {
+	if !wizard {
 		if dungeon[rogue.row as usize][rogue.col as usize] as libc::c_int
 			& 0o4 as libc::c_int as c_ushort as libc::c_int == 0
 		{
@@ -873,13 +769,13 @@ pub unsafe extern "C" fn check_up() -> libc::c_int {
 	return 0 as libc::c_int;
 }
 
-pub unsafe fn add_exp(e: libc::c_int, promotion: bool) {
-	rogue.exp_points += e as c_long;
+pub unsafe fn add_exp(e: i64, promotion: bool) {
+	rogue.exp_points += e;
 
-	if rogue.exp_points >= level_points[(rogue.exp - 1) as usize] {
-		let new_exp = get_exp_level(rogue.exp_points);
+	if rogue.exp_points >= level_points[(rogue.exp - 1) as usize] as i64 {
+		let new_exp = get_exp_level(rogue.exp_points as c_long);
 		if rogue.exp_points > MAX_EXP as i64 {
-			rogue.exp_points = (MAX_EXP + 1) as c_long;
+			rogue.exp_points = (MAX_EXP + 1) as i64;
 		}
 		for i in (rogue.exp as usize + 1)..=new_exp {
 			let msg = format!("welcome to level {}", i);
@@ -890,10 +786,10 @@ pub unsafe fn add_exp(e: libc::c_int, promotion: bool) {
 				rogue.hp_max = (rogue.hp_max as usize + hp) as c_short;
 			}
 			rogue.exp = i as c_short;
-			print_stats(STAT_HP | STAT_EXP);
+			print_stats((STAT_HP | STAT_EXP) as i64);
 		}
 	} else {
-		print_stats(STAT_EXP);
+		print_stats(STAT_EXP as i64);
 	}
 }
 
@@ -908,7 +804,7 @@ pub unsafe fn get_exp_level(e: c_long) -> usize {
 }
 
 pub unsafe fn hp_raise() -> usize {
-	if wizard != 0 {
+	if wizard {
 		10
 	} else {
 		get_rand(3, 10) as usize
@@ -933,8 +829,8 @@ pub unsafe fn mix_random_rooms() {
 		let mut x: usize = 0;
 		let mut y: usize = 0;
 		loop {
-			x = get_rand(0, MAXROOMS - 1) as usize;
-			y = get_rand(0, MAXROOMS - 1) as usize;
+			x = get_rand(0, (MAXROOMS - 1) as c_int) as usize;
+			y = get_rand(0, (MAXROOMS - 1) as c_int) as usize;
 			if x != y {
 				break;
 			}

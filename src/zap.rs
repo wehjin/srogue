@@ -3,23 +3,15 @@
 extern "C" {
 	pub type ldat;
 
-	fn winch(_: *mut WINDOW) -> chtype;
-	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	static mut stdscr: *mut WINDOW;
-	static mut rogue: fighter;
-	static mut dungeon: [[libc::c_ushort; 80]; 24];
-	static mut level_monsters: object;
 	fn is_direction() -> libc::c_char;
 	fn reg_move() -> libc::c_char;
 	fn get_letter_object() -> *mut object;
 	fn gr_monster() -> *mut object;
-	static mut being_held: libc::c_char;
-	static mut detect_monster: libc::c_char;
 	fn strncmp(
 		_: *const libc::c_char,
 		_: *const libc::c_char,
 		_: libc::c_ulong,
-	) -> libc::c_int;
+	) -> i64;
 }
 
 use libc::strlen;
@@ -38,21 +30,21 @@ pub struct _win_st {
 	pub _flags: libc::c_short,
 	pub _attrs: attr_t,
 	pub _bkgd: ncurses::chtype,
-	pub _notimeout: libc::c_int,
-	pub _clear: libc::c_int,
-	pub _leaveok: libc::c_int,
-	pub _scroll: libc::c_int,
-	pub _idlok: libc::c_int,
-	pub _idcok: libc::c_int,
-	pub _immed: libc::c_int,
-	pub _sync: libc::c_int,
-	pub _use_keypad: libc::c_int,
-	pub _delay: libc::c_int,
+	pub _notimeout: i64,
+	pub _clear: i64,
+	pub _leaveok: i64,
+	pub _scroll: i64,
+	pub _idlok: i64,
+	pub _idcok: i64,
+	pub _immed: i64,
+	pub _sync: i64,
+	pub _use_keypad: i64,
+	pub _delay: i64,
 	pub _line: *mut ldat,
 	pub _regtop: libc::c_short,
 	pub _regbottom: libc::c_short,
-	pub _parx: libc::c_int,
-	pub _pary: libc::c_int,
+	pub _parx: i64,
+	pub _pary: i64,
 	pub _parent: *mut WINDOW,
 	pub _pad: pdat,
 	pub _yoffset: libc::c_short,
@@ -70,39 +62,14 @@ pub struct pdat {
 }
 
 pub type WINDOW = _win_st;
-pub type attr_t = chtype;
+pub type attr_t = ncurses::chtype;
 
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct fight {
-	pub armor: *mut object,
-	pub weapon: *mut object,
-	pub left_ring: *mut object,
-	pub right_ring: *mut object,
-	pub hp_current: libc::c_short,
-	pub hp_max: libc::c_short,
-	pub str_current: libc::c_short,
-	pub str_max: libc::c_short,
-	pub pack: object,
-	pub gold: libc::c_long,
-	pub exp: libc::c_short,
-	pub exp_points: libc::c_long,
-	pub row: libc::c_short,
-	pub col: libc::c_short,
-	pub fchar: libc::c_short,
-	pub moves_left: libc::c_short,
-}
-
-pub type fighter = fight;
+pub static mut wizard: bool = false;
 
 #[no_mangle]
-pub static mut wizard: libc::c_char = 0 as libc::c_int as libc::c_char;
-
-#[no_mangle]
-pub unsafe extern "C" fn zapp() -> libc::c_int {
+pub unsafe extern "C" fn zapp() -> i64 {
 	let mut wch: libc::c_short = 0;
-	let mut first_miss: libc::c_char = 1 as libc::c_int as libc::c_char;
+	let mut first_miss: libc::c_char = 1 as libc::c_char;
 	let mut wand: *mut object = 0 as *mut object;
 	let mut dir: libc::c_short = 0;
 	let mut row: libc::c_short = 0;
@@ -110,61 +77,61 @@ pub unsafe extern "C" fn zapp() -> libc::c_int {
 	let mut monster: *mut object = 0 as *mut object;
 	loop {
 		dir = rgetchar() as libc::c_short;
-		if !(is_direction(dir as libc::c_int) == 0) {
+		if !(is_direction(dir as i64) == 0) {
 			break;
 		}
 		sound_bell();
 		if first_miss != 0 {
 			message(
 				b"direction? \0" as *const u8 as *const libc::c_char,
-				0 as libc::c_int,
+				0 as i64,
 			);
-			first_miss = 0 as libc::c_int as libc::c_char;
+			first_miss = 0 as i64 as libc::c_char;
 		}
 	}
 	check_message();
-	if dir as libc::c_int == '\u{1b}' as i32 {
+	if dir as i64 == '\u{1b}' as i32 {
 		return;
 	}
 	wch = pack_letter(
 		b"zap with what?\0" as *const u8 as *const libc::c_char,
-		0o100 as libc::c_int as libc::c_ushort as libc::c_int,
+		0o100 as i64 as libc::c_ushort as i64,
 	) as libc::c_short;
-	if wch as libc::c_int == '\u{1b}' as i32 {
+	if wch as i64 == '\u{1b}' as i32 {
 		return;
 	}
 	check_message();
-	wand = get_letter_object(wch as libc::c_int);
+	wand = get_letter_object(wch as i64);
 	if wand.is_null() {
 		message(
 			b"no such item.\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
+			0 as i64,
 		);
 		return;
 	}
-	if (*wand).what_is as libc::c_int
-		!= 0o100 as libc::c_int as libc::c_ushort as libc::c_int
+	if (*wand).what_is as i64
+		!= 0o100 as i64 as libc::c_ushort as i64
 	{
 		message(
 			b"you can't zap with that\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
+			0 as i64,
 		);
 		return;
 	}
-	if (*wand).class as libc::c_int <= 0 as libc::c_int {
+	if (*wand).class as i64 <= 0 as i64 {
 		message(
 			b"nothing happens\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
+			0 as i64,
 		);
 	} else {
 		(*wand).class -= 1;
 		(*wand).class;
 		row = rogue.row;
 		col = rogue.col;
-		monster = get_zapped_monster(dir as libc::c_int, &mut row, &mut col);
+		monster = get_zapped_monster(dir as i64, &mut row, &mut col);
 		if !monster.is_null() {
 			wake_up(monster);
-			zap_monster(monster, (*wand).which_kind as libc::c_int);
+			zap_monster(monster, (*wand).which_kind as i64);
 			relight();
 		}
 	}
@@ -183,25 +150,25 @@ pub unsafe extern "C" fn get_zapped_monster(
 	loop {
 		orow = *row;
 		ocol = *col;
-		get_dir_rc(dir as libc::c_int, row, col, 0 as libc::c_int);
-		if *row as libc::c_int == orow as libc::c_int
-			&& *col as libc::c_int == ocol as libc::c_int
-			|| dungeon[*row as usize][*col as usize] as libc::c_int
-			& (0o10 as libc::c_int as libc::c_ushort as libc::c_int
-			| 0o20 as libc::c_int as libc::c_ushort as libc::c_int) != 0
-			|| dungeon[*row as usize][*col as usize] as libc::c_int
-			== 0 as libc::c_int as libc::c_ushort as libc::c_int
+		get_dir_rc(dir as i64, row, col, 0 as i64);
+		if *row as i64 == orow as i64
+			&& *col as i64 == ocol as i64
+			|| dungeon[*row as usize][*col as usize] as i64
+			& (0o10 as i64 as libc::c_ushort as i64
+			| 0o20 as i64 as libc::c_ushort as i64) != 0
+			|| dungeon[*row as usize][*col as usize] as i64
+			== 0 as i64 as libc::c_ushort as i64
 		{
 			return 0 as *mut object;
 		}
-		if dungeon[*row as usize][*col as usize] as libc::c_int
-			& 0o2 as libc::c_int as libc::c_ushort as libc::c_int != 0
+		if dungeon[*row as usize][*col as usize] as i64
+			& 0o2 as i64 as libc::c_ushort as i64 != 0
 		{
-			if imitating(*row as libc::c_int, *col as libc::c_int) == 0 {
+			if imitating(*row as i64, *col as i64) == 0 {
 				return object_at(
 					&mut level_monsters,
-					*row as libc::c_int,
-					*col as libc::c_int,
+					*row as i64,
+					*col as i64,
 				);
 			}
 		}
@@ -212,8 +179,8 @@ pub unsafe extern "C" fn get_zapped_monster(
 pub unsafe extern "C" fn wizardize() {
 	let mut buf: [libc::c_char; 100] = [0; 100];
 	if wizard != 0 {
-		wizard = 0 as libc::c_int as libc::c_char;
-		message("not wizard anymore", 0 as libc::c_int);
+		wizard = 0 as i64 as libc::c_char;
+		message("not wizard anymore", 0 as i64);
 	} else {
 		let line = get_input_line("wizard's password:", None, None, false, false);
 		if !line.is_empty() {
@@ -222,14 +189,14 @@ pub unsafe extern "C" fn wizardize() {
 			if strncmp(
 				buf.as_mut_ptr(),
 				b"\xA7DV\xBAM\xA3\x17\0" as *const u8 as *const libc::c_char,
-				7 as libc::c_int as libc::c_ulong,
+				7 as i64 as libc::c_ulong,
 			) == 0
 			{
-				wizard = 1 as libc::c_int as libc::c_char;
+				wizard = 1 as libc::c_char;
 				set_score_only(true);
-				message("Welcome, mighty wizard!", 0 as libc::c_int);
+				message("Welcome, mighty wizard!", 0 as i64);
 			} else {
-				message("sorry", 0 as libc::c_int);
+				message("sorry", 0 as i64);
 			}
 		}
 	}

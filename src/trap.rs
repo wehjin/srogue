@@ -3,55 +3,18 @@
 extern "C" {
 	pub type ldat;
 
-	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	static mut stdscr: *mut WINDOW;
-	static mut rogue: fighter;
-	static mut rooms: [room; 0];
-	static mut dungeon: [[libc::c_ushort; 80]; 24];
 	fn is_direction() -> libc::c_char;
 	fn reg_move() -> libc::c_char;
-	static mut cur_level: libc::c_short;
-	static mut party_room: libc::c_short;
 	static mut ring_exp: libc::c_short;
 	static mut sustain_strength: libc::c_char;
-	static mut blind: libc::c_short;
 }
 
 use ncurses::addch;
+use serde::Serialize;
 use crate::prelude::*;
 
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _win_st {
-	pub _cury: libc::c_short,
-	pub _curx: libc::c_short,
-	pub _maxy: libc::c_short,
-	pub _maxx: libc::c_short,
-	pub _begy: libc::c_short,
-	pub _begx: libc::c_short,
-	pub _flags: libc::c_short,
-	pub _attrs: attr_t,
-	pub _bkgd: chtype,
-	pub _notimeout: libc::c_int,
-	pub _clear: libc::c_int,
-	pub _leaveok: libc::c_int,
-	pub _scroll: libc::c_int,
-	pub _idlok: libc::c_int,
-	pub _idcok: libc::c_int,
-	pub _immed: libc::c_int,
-	pub _sync: libc::c_int,
-	pub _use_keypad: libc::c_int,
-	pub _delay: libc::c_int,
-	pub _line: *mut ldat,
-	pub _regtop: libc::c_short,
-	pub _regbottom: libc::c_short,
-	pub _parx: libc::c_int,
-	pub _pary: libc::c_int,
-	pub _parent: *mut WINDOW,
-	pub _pad: pdat,
-	pub _yoffset: libc::c_short,
-}
+
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -65,39 +28,14 @@ pub struct pdat {
 }
 
 pub type WINDOW = _win_st;
-pub type attr_t = chtype;
+pub type attr_t = ncurses::chtype;
 
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct fight {
-	pub armor: *mut object,
-	pub weapon: *mut object,
-	pub left_ring: *mut object,
-	pub right_ring: *mut object,
-	pub hp_current: libc::c_short,
-	pub hp_max: libc::c_short,
-	pub str_current: libc::c_short,
-	pub str_max: libc::c_short,
-	pub pack: object,
-	pub gold: libc::c_long,
-	pub exp: libc::c_short,
-	pub exp_points: libc::c_long,
-	pub row: libc::c_short,
-	pub col: libc::c_short,
-	pub fchar: libc::c_short,
-	pub moves_left: libc::c_short,
-}
-
-pub type fighter = fight;
-
-
-#[derive(Copy, Clone)]
-#[repr(C)]
+#[derive(Copy, Clone, Serialize)]
 pub struct tr {
-	pub trap_type: libc::c_short,
-	pub trap_row: libc::c_short,
-	pub trap_col: libc::c_short,
+	pub trap_type: i16,
+	pub trap_row: i16,
+	pub trap_col: i16,
 }
 
 pub type trap = tr;
@@ -109,9 +47,8 @@ pub static mut traps: [trap; 10] = [tr {
 	trap_col: 0,
 }; 10];
 #[no_mangle]
-pub static mut trap_door: libc::c_char = 0 as libc::c_int as libc::c_char;
-#[no_mangle]
-pub static mut bear_trap: libc::c_short = 0 as libc::c_int as libc::c_short;
+pub static mut trap_door: libc::c_char = 0 as i64 as libc::c_char;
+pub static mut bear_trap: bool = false;
 #[no_mangle]
 pub static mut trap_strings: [*mut libc::c_char; 12] = [
 	b"trap door\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
@@ -134,99 +71,99 @@ pub static mut trap_strings: [*mut libc::c_char; 12] = [
 
 #[no_mangle]
 pub unsafe extern "C" fn trap_at(
-	mut row: libc::c_int,
-	mut col: libc::c_int,
-) -> libc::c_int {
+	mut row: i64,
+	mut col: i64,
+) -> i64 {
 	let mut i: libc::c_short = 0;
-	i = 0 as libc::c_int as libc::c_short;
-	while (i as libc::c_int) < 10 as libc::c_int
-		&& traps[i as usize].trap_type as libc::c_int != -(1 as libc::c_int)
+	i = 0 as i64 as libc::c_short;
+	while (i as i64) < 10 as i64
+		&& traps[i as usize].trap_type as i64 != -(1)
 	{
-		if traps[i as usize].trap_row as libc::c_int == row
-			&& traps[i as usize].trap_col as libc::c_int == col
+		if traps[i as usize].trap_row as i64 == row
+			&& traps[i as usize].trap_col as i64 == col
 		{
-			return traps[i as usize].trap_type as libc::c_int;
+			return traps[i as usize].trap_type as i64;
 		}
 		i += 1;
 		i;
 	}
-	return -(1 as libc::c_int);
+	return -(1);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn trap_player(
 	mut row: libc::c_short,
 	mut col: libc::c_short,
-) -> libc::c_int {
+) -> i64 {
 	let mut t: libc::c_short = 0;
-	t = trap_at(row as libc::c_int, col as libc::c_int) as libc::c_short;
-	if t as libc::c_int == -(1 as libc::c_int) {
+	t = trap_at(row as i64, col as i64) as libc::c_short;
+	if t as i64 == -(1) {
 		return;
 	}
 	dungeon[row
 		as usize][col
-		as usize] = (dungeon[row as usize][col as usize] as libc::c_int
-		& !(0o1000 as libc::c_int as libc::c_ushort as libc::c_int)) as libc::c_ushort;
-	if rand_percent(rogue.exp as libc::c_int + ring_exp as libc::c_int) != 0 {
+		as usize] = (dungeon[row as usize][col as usize] as i64
+		& !(0o1000 as i64 as libc::c_ushort as i64)) as libc::c_ushort;
+	if rand_percent(rogue.exp as i64 + ring_exp as i64) != 0 {
 		message(
 			b"the trap failed\0" as *const u8 as *const libc::c_char,
-			1 as libc::c_int,
+			1,
 		);
 		return;
 	}
-	match t as libc::c_int {
+	match t as i64 {
 		0 => {
-			trap_door = 1 as libc::c_int as libc::c_char;
-			new_level_message = trap_strings[(t as libc::c_int * 2 as libc::c_int
-				+ 1 as libc::c_int) as usize];
+			trap_door = 1 as libc::c_char;
+			new_level_message = trap_strings[(t as i64 * 2 as i64
+				+ 1) as usize];
 		}
 		1 => {
 			message(
-				trap_strings[(t as libc::c_int * 2 as libc::c_int + 1 as libc::c_int)
+				trap_strings[(t as i64 * 2 as i64 + 1)
 					as usize],
-				1 as libc::c_int,
+				1,
 			);
-			bear_trap = get_rand(4 as libc::c_int, 7 as libc::c_int) as libc::c_short;
+			bear_trap = get_rand(4 as i64, 7 as i64) as libc::c_short;
 		}
 		2 => {
-			if wmove(stdscr, rogue.row as libc::c_int, rogue.col as libc::c_int)
-				== -(1 as libc::c_int)
+			if ncurses::wmove(ncurses::stdscr(), rogue.row as i64, rogue.col as i64)
+				== -(1)
 			{
-				-(1 as libc::c_int);
+				-(1);
 			} else {
-				addch('^' as i32 as chtype);
+				addch('^' as i32 as ncurses::chtype);
 			};
 			tele();
 		}
 		3 => {
 			message(
-				trap_strings[(t as libc::c_int * 2 as libc::c_int + 1 as libc::c_int)
+				trap_strings[(t as i64 * 2 as i64 + 1)
 					as usize],
-				1 as libc::c_int,
+				1,
 			);
 			rogue
-				.hp_current = (rogue.hp_current as libc::c_int
+				.hp_current = (rogue.hp_current as i64
 				- get_damage(
 				b"1d6\0" as *const u8 as *const libc::c_char,
-				1 as libc::c_int,
+				1,
 			)) as libc::c_short;
-			if rogue.hp_current as libc::c_int <= 0 as libc::c_int {
-				rogue.hp_current = 0 as libc::c_int as libc::c_short;
+			if rogue.hp_current as i64 <= 0 as i64 {
+				rogue.hp_current = 0 as i64 as libc::c_short;
 			}
-			if sustain_strength == 0 && rand_percent(40 as libc::c_int) != 0
-				&& rogue.str_current as libc::c_int >= 3 as libc::c_int
+			if sustain_strength == 0 && rand_percent(40 as i64) != 0
+				&& rogue.str_current as i64 >= 3 as i64
 			{
 				rogue.str_current -= 1;
 				rogue.str_current;
 			}
-			print_stats(0o4 as libc::c_int | 0o10 as libc::c_int);
-			if rogue.hp_current as libc::c_int <= 0 as libc::c_int {
-				killed_by(0 as *mut object, 3 as libc::c_int);
+			print_stats(0o4 as i64 | 0o10 as i64);
+			if rogue.hp_current as i64 <= 0 as i64 {
+				killed_by(0 as *mut object, 3 as i64);
 			}
 		}
 		4 => {
 			message(
-				trap_strings[(t as libc::c_int * 2 as libc::c_int + 1 as libc::c_int)
+				trap_strings[(t as i64 * 2 as libc::c_int + 1 as libc::c_int)
 					as usize],
 				1 as libc::c_int,
 			);
@@ -383,12 +320,12 @@ pub unsafe extern "C" fn show_traps() -> libc::c_int {
 			if dungeon[i as usize][j as usize] as libc::c_int
 				& 0o400 as libc::c_int as libc::c_ushort as libc::c_int != 0
 			{
-				if wmove(stdscr, i as libc::c_int, j as libc::c_int)
+				if ncurses::wmove(ncurses::stdscr(), i as libc::c_int, j as libc::c_int)
 					== -(1 as libc::c_int)
 				{
 					-(1 as libc::c_int);
 				} else {
-					addch('^' as i32 as chtype);
+					addch('^' as i32 as ncurses::chtype);
 				};
 			}
 			j += 1;
@@ -469,12 +406,12 @@ pub unsafe extern "C" fn search(
 								&& (row as libc::c_int != rogue.row as libc::c_int
 								|| col as libc::c_int != rogue.col as libc::c_int)
 							{
-								if wmove(stdscr, row as libc::c_int, col as libc::c_int)
+								if ncurses::wmove(ncurses::stdscr(), row as libc::c_int, col as libc::c_int)
 									== -(1 as libc::c_int)
 								{
 									-(1 as libc::c_int);
 								} else {
-									addch(get_dungeon_char(row as usize, col as usize) as chtype);
+									addch(get_dungeon_char(row as usize, col as usize) as ncurses::chtype);
 								};
 							}
 							shown += 1;

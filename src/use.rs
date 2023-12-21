@@ -3,24 +3,10 @@
 extern "C" {
 	pub type ldat;
 
-	fn winch(_: *mut WINDOW) -> chtype;
-	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	static mut stdscr: *mut WINDOW;
 
-	static mut rogue: fighter;
-	static mut rooms: [room; 0];
-	static mut dungeon: [[libc::c_ushort; 80]; 24];
-	static mut level_objects: object;
-	static mut id_scrolls: [id; 0];
-	static mut id_potions: [id; 0];
-	static mut level_monsters: object;
 	fn reg_move() -> libc::c_char;
 	fn get_id_table() -> *mut id;
-	static mut bear_trap: libc::c_short;
-	static mut hunger_str: [libc::c_char; 0];
-	static mut cur_room: libc::c_short;
 	static mut level_points: [libc::c_long; 0];
-	static mut being_held: libc::c_char;
 	static mut you_can_move_again: *mut libc::c_char;
 	static mut sustain_strength: libc::c_char;
 }
@@ -29,37 +15,7 @@ use ncurses::addch;
 use crate::prelude::*;
 use crate::settings::fruit;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _win_st {
-	pub _cury: libc::c_short,
-	pub _curx: libc::c_short,
-	pub _maxy: libc::c_short,
-	pub _maxx: libc::c_short,
-	pub _begy: libc::c_short,
-	pub _begx: libc::c_short,
-	pub _flags: libc::c_short,
-	pub _attrs: attr_t,
-	pub _bkgd: chtype,
-	pub _notimeout: libc::c_int,
-	pub _clear: libc::c_int,
-	pub _leaveok: libc::c_int,
-	pub _scroll: libc::c_int,
-	pub _idlok: libc::c_int,
-	pub _idcok: libc::c_int,
-	pub _immed: libc::c_int,
-	pub _sync: libc::c_int,
-	pub _use_keypad: libc::c_int,
-	pub _delay: libc::c_int,
-	pub _line: *mut ldat,
-	pub _regtop: libc::c_short,
-	pub _regbottom: libc::c_short,
-	pub _parx: libc::c_int,
-	pub _pary: libc::c_int,
-	pub _parent: *mut WINDOW,
-	pub _pad: pdat,
-	pub _yoffset: libc::c_short,
-}
+
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -73,91 +29,59 @@ pub struct pdat {
 }
 
 pub type WINDOW = _win_st;
-pub type attr_t = chtype;
+pub type attr_t = ncurses::chtype;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct fight {
-	pub armor: *mut object,
-	pub weapon: *mut object,
-	pub left_ring: *mut object,
-	pub right_ring: *mut object,
-	pub hp_current: libc::c_short,
-	pub hp_max: libc::c_short,
-	pub str_current: libc::c_short,
-	pub str_max: libc::c_short,
-	pub pack: object,
-	pub gold: libc::c_long,
-	pub exp: libc::c_short,
-	pub exp_points: libc::c_long,
-	pub row: libc::c_short,
-	pub col: libc::c_short,
-	pub fchar: libc::c_short,
-	pub moves_left: libc::c_short,
-}
-
-pub type fighter = fight;
-
-
+pub static mut halluc: bool = false;
+pub static mut blind: bool = false;
+pub static mut confused: bool = false;
+pub static mut levitate: bool = false;
+pub static mut haste_self: bool = false;
+pub static mut see_invisible: bool = false;
 #[no_mangle]
-pub static mut halluc: libc::c_short = 0 as libc::c_int as libc::c_short;
-#[no_mangle]
-pub static mut blind: libc::c_short = 0 as libc::c_int as libc::c_short;
-#[no_mangle]
-pub static mut confused: libc::c_short = 0 as libc::c_int as libc::c_short;
-#[no_mangle]
-pub static mut levitate: libc::c_short = 0 as libc::c_int as libc::c_short;
-#[no_mangle]
-pub static mut haste_self: libc::c_short = 0 as libc::c_int as libc::c_short;
-#[no_mangle]
-pub static mut see_invisible: libc::c_char = 0 as libc::c_int as libc::c_char;
-#[no_mangle]
-pub static mut extra_hp: libc::c_short = 0 as libc::c_int as libc::c_short;
-#[no_mangle]
-pub static mut detect_monster: libc::c_char = 0 as libc::c_int as libc::c_char;
+pub static mut extra_hp: libc::c_short = 0 as i64 as libc::c_short;
 #[no_mangle]
 pub static mut strange_feeling: *mut libc::c_char = b"you have a strange feeling for a moment, then it passes\0"
 	as *const u8 as *const libc::c_char as *mut libc::c_char;
 
 #[no_mangle]
-pub unsafe extern "C" fn quaff() -> libc::c_int {
+pub unsafe extern "C" fn quaff() -> i64 {
 	let mut ch: libc::c_short = 0;
 	let mut buf: [libc::c_char; 80] = [0; 80];
 	let mut obj: *mut object = 0 as *mut object;
 	ch = pack_letter(
 		b"quaff what?\0" as *const u8 as *const libc::c_char,
-		0o10 as libc::c_int as libc::c_ushort as libc::c_int,
+		0o10 as i64 as libc::c_ushort as i64,
 	) as libc::c_short;
-	if ch as libc::c_int == '\u{1b}' as i32 {
+	if ch as i64 == '\u{1b}' as i32 {
 		return;
 	}
-	obj = get_letter_object(ch as libc::c_int);
+	obj = get_letter_object(ch as i64);
 	if obj.is_null() {
 		message(
 			b"no such item.\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
+			0 as i64,
 		);
 		return;
 	}
-	if (*obj).what_is as libc::c_int
-		!= 0o10 as libc::c_int as libc::c_ushort as libc::c_int
+	if (*obj).what_is as i64
+		!= 0o10 as i64 as libc::c_ushort as i64
 	{
 		message(
 			b"you can't drink that\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
+			0 as i64,
 		);
 		return;
 	}
-	match (*obj).which_kind as libc::c_int {
+	match (*obj).which_kind as i64 {
 		0 => {
 			message(
 				b"you feel stronger now, what bulging muscles!\0" as *const u8
 					as *const libc::c_char,
-				0 as libc::c_int,
+				0 as i64,
 			);
 			rogue.str_current += 1;
 			rogue.str_current;
-			if rogue.str_current as libc::c_int > rogue.str_max as libc::c_int {
+			if rogue.str_current as i64 > rogue.str_max as i64 {
 				rogue.str_max = rogue.str_current;
 			}
 		}
@@ -166,35 +90,35 @@ pub unsafe extern "C" fn quaff() -> libc::c_int {
 			message(
 				b"this tastes great, you feel warm all over\0" as *const u8
 					as *const libc::c_char,
-				0 as libc::c_int,
+				0 as i64,
 			);
 		}
 		2 => {
 			message(
 				b"you begin to feel better\0" as *const u8 as *const libc::c_char,
-				0 as libc::c_int,
+				0 as i64,
 			);
-			potion_heal(0 as libc::c_int);
+			potion_heal(0 as i64);
 		}
 		3 => {
 			message(
 				b"you begin to feel much better\0" as *const u8 as *const libc::c_char,
-				0 as libc::c_int,
+				0 as i64,
 			);
-			potion_heal(1 as libc::c_int);
+			potion_heal(1);
 		}
 		4 => {
 			if sustain_strength == 0 {
 				rogue
-					.str_current = (rogue.str_current as libc::c_int
-					- get_rand(1 as libc::c_int, 3 as libc::c_int)) as libc::c_short;
-				if (rogue.str_current as libc::c_int) < 1 as libc::c_int {
-					rogue.str_current = 1 as libc::c_int as libc::c_short;
+					.str_current = (rogue.str_current as i64
+					- get_rand(1, 3 as i64)) as libc::c_short;
+				if (rogue.str_current as i64) < 1 {
+					rogue.str_current = 1 as libc::c_short;
 				}
 			}
 			message(
 				b"you feel very sick now\0" as *const u8 as *const libc::c_char,
-				0 as libc::c_int,
+				0 as i64,
 			);
 			if halluc != 0 {
 				unhallucinate();
@@ -204,8 +128,8 @@ pub unsafe extern "C" fn quaff() -> libc::c_int {
 			rogue
 				.exp_points = *level_points
 				.as_mut_ptr()
-				.offset((rogue.exp as libc::c_int - 1 as libc::c_int) as isize);
-			add_exp(1 as libc::c_int, 1 as libc::c_int);
+				.offset((rogue.exp as i64 - 1) as isize);
+			add_exp(1, 1);
 		}
 		6 => {
 			go_blind();
@@ -214,15 +138,15 @@ pub unsafe extern "C" fn quaff() -> libc::c_int {
 			message(
 				b"oh wow, everything seems so cosmic\0" as *const u8
 					as *const libc::c_char,
-				0 as libc::c_int,
+				0 as i64,
 			);
-			halluc = (halluc as libc::c_int
-				+ get_rand(500 as libc::c_int, 800 as libc::c_int)) as libc::c_short;
+			halluc = (halluc as i64
+				+ get_rand(500 as i64, 800 as i64)) as libc::c_short;
 		}
 		8 => {
 			show_monsters();
 			if (level_monsters.next_object).is_null() {
-				message(strange_feeling, 0 as libc::c_int);
+				message(strange_feeling, 0 as i64);
 			}
 		}
 		9 => {
@@ -231,107 +155,107 @@ pub unsafe extern "C" fn quaff() -> libc::c_int {
 					show_objects();
 				}
 			} else {
-				message(strange_feeling, 0 as libc::c_int);
+				message(strange_feeling, 0 as i64);
 			}
 		}
 		10 => {
 			message(
-				if halluc as libc::c_int != 0 {
+				if halluc as i64 != 0 {
 					b"what a trippy feeling\0" as *const u8 as *const libc::c_char
 				} else {
 					b"you feel confused\0" as *const u8 as *const libc::c_char
 				},
-				0 as libc::c_int,
+				0 as i64,
 			);
 			confuse();
 		}
 		11 => {
 			message(
 				b"you start to float in the air\0" as *const u8 as *const libc::c_char,
-				0 as libc::c_int,
+				0 as i64,
 			);
-			levitate = (levitate as libc::c_int
-				+ get_rand(15 as libc::c_int, 30 as libc::c_int)) as libc::c_short;
-			bear_trap = 0 as libc::c_int as libc::c_short;
+			levitate = (levitate as i64
+				+ get_rand(15 as i64, 30 as i64)) as libc::c_short;
+			bear_trap = 0 as i64 as libc::c_short;
 			being_held = bear_trap as libc::c_char;
 		}
 		12 => {
 			message(
 				b"you feel yourself moving much faster\0" as *const u8
 					as *const libc::c_char,
-				0 as libc::c_int,
+				0 as i64,
 			);
-			haste_self = (haste_self as libc::c_int
-				+ get_rand(11 as libc::c_int, 21 as libc::c_int)) as libc::c_short;
-			if haste_self as libc::c_int % 2 as libc::c_int == 0 {
+			haste_self = (haste_self as i64
+				+ get_rand(11, 21)) as libc::c_short;
+			if haste_self as i64 % 2 as i64 == 0 {
 				haste_self += 1;
 				haste_self;
 			}
 		}
 		13 => {
 			let buf = format!("hmm, this potion tastes like {}juice", fruit());
-			message(&buf, 0 as libc::c_int);
+			message(&buf, 0 as i64);
 			if blind != 0 {
 				unblind();
 			}
-			see_invisible = 1 as libc::c_int as libc::c_char;
+			see_invisible = 1 as libc::c_char;
 			relight();
 		}
 		_ => {}
 	}
-	print_stats(0o10 as libc::c_int | 0o4 as libc::c_int);
+	print_stats(0o10 as i64 | 0o4 as i64);
 	if (*id_potions.as_mut_ptr().offset((*obj).which_kind as isize)).id_status
-		as libc::c_int != 0o2 as libc::c_int as libc::c_ushort as libc::c_int
+		as i64 != 0o2 as i64 as libc::c_ushort as i64
 	{
 		(*id_potions.as_mut_ptr().offset((*obj).which_kind as isize))
-			.id_status = 0o1 as libc::c_int as libc::c_ushort;
+			.id_status = 0o1 as libc::c_ushort;
 	}
-	vanish(obj, 1 as libc::c_int, &mut rogue.pack);
+	vanish(obj, 1, &mut rogue.pack);
 	panic!("Reached end of non-void function without returning");
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn read_scroll() -> libc::c_int {
+pub unsafe extern "C" fn read_scroll() -> i64 {
 	let mut ch: libc::c_short = 0;
 	let mut obj: *mut object = 0 as *mut object;
 	let mut msg: [libc::c_char; 80] = [0; 80];
 	if blind != 0 {
 		message(
 			b"You can't see to read the scroll.\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
+			0 as i64,
 		);
 		return;
 	}
 	ch = pack_letter(
 		b"read what?\0" as *const u8 as *const libc::c_char,
-		0o4 as libc::c_int as libc::c_ushort as libc::c_int,
+		0o4 as i64 as libc::c_ushort as i64,
 	) as libc::c_short;
-	if ch as libc::c_int == '\u{1b}' as i32 {
+	if ch as i64 == '\u{1b}' as i32 {
 		return;
 	}
-	obj = get_letter_object(ch as libc::c_int);
+	obj = get_letter_object(ch as i64);
 	if obj.is_null() {
 		message(
 			b"no such item.\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
+			0 as i64,
 		);
 		return;
 	}
-	if (*obj).what_is as libc::c_int
-		!= 0o4 as libc::c_int as libc::c_ushort as libc::c_int
+	if (*obj).what_is as i64
+		!= 0o4 as i64 as libc::c_ushort as i64
 	{
 		message(
 			b"you can't read that\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
+			0 as i64,
 		);
 		return;
 	}
-	match (*obj).which_kind as libc::c_int {
+	match (*obj).which_kind as i64 {
 		7 => {
 			message(
 				b"you hear a maniacal laughter in the distance\0" as *const u8
 					as *const libc::c_char,
-				0 as libc::c_int,
+				0 as i64,
 			);
 		}
 		1 => {
@@ -339,16 +263,16 @@ pub unsafe extern "C" fn read_scroll() -> libc::c_int {
 		}
 		2 => {
 			if !(rogue.weapon).is_null() {
-				if (*rogue.weapon).what_is as libc::c_int
-					== 0o2 as libc::c_int as libc::c_ushort as libc::c_int
+				if (*rogue.weapon).what_is as i64
+					== 0o2 as i64 as libc::c_ushort as i64
 				{
 					let msg = format!(
 						"your {}glow{} {}for a moment",
 						name_of(&rogue.weapon),
-						if (*rogue.weapon).quantity as libc::c_int <= 1 as libc::c_int { "s" } else { "" },
+						if (*rogue.weapon).quantity as i64 <= 1 { "s" } else { "" },
 						get_ench_color(),
 					);
-					message(&msg, 0 as libc::c_int);
+					message(&msg, 0 as i64);
 					if coin_toss() {
 						(*rogue.weapon).hit_enchant += 1;
 						(*rogue.weapon).hit_enchant;
@@ -357,42 +281,42 @@ pub unsafe extern "C" fn read_scroll() -> libc::c_int {
 						(*rogue.weapon).d_enchant;
 					}
 				}
-				(*rogue.weapon).is_cursed = 0 as libc::c_int as libc::c_short;
+				(*rogue.weapon).is_cursed = 0 as i64 as libc::c_short;
 			} else {
-				message("your hands tingle", 0 as libc::c_int);
+				message("your hands tingle", 0 as i64);
 			}
 		}
 		3 => {
 			if !(rogue.armor).is_null() {
 				let msg = format!("your armor glows {}for a moment", get_ench_color(), );
-				message(&msg, 0 as libc::c_int);
+				message(&msg, 0 as i64);
 				(*rogue.armor).d_enchant += 1;
 				(*rogue.armor).d_enchant;
-				(*rogue.armor).is_cursed = 0 as libc::c_int as libc::c_short;
-				print_stats(0o20 as libc::c_int);
+				(*rogue.armor).is_cursed = 0 as i64 as libc::c_short;
+				print_stats(0o20 as i64);
 			} else {
-				message("your skin crawls", 0 as libc::c_int);
+				message("your skin crawls", 0 as i64);
 			}
 		}
 		4 => {
-			message("this is a scroll of identify", 0 as libc::c_int);
-			(*obj).identified = 1 as libc::c_int as libc::c_short;
+			message("this is a scroll of identify", 0 as i64);
+			(*obj).identified = 1 as libc::c_short;
 			(*id_scrolls.as_mut_ptr().offset((*obj).which_kind as isize))
-				.id_status = 0o1 as libc::c_int as libc::c_ushort;
+				.id_status = 0o1 as libc::c_ushort;
 			idntfy();
 		}
 		5 => {
 			tele();
 		}
 		6 => {
-			message("you fall asleep", 0 as libc::c_int);
+			message("you fall asleep", 0 as i64);
 			take_a_nap();
 		}
 		0 => {
 			if !(rogue.armor).is_null() {
-				message("your armor is covered by a shimmering gold shield", 0 as libc::c_int);
-				(*rogue.armor).is_protected = 1 as libc::c_int as libc::c_short;
-				(*rogue.armor).is_cursed = 0 as libc::c_int as libc::c_short;
+				message("your armor is covered by a shimmering gold shield", 0 as i64);
+				(*rogue.armor).is_protected = 1 as libc::c_short;
+				(*rogue.armor).is_cursed = 0 as i64 as libc::c_short;
 			} else {
 				message("your acne seems to have disappeared", 0 as libc::c_int);
 			}
@@ -495,12 +419,12 @@ pub unsafe extern "C" fn hallucinate() -> libc::c_int {
 	}
 	obj = level_objects.next_object;
 	while !obj.is_null() {
-		ch = (if wmove(stdscr, (*obj).row as libc::c_int, (*obj).col as libc::c_int)
+		ch = (if ncurses::wmove(ncurses::stdscr(), (*obj).row as libc::c_int, (*obj).col as libc::c_int)
 			== -(1 as libc::c_int)
 		{
-			-(1 as libc::c_int) as chtype
+			-(1 as libc::c_int) as ncurses::chtype
 		} else {
-			winch(stdscr)
+			ncurses::winch(ncurses::stdscr())
 		}) as libc::c_short;
 		if ((ch as libc::c_int) < 'A' as i32 || ch as libc::c_int > 'Z' as i32)
 			&& ((*obj).row as libc::c_int != rogue.row as libc::c_int
@@ -509,25 +433,25 @@ pub unsafe extern "C" fn hallucinate() -> libc::c_int {
 			if ch as libc::c_int != ' ' as i32 && ch as libc::c_int != '.' as i32
 				&& ch as libc::c_int != '#' as i32 && ch as libc::c_int != '+' as i32
 			{
-				addch(gr_obj_char() as chtype);
+				addch(gr_obj_char() as ncurses::chtype);
 			}
 		}
 		obj = (*obj).next_object;
 	}
 	monster = level_monsters.next_object;
 	while !monster.is_null() {
-		ch = (if wmove(
-			stdscr,
+		ch = (if ncurses::wmove(
+			ncurses::stdscr(),
 			(*monster).row as libc::c_int,
 			(*monster).col as libc::c_int,
 		) == -(1 as libc::c_int)
 		{
-			-(1 as libc::c_int) as chtype
+			-(1 as libc::c_int) as ncurses::chtype
 		} else {
-			winch(stdscr)
+			ncurses::winch(ncurses::stdscr())
 		}) as libc::c_short;
 		if ch as libc::c_int >= 'A' as i32 && ch as libc::c_int <= 'Z' as i32 {
-			addch(get_rand('A' as i32, 'Z' as i32) as chtype);
+			addch(get_rand('A' as i32, 'Z' as i32) as ncurses::chtype);
 		}
 		monster = (*monster).next_object;
 	}

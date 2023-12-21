@@ -2,50 +2,13 @@
 
 extern "C" {
 	pub type ldat;
-	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	static mut stdscr: *mut WINDOW;
-	static mut rogue: fighter;
-	static mut level_objects: object;
 	fn is_digit() -> libc::c_char;
-	static mut wizard: libc::c_char;
 	static mut trap_door: libc::c_char;
 }
 
 use libc::c_short;
 use crate::prelude::*;
 
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _win_st {
-	pub _cury: libc::c_short,
-	pub _curx: libc::c_short,
-	pub _maxy: libc::c_short,
-	pub _maxx: libc::c_short,
-	pub _begy: libc::c_short,
-	pub _begx: libc::c_short,
-	pub _flags: libc::c_short,
-	pub _attrs: attr_t,
-	pub _bkgd: chtype,
-	pub _notimeout: libc::c_int,
-	pub _clear: libc::c_int,
-	pub _leaveok: libc::c_int,
-	pub _scroll: libc::c_int,
-	pub _idlok: libc::c_int,
-	pub _idcok: libc::c_int,
-	pub _immed: libc::c_int,
-	pub _sync: libc::c_int,
-	pub _use_keypad: libc::c_int,
-	pub _delay: libc::c_int,
-	pub _line: *mut ldat,
-	pub _regtop: libc::c_short,
-	pub _regbottom: libc::c_short,
-	pub _parx: libc::c_int,
-	pub _pary: libc::c_int,
-	pub _parent: *mut WINDOW,
-	pub _pad: pdat,
-	pub _yoffset: libc::c_short,
-}
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -59,31 +22,8 @@ pub struct pdat {
 }
 
 pub type WINDOW = _win_st;
-pub type attr_t = chtype;
+pub type attr_t = ncurses::chtype;
 
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct fight {
-	pub armor: *mut object,
-	pub weapon: *mut object,
-	pub left_ring: *mut object,
-	pub right_ring: *mut object,
-	pub hp_current: libc::c_short,
-	pub hp_max: libc::c_short,
-	pub str_current: libc::c_short,
-	pub str_max: libc::c_short,
-	pub pack: object,
-	pub gold: libc::c_long,
-	pub exp: libc::c_short,
-	pub exp_points: libc::c_long,
-	pub row: libc::c_short,
-	pub col: libc::c_short,
-	pub fchar: libc::c_short,
-	pub moves_left: libc::c_short,
-}
-
-pub type fighter = fight;
 
 #[no_mangle]
 pub static mut interrupted: bool = false;
@@ -94,7 +34,7 @@ pub static mut unknown_command: *mut libc::c_char = b"unknown command\0" as *con
 #[no_mangle]
 pub unsafe extern "C" fn play_level() {
 	let mut ch: libc::c_short = 0;
-	let mut count: libc::c_int = 0;
+	let mut count: i64 = 0;
 	loop {
 		interrupted = false;
 		if !hit_message.is_empty() {
@@ -105,20 +45,20 @@ pub unsafe extern "C" fn play_level() {
 			trap_door = 0;
 			return;
 		}
-		wmove(stdscr, rogue.row as libc::c_int, rogue.col as libc::c_int);
+		ncurses::wmove(ncurses::stdscr(), rogue.row as i64, rogue.col as i64);
 		ncurses::refresh();
 		ch = rgetchar() as libc::c_short;
 		check_message();
-		count = 0 as libc::c_int;
+		count = 0 as i64;
 		loop {
-			match ch as libc::c_int {
+			match ch as i64 {
 				63 => {
 					Instructions();
 					break;
 				}
 				46 => {
 					rest(
-						if count > 0 as libc::c_int { count } else { 1 as libc::c_int },
+						if count > 0 as i64 { count } else { 1 },
 					);
 					break;
 				}
@@ -129,25 +69,25 @@ pub unsafe extern "C" fn play_level() {
 				105 => {
 					inventory(
 						&mut rogue.pack,
-						0o777 as libc::c_int as libc::c_ushort as libc::c_int,
+						0o777 as i64 as libc::c_ushort as i64,
 					);
 					break;
 				}
 				102 => {
-					fight(0 as libc::c_int);
+					fight(0 as i64);
 					break;
 				}
 				70 => {
-					fight(1 as libc::c_int);
+					fight(1);
 					break;
 				}
 				104 | 106 | 107 | 108 | 121 | 117 | 110 | 98 => {
-					one_move_rogue(ch as libc::c_int, 1 as libc::c_int);
+					one_move_rogue(ch as i64, 1);
 					break;
 				}
 				72 | 74 | 75 | 76 | 66 | 89 | 85 | 78 | 8 | 10 | 11 | 12 | 25 | 21 | 14
 				| 2 => {
-					multiple_move_rogue(ch as libc::c_int);
+					multiple_move_rogue(ch as i64);
 					break;
 				}
 				101 => {
@@ -199,7 +139,7 @@ pub unsafe extern "C" fn play_level() {
 					break;
 				}
 				41 | 93 => {
-					inv_armor_weapon((ch as libc::c_int == ')' as i32) as libc::c_int);
+					inv_armor_weapon((ch as i64 == ')' as i32) as i64);
 					break;
 				}
 				61 => {
@@ -211,7 +151,7 @@ pub unsafe extern "C" fn play_level() {
 					break;
 				}
 				73 => {
-					single_inv(0 as libc::c_int);
+					single_inv(0 as i64);
 					break;
 				}
 				84 => {
@@ -242,12 +182,12 @@ pub unsafe extern "C" fn play_level() {
 					message(
 						b"rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims\0"
 							as *const u8 as *const libc::c_char,
-						0 as libc::c_int,
+						0 as i64,
 					);
 					break;
 				}
 				81 => {
-					quit(0 as libc::c_int);
+					quit(0 as i64);
 				}
 				48 | 49 | 50 | 51 | 52 | 53 | 54 | 55 | 56 | 57 => {}
 				32 => {
@@ -257,10 +197,10 @@ pub unsafe extern "C" fn play_level() {
 					if wizard != 0 {
 						inventory(
 							&mut level_objects,
-							0o777 as libc::c_int as libc::c_ushort as libc::c_int,
+							0o777 as i64 as libc::c_ushort as i64,
 						);
 					} else {
-						message(unknown_command, 0 as libc::c_int);
+						message(unknown_command, 0 as i64);
 					}
 					break;
 				}
@@ -268,7 +208,7 @@ pub unsafe extern "C" fn play_level() {
 					if wizard != 0 {
 						draw_magic_map();
 					} else {
-						message(unknown_command, 0 as libc::c_int);
+						message(unknown_command, 0 as i64);
 					}
 					break;
 				}
@@ -276,7 +216,7 @@ pub unsafe extern "C" fn play_level() {
 					if wizard != 0 {
 						show_traps();
 					} else {
-						message(unknown_command, 0 as libc::c_int);
+						message(unknown_command, 0 as i64);
 					}
 					break;
 				}
@@ -284,7 +224,7 @@ pub unsafe extern "C" fn play_level() {
 					if wizard != 0 {
 						show_objects();
 					} else {
-						message(unknown_command, 0 as libc::c_int);
+						message(unknown_command, 0 as i64);
 					}
 					break;
 				}
@@ -296,7 +236,7 @@ pub unsafe extern "C" fn play_level() {
 					if wizard != 0 {
 						new_object_for_wizard();
 					} else {
-						message(unknown_command, 0 as libc::c_int);
+						message(unknown_command, 0 as i64);
 					}
 					break;
 				}
@@ -304,7 +244,7 @@ pub unsafe extern "C" fn play_level() {
 					if wizard != 0 {
 						show_monsters();
 					} else {
-						message(unknown_command, 0 as libc::c_int);
+						message(unknown_command, 0 as i64);
 					}
 					break;
 				}
@@ -317,22 +257,22 @@ pub unsafe extern "C" fn play_level() {
 					break;
 				}
 				_ => {
-					message(unknown_command, 0 as libc::c_int);
+					message(unknown_command, 0 as i64);
 					break;
 				}
 			}
-			wmove(stdscr, rogue.row as libc::c_int, rogue.col as libc::c_int);
+			ncurses::wmove(ncurses::stdscr(), rogue.row as i64, rogue.col as i64);
 			ncurses::refresh();
 			loop {
-				if count < 100 as libc::c_int {
-					count = 10 as libc::c_int * count + (ch as libc::c_int - '0' as i32);
+				if count < 100 as i64 {
+					count = 10 as i64 * count + (ch as i64 - '0' as i32);
 				}
 				ch = rgetchar() as libc::c_short;
-				if !(is_digit(ch as libc::c_int) != 0) {
+				if !(is_digit(ch as i64) != 0) {
 					break;
 				}
 			}
-			if !(ch as libc::c_int != '\u{1b}' as i32) {
+			if !(ch as i64 != '\u{1b}' as i32) {
 				break;
 			}
 		}

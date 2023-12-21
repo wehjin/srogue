@@ -5,10 +5,6 @@ use crate::{get_input_line, message, mv_aquatars, print_stats};
 use crate::objects::place_at;
 
 extern "C" {
-	static mut rogue: fighter;
-	static mut dungeon: [[libc::c_ushort; 80]; 24];
-	static mut level_objects: object;
-	static mut id_scrolls: [id; 0];
 	fn reg_move() -> libc::c_char;
 	fn alloc_object() -> *mut object;
 	fn get_id_table() -> *mut id;
@@ -18,28 +14,7 @@ use crate::prelude::*;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::object_what::{ARMOR, RING, WEAPON};
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct fight {
-	pub armor: *mut object,
-	pub weapon: *mut object,
-	pub left_ring: *mut object,
-	pub right_ring: *mut object,
-	pub hp_current: libc::c_short,
-	pub hp_max: libc::c_short,
-	pub str_current: libc::c_short,
-	pub str_max: libc::c_short,
-	pub pack: object,
-	pub gold: libc::c_long,
-	pub exp: libc::c_short,
-	pub exp_points: libc::c_long,
-	pub row: libc::c_short,
-	pub col: libc::c_short,
-	pub fchar: libc::c_short,
-	pub moves_left: libc::c_short,
-}
 
-pub type fighter = fight;
 
 #[no_mangle]
 pub static mut curse_message: &'static str = "you can't, it appears to be cursed";
@@ -48,7 +23,7 @@ pub static mut curse_message: &'static str = "you can't, it appears to be cursed
 pub unsafe extern "C" fn add_to_pack(
 	mut obj: *mut object,
 	mut pack: *mut object,
-	mut condense: libc::c_int,
+	mut condense: i64,
 ) -> *mut object {
 	let mut op: *mut object = 0 as *mut object;
 	if condense != 0 {
@@ -77,7 +52,7 @@ pub unsafe extern "C" fn add_to_pack(
 pub unsafe extern "C" fn take_from_pack(
 	mut obj: *mut object,
 	mut pack: *mut object,
-) -> libc::c_int {
+) -> i64 {
 	while (*pack).next_object != obj {
 		pack = (*pack).next_object;
 	}
@@ -87,56 +62,56 @@ pub unsafe extern "C" fn take_from_pack(
 
 #[no_mangle]
 pub unsafe extern "C" fn pick_up(
-	mut row: libc::c_int,
-	mut col: libc::c_int,
+	mut row: i64,
+	mut col: i64,
 	mut status: *mut libc::c_short,
 ) -> *mut object {
 	let mut obj: *mut object = 0 as *mut object;
 	obj = object_at(&mut level_objects, row as c_short, col as c_short);
-	*status = 1 as libc::c_int as libc::c_short;
-	if (*obj).what_is as libc::c_int
-		== 0o4 as libc::c_int as libc::c_ushort as libc::c_int
-		&& (*obj).which_kind as libc::c_int == 7 as libc::c_int
-		&& (*obj).picked_up as libc::c_int != 0
+	*status = 1 as libc::c_short;
+	if (*obj).what_is as i64
+		== 0o4 as i64 as libc::c_ushort as i64
+		&& (*obj).which_kind as i64 == 7 as i64
+		&& (*obj).picked_up as i64 != 0
 	{
 		message("the scroll turns to dust as you pick it up", 0);
 		dungeon[row
 			as usize][col
-			as usize] = (dungeon[row as usize][col as usize] as libc::c_int
-			& !(0o1 as libc::c_int as libc::c_ushort as libc::c_int)) as libc::c_ushort;
-		vanish(obj, 0 as libc::c_int, &mut level_objects);
-		*status = 0 as libc::c_int as libc::c_short;
-		if (*id_scrolls.as_mut_ptr().offset(7 as libc::c_int as isize)).id_status
-			as libc::c_int == 0 as libc::c_int as libc::c_ushort as libc::c_int
+			as usize] = (dungeon[row as usize][col as usize] as i64
+			& !(0o1 as libc::c_ushort as i64)) as libc::c_ushort;
+		vanish(obj, 0 as i64, &mut level_objects);
+		*status = 0 as i64 as libc::c_short;
+		if (*id_scrolls.as_mut_ptr().offset(7 as i64 as isize)).id_status
+			as i64 == 0 as i64 as libc::c_ushort as i64
 		{
-			(*id_scrolls.as_mut_ptr().offset(7 as libc::c_int as isize))
-				.id_status = 0o1 as libc::c_int as libc::c_ushort;
+			(*id_scrolls.as_mut_ptr().offset(7 as i64 as isize))
+				.id_status = 0o1 as libc::c_ushort;
 		}
 		return 0 as *mut object;
 	}
-	if (*obj).what_is as libc::c_int
-		== 0o20 as libc::c_int as libc::c_ushort as libc::c_int
+	if (*obj).what_is as i64
+		== 0o20 as i64 as libc::c_ushort as i64
 	{
 		rogue.gold += (*obj).quantity as libc::c_long;
 		dungeon[row
 			as usize][col
-			as usize] = (dungeon[row as usize][col as usize] as libc::c_int
-			& !(0o1 as libc::c_int as libc::c_ushort as libc::c_int)) as libc::c_ushort;
+			as usize] = (dungeon[row as usize][col as usize] as i64
+			& !(0o1 as libc::c_ushort as i64)) as libc::c_ushort;
 		take_from_pack(obj, &mut level_objects);
-		print_stats(0o2 as libc::c_int);
+		print_stats(0o2 as i64);
 		return obj;
 	}
-	if pack_count(obj) >= 24 as libc::c_int {
-		message("pack too full", 1 as libc::c_int);
+	if pack_count(obj) >= 24 as i64 {
+		message("pack too full", 1);
 		return 0 as *mut object;
 	}
 	dungeon[row
 		as usize][col
-		as usize] = (dungeon[row as usize][col as usize] as libc::c_int
-		& !(0o1 as libc::c_int as libc::c_ushort as libc::c_int)) as libc::c_ushort;
+		as usize] = (dungeon[row as usize][col as usize] as i64
+		& !(0o1 as libc::c_ushort as i64)) as libc::c_ushort;
 	take_from_pack(obj, &mut level_objects);
-	obj = add_to_pack(obj, &mut rogue.pack, 1 as libc::c_int);
-	(*obj).picked_up = 1 as libc::c_int as libc::c_short;
+	obj = add_to_pack(obj, &mut rogue.pack, 1);
+	(*obj).picked_up = 1 as libc::c_short;
 	return obj;
 }
 
@@ -146,77 +121,77 @@ pub unsafe extern "C" fn drop_0() {
 	let mut new: *mut object = 0 as *mut object;
 	let mut ch: libc::c_short = 0;
 	let mut desc: [libc::c_char; 80] = [0; 80];
-	if dungeon[rogue.row as usize][rogue.col as usize] as libc::c_int
-		& (0o1 as libc::c_int as libc::c_ushort as libc::c_int
-		| 0o4 as libc::c_int as libc::c_ushort as libc::c_int
-		| 0o400 as libc::c_int as libc::c_ushort as libc::c_int) != 0
+	if dungeon[rogue.row as usize][rogue.col as usize] as i64
+		& (0o1 as libc::c_ushort as i64
+		| 0o4 as i64 as libc::c_ushort as i64
+		| 0o400 as i64 as libc::c_ushort as i64) != 0
 	{
-		message("there's already something there", 0 as libc::c_int);
+		message("there's already something there", 0 as i64);
 		return;
 	}
 	if (rogue.pack.next_object).is_null() {
-		message("you have nothing to drop", 0 as libc::c_int);
+		message("you have nothing to drop", 0 as i64);
 		return;
 	}
 	ch = pack_letter(
 		b"drop what?\0" as *const u8 as *const libc::c_char,
-		0o777 as libc::c_int as libc::c_ushort as libc::c_int,
+		0o777 as i64 as libc::c_ushort as i64,
 	) as libc::c_short;
-	if ch as libc::c_int == '\u{1b}' as i32 {
+	if ch as i64 == '\u{1b}' as i32 {
 		return;
 	}
-	obj = get_letter_object(ch as libc::c_int);
+	obj = get_letter_object(ch as i64);
 	if obj.is_null() {
-		message("no such item.", 0 as libc::c_int);
+		message("no such item.", 0 as i64);
 		return;
 	}
-	if (*obj).in_use_flags as libc::c_int
-		& 0o1 as libc::c_int as libc::c_ushort as libc::c_int != 0
+	if (*obj).in_use_flags as i64
+		& 0o1 as libc::c_ushort as i64 != 0
 	{
 		if (*obj).is_cursed != 0 {
-			message(curse_message, 0 as libc::c_int);
+			message(curse_message, 0 as i64);
 			return;
 		}
 		unwield(rogue.weapon);
-	} else if (*obj).in_use_flags as libc::c_int
-		& 0o2 as libc::c_int as libc::c_ushort as libc::c_int != 0
+	} else if (*obj).in_use_flags as i64
+		& 0o2 as i64 as libc::c_ushort as i64 != 0
 	{
 		if (*obj).is_cursed != 0 {
-			message(curse_message, 0 as libc::c_int);
+			message(curse_message, 0 as i64);
 			return;
 		}
 		mv_aquatars();
 		unwear(rogue.armor);
-		print_stats(0o20 as libc::c_int);
-	} else if (*obj).in_use_flags as libc::c_int
-		& 0o14 as libc::c_int as libc::c_ushort as libc::c_int != 0
+		print_stats(0o20 as i64);
+	} else if (*obj).in_use_flags as i64
+		& 0o14 as i64 as libc::c_ushort as i64 != 0
 	{
 		if (*obj).is_cursed != 0 {
-			message(curse_message, 0 as libc::c_int);
+			message(curse_message, 0 as i64);
 			return;
 		}
 		un_put_on(obj);
 	}
 	(*obj).row = rogue.row;
 	(*obj).col = rogue.col;
-	if (*obj).quantity as libc::c_int > 1 as libc::c_int
-		&& (*obj).what_is as libc::c_int
-		!= 0o2 as libc::c_int as libc::c_ushort as libc::c_int
+	if (*obj).quantity as i64 > 1
+		&& (*obj).what_is as i64
+		!= 0o2 as i64 as libc::c_ushort as i64
 	{
 		(*obj).quantity -= 1;
 		(*obj).quantity;
 		new = alloc_object();
 		*new = *obj;
-		(*new).quantity = 1 as libc::c_int as libc::c_short;
+		(*new).quantity = 1 as libc::c_short;
 		obj = new;
 	} else {
 		(*obj).ichar = 'L' as i32 as libc::c_short;
 		take_from_pack(obj, &mut rogue.pack);
 	}
-	place_at(obj, rogue.row as libc::c_int, rogue.col as libc::c_int);
+	place_at(obj, rogue.row as i64, rogue.col as i64);
 	let desc = "dropped ";
-	let full_desc = get_desc(obj, desc.as_mut_ptr().offset(8 as libc::c_int as isize));
-	message(&full_desc, 0 as libc::c_int);
+	let full_desc = get_desc(obj, desc.as_mut_ptr().offset(8 as i64 as isize));
+	message(&full_desc, 0 as i64);
 	reg_move();
 	panic!("Reached end of non-void function without returning");
 }
@@ -227,38 +202,38 @@ pub unsafe extern "C" fn check_duplicate(
 	mut pack: *mut object,
 ) -> *mut object {
 	let mut op: *mut object = 0 as *mut object;
-	if (*obj).what_is as libc::c_int
-		& (0o2 as libc::c_int as libc::c_ushort as libc::c_int
-		| 0o40 as libc::c_int as libc::c_ushort as libc::c_int
-		| 0o4 as libc::c_int as libc::c_ushort as libc::c_int
-		| 0o10 as libc::c_int as libc::c_ushort as libc::c_int) == 0
+	if (*obj).what_is as i64
+		& (0o2 as i64 as libc::c_ushort as i64
+		| 0o40 as i64 as libc::c_ushort as i64
+		| 0o4 as i64 as libc::c_ushort as i64
+		| 0o10 as i64 as libc::c_ushort as i64) == 0
 	{
 		return 0 as *mut object;
 	}
-	if (*obj).what_is as libc::c_int
-		== 0o40 as libc::c_int as libc::c_ushort as libc::c_int
-		&& (*obj).which_kind as libc::c_int == 1 as libc::c_int
+	if (*obj).what_is as i64
+		== 0o40 as i64 as libc::c_ushort as i64
+		&& (*obj).which_kind as i64 == 1
 	{
 		return 0 as *mut object;
 	}
 	op = (*pack).next_object;
 	while !op.is_null() {
-		if (*op).what_is as libc::c_int == (*obj).what_is as libc::c_int
-			&& (*op).which_kind as libc::c_int == (*obj).which_kind as libc::c_int
+		if (*op).what_is as i64 == (*obj).what_is as i64
+			&& (*op).which_kind as i64 == (*obj).which_kind as i64
 		{
-			if (*obj).what_is as libc::c_int
-				!= 0o2 as libc::c_int as libc::c_ushort as libc::c_int
-				|| (*obj).what_is as libc::c_int
-				== 0o2 as libc::c_int as libc::c_ushort as libc::c_int
-				&& ((*obj).which_kind as libc::c_int == 2 as libc::c_int
-				|| (*obj).which_kind as libc::c_int == 3 as libc::c_int
-				|| (*obj).which_kind as libc::c_int == 1 as libc::c_int
-				|| (*obj).which_kind as libc::c_int == 4 as libc::c_int)
-				&& (*obj).quiver as libc::c_int == (*op).quiver as libc::c_int
+			if (*obj).what_is as i64
+				!= 0o2 as i64 as libc::c_ushort as i64
+				|| (*obj).what_is as i64
+				== 0o2 as i64 as libc::c_ushort as i64
+				&& ((*obj).which_kind as i64 == 2 as i64
+				|| (*obj).which_kind as i64 == 3 as i64
+				|| (*obj).which_kind as i64 == 1
+				|| (*obj).which_kind as i64 == 4 as i64)
+				&& (*obj).quiver as i64 == (*op).quiver as i64
 			{
 				(*op)
-					.quantity = ((*op).quantity as libc::c_int
-					+ (*obj).quantity as libc::c_int) as libc::c_short;
+					.quantity = ((*op).quantity as i64
+					+ (*obj).quantity as i64) as libc::c_short;
 				return op;
 			}
 		}
@@ -268,18 +243,18 @@ pub unsafe extern "C" fn check_duplicate(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn wait_for_ack() -> libc::c_int {
+pub unsafe extern "C" fn wait_for_ack() -> i64 {
 	while rgetchar() != ' ' as i32 {}
 	panic!("Reached end of non-void function without returning");
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn take_off() -> libc::c_int {
+pub unsafe extern "C" fn take_off() -> i64 {
 	let mut desc: [libc::c_char; 80] = [0; 80];
 	let mut obj: *mut object = 0 as *mut object;
 	if !(rogue.armor).is_null() {
 		if (*rogue.armor).is_cursed != 0 {
-			message(curse_message, 0 as libc::c_int);
+			message(curse_message, 0 as i64);
 		} else {
 			mv_aquatars();
 			obj = rogue.armor;
@@ -288,62 +263,62 @@ pub unsafe extern "C" fn take_off() -> libc::c_int {
 				desc.as_mut_ptr(),
 				b"was wearing \0" as *const u8 as *const libc::c_char,
 			);
-			get_desc(obj, desc.as_mut_ptr().offset(12 as libc::c_int as isize));
-			message(desc.as_mut_ptr(), 0 as libc::c_int);
-			print_stats(0o20 as libc::c_int);
+			get_desc(obj, desc.as_mut_ptr().offset(12 as i64 as isize));
+			message(desc.as_mut_ptr(), 0 as i64);
+			print_stats(0o20 as i64);
 			reg_move();
 		}
 	} else {
 		message(
 			b"not wearing any\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
+			0 as i64,
 		);
 	}
 	panic!("Reached end of non-void function without returning");
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn wear() -> libc::c_int {
+pub unsafe extern "C" fn wear() -> i64 {
 	let mut ch: libc::c_short = 0;
 	let mut obj: *mut object = 0 as *mut object;
 	let mut desc: [libc::c_char; 80] = [0; 80];
 	if !(rogue.armor).is_null() {
 		message(
 			b"your already wearing some\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
+			0 as i64,
 		);
 		return;
 	}
 	ch = pack_letter(
 		b"wear what?\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-		0o1 as libc::c_int as libc::c_ushort as libc::c_int,
+		0o1 as libc::c_ushort as i64,
 	) as libc::c_short;
-	if ch as libc::c_int == '\u{1b}' as i32 {
+	if ch as i64 == '\u{1b}' as i32 {
 		return;
 	}
-	obj = get_letter_object(ch as libc::c_int);
+	obj = get_letter_object(ch as i64);
 	if obj.is_null() {
 		message(
 			b"no such item.\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
+			0 as i64,
 		);
 		return;
 	}
-	if (*obj).what_is as libc::c_int
-		!= 0o1 as libc::c_int as libc::c_ushort as libc::c_int
+	if (*obj).what_is as i64
+		!= 0o1 as libc::c_ushort as i64
 	{
 		message(
 			b"you can't wear that\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
+			0 as i64,
 		);
 		return;
 	}
-	(*obj).identified = 1 as libc::c_int as libc::c_short;
+	(*obj).identified = 1 as libc::c_short;
 	strcpy(desc.as_mut_ptr(), b"wearing \0" as *const u8 as *const libc::c_char);
-	get_desc(obj, desc.as_mut_ptr().offset(8 as libc::c_int as isize));
-	message(desc.as_mut_ptr(), 0 as libc::c_int);
+	get_desc(obj, desc.as_mut_ptr().offset(8 as i64 as isize));
+	message(desc.as_mut_ptr(), 0 as i64);
 	do_wear(&mut *obj);
-	print_stats(0o20 as libc::c_int);
+	print_stats(0o20 as i64);
 	reg_move();
 	panic!("Reached end of non-void function without returning");
 }
@@ -365,7 +340,7 @@ pub unsafe extern "C" fn wield() {
 	if ch == CANCEL {
 		return;
 	}
-	let obj = get_letter_object(ch as libc::c_int);
+	let obj = get_letter_object(ch as i64);
 	if obj.is_null() {
 		message("No such item.", 0);
 		return;
@@ -380,7 +355,7 @@ pub unsafe extern "C" fn wield() {
 	} else {
 		unwield(rogue.weapon);
 		let desc = "wielding ";
-		let full_desc = get_desc(obj, desc.as_mut_ptr().offset(9 as libc::c_int as isize));
+		let full_desc = get_desc(obj, desc.as_mut_ptr().offset(9 as i64 as isize));
 		message(full_desc, 0);
 		do_wield(&mut *obj);
 		reg_move();
@@ -394,39 +369,39 @@ pub unsafe fn do_wield(obj: &mut obj) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn call_it() -> libc::c_int {
+pub unsafe extern "C" fn call_it() -> i64 {
 	let mut ch: libc::c_short = 0;
 	let mut obj: *mut object = 0 as *mut object;
 	let mut id_table: *mut id = 0 as *mut id;
 	let mut buf: [libc::c_char; 32] = [0; 32];
 	ch = pack_letter(
 		b"call what?\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-		0o4 as libc::c_int as libc::c_ushort as libc::c_int
-			| 0o10 as libc::c_int as libc::c_ushort as libc::c_int
-			| 0o100 as libc::c_int as libc::c_ushort as libc::c_int
-			| 0o200 as libc::c_int as libc::c_ushort as libc::c_int,
+		0o4 as i64 as libc::c_ushort as i64
+			| 0o10 as i64 as libc::c_ushort as i64
+			| 0o100 as i64 as libc::c_ushort as i64
+			| 0o200 as i64 as libc::c_ushort as i64,
 	) as libc::c_short;
-	if ch as libc::c_int == '\u{1b}' as i32 {
+	if ch as i64 == '\u{1b}' as i32 {
 		return;
 	}
-	obj = get_letter_object(ch as libc::c_int);
+	obj = get_letter_object(ch as i64);
 	if obj.is_null() {
 		message(
 			b"no such item.\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
+			0 as i64,
 		);
 		return;
 	}
-	if (*obj).what_is as libc::c_int
-		& (0o4 as libc::c_int as libc::c_ushort as libc::c_int
-		| 0o10 as libc::c_int as libc::c_ushort as libc::c_int
-		| 0o100 as libc::c_int as libc::c_ushort as libc::c_int
-		| 0o200 as libc::c_int as libc::c_ushort as libc::c_int) == 0
+	if (*obj).what_is as i64
+		& (0o4 as i64 as libc::c_ushort as i64
+		| 0o10 as i64 as libc::c_ushort as i64
+		| 0o100 as i64 as libc::c_ushort as i64
+		| 0o200 as i64 as libc::c_ushort as i64) == 0
 	{
 		message(
 			b"surely you already know what that's called\0" as *const u8
 				as *const libc::c_char,
-			0 as libc::c_int,
+			0 as i64,
 		);
 		return;
 	}
@@ -436,12 +411,12 @@ pub unsafe extern "C" fn call_it() -> libc::c_int {
 		b"\0" as *const u8 as *const libc::c_char,
 		buf.as_mut_ptr(),
 		((*id_table.offset((*obj).which_kind as isize)).title).as_mut_ptr(),
-		1 as libc::c_int,
-		1 as libc::c_int,
+		1,
+		1,
 	) != 0
 	{
 		(*id_table.offset((*obj).which_kind as isize))
-			.id_status = 0o2 as libc::c_int as libc::c_ushort;
+			.id_status = 0o2 as i64 as libc::c_ushort;
 		strcpy(
 			((*id_table.offset((*obj).which_kind as isize)).title).as_mut_ptr(),
 			buf.as_mut_ptr(),
@@ -457,28 +432,28 @@ pub unsafe extern "C" fn mask_pack(
 ) -> libc::c_char {
 	while !((*pack).next_object).is_null() {
 		pack = (*pack).next_object;
-		if (*pack).what_is as libc::c_int & mask as libc::c_int != 0 {
-			return 1 as libc::c_int as libc::c_char;
+		if (*pack).what_is as i64 & mask as i64 != 0 {
+			return 1 as libc::c_char;
 		}
 	}
-	return 0 as libc::c_int as libc::c_char;
+	return 0 as i64 as libc::c_char;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn has_amulet() -> libc::c_int {
+pub unsafe extern "C" fn has_amulet() -> i64 {
 	return mask_pack(
 		&mut rogue.pack,
-		0o400 as libc::c_int as libc::c_ushort as libc::c_int,
-	) as libc::c_int;
+		0o400 as i64 as libc::c_ushort as i64,
+	) as i64;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn kick_into_pack() -> libc::c_int {
+pub unsafe extern "C" fn kick_into_pack() -> i64 {
 	let mut obj: *mut object = 0 as *mut object;
 	let mut n: libc::c_short = 0;
 	let mut stat: libc::c_short = 0;
-	if dungeon[rogue.row as usize][rogue.col as usize] as libc::c_int
-		& 0o1 as libc::c_int as libc::c_ushort as libc::c_int == 0
+	if dungeon[rogue.row as usize][rogue.col as usize] as i64
+		& 0o1 as libc::c_ushort as i64 == 0
 	{
 		message("nothing here", 0 as libc::c_int);
 	} else {

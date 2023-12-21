@@ -2,9 +2,6 @@
 #![feature(extern_types)]
 
 extern "C" {
-	static mut level_objects: object;
-	static mut level_monsters: object;
-	static mut party_room: libc::c_short;
 }
 
 use std::sync::OnceLock;
@@ -89,7 +86,7 @@ pub fn main() {
 			add_traps();
 			put_mons();
 			put_player(party_room);
-			print_stats(0o377 as libc::c_int);
+			print_stats(0o377 as i64);
 			level_ready = true;
 		}
 	};

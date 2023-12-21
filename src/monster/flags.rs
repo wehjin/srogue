@@ -1,4 +1,6 @@
-#[derive(Copy, Clone, Default)]
+use serde::Serialize;
+
+#[derive(Copy, Clone, Default, Serialize)]
 pub struct MonsterFlags {
 	pub hasted: bool,
 	pub slowed: bool,
@@ -20,7 +22,7 @@ pub struct MonsterFlags {
 	pub drops_level: bool,
 	pub seeks_gold: bool,
 	pub freezing_rogue: bool,
-	pub RUST_VANISHED: bool,
+	pub rust_vanished: bool,
 	pub confuses: bool,
 	pub imitates: bool,
 	pub flames: bool,

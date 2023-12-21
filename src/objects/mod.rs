@@ -3,58 +3,20 @@
 extern "C" {
 	pub type ldat;
 
-	fn winch(_: *mut WINDOW) -> chtype;
-	fn wmove(_: *mut WINDOW, _: libc::c_int, _: libc::c_int) -> libc::c_int;
-	static mut stdscr: *mut WINDOW;
-	static mut rooms: [room; 0];
-	static mut level_monsters: object;
 	fn md_malloc() -> *mut libc::c_char;
 	fn add_to_pack() -> *mut object;
-	static mut cur_level: libc::c_short;
-	static mut max_level: libc::c_short;
-	static mut party_room: libc::c_short;
 	static mut error_file: *mut libc::c_char;
-	static mut is_wood: [libc::c_char; 0];
 }
 
 use libc::{c_int, c_short};
-use ncurses::addch;
+use ncurses::{addch, chtype};
+use serde::Serialize;
 use crate::prelude::*;
 use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::object_what::FOOD;
+use crate::prelude::potion_kind::POTIONS;
 use crate::settings::fruit;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _win_st {
-	pub _cury: libc::c_short,
-	pub _curx: libc::c_short,
-	pub _maxy: libc::c_short,
-	pub _maxx: libc::c_short,
-	pub _begy: libc::c_short,
-	pub _begx: libc::c_short,
-	pub _flags: libc::c_short,
-	pub _attrs: attr_t,
-	pub _bkgd: chtype,
-	pub _notimeout: libc::c_int,
-	pub _clear: libc::c_int,
-	pub _leaveok: libc::c_int,
-	pub _scroll: libc::c_int,
-	pub _idlok: libc::c_int,
-	pub _idcok: libc::c_int,
-	pub _immed: libc::c_int,
-	pub _sync: libc::c_int,
-	pub _use_keypad: libc::c_int,
-	pub _delay: libc::c_int,
-	pub _line: *mut ldat,
-	pub _regtop: libc::c_short,
-	pub _regbottom: libc::c_short,
-	pub _parx: libc::c_int,
-	pub _pary: libc::c_int,
-	pub _parent: *mut WINDOW,
-	pub _pad: pdat,
-	pub _yoffset: libc::c_short,
-}
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -68,15 +30,74 @@ pub struct pdat {
 }
 
 pub type WINDOW = _win_st;
-pub type attr_t = chtype;
+pub type attr_t = ncurses::chtype;
 
-#[derive(Clone)]
-#[repr(C)]
+#[derive(Clone, Serialize)]
 pub struct id {
-	pub value: libc::c_short,
+	pub value: i16,
 	pub title: String,
 	pub real: String,
-	pub id_status: libc::c_ushort,
+	pub id_status: u16,
+}
+
+#[derive(Serialize)]
+pub struct SaveObj {
+	pub m_flags: MonsterFlags,
+	pub damage: String,
+	pub quantity: i16,
+	pub ichar: i16,
+	pub kill_exp: i16,
+	pub is_protected: i16,
+	pub is_cursed: i16,
+	pub class: i16,
+	pub identified: i16,
+	pub which_kind: u16,
+	pub o_row: i16,
+	pub o_col: i16,
+	pub o: i16,
+	pub row: i16,
+	pub col: i16,
+	pub d_enchant: i16,
+	pub quiver: i16,
+	pub trow: i16,
+	pub tcol: i16,
+	pub hit_enchant: i16,
+	pub what_is: u16,
+	pub picked_up: i16,
+	pub in_use_flags: u16,
+}
+
+impl SaveObj {
+	pub unsafe fn option_save_obj(obj: *const object) -> Option<SaveObj> {
+		if obj.is_null() { None } else { Self::from_obj(&*obj) }
+	}
+	pub fn from_obj(obj: &obj) -> Self {
+		Self {
+			m_flags: obj.m_flags,
+			damage: obj.to_string(),
+			quantity: obj.quantity,
+			ichar: obj.ichar,
+			kill_exp: obj.kill_exp,
+			is_protected: obj.is_protected,
+			is_cursed: obj.is_cursed,
+			class: obj.class,
+			identified: obj.identified,
+			which_kind: obj.which_kind,
+			o_row: obj.o_row,
+			o_col: obj.o_col,
+			o: obj.o,
+			row: obj.row,
+			col: obj.col,
+			d_enchant: obj.d_enchant,
+			quiver: obj.quiver,
+			trow: obj.trow,
+			tcol: obj.tcol,
+			hit_enchant: obj.hit_enchant,
+			what_is: obj.what_is,
+			picked_up: obj.picked_up,
+			in_use_flags: obj.in_use_flags,
+		}
+	}
 }
 
 #[derive(Copy, Clone)]
@@ -84,27 +105,27 @@ pub struct id {
 pub struct obj {
 	pub m_flags: MonsterFlags,
 	pub damage: &'static str,
-	pub quantity: libc::c_short,
-	pub ichar: libc::c_short,
-	pub kill_exp: libc::c_short,
-	pub is_protected: libc::c_short,
-	pub is_cursed: libc::c_short,
-	pub class: libc::c_short,
-	pub identified: libc::c_short,
-	pub which_kind: libc::c_ushort,
-	pub o_row: libc::c_short,
-	pub o_col: libc::c_short,
-	pub o: libc::c_short,
-	pub row: libc::c_short,
-	pub col: libc::c_short,
-	pub d_enchant: libc::c_short,
-	pub quiver: libc::c_short,
-	pub trow: libc::c_short,
-	pub tcol: libc::c_short,
-	pub hit_enchant: libc::c_short,
-	pub what_is: libc::c_ushort,
-	pub picked_up: libc::c_short,
-	pub in_use_flags: libc::c_ushort,
+	pub quantity: i16,
+	pub ichar: i16,
+	pub kill_exp: i16,
+	pub is_protected: i16,
+	pub is_cursed: i16,
+	pub class: i16,
+	pub identified: i16,
+	pub which_kind: u16,
+	pub o_row: i16,
+	pub o_col: i16,
+	pub o: i16,
+	pub row: i16,
+	pub col: i16,
+	pub d_enchant: i16,
+	pub quiver: i16,
+	pub trow: i16,
+	pub tcol: i16,
+	pub hit_enchant: i16,
+	pub what_is: u16,
+	pub picked_up: i16,
+	pub in_use_flags: u16,
 	pub next_object: *mut obj,
 }
 
@@ -112,7 +133,7 @@ impl obj {
 	pub fn hp_to_kill(&self) -> c_short { self.quantity }
 	pub fn set_hp_to_kill(&mut self, value: c_short) { self.quantity = value }
 	pub fn m_char(&self) -> chtype {
-		self.ichar as chtype
+		self.ichar as ncurses::chtype
 	}
 	pub fn first_level(&self) -> c_short {
 		self.is_protected
@@ -126,10 +147,10 @@ impl obj {
 		self.d_enchant = ch as c_short;
 	}
 	pub fn trail_char(&self) -> chtype {
-		self.d_enchant as chtype
+		self.d_enchant as ncurses::chtype
 	}
 	pub fn disguise(&self) -> chtype {
-		self.what_is as chtype
+		self.what_is as ncurses::chtype
 	}
 	pub fn nap_length(&self) -> c_short {
 		self.picked_up
@@ -173,29 +194,6 @@ impl obj {
 
 pub type object = obj;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct fight {
-	pub armor: *mut object,
-	pub weapon: *mut object,
-	pub left_ring: *mut object,
-	pub right_ring: *mut object,
-	pub hp_current: libc::c_short,
-	pub hp_max: libc::c_short,
-	pub str_current: libc::c_short,
-	pub str_max: libc::c_short,
-	pub pack: object,
-	pub gold: libc::c_long,
-	pub exp: libc::c_short,
-	pub exp_points: libc::c_long,
-	pub row: libc::c_short,
-	pub col: libc::c_short,
-	pub fchar: libc::c_short,
-	pub moves_left: libc::c_short,
-}
-
-pub type fighter = fight;
-
 #[no_mangle]
 pub static mut level_objects: object = obj {
 	m_flags: MonsterFlags::default(),
@@ -223,12 +221,9 @@ pub static mut level_objects: object = obj {
 	in_use_flags: 0,
 	next_object: 0 as *const obj as *mut obj,
 };
-#[no_mangle]
-pub static mut dungeon: [[libc::c_ushort; 80]; 24] = [[0; 80]; 24];
-#[no_mangle]
-pub static mut foods: libc::c_short = 0 as libc::c_int as libc::c_short;
-#[no_mangle]
-pub static mut party_counter: libc::c_short = 0;
+pub static mut dungeon: [[u16; DCOLS]; DROWS] = [[0; DCOLS]; DROWS];
+pub static mut foods: i16 = 0;
+pub static mut party_counter: i16 = 0;
 #[no_mangle]
 pub static mut free_list: *mut object = 0 as *const object as *mut object;
 #[no_mangle]
@@ -238,10 +233,10 @@ pub static mut rogue: fighter = {
 		weapon: 0 as *const object as *mut object,
 		left_ring: 0 as *const object as *mut object,
 		right_ring: 0 as *const object as *mut object,
-		hp_current: 12 as libc::c_int as libc::c_short,
-		hp_max: 12 as libc::c_int as libc::c_short,
-		str_current: 16 as libc::c_int as libc::c_short,
-		str_max: 16 as libc::c_int as libc::c_short,
+		hp_current: 12 as i64 as libc::c_short,
+		hp_max: 12 as i64 as libc::c_short,
+		str_current: 16 as i64 as libc::c_short,
+		str_max: 16 as i64 as libc::c_short,
 		pack: {
 			let mut init = obj {
 				m_flags: MonsterFlags::default(),
@@ -271,142 +266,142 @@ pub static mut rogue: fighter = {
 			};
 			init
 		},
-		gold: 0 as libc::c_int as libc::c_long,
-		exp: 1 as libc::c_int as libc::c_short,
-		exp_points: 0 as libc::c_int as libc::c_long,
-		row: 0 as libc::c_int as libc::c_short,
-		col: 0 as libc::c_int as libc::c_short,
+		gold: 0,
+		exp: 1 as libc::c_short,
+		exp_points: 0,
+		row: 0 as i64 as libc::c_short,
+		col: 0 as i64 as libc::c_short,
 		fchar: '@' as i32 as libc::c_short,
-		moves_left: 1250 as libc::c_int as libc::c_short,
+		moves_left: 1250 as i64 as libc::c_short,
 	};
 	init
 };
 #[no_mangle]
-pub static mut id_potions: [id; 14] = unsafe {
+pub static mut id_potions: [id; POTIONS] = unsafe {
 	[
 		{
 			let mut init = id {
-				value: 100 as libc::c_int as libc::c_short,
+				value: 100 as i64 as libc::c_short,
 				title: "blue ".to_string(),
 				real: "of increase strength ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 250 as libc::c_int as libc::c_short,
+				value: 250 as i64 as libc::c_short,
 				title: "red ".to_string(),
 				real: "of restore strength ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 100 as libc::c_int as libc::c_short,
+				value: 100 as i64 as libc::c_short,
 				title: "green ".to_string(),
 				real: "of healing ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 200 as libc::c_int as libc::c_short,
+				value: 200 as i64 as libc::c_short,
 				title: "grey ".to_string(),
 				real: "of extra healing ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 10 as libc::c_int as libc::c_short,
+				value: 10 as i64 as libc::c_short,
 				title: "brown ".to_string(),
 				real: "of poison ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 300 as libc::c_int as libc::c_short,
+				value: 300 as i64 as libc::c_short,
 				title: "clear ".to_string(),
 				real: "of raise level ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 10 as libc::c_int as libc::c_short,
+				value: 10 as i64 as libc::c_short,
 				title: "pink ".to_string(),
 				real: "of blindness ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 25 as libc::c_int as libc::c_short,
+				value: 25 as i64 as libc::c_short,
 				title: "white ".to_string(),
 				real: "of hallucination ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 100 as libc::c_int as libc::c_short,
+				value: 100 as i64 as libc::c_short,
 				title: "purple ".to_string(),
 				real: "of detect monster ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 100 as libc::c_int as libc::c_short,
+				value: 100 as i64 as libc::c_short,
 				title: "black ".to_string(),
 				real: "of detect things ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 10 as libc::c_int as libc::c_short,
+				value: 10 as i64 as libc::c_short,
 				title: "yellow ".to_string(),
 				real: "of confusion ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 80 as libc::c_int as libc::c_short,
+				value: 80 as i64 as libc::c_short,
 				title: "plaid ".to_string(),
 				real: "of levitation ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 150 as libc::c_int as libc::c_short,
+				value: 150 as i64 as libc::c_short,
 				title: "burgundy ".to_string(),
 				real: "of haste self ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 145 as libc::c_int as libc::c_short,
+				value: 145 as i64 as libc::c_short,
 				title: "beige ".to_string(),
 				real: "of see invisible ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
@@ -417,109 +412,109 @@ pub static mut id_scrolls: [id; 12] = unsafe {
 	[
 		{
 			let mut init = id {
-				value: 505 as libc::c_int as libc::c_short,
+				value: 505 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of protect armor ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 200 as libc::c_int as libc::c_short,
+				value: 200 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of hold monster ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 235 as libc::c_int as libc::c_short,
+				value: 235 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of enchant weapon ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 235 as libc::c_int as libc::c_short,
+				value: 235 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of enchant armor ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 175 as libc::c_int as libc::c_short,
+				value: 175 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of identify ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 190 as libc::c_int as libc::c_short,
+				value: 190 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of teleportation ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 25 as libc::c_int as libc::c_short,
+				value: 25 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of sleep ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 610 as libc::c_int as libc::c_short,
+				value: 610 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of scare monster ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 210 as libc::c_int as libc::c_short,
+				value: 210 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of remove curse ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 100 as libc::c_int as libc::c_short,
+				value: 100 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of create monster ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 25 as libc::c_int as libc::c_short,
+				value: 25 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of aggravate monster ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 180 as libc::c_int as libc::c_short,
+				value: 180 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of magic mapping ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
@@ -530,73 +525,73 @@ pub static mut id_weapons: [id; 8] = unsafe {
 	[
 		{
 			let mut init = id {
-				value: 150 as libc::c_int as libc::c_short,
+				value: 150 as i64 as libc::c_short,
 				title: "short bow ".to_string(),
 				real: "".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 8 as libc::c_int as libc::c_short,
+				value: 8 as i64 as libc::c_short,
 				title: "darts ".to_string(),
 				real: "".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 15 as libc::c_int as libc::c_short,
+				value: 15 as i64 as libc::c_short,
 				title: "arrows ".to_string(),
 				real: "".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 27 as libc::c_int as libc::c_short,
+				value: 27 as i64 as libc::c_short,
 				title: "daggers ".to_string(),
 				real: "".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 35 as libc::c_int as libc::c_short,
+				value: 35 as i64 as libc::c_short,
 				title: "shurikens ".to_string(),
 				real: "".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 360 as libc::c_int as libc::c_short,
+				value: 360 as i64 as libc::c_short,
 				title: "mace ".to_string(),
 				real: "".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 470 as libc::c_int as libc::c_short,
+				value: 470 as i64 as libc::c_short,
 				title: "long sword ".to_string(),
 				real: "".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 580 as libc::c_int as libc::c_short,
+				value: 580 as i64 as libc::c_short,
 				title: "two-handed sword ".to_string(),
 				real: "".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
@@ -607,64 +602,64 @@ pub static mut id_armors: [id; 7] = unsafe {
 	[
 		{
 			let mut init = id {
-				value: 300 as libc::c_int as libc::c_short,
+				value: 300 as i64 as libc::c_short,
 				title: "leather armor ".to_string(),
 				real: "".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 300 as libc::c_int as libc::c_short,
+				value: 300 as i64 as libc::c_short,
 				title: "ring mail ".to_string(),
 				real: "".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 400 as libc::c_int as libc::c_short,
+				value: 400 as i64 as libc::c_short,
 				title: "scale mail ".to_string(),
 				real: "".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 500 as libc::c_int as libc::c_short,
+				value: 500 as i64 as libc::c_short,
 				title: "chain mail ".to_string(),
 				real: "".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 600 as libc::c_int as libc::c_short,
+				value: 600 as i64 as libc::c_short,
 				title: "banded mail ".to_string(),
 				real: "".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 600 as libc::c_int as libc::c_short,
+				value: 600 as i64 as libc::c_short,
 				title: "splint mail ".to_string(),
 				real: "".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 700 as libc::c_int as libc::c_short,
+				value: 700 as i64 as libc::c_short,
 				title: "plate mail ".to_string(),
 				real: "".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
@@ -675,91 +670,91 @@ pub static mut id_wands: [id; 10] = unsafe {
 	[
 		{
 			let mut init = id {
-				value: 25 as libc::c_int as libc::c_short,
+				value: 25 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of teleport away ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 50 as libc::c_int as libc::c_short,
+				value: 50 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of slow monster ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 45 as libc::c_int as libc::c_short,
+				value: 45 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of confuse monster ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 8 as libc::c_int as libc::c_short,
+				value: 8 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of invisibility ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 55 as libc::c_int as libc::c_short,
+				value: 55 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of polymorph ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 2 as libc::c_int as libc::c_short,
+				value: 2 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of haste monster ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 25 as libc::c_int as libc::c_short,
+				value: 25 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of sleep ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 20 as libc::c_int as libc::c_short,
+				value: 20 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of magic missile ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 20 as libc::c_int as libc::c_short,
+				value: 20 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of cancellation ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 0 as libc::c_int as libc::c_short,
+				value: 0 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of do nothing ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
@@ -770,101 +765,101 @@ pub static mut id_rings: [id; 11] = unsafe {
 	[
 		{
 			let mut init = id {
-				value: 250 as libc::c_int as libc::c_short,
+				value: 250 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of stealth ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 100 as libc::c_int as libc::c_short,
+				value: 100 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of teleportation ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 255 as libc::c_int as libc::c_short,
+				value: 255 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of regeneration ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 295 as libc::c_int as libc::c_short,
+				value: 295 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of slow digestion ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 200 as libc::c_int as libc::c_short,
+				value: 200 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of add strength ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 250 as libc::c_int as libc::c_short,
+				value: 250 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of sustain strength ".to_string(),
 
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 250 as libc::c_int as libc::c_short,
+				value: 250 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of dexterity ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 25 as libc::c_int as libc::c_short,
+				value: 25 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of adornment ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 300 as libc::c_int as libc::c_short,
+				value: 300 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of see invisible ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 290 as libc::c_int as libc::c_short,
+				value: 290 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of maintain armor ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
 		{
 			let mut init = id {
-				value: 270 as libc::c_int as libc::c_short,
+				value: 270 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of searching ".to_string(),
-				id_status: 0 as libc::c_int as libc::c_ushort,
+				id_status: 0 as i64 as libc::c_ushort,
 			};
 			init
 		},
@@ -872,28 +867,28 @@ pub static mut id_rings: [id; 11] = unsafe {
 };
 
 #[no_mangle]
-pub unsafe extern "C" fn put_objects() -> libc::c_int {
+pub unsafe extern "C" fn put_objects() -> i64 {
 	let mut i: libc::c_short = 0;
 	let mut n: libc::c_short = 0;
 	let mut obj: *mut object = 0 as *mut object;
-	if (cur_level as libc::c_int) < max_level as libc::c_int {
+	if (cur_level as i64) < max_level as i64 {
 		return;
 	}
 	n = (if coin_toss() != 0 {
-		get_rand(2 as libc::c_int, 4 as libc::c_int)
+		get_rand(2 as i64, 4 as i64)
 	} else {
-		get_rand(3 as libc::c_int, 5 as libc::c_int)
+		get_rand(3 as i64, 5 as i64)
 	}) as libc::c_short;
-	while rand_percent(33 as libc::c_int) != 0 {
+	while rand_percent(33 as i64) != 0 {
 		n += 1;
 		n;
 	}
-	if cur_level as libc::c_int == party_counter as libc::c_int {
+	if cur_level as i64 == party_counter as i64 {
 		make_party();
 		party_counter = next_party() as libc::c_short;
 	}
-	i = 0 as libc::c_int as libc::c_short;
-	while (i as libc::c_int) < n as libc::c_int {
+	i = 0 as i64 as libc::c_short;
+	while (i as i64) < n as i64 {
 		obj = gr_object();
 		rand_place(obj);
 		i += 1;
@@ -906,16 +901,16 @@ pub unsafe extern "C" fn put_objects() -> libc::c_int {
 #[no_mangle]
 pub unsafe extern "C" fn place_at(
 	mut obj: *mut object,
-	mut row: libc::c_int,
-	mut col: libc::c_int,
-) -> libc::c_int {
+	mut row: i64,
+	mut col: i64,
+) -> i64 {
 	(*obj).row = row as libc::c_short;
 	(*obj).col = col as libc::c_short;
 	dungeon[row
 		as usize][col
-		as usize] = (dungeon[row as usize][col as usize] as libc::c_int
-		| 0o1 as libc::c_int as libc::c_ushort as libc::c_int) as libc::c_ushort;
-	add_to_pack(obj, &mut level_objects, 0 as libc::c_int);
+		as usize] = (dungeon[row as usize][col as usize] as i64
+		| 0o1 as libc::c_ushort as i64) as libc::c_ushort;
+	add_to_pack(obj, &mut level_objects, 0 as i64);
 	panic!("Reached end of non-void function without returning");
 }
 
@@ -927,8 +922,8 @@ pub unsafe extern "C" fn object_at(
 ) -> *mut object {
 	let mut obj: *mut object = (*pack).next_object;
 	while !obj.is_null()
-		&& ((*obj).row as libc::c_int != row as libc::c_int
-		|| (*obj).col as libc::c_int != col as libc::c_int)
+		&& ((*obj).row as i64 != row as i64
+		|| (*obj).col as i64 != col as i64)
 	{
 		obj = (*obj).next_object;
 	}
@@ -936,17 +931,17 @@ pub unsafe extern "C" fn object_at(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_letter_object(mut ch: libc::c_int) -> *mut object {
+pub unsafe extern "C" fn get_letter_object(mut ch: i64) -> *mut object {
 	let mut obj: *mut object = 0 as *mut object;
 	obj = rogue.pack.next_object;
-	while !obj.is_null() && (*obj).ichar as libc::c_int != ch {
+	while !obj.is_null() && (*obj).ichar as i64 != ch {
 		obj = (*obj).next_object;
 	}
 	return obj;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free_stuff(mut objlist: *mut object) -> libc::c_int {
+pub unsafe extern "C" fn free_stuff(mut objlist: *mut object) -> i64 {
 	let mut obj: *mut object = 0 as *mut object;
 	while !((*objlist).next_object).is_null() {
 		obj = (*objlist).next_object;
@@ -981,14 +976,14 @@ pub unsafe extern "C" fn name_of(obj: &object) -> String {
 pub unsafe extern "C" fn gr_object() -> *mut object {
 	let mut obj: *mut object = 0 as *mut object;
 	obj = alloc_object();
-	if (foods as libc::c_int) < cur_level as libc::c_int / 2 as libc::c_int {
-		(*obj).what_is = 0o40 as libc::c_int as libc::c_ushort;
+	if (foods as i64) < cur_level as i64 / 2 as i64 {
+		(*obj).what_is = 0o40 as i64 as libc::c_ushort;
 		foods += 1;
 		foods;
 	} else {
 		(*obj).what_is = gr_what_is();
 	}
-	match (*obj).what_is as libc::c_int {
+	match (*obj).what_is as i64 {
 		4 => {
 			gr_scroll(obj);
 		}
@@ -996,7 +991,7 @@ pub unsafe extern "C" fn gr_object() -> *mut object {
 			gr_potion(obj);
 		}
 		2 => {
-			gr_weapon(obj, 1 as libc::c_int);
+			gr_weapon(obj, 1);
 		}
 		1 => {
 			gr_armor(obj);
@@ -1126,23 +1121,23 @@ pub unsafe extern "C" fn show_objects() -> libc::c_int {
 				(*monster).d_enchant = rc;
 			}
 		}
-		mc = (if wmove(stdscr, row as libc::c_int, col as libc::c_int)
+		mc = (if ncurses::wmove(ncurses::stdscr(), row as libc::c_int, col as libc::c_int)
 			== -(1 as libc::c_int)
 		{
-			-(1 as libc::c_int) as chtype
+			-(1 as libc::c_int) as ncurses::chtype
 		} else {
-			winch(stdscr)
+			ncurses::winch(ncurses::stdscr())
 		}) as libc::c_short;
 		if ((mc as libc::c_int) < 'A' as i32 || mc as libc::c_int > 'Z' as i32)
 			&& (row as libc::c_int != rogue.row as libc::c_int
 			|| col as libc::c_int != rogue.col as libc::c_int)
 		{
-			if wmove(stdscr, row as libc::c_int, col as libc::c_int)
+			if ncurses::wmove(ncurses::stdscr(), row as libc::c_int, col as libc::c_int)
 				== -(1 as libc::c_int)
 			{
 				-(1 as libc::c_int);
 			} else {
-				addch(rc as chtype);
+				addch(rc as ncurses::chtype);
 			};
 		}
 		obj = (*obj).next_object;
@@ -1150,15 +1145,15 @@ pub unsafe extern "C" fn show_objects() -> libc::c_int {
 	monster = level_monsters.next_object;
 	while !monster.is_null() {
 		if (*monster).m_flags & 0o20000000 as libc::c_long as libc::c_ulong != 0 {
-			if wmove(
-				stdscr,
+			if ncurses::wmove(
+				ncurses::stdscr(),
 				(*monster).row as libc::c_int,
 				(*monster).col as libc::c_int,
 			) == -(1 as libc::c_int)
 			{
 				-(1 as libc::c_int);
 			} else {
-				addch((*monster).what_is as libc::c_int as chtype);
+				addch((*monster).what_is as libc::c_int as ncurses::chtype);
 			};
 		}
 		monster = (*monster).next_object;
