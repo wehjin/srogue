@@ -171,18 +171,14 @@ pub unsafe fn rgetchar() -> c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn print_stats(mut stat_mask: i64) -> i64 {
+pub unsafe extern "C" fn print_stats(mut stat_mask: usize) -> i64 {
 	let mut buf: [libc::c_char; 16] = [0; 16];
 	let mut label: libc::c_char = 0;
 	let mut row: i64 = 24 as i64 - 1;
-	label = (if stat_mask & 0o200 as i64 != 0 {
-		1
-	} else {
-		0 as i64
-	}) as libc::c_char;
+	label = (if stat_mask & 0o200 != 0 { 1 } else { 0 }) as libc::c_char;
 	if stat_mask & 0o1 != 0 {
 		if label != 0 {
-			if ncurses::wmove(ncurses::stdscr(), row as i32, 0 as i32) == -1 {
+			if ncurses::wmove(ncurses::stdscr(), row as i32, 0) == -1 {
 				-1;
 			} else {
 				waddnstr(

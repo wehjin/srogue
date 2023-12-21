@@ -435,12 +435,12 @@ pub unsafe fn add_mazes() {
 			} else {
 				nominal_percent
 			}
-		};
+		} as usize;
 
 		for i in 0..MAXROOMS {
 			let j = (start + i) as usize % MAXROOMS;
 			if rooms[j].room_type.is_nothing() {
-				let do_maze = rand_percent(maze_percent);
+				let do_maze = rand_percent(maze_percent as usize);
 				if do_maze {
 					rooms[j].room_type = RoomType::Maze;
 					make_maze(
@@ -786,10 +786,10 @@ pub unsafe fn add_exp(e: i64, promotion: bool) {
 				rogue.hp_max = (rogue.hp_max as usize + hp) as c_short;
 			}
 			rogue.exp = i as c_short;
-			print_stats((STAT_HP | STAT_EXP) as i64);
+			print_stats(STAT_HP | STAT_EXP);
 		}
 	} else {
-		print_stats(STAT_EXP as i64);
+		print_stats(STAT_EXP);
 	}
 }
 

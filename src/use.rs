@@ -381,7 +381,7 @@ pub unsafe extern "C" fn eat() {
 		return;
 	}
 	if (*obj).which_kind as libc::c_int == 1 as libc::c_int
-		|| rand_percent(60 as libc::c_int) != 0
+		|| rand_percent(60 ) != 0
 	{
 		moves = get_rand(900 as libc::c_int, 1100 as libc::c_int) as libc::c_short;
 		if (*obj).which_kind as libc::c_int == 0 as libc::c_int {

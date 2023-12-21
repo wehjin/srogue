@@ -45,7 +45,7 @@ pub unsafe extern "C" fn throw() -> i64 {
 	let mut monster: *mut object = 0 as *mut object;
 	loop {
 		dir = rgetchar() as libc::c_short;
-		if !(is_direction(dir as i64) == 0) {
+		if !(is_direction(dir as i32) == 0) {
 			break;
 		}
 		sound_bell();

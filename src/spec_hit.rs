@@ -47,7 +47,7 @@ pub static mut being_held: bool = false;
 #[no_mangle]
 pub unsafe extern "C" fn special_hit(mut monster: *mut object) -> i64 {
 	if (*monster).m_flags & 0o1000 as libc::c_long as libc::c_ulong != 0
-		&& rand_percent(66 as i64) != 0
+		&& rand_percent(66) != 0
 	{
 		return;
 	}
@@ -97,7 +97,7 @@ pub unsafe extern "C" fn cough_up(mut monster: *mut object) -> i64 {
 			cur_level as i64 * 30 as i64,
 		) as libc::c_short;
 	} else {
-		if rand_percent((*monster).which_kind as i64) == 0 {
+		if !rand_percent((*monster).which_kind as usize) {
 			return;
 		}
 		obj = gr_object();
@@ -261,11 +261,11 @@ pub unsafe extern "C" fn m_confuse(mut monster: *mut object) -> bool {
 	if rogue_can_see((*monster).row as i64, (*monster).col as i64) == 0 {
 		return false;
 	}
-	if rand_percent(45 as i64) != 0 {
+	if rand_percent(45) != 0 {
 		(*monster).m_flags &= !(0o10000000 as libc::c_long) as libc::c_ulong;
 		return false;
 	}
-	if rand_percent(55 as i64) != 0 {
+	if rand_percent(55) != 0 {
 		(*monster).m_flags &= !(0o10000000 as libc::c_long) as libc::c_ulong;
 		sprintf(
 			msg.as_mut_ptr(),

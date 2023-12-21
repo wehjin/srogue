@@ -36,7 +36,7 @@ pub const COL1: i64 = 26;
 pub const COL2: i64 = 52;
 pub const ROW1: i64 = 7;
 pub const ROW2: i64 = 15;
-pub const HIDE_PERCENT: i64 = 12;
+pub const HIDE_PERCENT: usize = 12;
 
 
 pub const MAX_EXP_LEVEL: usize = 21;
@@ -218,15 +218,15 @@ pub mod potion_kind {
 pub mod ring_kind;
 
 pub mod stat_const {
-	pub const STAT_LEVEL: libc::c_int = 0o1;
-	pub const STAT_GOLD: libc::c_int = 0o2;
-	pub const STAT_HP: libc::c_int = 0o4;
-	pub const STAT_STRENGTH: libc::c_int = 0o10;
-	pub const STAT_ARMOR: libc::c_int = 0o20;
-	pub const STAT_EXP: libc::c_int = 0o40;
-	pub const STAT_HUNGER: libc::c_int = 0o100;
-	pub const STAT_LABEL: libc::c_int = 0o200;
-	pub const STAT_ALL: libc::c_int = 0o377;
+	pub const STAT_LEVEL: usize = 0o1;
+	pub const STAT_GOLD: usize = 0o2;
+	pub const STAT_HP: usize = 0o4;
+	pub const STAT_STRENGTH: usize = 0o10;
+	pub const STAT_ARMOR: usize = 0o20;
+	pub const STAT_EXP: usize = 0o40;
+	pub const STAT_HUNGER: usize = 0o100;
+	pub const STAT_LABEL: usize = 0o200;
+	pub const STAT_ALL: usize = 0o377;
 }
 
 #[derive(Copy, Clone)]

@@ -74,7 +74,7 @@ pub unsafe extern "C" fn one_move_rogue(mut dirch: libc::c_short, pickup: bool) 
 		}
 	}
 	if r_teleport != 0 {
-		if rand_percent(8 as i64) != 0 {
+		if rand_percent(8) != 0 {
 			tele();
 			return -(2 as i64);
 		}
@@ -325,7 +325,7 @@ pub unsafe extern "C" fn move_onto() -> libc::c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn is_direction(mut c: libc::c_int) -> libc::c_char {
+pub unsafe extern "C" fn is_direction(mut c: i32) -> libc::c_char {
 	return (c == 'h' as i32 || c == 'j' as i32 || c == 'k' as i32 || c == 'l' as i32
 		|| c == 'b' as i32 || c == 'y' as i32 || c == 'u' as i32 || c == 'n' as i32
 		|| c == '\u{1b}' as i32) as libc::c_int as libc::c_char;
@@ -361,7 +361,7 @@ pub unsafe extern "C" fn check_hunger(mut messages_only: libc::c_char) -> libc::
 		) as libc::c_short;
 		if n as libc::c_int > 0 as libc::c_int {
 			fainted = 1 as libc::c_int as libc::c_char;
-			if rand_percent(40 as libc::c_int) != 0 {
+			if rand_percent(40) != 0 {
 				rogue.moves_left += 1;
 				rogue.moves_left;
 			}

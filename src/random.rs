@@ -1,6 +1,7 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
 use rand::{random, Rng, thread_rng};
+use rand::distributions::uniform::SampleUniform;
 
 static mut rntb: [libc::c_long; 32] = [
 	3 as i64 as libc::c_long,
@@ -46,9 +47,11 @@ static mut end_ptr: *mut libc::c_long = 0 as *const libc::c_long as *mut libc::c
 
 pub fn rrandom() -> libc::c_long { random() }
 
-pub fn get_rand<T>(x: T, y: T) -> T { thread_rng().gen_range(x..=y) }
+pub fn get_rand<T: SampleUniform + PartialOrd>(x: T, y: T) -> T {
+	thread_rng().gen_range(x..=y)
+}
 
-pub fn rand_percent<T>(percentage: T) -> bool { get_rand(1, 100) <= percentage }
+pub fn rand_percent(percentage: usize) -> bool { get_rand(1, 100) <= percentage }
 
 pub fn coin_toss() -> bool { random() }
 

@@ -104,7 +104,7 @@ pub unsafe extern "C" fn trap_player(
 		as usize][col
 		as usize] = (dungeon[row as usize][col as usize] as i64
 		& !(0o1000 as i64 as libc::c_ushort as i64)) as libc::c_ushort;
-	if rand_percent(rogue.exp as i64 + ring_exp as i64) != 0 {
+	if rand_percent((rogue.exp + ring_exp) as usize) != 0 {
 		message(
 			b"the trap failed\0" as *const u8 as *const libc::c_char,
 			1,
@@ -150,7 +150,7 @@ pub unsafe extern "C" fn trap_player(
 			if rogue.hp_current as i64 <= 0 as i64 {
 				rogue.hp_current = 0 as i64 as libc::c_short;
 			}
-			if sustain_strength == 0 && rand_percent(40 as i64) != 0
+			if sustain_strength == 0 && rand_percent(40) != 0
 				&& rogue.str_current as i64 >= 3 as i64
 			{
 				rogue.str_current -= 1;
@@ -158,7 +158,7 @@ pub unsafe extern "C" fn trap_player(
 			}
 			print_stats(0o4 as i64 | 0o10 as i64);
 			if rogue.hp_current as i64 <= 0 as i64 {
-				killed_by(0 as *mut object, 3 as i64);
+				killed_by(0 as *mut object, 3 );
 			}
 		}
 		4 => {
@@ -392,8 +392,8 @@ pub unsafe extern "C" fn search(
 						& 0o1000 as libc::c_int as libc::c_ushort as libc::c_int != 0
 					{
 						if rand_percent(
-							17 as libc::c_int
-								+ (rogue.exp as libc::c_int + ring_exp as libc::c_int),
+							17
+								+ (rogue.exp + ring_exp ) as usize,
 						) != 0
 						{
 							dungeon[row

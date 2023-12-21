@@ -879,7 +879,7 @@ pub unsafe extern "C" fn put_objects() -> i64 {
 	} else {
 		get_rand(3 as i64, 5 as i64)
 	}) as libc::c_short;
-	while rand_percent(33 as i64) != 0 {
+	while rand_percent(33) != 0 {
 		n += 1;
 		n;
 	}
@@ -1060,11 +1060,11 @@ pub unsafe extern "C" fn put_stairs() -> libc::c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_armor_class(mut obj: *mut obj) -> libc::c_int {
+pub unsafe extern "C" fn get_armor_class(mut obj: *mut obj) -> i64 {
 	if !obj.is_null() {
-		return (*obj).class as libc::c_int + (*obj).d_enchant as libc::c_int;
+		return ((*obj).class + (*obj).d_enchant) as i64;
 	}
-	return 0 as libc::c_int;
+	return 0;
 }
 
 #[no_mangle]
@@ -1097,7 +1097,7 @@ pub unsafe fn free_object(obj: *mut object) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn show_objects() -> libc::c_int {
+pub unsafe extern "C" fn show_objects() {
 	let mut obj: *mut object = 0 as *mut object;
 	let mut mc: libc::c_short = 0;
 	let mut rc: libc::c_short = 0;
@@ -1158,7 +1158,6 @@ pub unsafe extern "C" fn show_objects() -> libc::c_int {
 		}
 		monster = (*monster).next_object;
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
 #[no_mangle]

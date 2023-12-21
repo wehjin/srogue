@@ -64,7 +64,7 @@ pub unsafe extern "C" fn mon_hit(mut monster: *mut object, other: Option<&str>, 
 
 	let base_monster_name = mon_name(monster);
 	let monster_name = if let Some(name) = other { name } else { &base_monster_name };
-	if !rand_percent(hit_chance as i64) {
+	if !rand_percent(hit_chance as usize) {
 		if fight_monster.is_null() {
 			hit_message = format!("{}the {} misses", hit_message, monster_name);
 			message(&hit_message, 1);
@@ -83,8 +83,8 @@ pub unsafe extern "C" fn mon_hit(mut monster: *mut object, other: Option<&str>, 
 			if flame != 0 {
 				damage = (damage as i64 - get_armor_class(rogue.armor))
 					as libc::c_short;
-				if (damage as i64) < 0 as i64 {
-					damage = 1 as libc::c_short;
+				if (damage as i64) < 0 {
+					damage = 1;
 				}
 			}
 		}
@@ -120,8 +120,8 @@ pub unsafe extern "C" fn rogue_hit(mut monster: *mut object, force_hit: bool) {
 			return;
 		}
 		let hit_chance = if force_hit { 100 } else { get_hit_chance(&mut *rogue.weapon) };
-		let hit_chance = if wizard { hit_chance * 2 } else { hit_chance };
-		if !rand_percent(hit_chance as i64) {
+		let hit_chance = if wizard { hit_chance * 2 } else { hit_chance } as usize;
+		if !rand_percent(hit_chance) {
 			if fight_monster.is_null() {
 				hit_message = "you miss  ".to_string();
 			}
@@ -245,7 +245,7 @@ pub unsafe extern "C" fn fight(to_the_death: bool) {
 	let mut ch: libc::c_short = 0;
 	loop {
 		ch = rgetchar() as libc::c_short;
-		if !(is_direction(ch as i64) == 0) {
+		if !(is_direction(ch as i32) == 0) {
 			break;
 		}
 		sound_bell();

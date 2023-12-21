@@ -1040,7 +1040,7 @@ pub unsafe fn mv_monster(monster: &mut object, row: isize, col: isize) {
 		}
 		if (monster.m_flags.wakens)
 			&& rogue_is_around(monster.row, monster.col)
-			&& rand_percent(if stealthy > 0 { odds::WAKE_PERCENT / (odds::STEALTH_FACTOR + (stealthy as c_int)) } else { odds::WAKE_PERCENT })
+			&& rand_percent(if stealthy > 0 { odds::WAKE_PERCENT / (odds::STEALTH_FACTOR + (stealthy as usize)) } else { odds::WAKE_PERCENT })
 		{
 			wake_up(monster);
 		}
@@ -1243,7 +1243,7 @@ pub unsafe extern "C" fn wake_room(rn: usize, entering: bool, row: usize, col: u
 	let wake_percent = {
 		let wake_percent = if rn == party_room as usize { odds::PARTY_WAKE_PERCENT } else { odds::WAKE_PERCENT };
 		if stealthy > 0 {
-			wake_percent / (odds::STEALTH_FACTOR + stealthy as c_int)
+			wake_percent / (odds::STEALTH_FACTOR + stealthy as usize)
 		} else {
 			wake_percent
 		}
