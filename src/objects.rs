@@ -20,6 +20,8 @@ extern "C" {
 use libc::{c_int, c_short};
 use ncurses::addch;
 use crate::prelude::*;
+use crate::prelude::food_kind::{FRUIT, RATION};
+use crate::prelude::object_what::FOOD;
 use crate::settings::fruit;
 
 #[derive(Copy, Clone)]
@@ -1034,6 +1036,15 @@ pub unsafe extern "C" fn gr_what_is() -> libc::c_ushort {
 		what_is = 0o200 as libc::c_int as libc::c_ushort;
 	}
 	return what_is;
+}
+
+pub fn get_food(obj: &mut obj, force_ration: bool) {
+	obj.what_is = FOOD;
+	if force_ration || rand_percent(80) {
+		obj.which_kind = RATION;
+	} else {
+		obj.which_kind = FRUIT;
+	}
 }
 
 #[no_mangle]

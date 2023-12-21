@@ -1,5 +1,7 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
+use rand::{random, Rng, thread_rng};
+
 static mut rntb: [libc::c_long; 32] = [
 	3 as libc::c_int as libc::c_long,
 	0x9a319039 as libc::c_uint as libc::c_long,
@@ -42,66 +44,13 @@ static mut rand_deg: libc::c_int = 31 as libc::c_int;
 static mut rand_sep: libc::c_int = 3 as libc::c_int;
 static mut end_ptr: *mut libc::c_long = 0 as *const libc::c_long as *mut libc::c_long;
 
-pub unsafe extern "C" fn rrandom() -> libc::c_long {
-	let mut i_0: libc::c_long = 0;
-	if rand_type == 0 as libc::c_int {
-		let ref mut fresh0 = *state.offset(0 as libc::c_int as isize);
-		*fresh0 = *state.offset(0 as libc::c_int as isize)
-			* 1103515245 as libc::c_int as libc::c_long
-			+ 12345 as libc::c_int as libc::c_long
-			& 0x7fffffff as libc::c_int as libc::c_long;
-		i_0 = *fresh0;
-	} else {
-		*fptr += *rptr;
-		i_0 = *fptr >> 1 as libc::c_int & 0x7fffffff as libc::c_int as libc::c_long;
-		fptr = fptr.offset(1);
-		if fptr >= end_ptr {
-			fptr = state;
-			rptr = rptr.offset(1);
-			rptr;
-		} else {
-			rptr = rptr.offset(1);
-			if rptr >= end_ptr {
-				rptr = state;
-			}
-		}
-	}
-	return i_0;
-}
+pub fn rrandom() -> libc::c_long { random() }
 
-#[no_mangle]
-pub unsafe extern "C" fn get_rand(
-	mut x: libc::c_int,
-	mut y: libc::c_int,
-) -> libc::c_int {
-	let mut r: libc::c_int = 0;
-	let mut t: libc::c_int = 0;
-	let mut lr: libc::c_long = 0;
-	if x > y {
-		t = y;
-		y = x;
-		x = t;
-	}
-	lr = rrandom();
-	lr &= 0x7fff as libc::c_int as libc::c_long;
-	r = lr as libc::c_int;
-	r = r % (y - x + 1 as libc::c_int) + x;
-	return r;
-}
+pub fn get_rand(x: libc::c_int, y: libc::c_int) -> libc::c_int { thread_rng().gen_range(x..=y) }
 
-#[no_mangle]
-pub unsafe extern "C" fn rand_percent(mut percentage: libc::c_int) -> bool {
-	get_rand(1 as libc::c_int, 100 as libc::c_int) <= percentage
-}
+pub fn rand_percent(percentage: libc::c_int) -> bool { get_rand(1, 100) <= percentage }
 
-#[no_mangle]
-pub unsafe extern "C" fn coin_toss() -> bool {
-	if rrandom() & 0o1 as libc::c_int as libc::c_long != 0 {
-		true
-	} else {
-		false
-	}
-}
+pub fn coin_toss() -> bool { random() }
 
 unsafe extern "C" fn run_static_initializers() {
 	fptr = &mut *rntb.as_mut_ptr().offset(4 as libc::c_int as isize)

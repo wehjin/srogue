@@ -250,8 +250,8 @@ pub unsafe fn init() -> bool {
 unsafe fn player_init() {
 	rogue.pack.next_object = 0 as *mut obj;
 
-	let obj = alloc_object();
-	get_food(obj, 1);
+	let mut obj = alloc_object();
+	get_food(&mut *obj, true);
 	add_to_pack(obj, &mut rogue.pack, 1);
 
 	let obj = alloc_object();           /* initial armor */
