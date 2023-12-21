@@ -200,12 +200,12 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: usize) -> i64 {
 		};
 		pad(buf.as_mut_ptr(), 2);
 	}
-	if stat_mask & 0o2 as i64 != 0 {
+	if stat_mask & 0o2 != 0 {
 		if label != 0 {
-			if rogue.gold > 900000 as i64 as libc::c_long {
-				rogue.gold = 900000 as i64 as libc::c_long;
+			if rogue.gold > 900000 as libc::c_long {
+				rogue.gold = 900000 as libc::c_long;
 			}
-			if ncurses::wmove(ncurses::stdscr(), row, 10) == -(1) {
+			if ncurses::wmove(ncurses::stdscr(), row as i32, 10) == -(1) {
 				-(1);
 			} else {
 				waddnstr(
@@ -220,16 +220,16 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: usize) -> i64 {
 			b"%ld\0" as *const u8 as *const libc::c_char,
 			rogue.gold,
 		);
-		if ncurses::wmove(ncurses::stdscr(), row, 16) == -(1) {
+		if ncurses::wmove(ncurses::stdscr(), row as i32, 16) == -(1) {
 			-(1);
 		} else {
 			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -(1));
 		};
 		pad(buf.as_mut_ptr(), 6);
 	}
-	if stat_mask & 0o4 as i64 != 0 {
+	if stat_mask & 0o4 != 0 {
 		if label != 0 {
-			if ncurses::wmove(ncurses::stdscr(), row, 23 as i64) == -(1) {
+			if ncurses::wmove(ncurses::stdscr(), row as i32, 23) == -(1) {
 				-(1);
 			} else {
 				waddnstr(
@@ -252,16 +252,16 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: usize) -> i64 {
 			rogue.hp_current as i64,
 			rogue.hp_max as i64,
 		);
-		if ncurses::wmove(ncurses::stdscr(), row, 27 as i64) == -(1) {
+		if ncurses::wmove(ncurses::stdscr(), row as i32, 27) == -(1) {
 			-(1);
 		} else {
 			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -(1));
 		};
 		pad(buf.as_mut_ptr(), 8);
 	}
-	if stat_mask & 0o10 as i64 != 0 {
+	if stat_mask & 0o10 != 0 {
 		if label != 0 {
-			if ncurses::wmove(ncurses::stdscr(), row, 36 as i64) == -(1) {
+			if ncurses::wmove(ncurses::stdscr(), row as i32, 36) == -(1) {
 				-(1);
 			} else {
 				waddnstr(
@@ -283,16 +283,16 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: usize) -> i64 {
 			rogue.str_current as i64 + add_strength as i64,
 			rogue.str_max as i64,
 		);
-		if ncurses::wmove(ncurses::stdscr(), row, 41) == -(1) {
+		if ncurses::wmove(ncurses::stdscr(), row as i32, 41) == -(1) {
 			-(1);
 		} else {
 			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -(1));
 		};
 		pad(buf.as_mut_ptr(), 6);
 	}
-	if stat_mask & 0o20 as i64 != 0 {
+	if stat_mask & 0o20 != 0 {
 		if label != 0 {
-			if ncurses::wmove(ncurses::stdscr(), row, 48 as i64) == -(1) {
+			if ncurses::wmove(ncurses::stdscr(), row as i32, 48) == -(1) {
 				-(1);
 			} else {
 				waddnstr(
@@ -303,25 +303,25 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: usize) -> i64 {
 			};
 		}
 		if !rogue.armor.is_null()
-			&& (*rogue.armor).d_enchant as i64 > 99 as i64
+			&& (*rogue.armor).d_enchant as i64 > 99
 		{
-			(*rogue.armor).d_enchant = 99 as i64 as libc::c_short;
+			(*rogue.armor).d_enchant = 99;
 		}
 		sprintf(
 			buf.as_mut_ptr(),
 			b"%d\0" as *const u8 as *const libc::c_char,
 			get_armor_class(rogue.armor),
 		);
-		if ncurses::wmove(ncurses::stdscr(), row, 53 as i64) == -(1) {
+		if ncurses::wmove(ncurses::stdscr(), row as i32, 53) == -(1) {
 			-(1);
 		} else {
 			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -(1));
 		};
 		pad(buf.as_mut_ptr(), 2);
 	}
-	if stat_mask & 0o40 as i64 != 0 {
+	if stat_mask & 0o40 != 0 {
 		if label != 0 {
-			if ncurses::wmove(ncurses::stdscr(), row, 56 as i64) == -(1) {
+			if ncurses::wmove(ncurses::stdscr(), row as i32, 56) == -(1) {
 				-(1);
 			} else {
 				waddnstr(
@@ -337,15 +337,15 @@ pub unsafe extern "C" fn print_stats(mut stat_mask: usize) -> i64 {
 			rogue.exp as i64,
 			rogue.exp_points,
 		);
-		if ncurses::wmove(ncurses::stdscr(), row, 61) == -(1) {
+		if ncurses::wmove(ncurses::stdscr(), row as i32, 61) == -(1) {
 			-(1);
 		} else {
 			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -(1));
 		};
 		pad(buf.as_mut_ptr(), 11);
 	}
-	if stat_mask & 0o100 as i64 != 0 {
-		if ncurses::wmove(ncurses::stdscr(), row, 73 as i64) == -(1) {
+	if stat_mask & 0o100 != 0 {
+		if ncurses::wmove(ncurses::stdscr(), row as i32, 73) == -(1) {
 			-(1);
 		} else {
 			waddnstr(ncurses::stdscr(), hunger_str.as_mut_ptr(), -(1));
@@ -399,8 +399,7 @@ pub fn sound_bell() {
 
 #[no_mangle]
 pub unsafe extern "C" fn is_digit(mut ch: libc::c_short) -> libc::c_char {
-	return (ch as i64 >= '0' as i32 && ch as i64 <= '9' as i32)
-		as i64 as libc::c_char;
+	return (ch as i64 >= '0' as i64 && ch as i64 <= '9' as i64) as libc::c_char;
 }
 
 #[no_mangle]
