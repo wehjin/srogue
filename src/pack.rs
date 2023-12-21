@@ -15,7 +15,7 @@ extern "C" {
 }
 
 use crate::prelude::*;
-use crate::prelude::item_usage::BEING_WIELDED;
+use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::object_what::{ARMOR, RING, WEAPON};
 
 #[derive(Copy, Clone)]
@@ -342,10 +342,16 @@ pub unsafe extern "C" fn wear() -> libc::c_int {
 	strcpy(desc.as_mut_ptr(), b"wearing \0" as *const u8 as *const libc::c_char);
 	get_desc(obj, desc.as_mut_ptr().offset(8 as libc::c_int as isize));
 	message(desc.as_mut_ptr(), 0 as libc::c_int);
-	do_wear(obj);
+	do_wear(&mut *obj);
 	print_stats(0o20 as libc::c_int);
 	reg_move();
 	panic!("Reached end of non-void function without returning");
+}
+
+pub unsafe fn do_wear(obj: &mut obj) {
+	rogue.armor = obj;
+	obj.in_use_flags |= BEING_WORN;
+	obj.identified = 1;
 }
 
 #[no_mangle]

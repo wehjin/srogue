@@ -264,7 +264,7 @@ unsafe fn player_init() {
 		obj.d_enchant = 1;
 	}
 	add_to_pack(obj, &mut rogue.pack, 1);
-	do_wear(obj);
+	do_wear(&mut *obj);
 
 	let obj = alloc_object();           /* initial weapons */
 	{

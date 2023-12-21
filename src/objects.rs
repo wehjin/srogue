@@ -1005,7 +1005,7 @@ pub unsafe extern "C" fn gr_object() -> *mut object {
 			gr_wand(obj);
 		}
 		32 => {
-			get_food(obj, 0 as libc::c_int);
+			get_food(&mut *obj, false);
 		}
 		128 => {
 			gr_ring(obj, 1 as libc::c_int);
@@ -1217,7 +1217,7 @@ pub unsafe extern "C" fn new_object_for_wizard() -> libc::c_int {
 			(*obj).what_is = 0o400 as libc::c_int as libc::c_ushort;
 		}
 		58 => {
-			get_food(obj, 0 as libc::c_int);
+			get_food(&mut *obj, false);
 		}
 		41 => {
 			gr_weapon(obj, 0 as libc::c_int);
