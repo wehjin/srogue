@@ -174,6 +174,17 @@ pub mod weapon_kind {
 	pub const WEAPONS: u16 = 8;
 }
 
+pub mod armor_kind {
+	pub const LEATHER: u16 = 0;
+	pub const RINGMAIL: u16 = 1;
+	pub const SCALE: u16 = 2;
+	pub const CHAIN: u16 = 3;
+	pub const BANDED: u16 = 4;
+	pub const SPLINT: u16 = 5;
+	pub const PLATE: u16 = 6;
+	pub const ARMORS: u16 = 7;
+}
+
 pub mod stat_const {
 	pub const STAT_LEVEL: libc::c_int = 0o1;
 	pub const STAT_GOLD: libc::c_int = 0o2;
