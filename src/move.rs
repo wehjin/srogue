@@ -18,7 +18,6 @@ extern "C" {
 	static mut bear_trap: libc::c_short;
 	static mut haste_self: libc::c_short;
 	static mut confused: libc::c_short;
-	static mut e_rings: libc::c_short;
 	static mut regeneration: libc::c_short;
 	static mut auto_search: libc::c_short;
 	static mut hunger_str: [libc::c_char; 0];

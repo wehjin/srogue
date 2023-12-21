@@ -12,7 +12,6 @@ extern "C" {
 	static mut cur_level: libc::c_short;
 	static mut add_strength: libc::c_short;
 	static mut ring_exp: libc::c_short;
-	static mut r_rings: libc::c_short;
 	static mut being_held: libc::c_char;
 	static mut wizard: libc::c_char;
 }

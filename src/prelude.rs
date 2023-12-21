@@ -185,6 +185,8 @@ pub mod armor_kind {
 	pub const ARMORS: u16 = 7;
 }
 
+pub mod ring_kind;
+
 pub mod stat_const {
 	pub const STAT_LEVEL: libc::c_int = 0o1;
 	pub const STAT_GOLD: libc::c_int = 0o2;

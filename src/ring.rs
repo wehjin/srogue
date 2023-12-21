@@ -8,6 +8,8 @@ extern "C" {
 }
 
 use crate::prelude::*;
+use crate::prelude::ring_kind::RingKind;
+use crate::prelude::stat_const::STAT_STRENGTH;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -234,4 +236,56 @@ pub unsafe extern "C" fn gr_ring(
 		_ => {}
 	}
 	panic!("Reached end of non-void function without returning");
+}
+
+enum RingHand {
+	Left,
+	Right,
+}
+
+impl RingHand {
+	pub const ALL: &'static [RingHand; 2] = &[RingHand::Left, RingHand::Right];
+}
+
+pub unsafe fn ring_stats(print: bool) {
+	r_rings = 0;
+	e_rings = 0;
+	r_teleport = 0;
+	sustain_strength = 0;
+	add_strength = 0;
+	regeneration = 0;
+	ring_exp = 0;
+	r_see_invisible = 0;
+	maintain_armor = 0;
+	auto_search = 0;
+
+	for ring_hand in RingHand::ALL {
+		let ring = match ring_hand {
+			RingHand::Left => rogue.left_ring,
+			RingHand::Right => rogue.right_ring,
+		};
+		if ring.is_null() {
+			continue;
+		}
+		let ring = &*ring;
+		r_rings += 1;
+		e_rings += 1;
+		match RingKind::from_code((*ring).which_kind) {
+			RingKind::Stealth => { stealthy += 1; }
+			RingKind::RTeleport => { r_teleport = 1; }
+			RingKind::Regeneration => { regeneration += 1; }
+			RingKind::SlowDigest => { e_rings -= 2; }
+			RingKind::AddStrength => { add_strength += ring.class; }
+			RingKind::SustainStrength => { sustain_strength = 1; }
+			RingKind::Dexterity => { ring_exp += ring.class; }
+			RingKind::Adornment => {}
+			RingKind::RSeeInvisible => { r_see_invisible = 1; }
+			RingKind::MaintainArmor => { maintain_armor = 1; }
+			RingKind::Searching => { auto_search += 2; }
+		}
+	}
+	if print {
+		print_stats(STAT_STRENGTH);
+		relight();
+	}
 }

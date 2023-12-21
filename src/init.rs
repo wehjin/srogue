@@ -243,7 +243,7 @@ pub unsafe fn init() -> bool {
 	level_monsters.next_object = 0 as *mut obj;
 	player_init();
 	party_counter = get_rand(1 as libc::c_int, 10 as libc::c_int) as libc::c_short;
-	ring_stats(0 as libc::c_int);
+	ring_stats(false);
 	return false;
 }
 
