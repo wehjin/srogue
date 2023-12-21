@@ -277,7 +277,7 @@ unsafe fn player_init() {
 		obj.identified = 1;
 	}
 	add_to_pack(obj, &mut rogue.pack, 1);
-	do_wield(obj);
+	do_wield(&mut *obj);
 
 	let obj = alloc_object();
 	{

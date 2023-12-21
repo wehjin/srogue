@@ -382,10 +382,15 @@ pub unsafe extern "C" fn wield() {
 		let desc = "wielding ";
 		let full_desc = get_desc(obj, desc.as_mut_ptr().offset(9 as libc::c_int as isize));
 		message(full_desc, 0);
-		do_wield(obj);
+		do_wield(&mut *obj);
 		reg_move();
 	}
 	panic!("Reached end of non-void function without returning");
+}
+
+pub unsafe fn do_wield(obj: &mut obj) {
+	rogue.weapon = obj;
+	obj.in_use_flags |= BEING_WIELDED;
 }
 
 #[no_mangle]
