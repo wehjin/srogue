@@ -370,6 +370,6 @@ pub unsafe extern "C" fn flame_broil(mut monster: *mut object) -> bool {
 			}
 		}
 	}
-	mon_hit(monster, flame_name, 1);
+	mon_hit(monster, flame_name, true);
 	return true;
 }

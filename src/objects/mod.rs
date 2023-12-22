@@ -138,16 +138,16 @@ impl obj {
 	pub fn m_char(&self) -> chtype {
 		self.ichar as ncurses::chtype
 	}
-	pub fn first_level(&self) -> c_short {
-		self.is_protected
-	}
-
 	pub fn stationary_damage(&self) -> isize { self.identified as isize }
+
 	pub fn set_stationary_damage(&mut self, value: isize) {
 		self.identified = value as i16
 	}
-	pub fn set_first_level(&mut self, value: c_short) {
-		self.is_protected = value;
+	pub fn first_level(&self) -> isize {
+		self.is_protected as isize
+	}
+	pub fn set_first_level(&mut self, value: isize) {
+		self.is_protected = value as i16;
 	}
 	pub fn set_trail_char(&mut self, ch: chtype) { self.d_enchant = ch as isize; }
 	pub fn trail_char(&self) -> chtype {

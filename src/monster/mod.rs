@@ -1062,7 +1062,7 @@ pub unsafe fn mv_monster(monster: &mut object, row: isize, col: isize) {
 		return;
 	}
 	if mon_can_go(monster, rogue.row as usize, rogue.col as usize) {
-		mon_hit(monster, None, 0);
+		mon_hit(monster, None, false);
 		return;
 	}
 	if monster.m_flags.flames && flame_broil(monster) {
