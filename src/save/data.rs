@@ -16,7 +16,7 @@ pub struct SavePack {
 }
 
 impl SavePack {
-	pub unsafe fn from_pack(pack: *mut obj) -> SavePack {
+	pub unsafe fn from_pack(pack: *const obj) -> SavePack {
 		let mut save_objs = Vec::new();
 		loop {
 			let pack = (*pack).next_object;
@@ -61,7 +61,7 @@ impl SaveFighter {
 			hp_max: fighter.hp_max,
 			str_current: fighter.str_current,
 			str_max: fighter.str_max,
-			pack: SavePack::from_pack(*fighter.pack),
+			pack: SavePack::from_pack(&fighter.pack),
 			gold: fighter.gold,
 			exp: fighter.exp,
 			exp_points: fighter.exp_points,
@@ -75,18 +75,21 @@ impl SaveFighter {
 
 #[derive(Serialize)]
 pub struct SaveDungeon {
-	pub dungeon: [[chtype; DCOLS]; DROWS],
+	pub rows: Vec<Vec<chtype>>,
 }
 
 impl SaveDungeon {
 	pub fn from_statics() -> SaveDungeon {
-		let mut dungeon = [[0; DCOLS]; DROWS];
+		let mut rows = Vec::new();
 		for row in 0..DROWS {
+			let mut cols = Vec::new();
 			for col in 0..DCOLS {
-				dungeon[row][col] = ncurses::mvinch(row as i32, col as i32);
+				let ch = ncurses::mvinch(row as i32, col as i32);
+				cols.push(ch);
 			}
+			rows.push(cols);
 		}
-		SaveDungeon { dungeon }
+		SaveDungeon { rows }
 	}
 }
 
@@ -137,13 +140,13 @@ pub unsafe fn from_statics(file_id: i64) -> SaveData {
 		login_name: login_name().to_string(),
 		party_room,
 		party_counter,
-		level_monsters: SavePack::from_pack(&*level_monsters),
-		level_objects: SavePack::from_pack(&*level_objects),
+		level_monsters: SavePack::from_pack(&level_monsters),
+		level_objects: SavePack::from_pack(&level_objects),
 		file_id,
 		dungeon: SaveDungeon::from_statics(),
 		foods,
 		rogue: SaveFighter::from_fighter(&rogue),
-		rogue_pack: SavePack::from_pack(&*rogue.pack),
+		rogue_pack: SavePack::from_pack(&rogue.pack),
 		id_potions: SaveIdTable::from_array(&id_potions),
 		id_scrolls: SaveIdTable::from_array(&id_scrolls),
 		id_wands: SaveIdTable::from_array(&id_wands),
