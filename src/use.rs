@@ -3,7 +3,6 @@
 extern "C" {
 	pub type ldat;
 
-
 	fn reg_move() -> libc::c_char;
 	fn get_id_table() -> *mut id;
 	static mut level_points: [libc::c_long; 0];
@@ -14,7 +13,6 @@ extern "C" {
 use ncurses::addch;
 use crate::prelude::*;
 use crate::settings::fruit;
-
 
 
 #[derive(Copy, Clone)]
@@ -37,8 +35,7 @@ pub static mut confused: bool = false;
 pub static mut levitate: bool = false;
 pub static mut haste_self: bool = false;
 pub static mut see_invisible: bool = false;
-#[no_mangle]
-pub static mut extra_hp: libc::c_short = 0 as i64 as libc::c_short;
+pub static mut extra_hp: isize = 0;
 #[no_mangle]
 pub static mut strange_feeling: *mut libc::c_char = b"you have a strange feeling for a moment, then it passes\0"
 	as *const u8 as *const libc::c_char as *mut libc::c_char;
@@ -176,7 +173,7 @@ pub unsafe extern "C" fn quaff() -> i64 {
 			);
 			levitate = (levitate as i64
 				+ get_rand(15 as i64, 30 as i64)) as libc::c_short;
-			bear_trap = 0 as i64 as libc::c_short;
+			bear_trap = 0;
 			being_held = bear_trap as libc::c_char;
 		}
 		12 => {
@@ -281,7 +278,7 @@ pub unsafe extern "C" fn read_scroll() -> i64 {
 						(*rogue.weapon).d_enchant;
 					}
 				}
-				(*rogue.weapon).is_cursed = 0 as i64 as libc::c_short;
+				(*rogue.weapon).is_cursed = 0;
 			} else {
 				message("your hands tingle", 0 as i64);
 			}
@@ -292,7 +289,7 @@ pub unsafe extern "C" fn read_scroll() -> i64 {
 				message(&msg, 0 as i64);
 				(*rogue.armor).d_enchant += 1;
 				(*rogue.armor).d_enchant;
-				(*rogue.armor).is_cursed = 0 as i64 as libc::c_short;
+				(*rogue.armor).is_cursed = 0;
 				print_stats(0o20 as i64);
 			} else {
 				message("your skin crawls", 0 as i64);
@@ -316,7 +313,7 @@ pub unsafe extern "C" fn read_scroll() -> i64 {
 			if !(rogue.armor).is_null() {
 				message("your armor is covered by a shimmering gold shield", 0 as i64);
 				(*rogue.armor).is_protected = 1 as libc::c_short;
-				(*rogue.armor).is_cursed = 0 as i64 as libc::c_short;
+				(*rogue.armor).is_cursed = 0;
 			} else {
 				message("your acne seems to have disappeared", 0 as libc::c_int);
 			}
@@ -381,7 +378,7 @@ pub unsafe extern "C" fn eat() {
 		return;
 	}
 	if (*obj).which_kind as libc::c_int == 1 as libc::c_int
-		|| rand_percent(60 ) != 0
+		|| rand_percent(60) != 0
 	{
 		moves = get_rand(900 as libc::c_int, 1100 as libc::c_int) as libc::c_short;
 		if (*obj).which_kind as libc::c_int == 0 as libc::c_int {

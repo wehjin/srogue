@@ -16,16 +16,13 @@ pub static left_or_right: &'static str = "left or right hand?";
 pub static no_ring: &'static str = "there's no ring on that hand";
 #[no_mangle]
 pub static mut stealthy: libc::c_short = 0;
-#[no_mangle]
-pub static mut r_rings: libc::c_short = 0;
-#[no_mangle]
-pub static mut add_strength: libc::c_short = 0;
+pub static mut r_rings: isize = 0;
+pub static mut add_strength: isize = 0;
 #[no_mangle]
 pub static mut e_rings: libc::c_short = 0;
 #[no_mangle]
 pub static mut regeneration: libc::c_short = 0;
-#[no_mangle]
-pub static mut ring_exp: libc::c_short = 0;
+pub static mut ring_exp: isize = 0;
 #[no_mangle]
 pub static mut auto_search: libc::c_short = 0;
 #[no_mangle]
@@ -187,7 +184,7 @@ pub unsafe extern "C" fn gr_ring(
 			11 - 1,
 		) as libc::c_ushort;
 	}
-	(*ring).class = 0 as i64 as libc::c_short;
+	(*ring).class = 0;
 	match (*ring).which_kind as i64 {
 		1 => {
 			(*ring).is_cursed = 1 as libc::c_short;

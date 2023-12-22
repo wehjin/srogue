@@ -371,7 +371,7 @@ pub unsafe extern "C" fn gr_room() -> i64 {
 pub unsafe extern "C" fn party_objects(mut rn: i64) -> i64 {
 	let mut i: libc::c_short = 0;
 	let mut j: libc::c_short = 0;
-	let mut nf: libc::c_short = 0 as i64 as libc::c_short;
+	let mut nf: libc::c_short = 0;
 	let mut obj: *mut object = 0 as *mut object;
 	let mut n: libc::c_short = 0;
 	let mut N: libc::c_short = 0;
@@ -387,7 +387,7 @@ pub unsafe extern "C" fn party_objects(mut rn: i64) -> i64 {
 	if n as i64 > N as i64 {
 		n = (N as i64 - 2 as i64) as libc::c_short;
 	}
-	i = 0 as i64 as libc::c_short;
+	i = 0;
 	while (i as i64) < n as i64 {
 		found = 0 as i64 as libc::c_char;
 		j = found as libc::c_short;
@@ -441,7 +441,7 @@ pub fn get_room_number(row: i64, col: i64) -> i64 {
 pub unsafe extern "C" fn is_all_connected() -> i64 {
 	let mut i: libc::c_short = 0;
 	let mut starting_room: libc::c_short = 0;
-	i = 0 as i64 as libc::c_short;
+	i = 0;
 	while (i as i64) < 9 as libc::c_int {
 		rooms_visited[i as usize] = 0 as libc::c_int as libc::c_char;
 		if rooms[i as usize].room_type as libc::c_int

@@ -15,12 +15,12 @@ extern "C" {
 	fn fputs(_: *const libc::c_char, _: *mut FILE) -> i64;
 	fn onintr() -> i64;
 	static mut save_is_interactive: libc::c_char;
-	static mut add_strength: libc::c_short;
 }
 
-use libc::{c_int, sprintf};
-use ncurses::{chtype, waddnstr};
+use libc::{c_int};
+use ncurses::{addch, chtype, clrtoeol, mvaddstr};
 use crate::prelude::*;
+use crate::prelude::stat_const::{STAT_ARMOR, STAT_EXP, STAT_GOLD, STAT_HP, STAT_HUNGER, STAT_LABEL, STAT_LEVEL, STAT_STRENGTH};
 
 pub type __int64_t = libc::c_longlong;
 pub type __darwin_off_t = __int64_t;
@@ -170,195 +170,83 @@ pub unsafe fn rgetchar() -> c_int {
 	return ch;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn print_stats(mut stat_mask: usize) -> i64 {
-	let mut buf: [libc::c_char; 16] = [0; 16];
-	let mut label: libc::c_char = 0;
-	let mut row: i64 = 24 as i64 - 1;
-	label = (if stat_mask & 0o200 != 0 { 1 } else { 0 }) as libc::c_char;
-	if stat_mask & 0o1 != 0 {
-		if label != 0 {
-			if ncurses::wmove(ncurses::stdscr(), row as i32, 0) == -1 {
-				-1;
-			} else {
-				waddnstr(
-					ncurses::stdscr(),
-					"Level: ",
-					-1,
-				);
-			};
+pub unsafe fn print_stats(stat_mask: usize) {
+	const STATS_ROW: i32 = DROWS as i32 - 1;
+	let label = if stat_mask & STAT_LABEL != 0 { true } else { false };
+
+	if stat_mask & STAT_LEVEL != 0 {
+		if label {
+			mvaddstr(STATS_ROW, 0, "Level: ");
 		}
-		sprintf(
-			buf.as_mut_ptr(),
-			b"%d\0" as *const u8 as *const libc::c_char,
-			cur_level as i64,
-		);
-		if ncurses::wmove(ncurses::stdscr(), row as i32, 7) == -1 {
-			-1;
-		} else {
-			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -1);
-		};
-		pad(buf.as_mut_ptr(), 2);
+		let s = format!("{}", cur_level);
+		mvaddstr(STATS_ROW, 7, &s);
+		pad(&s, 2);
 	}
-	if stat_mask & 0o2 != 0 {
-		if label != 0 {
-			if rogue.gold > 900000 as libc::c_long {
-				rogue.gold = 900000 as libc::c_long;
+	if stat_mask & STAT_GOLD != 0 {
+		if label {
+			if rogue.gold > MAX_GOLD {
+				rogue.gold = MAX_GOLD;
 			}
-			if ncurses::wmove(ncurses::stdscr(), row as i32, 10) == -(1) {
-				-(1);
-			} else {
-				waddnstr(
-					ncurses::stdscr(),
-					"Gold: ",
-					-(1),
-				);
-			};
+			mvaddstr(STATS_ROW, 10, "Gold: ");
 		}
-		sprintf(
-			buf.as_mut_ptr(),
-			b"%ld\0" as *const u8 as *const libc::c_char,
-			rogue.gold,
-		);
-		if ncurses::wmove(ncurses::stdscr(), row as i32, 16) == -(1) {
-			-(1);
-		} else {
-			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -(1));
-		};
-		pad(buf.as_mut_ptr(), 6);
+		let s = format!("{}", rogue.gold);
+		mvaddstr(STATS_ROW, 16, &s);
+		pad(&s, 6);
 	}
-	if stat_mask & 0o4 != 0 {
-		if label != 0 {
-			if ncurses::wmove(ncurses::stdscr(), row as i32, 23) == -(1) {
-				-(1);
-			} else {
-				waddnstr(
-					ncurses::stdscr(),
-					b"Hp: \0" as *const u8 as *const libc::c_char,
-					-(1),
-				);
-			};
-			if rogue.hp_max as i64 > 800 as i64 {
-				rogue
-					.hp_current = (rogue.hp_current as i64
-					- (rogue.hp_max as i64 - 800 as i64))
-					as libc::c_short;
-				rogue.hp_max = 800 as i64 as libc::c_short;
+	if stat_mask & STAT_HP != 0 {
+		if label {
+			mvaddstr(STATS_ROW, 23, "Hp: ");
+			if rogue.hp_max > 800 {
+				rogue.hp_current -= rogue.hp_max - 800;
+				rogue.hp_max = 800;
 			}
 		}
-		sprintf(
-			buf.as_mut_ptr(),
-			b"%d(%d)\0" as *const u8 as *const libc::c_char,
-			rogue.hp_current as i64,
-			rogue.hp_max as i64,
-		);
-		if ncurses::wmove(ncurses::stdscr(), row as i32, 27) == -(1) {
-			-(1);
-		} else {
-			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -(1));
-		};
-		pad(buf.as_mut_ptr(), 8);
+		let s = format!("{}({})", rogue.hp_current, rogue.hp_max);
+		mvaddstr(STATS_ROW, 27, &s);
+		pad(&s, 8);
 	}
-	if stat_mask & 0o10 != 0 {
-		if label != 0 {
-			if ncurses::wmove(ncurses::stdscr(), row as i32, 36) == -(1) {
-				-(1);
-			} else {
-				waddnstr(
-					ncurses::stdscr(),
-					b"Str: \0" as *const u8 as *const libc::c_char,
-					-(1),
-				);
-			};
+	if stat_mask & STAT_STRENGTH != 0 {
+		if label {
+			mvaddstr(STATS_ROW, 36, "Str: ");
 		}
-		if rogue.str_max as i64 > 99 as i64 {
-			rogue
-				.str_current = (rogue.str_current as i64
-				- (rogue.str_max as i64 - 99 as i64)) as libc::c_short;
-			rogue.str_max = 99 as i64 as libc::c_short;
+		if rogue.str_max > MAX_STRENGTH {
+			rogue.str_current -= rogue.str_max - MAX_STRENGTH;
+			rogue.str_max = MAX_STRENGTH;
 		}
-		sprintf(
-			buf.as_mut_ptr(),
-			b"%d(%d)\0" as *const u8 as *const libc::c_char,
-			rogue.str_current as i64 + add_strength as i64,
-			rogue.str_max as i64,
-		);
-		if ncurses::wmove(ncurses::stdscr(), row as i32, 41) == -(1) {
-			-(1);
-		} else {
-			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -(1));
-		};
-		pad(buf.as_mut_ptr(), 6);
+		let s = format!("{}({})", rogue.str_current + add_strength, rogue.str_max);
+		mvaddstr(STATS_ROW, 41, &s);
+		pad(&s, 6);
 	}
-	if stat_mask & 0o20 != 0 {
-		if label != 0 {
-			if ncurses::wmove(ncurses::stdscr(), row as i32, 48) == -(1) {
-				-(1);
-			} else {
-				waddnstr(
-					ncurses::stdscr(),
-					b"Arm: \0" as *const u8 as *const libc::c_char,
-					-(1),
-				);
-			};
+	if stat_mask & STAT_ARMOR != 0 {
+		if label {
+			mvaddstr(STATS_ROW, 48, "Arm: ");
 		}
-		if !rogue.armor.is_null()
-			&& (*rogue.armor).d_enchant as i64 > 99
-		{
-			(*rogue.armor).d_enchant = 99;
+		if !rogue.armor.is_null() && (*rogue.armor).d_enchant > MAX_ARMOR {
+			(*rogue.armor).d_enchant = MAX_ARMOR;
 		}
-		sprintf(
-			buf.as_mut_ptr(),
-			b"%d\0" as *const u8 as *const libc::c_char,
-			get_armor_class(rogue.armor),
-		);
-		if ncurses::wmove(ncurses::stdscr(), row as i32, 53) == -(1) {
-			-(1);
-		} else {
-			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -(1));
-		};
-		pad(buf.as_mut_ptr(), 2);
+		let s = format!("{}", get_armor_class(rogue.armor));
+		mvaddstr(STATS_ROW, 53, &s);
+		pad(&s, 2);
 	}
-	if stat_mask & 0o40 != 0 {
-		if label != 0 {
-			if ncurses::wmove(ncurses::stdscr(), row as i32, 56) == -(1) {
-				-(1);
-			} else {
-				waddnstr(
-					ncurses::stdscr(),
-					b"Exp: \0" as *const u8 as *const libc::c_char,
-					-(1),
-				);
-			};
+	if stat_mask & STAT_EXP != 0 {
+		if label {
+			mvaddstr(STATS_ROW, 56, "Exp: ");
 		}
-		sprintf(
-			buf.as_mut_ptr(),
-			b"%d/%ld\0" as *const u8 as *const libc::c_char,
-			rogue.exp as i64,
-			rogue.exp_points,
-		);
-		if ncurses::wmove(ncurses::stdscr(), row as i32, 61) == -(1) {
-			-(1);
-		} else {
-			waddnstr(ncurses::stdscr(), buf.as_mut_ptr(), -(1));
-		};
-		pad(buf.as_mut_ptr(), 11);
+		/*  Max exp taken care of in add_exp() */
+		let s = format!("{}/{}", rogue.exp, rogue.exp_points);
+		mvaddstr(STATS_ROW, 61, &s);
+		pad(&s, 11);
 	}
-	if stat_mask & 0o100 != 0 {
-		if ncurses::wmove(ncurses::stdscr(), row as i32, 73) == -(1) {
-			-(1);
-		} else {
-			waddnstr(ncurses::stdscr(), hunger_str.as_mut_ptr(), -(1));
-		};
-		ncurses::clrtoeol();
+	if stat_mask & STAT_HUNGER != 0 {
+		mvaddstr(STATS_ROW, 73, &hunger_str);
+		clrtoeol();
 	}
 	ncurses::refresh();
-	panic!("Reached end of non-void function without returning");
 }
 
-pub unsafe fn pad(s: *const libc::c_char, n: libc::size_t) {
-	for _ in libc::strlen(s)..n {
-		ncurses::addch(' ' as ncurses::chtype);
+fn pad(s: &str, n: usize) {
+	for _ in s.len()..n {
+		addch(' ' as ncurses::chtype);
 	}
 }
 

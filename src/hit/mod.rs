@@ -2,9 +2,6 @@
 
 extern "C" {
 	pub type ldat;
-
-	static mut add_strength: libc::c_short;
-	static mut ring_exp: libc::c_short;
 }
 
 use libc::{c_char, c_short};
@@ -32,39 +29,31 @@ pub static mut fight_monster: *mut object = 0 as *const object as *mut object;
 pub static mut detect_monster: bool = false;
 pub static mut hit_message: String = String::new();
 
-#[no_mangle]
-pub unsafe extern "C" fn mon_hit(mut monster: *mut object, other: Option<&str>, mut flame: libc::c_char) {
-	let mut damage: libc::c_short = 0;
-	let mut hit_chance: libc::c_short = 0;
-	let mut minus: i64 = 0;
+pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool) {
 	if !fight_monster.is_null() && monster != fight_monster {
 		fight_monster = 0 as *mut object;
 	}
-	(*monster).trow = -(1) as libc::c_short;
-	if cur_level as i64 >= 26 as i64 * 2 as i64 {
-		hit_chance = 100 as i64 as libc::c_short;
+	(*monster).trow = NO_ROOM;
+	let mut hit_chance: usize = if cur_level >= (AMULET_LEVEL * 2) {
+		100
 	} else {
-		hit_chance = (*monster).class;
-		hit_chance = (hit_chance as i64
-			- (2 as i64 * rogue.exp as i64
-			+ 2 as i64 * ring_exp as i64 - r_rings as i64)
-		) as c_short;
-	}
+		let hit_chance = (*monster).m_hit_chance();
+		hit_chance - (2 * rogue.exp + 2 * ring_exp - r_rings) as usize;
+	};
 	if wizard {
-		hit_chance = (hit_chance as i64 / 2 as i64) as libc::c_short;
+		hit_chance /= 2;
 	}
+
 	if fight_monster.is_null() {
 		interrupted = true;
 	}
 	if other.is_some() {
-		hit_chance = (hit_chance as i64
-			- (rogue.exp as i64 + ring_exp as i64
-			- r_rings as i64)) as libc::c_short;
+		hit_chance -= (rogue.exp + ring_exp - r_rings) as usize;
 	}
 
 	let base_monster_name = mon_name(monster);
 	let monster_name = if let Some(name) = other { name } else { &base_monster_name };
-	if !rand_percent(hit_chance as usize) {
+	if !rand_percent(hit_chance) {
 		if fight_monster.is_null() {
 			hit_message = format!("{}the {} misses", hit_message, monster_name);
 			message(&hit_message, 1);
@@ -77,36 +66,33 @@ pub unsafe extern "C" fn mon_hit(mut monster: *mut object, other: Option<&str>, 
 		message(&hit_message, 1);
 		hit_message.clear();
 	}
-	if !(*monster).m_flags.stationary {
-		damage = get_damage((*monster).damage, DamageEffect::Roll) as libc::c_short;
-		if other.is_some() {
-			if flame != 0 {
-				damage = (damage as i64 - get_armor_class(rogue.armor))
-					as libc::c_short;
-				if (damage as i64) < 0 {
-					damage = 1;
-				}
+	let mut damage: isize = if (*monster).m_flags.stationary {
+		let stationary_damage = (*monster).stationary_damage();
+		(*monster).set_stationary_damage(stationary_damage + 1);
+		stationary_damage
+	} else {
+		let mut damage = get_damage((*monster).damage, DamageEffect::Roll);
+		if other.is_some() && flame {
+			damage -= get_armor_class(rogue.armor);
+			if damage < 0 {
+				damage = 1;
 			}
 		}
-		if cur_level as i64 >= 26 as i64 * 2 as i64 {
-			minus = 26 as i64 * 2 as i64 - cur_level as i64;
+		let minus: isize = if cur_level >= AMULET_LEVEL * 2 {
+			AMULET_LEVEL * 2 - cur_level
 		} else {
-			minus = (get_armor_class(rogue.armor) as libc::c_double * 3.00f64)
-				as i64;
-			minus = minus / 100 as i64 * damage as i64;
-		}
-		damage = (damage as i64 - minus as libc::c_short as i64)
-			as libc::c_short;
-	} else {
-		let fresh0 = (*monster).identified;
-		(*monster).identified = (*monster).identified + 1;
-		damage = fresh0;
-	}
+			let mut minus = get_armor_class(rogue.armor) * 3;
+			minus = (minus as f64 / 100.0 * damage) as isize;
+			minus
+		};
+		damage -= minus;
+		damage
+	};
 	if wizard {
-		damage = (damage as i64 / 3 as i64) as libc::c_short;
+		damage /= 3;
 	}
-	if damage as i64 > 0 as i64 {
-		rogue_damage(damage as usize, &mut *monster);
+	if damage > 0 {
+		rogue_damage(damage, &mut *monster);
 	}
 	if (*monster).m_flags.special_hit() {
 		special_hit(monster);
@@ -139,8 +125,7 @@ pub unsafe extern "C" fn rogue_hit(mut monster: *mut object, force_hit: bool) {
 	}
 }
 
-pub unsafe fn rogue_damage(d: usize, monster: &mut object) {
-	let d = d as libc::c_short;
+pub unsafe fn rogue_damage(d: isize, monster: &mut object) {
 	if d >= rogue.hp_current {
 		rogue.hp_current = 0;
 		print_stats(STAT_HP);

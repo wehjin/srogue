@@ -8,7 +8,6 @@ extern "C" {
 	fn mon_sees() -> libc::c_char;
 	fn alloc_object() -> *mut object;
 	fn gr_object() -> *mut object;
-	static mut ring_exp: libc::c_short;
 	static mut level_points: [libc::c_long; 0];
 	static mut mon_disappeared: libc::c_char;
 	static mut sustain_strength: libc::c_char;
@@ -36,8 +35,7 @@ pub type WINDOW = _win_st;
 pub type attr_t = ncurses::chtype;
 
 
-#[no_mangle]
-pub static mut less_hp: libc::c_short = 0 as i64 as libc::c_short;
+pub static mut less_hp: isize = 0;
 #[no_mangle]
 pub static mut flame_name: *mut libc::c_char = b"flame\0" as *const u8
 	as *const libc::c_char as *mut libc::c_char;
@@ -104,7 +102,7 @@ pub unsafe extern "C" fn cough_up(mut monster: *mut object) -> i64 {
 	}
 	row = (*monster).row;
 	col = (*monster).col;
-	n = 0 as i64 as libc::c_short;
+	n = 0;
 	while n as i64 <= 5 as i64 {
 		i = -(n as i64) as libc::c_short;
 		while i as i64 <= n as i64 {

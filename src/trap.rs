@@ -5,7 +5,6 @@ extern "C" {
 
 	fn is_direction() -> libc::c_char;
 	fn reg_move() -> libc::c_char;
-	static mut ring_exp: libc::c_short;
 	static mut sustain_strength: libc::c_char;
 }
 
@@ -75,7 +74,7 @@ pub unsafe extern "C" fn trap_at(
 	mut col: i64,
 ) -> i64 {
 	let mut i: libc::c_short = 0;
-	i = 0 as i64 as libc::c_short;
+	i = 0;
 	while (i as i64) < 10 as i64
 		&& traps[i as usize].trap_type as i64 != -(1)
 	{
@@ -148,7 +147,7 @@ pub unsafe extern "C" fn trap_player(
 				1,
 			)) as libc::c_short;
 			if rogue.hp_current as i64 <= 0 as i64 {
-				rogue.hp_current = 0 as i64 as libc::c_short;
+				rogue.hp_current = 0;
 			}
 			if sustain_strength == 0 && rand_percent(40) != 0
 				&& rogue.str_current as i64 >= 3 as i64

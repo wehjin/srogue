@@ -24,7 +24,7 @@ pub use crate::zap::*;
 
 
 pub const MAXROOMS: usize = 9;
-pub const NO_ROOM: i64 = -1;
+pub const NO_ROOM: i16 = -1;
 pub const BIG_ROOM: usize = 10;
 pub const R_ROOM: c_ushort = 2;
 pub const MIN_ROW: i64 = 1;
@@ -38,15 +38,17 @@ pub const ROW1: i64 = 7;
 pub const ROW2: i64 = 15;
 pub const HIDE_PERCENT: usize = 12;
 
+pub const AMULET_LEVEL: isize = 26;
 
-pub const MAX_EXP_LEVEL: usize = 21;
-pub const MAX_EXP: usize = 10000000;
-pub const MAX_GOLD: usize = 900000;
-pub const MAX_ARMOR: usize = 99;
-pub const MAX_HP: usize = 800;
-pub const MAX_STRENGTH: usize = 99;
+
+pub const MAX_EXP_LEVEL: isize = 21;
+pub const MAX_EXP: isize = 10000000;
+pub const MAX_GOLD: isize = 900000;
+pub const MAX_ARMOR: isize = 99;
+pub const MAX_HP: isize = 800;
+pub const MAX_STRENGTH: isize = 99;
 pub const LAST_DUNGEON: usize = 99;
-pub const INIT_HP: usize = 12;
+pub const INIT_HP: isize = 12;
 
 #[derive(Copy, Clone)]
 pub struct DungeonSpot {

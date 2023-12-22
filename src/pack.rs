@@ -12,8 +12,7 @@ extern "C" {
 
 use crate::prelude::*;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
-use crate::prelude::object_what::{ARMOR, RING, WEAPON};
-
+use crate::prelude::object_what::{AMULET, ARMOR, RING, WEAPON};
 
 
 #[no_mangle]
@@ -80,7 +79,7 @@ pub unsafe extern "C" fn pick_up(
 			as usize] = (dungeon[row as usize][col as usize] as i64
 			& !(0o1 as libc::c_ushort as i64)) as libc::c_ushort;
 		vanish(obj, 0 as i64, &mut level_objects);
-		*status = 0 as i64 as libc::c_short;
+		*status = 0;
 		if (*id_scrolls.as_mut_ptr().offset(7 as i64 as isize)).id_status
 			as i64 == 0 as i64 as libc::c_ushort as i64
 		{
@@ -425,26 +424,20 @@ pub unsafe extern "C" fn call_it() -> i64 {
 	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn mask_pack(
-	mut pack: *mut object,
-	mut mask: libc::c_ushort,
-) -> libc::c_char {
+
+pub unsafe fn mask_pack(mut pack: *mut object, mut mask: libc::c_ushort) -> bool {
 	while !((*pack).next_object).is_null() {
 		pack = (*pack).next_object;
 		if (*pack).what_is as i64 & mask as i64 != 0 {
-			return 1 as libc::c_char;
+			return true;
 		}
 	}
-	return 0 as i64 as libc::c_char;
+	return false;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn has_amulet() -> i64 {
-	return mask_pack(
-		&mut rogue.pack,
-		0o400 as i64 as libc::c_ushort as i64,
-	) as i64;
+
+pub unsafe fn has_amulet() -> bool {
+	mask_pack(&mut rogue.pack, AMULET)
 }
 
 #[no_mangle]

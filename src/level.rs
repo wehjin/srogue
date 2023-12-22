@@ -2,7 +2,7 @@
 
 use std::mem;
 use std::os::raw::c_int;
-use libc::{c_long, c_short, c_ushort};
+use libc::{c_short, c_ushort};
 use SpotFlag::Door;
 use crate::message::{message, print_stats};
 use crate::monster::wake_room;
@@ -12,15 +12,15 @@ use crate::random::{get_rand, rand_percent};
 use crate::room::{gr_row_col, is_all_connected, light_passage, light_up_room};
 use crate::score::win;
 use crate::prelude::*;
-use crate::prelude::SpotFlag::{HorWall, Tunnel, VertWall};
+use crate::prelude::SpotFlag::{HorWall, Stairs, Tunnel, VertWall};
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
 
 
 pub type WINDOW = _win_st;
 pub type attr_t = ncurses::chtype;
 
-pub static mut cur_level: i16 = 0;
-pub static mut max_level: i16 = 1;
+pub static mut cur_level: isize = 0;
+pub static mut max_level: isize = 1;
 pub static mut cur_room: i16 = 0;
 pub static mut new_level_message: Option<String> = None;
 #[no_mangle]
@@ -28,28 +28,28 @@ pub static mut party_room: i16 = -1;
 #[no_mangle]
 pub static mut r_de: c_short = 0;
 #[no_mangle]
-pub static mut level_points: [c_long; 21] = [
-	10 as c_long,
-	20 as c_long,
-	40 as c_long,
-	80 as c_long,
-	160 as c_long,
-	320 as c_long,
-	640 as c_long,
-	1300 as c_long,
-	2600 as c_long,
-	5200 as c_long,
-	10000 as c_long,
-	20000 as c_long,
-	40000 as c_long,
-	80000 as c_long,
-	160000 as c_long,
-	320000 as c_long,
-	1000000 as c_long,
-	3333333 as c_long,
-	6666666 as c_long,
-	10000000 as c_long,
-	99900000 as c_long,
+pub static mut level_points: [isize; 21] = [
+	10,
+	20,
+	40,
+	80,
+	160,
+	320,
+	640,
+	1300,
+	2600,
+	5200,
+	10000,
+	20000,
+	40000,
+	80000,
+	160000,
+	320000,
+	1000000,
+	3333333,
+	6666666,
+	10000000,
+	99900000,
 ];
 #[no_mangle]
 pub static mut random_rooms: [libc::c_char; 10] = [
@@ -65,8 +65,7 @@ pub static mut random_rooms: [libc::c_char; 10] = [
 	0,
 ];
 
-#[no_mangle]
-pub unsafe extern "C" fn make_level() -> i64 {
+pub unsafe fn make_level() {
 	let mut i: c_short = 0;
 	let mut j: c_short = 0;
 	let mut must_exist1: c_short = 0;
@@ -183,10 +182,9 @@ pub unsafe extern "C" fn make_level() -> i64 {
 		}
 		fill_out_level();
 	}
-	if has_amulet() == 0 && cur_level as i64 >= 26 as i64 {
+	if !has_amulet() && cur_level >= AMULET_LEVEL {
 		put_amulet();
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
 pub unsafe fn make_room(rn: i64, r1: i64, r2: i64, r3: i64) {
@@ -745,47 +743,44 @@ pub unsafe extern "C" fn drop_check() -> bool {
 	return false;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn check_up() -> libc::c_int {
+pub unsafe fn check_up() -> bool {
 	if !wizard {
-		if dungeon[rogue.row as usize][rogue.col as usize] as libc::c_int
-			& 0o4 as libc::c_int as c_ushort as libc::c_int == 0
-		{
+		if !Stairs.is_set(dungeon[rogue.row as usize][rogue.col as usize]) {
 			message("I see no way up", 0);
-			return 0 as libc::c_int;
+			return false;
 		}
-		if has_amulet() == 0 {
+		if !has_amulet() {
 			message("Your way is magically blocked", 0);
-			return 0 as libc::c_int;
+			return false;
 		}
 	}
 	new_level_message = Some("you feel a wrenching sensation in your gut".to_string());
-	if cur_level as libc::c_int == 1 as libc::c_int {
+	if cur_level == 1 {
 		win();
 	} else {
-		cur_level = (cur_level as libc::c_int - 2 as libc::c_int) as c_short;
-		return 1 as libc::c_int;
+		cur_level -= 2;
+		return true;
 	}
-	return 0 as libc::c_int;
+	return false;
 }
 
-pub unsafe fn add_exp(e: i64, promotion: bool) {
+pub unsafe fn add_exp(e: isize, promotion: bool) {
 	rogue.exp_points += e;
 
-	if rogue.exp_points >= level_points[(rogue.exp - 1) as usize] as i64 {
-		let new_exp = get_exp_level(rogue.exp_points as c_long);
-		if rogue.exp_points > MAX_EXP as i64 {
-			rogue.exp_points = (MAX_EXP + 1) as i64;
+	if rogue.exp_points >= level_points[(rogue.exp - 1) as usize] {
+		let new_exp = get_exp_level(rogue.exp_points);
+		if rogue.exp_points > MAX_EXP {
+			rogue.exp_points = MAX_EXP + 1;
 		}
-		for i in (rogue.exp as usize + 1)..=new_exp {
+		for i in (rogue.exp + 1)..=new_exp {
 			let msg = format!("welcome to level {}", i);
 			message(&msg, 0);
 			if promotion {
 				let hp = hp_raise();
-				rogue.hp_current = (rogue.hp_current as usize + hp) as c_short;
-				rogue.hp_max = (rogue.hp_max as usize + hp) as c_short;
+				rogue.hp_current += hp;
+				rogue.hp_max += hp;
 			}
-			rogue.exp = i as c_short;
+			rogue.exp = i;
 			print_stats(STAT_HP | STAT_EXP);
 		}
 	} else {
@@ -793,21 +788,20 @@ pub unsafe fn add_exp(e: i64, promotion: bool) {
 	}
 }
 
-pub unsafe fn get_exp_level(e: c_long) -> usize {
-	const MAX_EXP_LEVEL: usize = 21;
+pub unsafe fn get_exp_level(e: isize) -> isize {
 	for i in 0..(MAX_EXP_LEVEL - 1) {
-		if level_points[i] > e {
+		if level_points[i as usize] > e {
 			return i + 1;
 		}
 	}
 	return MAX_EXP_LEVEL;
 }
 
-pub unsafe fn hp_raise() -> usize {
+pub unsafe fn hp_raise() -> isize {
 	if wizard {
 		10
 	} else {
-		get_rand(3, 10) as usize
+		get_rand(3, 10) as isize
 	}
 }
 
@@ -816,8 +810,8 @@ pub unsafe extern "C" fn show_average_hp() {
 	let (real_average, effective_average) = if rogue.exp == 1 {
 		(0.0, 0.0)
 	} else {
-		let real = (rogue.hp_max - extra_hp - INIT_HP as c_short + less_hp) as f32 / (rogue.exp - 1) as f32;
-		let average = (rogue.hp_max - INIT_HP as c_short) as f32 / (rogue.exp - 1) as f32;
+		let real = (rogue.hp_max - extra_hp - INIT_HP + less_hp) as f32 / (rogue.exp - 1) as f32;
+		let average = (rogue.hp_max - INIT_HP) as f32 / (rogue.exp - 1) as f32;
 		(real, average)
 	};
 	let msg = format!("R-Hp: {:.2}, E-Hp: {:.2} (!: {}, V: {})", real_average, effective_average, extra_hp, less_hp);

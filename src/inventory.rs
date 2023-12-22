@@ -141,9 +141,9 @@ pub unsafe extern "C" fn inventory(
 	mut mask: libc::c_ushort,
 ) -> i64 {
 	let mut obj: *mut object = 0 as *mut object;
-	let mut i: libc::c_short = 0 as i64 as libc::c_short;
+	let mut i: libc::c_short = 0;
 	let mut j: libc::c_short = 0;
-	let mut maxlen: libc::c_short = 0 as i64 as libc::c_short;
+	let mut maxlen: libc::c_short = 0;
 	let mut n: libc::c_short = 0;
 	let mut descs: [[libc::c_char; 80]; 25] = [[0; 80]; 25];
 	let mut row: libc::c_short = 0;
@@ -195,7 +195,7 @@ pub unsafe extern "C" fn inventory(
 	}
 	col = (80 as i64 - (maxlen as i64 + 2 as i64))
 		as libc::c_short;
-	row = 0 as i64 as libc::c_short;
+	row = 0;
 	while (row as i64) < i as i64
 		&& (row as i64) < 24 as i64
 	{
@@ -255,7 +255,7 @@ pub unsafe extern "C" fn mix_colors() -> i64 {
 	let mut j: libc::c_short = 0;
 	let mut k: libc::c_short = 0;
 	let mut t: [libc::c_char; 128] = [0; 128];
-	i = 0 as i64 as libc::c_short;
+	i = 0;
 	while i as i64 <= 32 as i64 {
 		j = get_rand(0 as i64, 14 as i64 - 1)
 			as libc::c_short;
@@ -286,14 +286,14 @@ pub unsafe extern "C" fn make_scroll_titles() -> i64 {
 	let mut n: libc::c_short = 0;
 	let mut sylls: libc::c_short = 0;
 	let mut s: libc::c_short = 0;
-	i = 0 as i64 as libc::c_short;
+	i = 0;
 	while (i as i64) < 12 as i64 {
 		sylls = get_rand(2 as i64, 5 as i64) as libc::c_short;
 		strcpy(
 			((*id_scrolls.as_mut_ptr().offset(i as isize)).title).as_mut_ptr(),
 			b"'\0" as *const u8 as *const libc::c_char,
 		);
-		j = 0 as i64 as libc::c_short;
+		j = 0;
 		while (j as i64) < sylls as i64 {
 			s = get_rand(1, 40 as i64 - 1)
 				as libc::c_short;
@@ -323,13 +323,13 @@ pub unsafe extern "C" fn get_wand_and_ring_materials() -> i64 {
 	let mut i: libc::c_short = 0;
 	let mut j: libc::c_short = 0;
 	let mut used: [libc::c_char; 30] = [0; 30];
-	i = 0 as i64 as libc::c_short;
+	i = 0;
 	while (i as i64) < 30 as i64 {
 		used[i as usize] = 0 as i64 as libc::c_char;
 		i += 1;
 		i;
 	}
-	i = 0 as i64 as libc::c_short;
+	i = 0;
 	while (i as i64) < 10 as i64 {
 		loop {
 			j = get_rand(0 as i64, 30 as i64 - 1)
@@ -349,13 +349,13 @@ pub unsafe extern "C" fn get_wand_and_ring_materials() -> i64 {
 		i += 1;
 		i;
 	}
-	i = 0 as i64 as libc::c_short;
+	i = 0;
 	while (i as i64) < 14 as i64 {
 		used[i as usize] = 0 as i64 as libc::c_char;
 		i += 1;
 		i;
 	}
-	i = 0 as i64 as libc::c_short;
+	i = 0;
 	while (i as i64) < 11 {
 		loop {
 			j = get_rand(0 as i64, 14 as i64 - 1)

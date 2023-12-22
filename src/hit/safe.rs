@@ -32,7 +32,7 @@ impl DamageStat {
 	}
 }
 
-pub fn get_damage(damage_str: &str, effect: DamageEffect) -> usize {
+pub fn get_damage(damage_str: &str, effect: DamageEffect) -> isize {
 	let mut total = 0;
 	for DamageStat { hits, damage } in DamageStat::parse(damage_str) {
 		for _ in 0..hits {
@@ -50,7 +50,7 @@ pub fn get_damage(damage_str: &str, effect: DamageEffect) -> usize {
 			total += damage;
 		}
 	}
-	return total;
+	return total as isize;
 }
 
 pub fn get_w_damage(obj: &object) -> Option<usize> {

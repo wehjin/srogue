@@ -148,7 +148,7 @@ pub unsafe extern "C" fn get_thrown_at_monster(
 	orow = *row;
 	ocol = *col;
 	ch = get_mask_char((*obj).what_is as i64) as libc::c_short;
-	i = 0 as i64 as libc::c_short;
+	i = 0;
 	while (i as i64) < 24 as i64 {
 		get_dir_rc(dir as i64, row, col, 0 as i64);
 		if dungeon[*row as usize][*col as usize] as i64

@@ -54,7 +54,7 @@ pub unsafe extern "C" fn Instructions() {
 		message("Help file not on line.", 0);
 		return;
 	}
-	row = 0 as i64 as libc::c_short;
+	row = 0;
 	while (row as i64) < 24 as i64 {
 		j = 0 as i64;
 		while j < 80 as i64 {
