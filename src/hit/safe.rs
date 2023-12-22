@@ -53,7 +53,7 @@ pub fn get_damage(damage_str: &str, effect: DamageEffect) -> isize {
 	return total as isize;
 }
 
-pub fn get_w_damage(obj: &object) -> Option<usize> {
+pub fn get_w_damage(obj: &object) -> Option<isize> {
 	if obj.what_is != WEAPON {
 		return None;
 	}

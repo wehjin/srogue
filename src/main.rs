@@ -1,8 +1,7 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 #![feature(extern_types)]
 
-extern "C" {
-}
+extern "C" {}
 
 use std::sync::OnceLock;
 use crate::prelude::*;
@@ -33,6 +32,7 @@ mod zap;
 mod prelude;
 
 use libc::{setuid, perror, geteuid, getuid};
+use crate::prelude::stat_const::STAT_ALL;
 
 pub mod odds;
 
@@ -86,7 +86,7 @@ pub fn main() {
 			add_traps();
 			put_mons();
 			put_player(party_room);
-			print_stats(0o377 as i64);
+			print_stats(STAT_ALL);
 			level_ready = true;
 		}
 	};

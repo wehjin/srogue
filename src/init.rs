@@ -192,7 +192,7 @@ unsafe fn player_init() {
 		let obj: &mut obj = &mut *obj;
 		obj.what_is = ARMOR;
 		obj.which_kind = RINGMAIL;
-		obj.class = (RINGMAIL + 2) as c_short;
+		obj.class = RINGMAIL as isize + 2;
 		obj.is_protected = 0;
 		obj.d_enchant = 1;
 	}

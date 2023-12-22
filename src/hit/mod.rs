@@ -38,7 +38,7 @@ pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool) {
 		100
 	} else {
 		let hit_chance = (*monster).m_hit_chance();
-		hit_chance - (2 * rogue.exp + 2 * ring_exp - r_rings) as usize;
+		hit_chance - (2 * rogue.exp + 2 * ring_exp - r_rings) as usize
 	};
 	if wizard {
 		hit_chance /= 2;
@@ -82,7 +82,7 @@ pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool) {
 			AMULET_LEVEL * 2 - cur_level
 		} else {
 			let mut minus = get_armor_class(rogue.armor) * 3;
-			minus = (minus as f64 / 100.0 * damage) as isize;
+			minus = (minus as f64 / 100.0 * damage as f64) as isize;
 			minus
 		};
 		damage -= minus;
@@ -211,7 +211,7 @@ pub unsafe fn mon_damage(monster: &mut object, damage: usize) -> bool {
 		hit_message = format!("{}defeated the {}", hit_message, mn);
 		message(&hit_message, 1);
 		hit_message.clear();
-		add_exp(monster.kill_exp as i64, true);
+		add_exp(monster.kill_exp, true);
 		take_from_pack(monster, &mut level_monsters);
 
 		if monster.m_flags.holds {
@@ -240,7 +240,7 @@ pub unsafe extern "C" fn fight(to_the_death: bool) {
 		}
 	}
 	check_message();
-	if ch as i64 == '\u{1b}' as i32 {
+	if ch as u32 == '\u{1b}' as u32 {
 		return;
 	}
 	let mut row = rogue.row;
@@ -248,7 +248,7 @@ pub unsafe extern "C" fn fight(to_the_death: bool) {
 	get_dir_rc(ch, &mut row, &mut col, false);
 	let c = ncurses::mvinch(row as i32, col as i32);
 	{
-		let not_a_monster = (c as i64) < 'A' as i32 || c as i64 > 'Z' as i32;
+		let not_a_monster = (c as i64) < 'A' as i64 || c as i64 > 'Z' as i64;
 		let cannot_move = !can_move(rogue.row as usize, rogue.col as usize, row as usize, col as usize);
 		if not_a_monster || cannot_move {
 			message("I see no monster there", 0);
@@ -266,7 +266,7 @@ pub unsafe extern "C" fn fight(to_the_death: bool) {
 	};
 	while !fight_monster.is_null() {
 		one_move_rogue(ch, false);
-		if (!to_the_death && rogue.hp_current <= possible_damage as i16)
+		if (!to_the_death && rogue.hp_current <= possible_damage)
 			|| interrupted
 			|| !Monster.is_set(dungeon[row as usize][col as usize]) {
 			fight_monster = 0 as *mut object;

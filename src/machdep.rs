@@ -2,6 +2,7 @@
 
 use std::{fs, process};
 use std::ffi::CString;
+use std::time::SystemTime;
 use libc::stat;
 
 extern "C" {
@@ -305,23 +306,9 @@ pub unsafe extern "C" fn md_gct(mut rt_buf: *mut rogue_time) -> i64 {
 	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn md_gfmt(
-	mut fname: *mut libc::c_char,
-	mut rt_buf: *mut rogue_time,
-) -> i64 {
-	let mut sbuf: stat = stat::default();
-	let mut t: *mut tm = 0 as *mut tm;
-	stat(fname, &mut sbuf);
-	let mut seconds = sbuf.st_mtimespec.tv_sec;
-	t = localtime(&mut seconds);
-	(*rt_buf).year = (*t).tm_year as libc::c_short;
-	(*rt_buf).month = ((*t).tm_mon + 1) as libc::c_short;
-	(*rt_buf).day = (*t).tm_mday as libc::c_short;
-	(*rt_buf).hour = (*t).tm_hour as libc::c_short;
-	(*rt_buf).minute = (*t).tm_min as libc::c_short;
-	(*rt_buf).second = (*t).tm_sec as libc::c_short;
-	panic!("Reached end of non-void function without returning");
+pub unsafe fn md_gfmt(file_name: &str) -> SystemTime {
+	let metadata = fs::metadata(file_name).expect("metadata");
+	metadata.modified().expect("modification time")
 }
 
 pub fn md_df(file_name: &str) -> bool {
@@ -363,6 +350,6 @@ pub fn md_get_seed() -> u32 {
 	process::id()
 }
 
-pub fn md_exit(status: i64) {
+pub fn md_exit(status: i32) {
 	process::exit(status)
 }

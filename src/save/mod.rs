@@ -86,7 +86,6 @@ pub struct __sFILE {
 pub type FILE = __sFILE;
 
 
-
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct pdat {
@@ -372,7 +371,7 @@ pub unsafe extern "C" fn restore(fname: &str) -> i64 {
 		ncurses::wclear(ncurses::stdscr());
 		clean_up(b"extra characters in file\0" as *const u8 as *const libc::c_char);
 	}
-	md_gfmt(fname, &mut mod_time);
+	let mod_time = md_gfmt(fname);
 	if has_been_touched(&mut saved_time, &mut mod_time) != 0 {
 		ncurses::wclear(ncurses::stdscr());
 		clean_up(b"sorry, file has been touched\0" as *const u8 as *const libc::c_char);
