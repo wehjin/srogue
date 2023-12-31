@@ -1276,7 +1276,7 @@ pub unsafe extern "C" fn mon_name(monster: *mut object) -> String {
 	}.to_string()
 }
 
-pub unsafe fn player_hallucinating() -> bool { halluc }
+pub unsafe fn player_hallucinating() -> bool { halluc != 0 }
 
 pub unsafe fn player_is_blind() -> bool { blind }
 

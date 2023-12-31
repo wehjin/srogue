@@ -12,7 +12,7 @@ use MoveResult::MoveFailed;
 use crate::odds::R_TELE_PERCENT;
 use crate::prelude::*;
 use crate::prelude::object_what::ObjectWhat::Gold;
-use crate::prelude::SpotFlag::{Door, Monster, Nothing, Object, Stairs, Trap, Tunnel};
+use crate::prelude::SpotFlag::{Door, Hidden, Monster, Nothing, Object, Stairs, Trap, Tunnel};
 use crate::prelude::stat_const::STAT_HUNGER;
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
 use crate::settings::jump;
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn multiple_move_rogue(mut dirch: i64) -> i64 {
 				{
 					break;
 				}
-				if !(next_to_something(row as libc::c_int, col as libc::c_int) == 0) {
+				if next_to_something(row, col) {
 					break;
 				}
 			}
@@ -206,6 +206,66 @@ pub unsafe extern "C" fn is_passable(
 	}
 	const flags: Vec<SpotFlag> = vec![SpotFlag::Floor, SpotFlag::Tunnel, SpotFlag::Door, SpotFlag::Stairs, SpotFlag::Trap];
 	return SpotFlag::is_any_set(&flags, dungeon[row as usize][col as usize]);
+}
+
+pub unsafe fn next_to_something(drow: i64, dcol: i64) -> bool {
+	if confused {
+		return true;
+	}
+	if blind {
+		return false;
+	}
+	let mut row = 0;
+	let mut col = 0;
+	let mut pass_count = 0;
+	let i_end = if (rogue.row < (DROWS as i64 - 2)) { 1 } else { 0 };
+	let j_end = if (rogue.col < (DCOLS as i64 - 1)) { 1 } else { 0 };
+	let i_start = if (rogue.row > MIN_ROW) { -1 } else { 0 };
+	let j_start = if (rogue.col > 0) { -1 } else { 0 };
+	for i in i_start..=i_end {
+		for j in j_start..=j_end {
+			if ((i == 0) && (j == 0)) {
+				continue;
+			}
+			if (((rogue.row + i) == drow) && ((rogue.col + j) == dcol)) {
+				continue;
+			}
+			row = rogue.row + i;
+			col = rogue.col + j;
+			let s = dungeon[row as usize][col as usize];
+			if Hidden.is_set(s) {
+				continue;
+			}
+			/* If the rogue used to be right, up, left, down, or right of
+			 * row,col, and now isn't, then don't stop */
+			if SpotFlag::is_any_set(&vec![Monster, Object, Stairs], s) {
+				if (((row == drow) || (col == dcol)) &&
+					(!((row == rogue.row) || (col == rogue.col)))) {
+					continue;
+				}
+				return true;
+			}
+			if Trap.is_set(s) {
+				if !Hidden.is_set(s) {
+					if (((row == drow) || (col == dcol)) &&
+						(!((row == rogue.row) || (col == rogue.col)))) {
+						continue;
+					}
+					return true;
+				}
+			}
+			if ((((i - j) == 1) || ((i - j) == -1)) && (Tunnel.is_set(s))) {
+				pass_count += 1;
+				if pass_count > 1 {
+					return true;
+				}
+			}
+			if (Door.is_set(s)) && ((i == 0) || (j == 0)) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 pub unsafe fn can_move(row1: i64, col1: i64, row2: i64, col2: i64) -> bool {
@@ -376,10 +436,7 @@ pub unsafe extern "C" fn reg_move() -> libc::c_char {
 	if levitate != 0 {
 		levitate -= 1;
 		if levitate == 0 {
-			message(
-				b"you float gently to the ground\0" as *const u8 as *const libc::c_char,
-				1 as libc::c_int,
-			);
+			message("you float gently to the ground", 1);
 			if dungeon[rogue.row as usize][rogue.col as usize] as libc::c_int
 				& 0o400 as libc::c_int as libc::c_ushort as libc::c_int != 0
 			{

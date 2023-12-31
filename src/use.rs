@@ -10,7 +10,7 @@ extern "C" {
 }
 
 use libc::c_short;
-use ncurses::{addch, mvaddch};
+use ncurses::{addch, chtype, mvaddch};
 use crate::prelude::*;
 use crate::prelude::object_what::PackFilter::{Foods, Potions, Scrolls};
 use crate::settings::fruit;
@@ -30,7 +30,7 @@ pub struct pdat {
 pub type WINDOW = _win_st;
 pub type attr_t = ncurses::chtype;
 
-pub static mut halluc: bool = false;
+pub static mut halluc: usize = 0;
 pub static mut blind: bool = false;
 pub static mut confused: bool = false;
 pub static mut levitate: bool = false;
@@ -100,10 +100,7 @@ pub unsafe extern "C" fn quaff() {
 					rogue.str_current = 1 as libc::c_short;
 				}
 			}
-			message(
-				b"you feel very sick now\0" as *const u8 as *const libc::c_char,
-				0 as i64,
-			);
+			message("you feel very sick now", 0);
 			if halluc != 0 {
 				unhallucinate();
 			}
@@ -119,13 +116,8 @@ pub unsafe extern "C" fn quaff() {
 			go_blind();
 		}
 		7 => {
-			message(
-				b"oh wow, everything seems so cosmic\0" as *const u8
-					as *const libc::c_char,
-				0 as i64,
-			);
-			halluc = (halluc as i64
-				+ get_rand(500 as i64, 800 as i64)) as libc::c_short;
+			message("oh wow, everything seems so cosmic", 0);
+			halluc = halluc + get_rand(500, 800);
 		}
 		8 => {
 			show_monsters();
@@ -143,14 +135,7 @@ pub unsafe extern "C" fn quaff() {
 			}
 		}
 		10 => {
-			message(
-				if halluc as i64 != 0 {
-					b"what a trippy feeling\0" as *const u8 as *const libc::c_char
-				} else {
-					b"you feel confused\0" as *const u8 as *const libc::c_char
-				},
-				0 as i64,
-			);
+			message(if halluc != 0 { "what a trippy feeling" } else { "you feel confused" }, 0);
 			confuse();
 		}
 		11 => {
@@ -444,6 +429,22 @@ pub unsafe fn hallucinate() {
 		monster = (*monster).next_object;
 	}
 }
+
+pub unsafe fn unhallucinate() {
+	halluc = 0;
+	relight();
+	message("everything looks SO boring now", 1);
+}
+
+pub unsafe fn relight() {
+	if cur_room == PASSAGE {
+		light_passage(rogue.row, rogue.col);
+	} else {
+		light_up_room(cur_room);
+	}
+	mvaddch(rogue.row as i32, rogue.col as i32, chtype::from(rogue.fchar));
+}
+
 
 #[no_mangle]
 pub unsafe extern "C" fn get_ench_color() -> *mut libc::c_char {
