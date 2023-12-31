@@ -628,6 +628,13 @@ pub unsafe fn put_scores(monster: Option<&object>, other: i16) {
 	clean_up(b"\n\0" as *const u8 as *const libc::c_char);
 }
 
+pub fn is_vowel(ch: char) -> bool {
+	match ch {
+		'a' | 'e' | 'i' | 'o' | 'u' => true,
+		_ => false
+	}
+}
+
 pub fn xxxx<const N: usize>(buf: &mut [u8; N], n: usize) {
 	for i in 0..n {
 		/* It does not matter if accuracy is lost during this assignment */

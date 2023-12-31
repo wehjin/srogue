@@ -5,7 +5,6 @@ extern "C" {
 
 
 	fn strcat(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
-	fn name_of() -> *mut libc::c_char;
 	fn is_direction() -> libc::c_char;
 	fn alloc_object() -> *mut object;
 	fn get_letter_object() -> *mut object;

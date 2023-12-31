@@ -73,7 +73,7 @@ pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool) {
 	} else {
 		let mut damage = get_damage((*monster).damage, DamageEffect::Roll);
 		if other.is_some() && flame {
-			damage -= get_armor_class(rogue.armor);
+			damage -= get_armor_class(&*rogue.armor);
 			if damage < 0 {
 				damage = 1;
 			}
@@ -81,7 +81,7 @@ pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool) {
 		let minus: isize = if cur_level >= AMULET_LEVEL * 2 {
 			AMULET_LEVEL * 2 - cur_level
 		} else {
-			let mut minus = get_armor_class(rogue.armor) * 3;
+			let mut minus = get_armor_class(&*rogue.armor) * 3;
 			minus = (minus as f64 / 100.0 * damage as f64) as isize;
 			minus
 		};

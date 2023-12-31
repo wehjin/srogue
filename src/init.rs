@@ -28,10 +28,11 @@ use std::{io};
 use std::io::Write;
 use libc::c_short;
 use settings::nick_name;
+use WhatIsOrDisguise::WhatIs;
 use crate::{console, settings};
 use crate::prelude::*;
 use crate::prelude::armor_kind::RINGMAIL;
-use crate::prelude::object_what::{ARMOR, WEAPON};
+use crate::prelude::object_what::ObjectWhat::{Armor, Weapon};
 use crate::prelude::weapon_kind::{ARROW, BOW, MACE};
 use crate::settings::{rest_file, score_only};
 
@@ -190,7 +191,7 @@ unsafe fn player_init() {
 	let obj = alloc_object();           /* initial armor */
 	{
 		let obj: &mut obj = &mut *obj;
-		obj.what_is = ARMOR;
+		obj.what_is = WhatIs(Armor);
 		obj.which_kind = RINGMAIL;
 		obj.class = RINGMAIL as isize + 2;
 		obj.is_protected = 0;
@@ -202,12 +203,12 @@ unsafe fn player_init() {
 	let obj = alloc_object();           /* initial weapons */
 	{
 		let obj: &mut obj = &mut *obj;
-		obj.what_is = WEAPON;
+		obj.what_is = WhatIs(Weapon);
 		obj.which_kind = MACE;
 		obj.damage = "2d3";
 		obj.hit_enchant = 1;
 		obj.d_enchant = 1;
-		obj.identified = 1;
+		obj.identified = true;
 	}
 	add_to_pack(obj, &mut rogue.pack, 1);
 	do_wield(&mut *obj);
@@ -215,25 +216,25 @@ unsafe fn player_init() {
 	let obj = alloc_object();
 	{
 		let obj: &mut obj = &mut *obj;
-		obj.what_is = WEAPON;
+		obj.what_is = WhatIs(Weapon);
 		obj.which_kind = BOW;
 		obj.damage = "1d2";
 		obj.hit_enchant = 1;
 		obj.d_enchant = 0;
-		obj.identified = 1;
+		obj.identified = true;
 	}
 	add_to_pack(obj, &mut rogue.pack, 1);
 
 	let obj = alloc_object();
 	{
 		let obj: &mut obj = &mut *obj;
-		obj.what_is = WEAPON;
+		obj.what_is = WhatIs(Weapon);
 		obj.which_kind = ARROW;
 		obj.quantity = get_rand(25, 35) as c_short;
 		obj.damage = "1d2";
 		obj.hit_enchant = 0;
 		obj.d_enchant = 0;
-		obj.identified = 1;
+		obj.identified = true;
 	}
 	add_to_pack(obj, &mut rogue.pack, 1);
 }

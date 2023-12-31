@@ -4,7 +4,6 @@ extern "C" {
 	pub type ldat;
 
 	fn reg_move() -> libc::c_char;
-	fn get_id_table() -> *mut id;
 	static mut level_points: [libc::c_long; 0];
 	static mut you_can_move_again: *mut libc::c_char;
 	static mut sustain_strength: libc::c_char;
@@ -41,7 +40,7 @@ pub static mut strange_feeling: *mut libc::c_char = b"you have a strange feeling
 	as *const u8 as *const libc::c_char as *mut libc::c_char;
 
 #[no_mangle]
-pub unsafe extern "C" fn quaff() -> i64 {
+pub unsafe extern "C" fn quaff() {
 	let mut ch: libc::c_short = 0;
 	let mut buf: [libc::c_char; 80] = [0; 80];
 	let mut obj: *mut object = 0 as *mut object;
@@ -54,28 +53,17 @@ pub unsafe extern "C" fn quaff() -> i64 {
 	}
 	obj = get_letter_object(ch as i64);
 	if obj.is_null() {
-		message(
-			b"no such item.\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+		message("no such item.", 0);
 		return;
 	}
-	if (*obj).what_is as i64
-		!= 0o10 as i64 as libc::c_ushort as i64
+	if (*obj).what_is as i64 != 0o10 as i64 as libc::c_ushort as i64
 	{
-		message(
-			b"you can't drink that\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+		message("you can't drink that", 0);
 		return;
 	}
 	match (*obj).which_kind as i64 {
 		0 => {
-			message(
-				b"you feel stronger now, what bulging muscles!\0" as *const u8
-					as *const libc::c_char,
-				0 as i64,
-			);
+			message("you feel stronger now, what bulging muscles!", 0);
 			rogue.str_current += 1;
 			rogue.str_current;
 			if rogue.str_current as i64 > rogue.str_max as i64 {

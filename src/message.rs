@@ -98,6 +98,7 @@ pub unsafe fn check_message() {
 }
 
 pub const CANCEL: char = '\u{1b}';
+pub const LIST: char = '*';
 
 #[no_mangle]
 pub unsafe extern "C" fn get_input_line(prompt: &str, insert: Option<&str>, if_cancelled: Option<&str>, add_blank: bool, do_echo: bool) -> String {
@@ -224,7 +225,7 @@ pub unsafe fn print_stats(stat_mask: usize) {
 		if !rogue.armor.is_null() && (*rogue.armor).d_enchant > MAX_ARMOR {
 			(*rogue.armor).d_enchant = MAX_ARMOR;
 		}
-		let s = format!("{}", get_armor_class(rogue.armor));
+		let s = format!("{}", get_armor_class(&*rogue.armor));
 		mvaddstr(STATS_ROW, 53, &s);
 		pad(&s, 2);
 	}

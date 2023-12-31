@@ -1,6 +1,6 @@
 use rand::{Rng, thread_rng};
 use crate::objects::object;
-use crate::prelude::object_what::WEAPON;
+use crate::prelude::object_what::ObjectWhat::Weapon;
 
 pub enum DamageEffect {
 	Roll,
@@ -54,7 +54,7 @@ pub fn get_damage(damage_str: &str, effect: DamageEffect) -> isize {
 }
 
 pub fn get_w_damage(obj: &object) -> Option<isize> {
-	if obj.what_is != WEAPON {
+	if obj.what_is.what_is() != Weapon {
 		return None;
 	}
 	let first = DamageStat::parse(obj.damage).first().expect("base damage stats for weapon");

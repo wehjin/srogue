@@ -32,6 +32,10 @@ pub const DCOLS: usize = 80;
 pub const DROWS: usize = 24;
 pub const MAX_TITLE_LENGTH: usize = 30;
 pub const MORE: &'static str = "-more-";
+pub const MAXSYLLABLES: usize = 40;
+pub const MAX_METAL: usize = 14;
+pub const WAND_MATERIALS: usize = 30;
+pub const GEMS: usize = 14;
 pub const COL1: i64 = 26;
 pub const COL2: i64 = 52;
 pub const ROW1: i64 = 7;
@@ -129,16 +133,45 @@ pub mod item_usage {
 }
 
 pub mod object_what {
-	pub const ARMOR: u16 = 0o1;
-	pub const WEAPON: u16 = 0o2;
-	pub const SCROLL: u16 = 0o4;
-	pub const POTION: u16 = 0o10;
-	pub const GOLD: u16 = 0o20;
-	pub const FOOD: u16 = 0o40;
-	pub const WAND: u16 = 0o100;
-	pub const RING: u16 = 0o200;
-	pub const AMULET: u16 = 0o400;
-	pub const ALL_OBJECTS: u16 = 0o777;
+	#[derive(Copy, Clone, Eq, PartialEq)]
+	pub enum ObjectWhat {
+		Armor,
+		Weapon,
+		Scroll,
+		Potion,
+		Gold,
+		Food,
+		Wand,
+		Ring,
+		Amulet,
+		None,
+	}
+
+	#[derive(Clone, Eq, PartialEq)]
+	pub enum InventoryFilter {
+		All,
+		Some(Vec<ObjectWhat>),
+	}
+
+	impl InventoryFilter {
+		pub fn includes(&self, what: ObjectWhat) -> bool {
+			match self {
+				InventoryFilter::All => true,
+				InventoryFilter::Some(filter) => filter.iter().find(what).is_some()
+			}
+		}
+	}
+
+	const ARMOR: u16 = 0o1;
+	const WEAPON: u16 = 0o2;
+	const SCROLL: u16 = 0o4;
+	const POTION: u16 = 0o10;
+	const GOLD: u16 = 0o20;
+	const FOOD: u16 = 0o40;
+	const WAND: u16 = 0o100;
+	const RING: u16 = 0o200;
+	const AMULET: u16 = 0o400;
+	const ALL_OBJECTS: u16 = 0o777;
 }
 
 pub mod scroll_kind {
@@ -185,7 +218,7 @@ pub mod weapon_kind {
 	pub const MACE: u16 = 5;
 	pub const LONG_SWORD: u16 = 6;
 	pub const TWO_HANDED_SWORD: u16 = 7;
-	pub const WEAPONS: u16 = 8;
+	pub const WEAPONS: usize = 8;
 }
 
 pub mod armor_kind {
@@ -196,7 +229,7 @@ pub mod armor_kind {
 	pub const BANDED: u16 = 4;
 	pub const SPLINT: u16 = 5;
 	pub const PLATE: u16 = 6;
-	pub const ARMORS: u16 = 7;
+	pub const ARMORS: usize = 7;
 }
 
 pub mod potion_kind {

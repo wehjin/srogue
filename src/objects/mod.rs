@@ -11,10 +11,17 @@ extern "C" {
 use libc::{c_int, c_short};
 use ncurses::{addch, chtype};
 use serde::Serialize;
+use WhatIsOrDisguise::WhatIs;
 use crate::prelude::*;
+use crate::prelude::armor_kind::ARMORS;
 use crate::prelude::food_kind::{FRUIT, RATION};
-use crate::prelude::object_what::FOOD;
+use crate::prelude::object_what::{ObjectWhat};
+use crate::prelude::object_what::ObjectWhat::Food;
 use crate::prelude::potion_kind::POTIONS;
+use crate::prelude::ring_kind::RINGS;
+use crate::prelude::scroll_kind::SCROLLS;
+use crate::prelude::wand_kind::WANDS;
+use crate::prelude::weapon_kind::WEAPONS;
 use crate::settings::fruit;
 
 
@@ -37,7 +44,14 @@ pub struct id {
 	pub value: i16,
 	pub title: String,
 	pub real: String,
-	pub id_status: u16,
+	pub id_status: IdStatus,
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum IdStatus {
+	Unidentified,
+	Identified,
+	Called,
 }
 
 #[derive(Serialize)]
@@ -62,9 +76,24 @@ pub struct SaveObj {
 	pub trow: i16,
 	pub tcol: i16,
 	pub hit_enchant: i16,
-	pub what_is: u16,
+	pub what_is: WhatIsOrDisguise,
 	pub picked_up: i16,
 	pub in_use_flags: u16,
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum WhatIsOrDisguise {
+	WhatIs(ObjectWhat),
+	Disguise(u16),
+}
+
+impl WhatIsOrDisguise {
+	pub fn what_is(&self) -> ObjectWhat {
+		match self {
+			WhatIs(object_what) => *object_what,
+			WhatIsOrDisguise::Disguise(_) => panic!("not a what_is"),
+		}
+	}
 }
 
 impl SaveObj {
@@ -111,7 +140,7 @@ pub struct obj {
 	pub is_protected: i16,
 	pub is_cursed: i16,
 	pub class: isize,
-	pub identified: i16,
+	pub identified: bool,
 	pub which_kind: u16,
 	pub o_row: i16,
 	pub o_col: i16,
@@ -123,7 +152,7 @@ pub struct obj {
 	pub trow: i16,
 	pub tcol: i16,
 	pub hit_enchant: i16,
-	pub what_is: u16,
+	pub what_is: WhatIsOrDisguise,
 	pub picked_up: i16,
 	pub in_use_flags: u16,
 	pub next_object: *mut obj,
@@ -208,7 +237,7 @@ pub static mut level_objects: object = obj {
 	is_protected: 0,
 	is_cursed: 0,
 	class: 0,
-	identified: 0,
+	identified: false,
 	which_kind: 0,
 	o_row: 0,
 	o_col: 0,
@@ -220,7 +249,7 @@ pub static mut level_objects: object = obj {
 	trow: 0,
 	tcol: 0,
 	hit_enchant: 0,
-	what_is: 0,
+	what_is: WhatIs(ObjectWhat::None),
 	picked_up: 0,
 	in_use_flags: 0,
 	next_object: 0 as *const obj as *mut obj,
@@ -251,7 +280,7 @@ pub static mut rogue: fighter = {
 				is_protected: 0,
 				is_cursed: 0,
 				class: 0,
-				identified: 0,
+				identified: false,
 				which_kind: 0,
 				o_row: 0,
 				o_col: 0,
@@ -263,7 +292,7 @@ pub static mut rogue: fighter = {
 				trow: 0,
 				tcol: 0,
 				hit_enchant: 0,
-				what_is: 0,
+				what_is: WhatIs(ObjectWhat::None),
 				picked_up: 0,
 				in_use_flags: 0,
 				next_object: 0 as *const obj as *mut obj,
@@ -280,15 +309,14 @@ pub static mut rogue: fighter = {
 	};
 	init
 };
-#[no_mangle]
-pub static mut id_potions: [id; POTIONS] = unsafe {
+pub static mut id_potions: [id; POTIONS] = {
 	[
 		{
 			let mut init = id {
 				value: 100,
 				title: "blue ".to_string(),
 				real: "of increase strength ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -297,7 +325,7 @@ pub static mut id_potions: [id; POTIONS] = unsafe {
 				value: 250,
 				title: "red ".to_string(),
 				real: "of restore strength ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -306,7 +334,7 @@ pub static mut id_potions: [id; POTIONS] = unsafe {
 				value: 100,
 				title: "green ".to_string(),
 				real: "of healing ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -315,7 +343,7 @@ pub static mut id_potions: [id; POTIONS] = unsafe {
 				value: 200,
 				title: "grey ".to_string(),
 				real: "of extra healing ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -324,7 +352,7 @@ pub static mut id_potions: [id; POTIONS] = unsafe {
 				value: 10,
 				title: "brown ".to_string(),
 				real: "of poison ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -333,7 +361,7 @@ pub static mut id_potions: [id; POTIONS] = unsafe {
 				value: 300,
 				title: "clear ".to_string(),
 				real: "of raise level ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -342,7 +370,7 @@ pub static mut id_potions: [id; POTIONS] = unsafe {
 				value: 10,
 				title: "pink ".to_string(),
 				real: "of blindness ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -351,7 +379,7 @@ pub static mut id_potions: [id; POTIONS] = unsafe {
 				value: 25 as i64 as libc::c_short,
 				title: "white ".to_string(),
 				real: "of hallucination ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -360,7 +388,7 @@ pub static mut id_potions: [id; POTIONS] = unsafe {
 				value: 100,
 				title: "purple ".to_string(),
 				real: "of detect monster ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -369,7 +397,7 @@ pub static mut id_potions: [id; POTIONS] = unsafe {
 				value: 100,
 				title: "black ".to_string(),
 				real: "of detect things ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -378,7 +406,7 @@ pub static mut id_potions: [id; POTIONS] = unsafe {
 				value: 10,
 				title: "yellow ".to_string(),
 				real: "of confusion ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -387,7 +415,7 @@ pub static mut id_potions: [id; POTIONS] = unsafe {
 				value: 80,
 				title: "plaid ".to_string(),
 				real: "of levitation ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -396,7 +424,7 @@ pub static mut id_potions: [id; POTIONS] = unsafe {
 				value: 150,
 				title: "burgundy ".to_string(),
 				real: "of haste self ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -405,21 +433,20 @@ pub static mut id_potions: [id; POTIONS] = unsafe {
 				value: 145 as i64 as libc::c_short,
 				title: "beige ".to_string(),
 				real: "of see invisible ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
 	]
 };
-#[no_mangle]
-pub static mut id_scrolls: [id; 12] = unsafe {
+pub static mut id_scrolls: [id; SCROLLS] = {
 	[
 		{
 			let mut init = id {
 				value: 505 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of protect armor ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -428,7 +455,7 @@ pub static mut id_scrolls: [id; 12] = unsafe {
 				value: 200,
 				title: "                                   ".to_string(),
 				real: "of hold monster ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -437,7 +464,7 @@ pub static mut id_scrolls: [id; 12] = unsafe {
 				value: 235 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of enchant weapon ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -446,7 +473,7 @@ pub static mut id_scrolls: [id; 12] = unsafe {
 				value: 235 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of enchant armor ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -455,7 +482,7 @@ pub static mut id_scrolls: [id; 12] = unsafe {
 				value: 175 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of identify ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -464,7 +491,7 @@ pub static mut id_scrolls: [id; 12] = unsafe {
 				value: 190,
 				title: "                                   ".to_string(),
 				real: "of teleportation ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -473,7 +500,7 @@ pub static mut id_scrolls: [id; 12] = unsafe {
 				value: 25 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of sleep ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -482,7 +509,7 @@ pub static mut id_scrolls: [id; 12] = unsafe {
 				value: 610,
 				title: "                                   ".to_string(),
 				real: "of scare monster ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -491,7 +518,7 @@ pub static mut id_scrolls: [id; 12] = unsafe {
 				value: 210,
 				title: "                                   ".to_string(),
 				real: "of remove curse ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -500,7 +527,7 @@ pub static mut id_scrolls: [id; 12] = unsafe {
 				value: 100,
 				title: "                                   ".to_string(),
 				real: "of create monster ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -509,7 +536,7 @@ pub static mut id_scrolls: [id; 12] = unsafe {
 				value: 25 as i64 as libc::c_short,
 				title: "                                   ".to_string(),
 				real: "of aggravate monster ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -518,21 +545,20 @@ pub static mut id_scrolls: [id; 12] = unsafe {
 				value: 180,
 				title: "                                   ".to_string(),
 				real: "of magic mapping ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
 	]
 };
-#[no_mangle]
-pub static mut id_weapons: [id; 8] = unsafe {
+pub static mut id_weapons: [id; WEAPONS] = {
 	[
 		{
 			let mut init = id {
 				value: 150,
 				title: "short bow ".to_string(),
 				real: "".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -541,7 +567,7 @@ pub static mut id_weapons: [id; 8] = unsafe {
 				value: 8 as i64 as libc::c_short,
 				title: "darts ".to_string(),
 				real: "".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -550,7 +576,7 @@ pub static mut id_weapons: [id; 8] = unsafe {
 				value: 15 as i64 as libc::c_short,
 				title: "arrows ".to_string(),
 				real: "".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -559,7 +585,7 @@ pub static mut id_weapons: [id; 8] = unsafe {
 				value: 27 as i64 as libc::c_short,
 				title: "daggers ".to_string(),
 				real: "".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -568,7 +594,7 @@ pub static mut id_weapons: [id; 8] = unsafe {
 				value: 35 as i64 as libc::c_short,
 				title: "shurikens ".to_string(),
 				real: "".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -577,7 +603,7 @@ pub static mut id_weapons: [id; 8] = unsafe {
 				value: 360,
 				title: "mace ".to_string(),
 				real: "".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -586,7 +612,7 @@ pub static mut id_weapons: [id; 8] = unsafe {
 				value: 470,
 				title: "long sword ".to_string(),
 				real: "".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -595,21 +621,20 @@ pub static mut id_weapons: [id; 8] = unsafe {
 				value: 580,
 				title: "two-handed sword ".to_string(),
 				real: "".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
 	]
 };
-#[no_mangle]
-pub static mut id_armors: [id; 7] = unsafe {
+pub static mut id_armors: [id; ARMORS] = {
 	[
 		{
 			let mut init = id {
 				value: 300,
 				title: "leather armor ".to_string(),
 				real: "".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -618,7 +643,7 @@ pub static mut id_armors: [id; 7] = unsafe {
 				value: 300,
 				title: "ring mail ".to_string(),
 				real: "".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -627,7 +652,7 @@ pub static mut id_armors: [id; 7] = unsafe {
 				value: 400,
 				title: "scale mail ".to_string(),
 				real: "".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -636,7 +661,7 @@ pub static mut id_armors: [id; 7] = unsafe {
 				value: 500,
 				title: "chain mail ".to_string(),
 				real: "".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -645,7 +670,7 @@ pub static mut id_armors: [id; 7] = unsafe {
 				value: 600,
 				title: "banded mail ".to_string(),
 				real: "".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -654,7 +679,7 @@ pub static mut id_armors: [id; 7] = unsafe {
 				value: 600,
 				title: "splint mail ".to_string(),
 				real: "".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -663,21 +688,20 @@ pub static mut id_armors: [id; 7] = unsafe {
 				value: 700,
 				title: "plate mail ".to_string(),
 				real: "".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
 	]
 };
-#[no_mangle]
-pub static mut id_wands: [id; 10] = unsafe {
+pub static mut id_wands: [id; WANDS] = {
 	[
 		{
 			let mut init = id {
 				value: 25 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of teleport away ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -686,7 +710,7 @@ pub static mut id_wands: [id; 10] = unsafe {
 				value: 50,
 				title: "                                 ".to_string(),
 				real: "of slow monster ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -695,7 +719,7 @@ pub static mut id_wands: [id; 10] = unsafe {
 				value: 45 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of confuse monster ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -704,7 +728,7 @@ pub static mut id_wands: [id; 10] = unsafe {
 				value: 8 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of invisibility ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -713,7 +737,7 @@ pub static mut id_wands: [id; 10] = unsafe {
 				value: 55 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of polymorph ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -722,7 +746,7 @@ pub static mut id_wands: [id; 10] = unsafe {
 				value: 2,
 				title: "                                 ".to_string(),
 				real: "of haste monster ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -731,7 +755,7 @@ pub static mut id_wands: [id; 10] = unsafe {
 				value: 25 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of sleep ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -740,7 +764,7 @@ pub static mut id_wands: [id; 10] = unsafe {
 				value: 20,
 				title: "                                 ".to_string(),
 				real: "of magic missile ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -749,7 +773,7 @@ pub static mut id_wands: [id; 10] = unsafe {
 				value: 20,
 				title: "                                 ".to_string(),
 				real: "of cancellation ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -758,21 +782,20 @@ pub static mut id_wands: [id; 10] = unsafe {
 				value: 0,
 				title: "                                 ".to_string(),
 				real: "of do nothing ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
 	]
 };
-#[no_mangle]
-pub static mut id_rings: [id; 11] = unsafe {
+pub static mut id_rings: [id; RINGS] = {
 	[
 		{
 			let mut init = id {
 				value: 250,
 				title: "                                 ".to_string(),
 				real: "of stealth ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -781,7 +804,7 @@ pub static mut id_rings: [id; 11] = unsafe {
 				value: 100,
 				title: "                                 ".to_string(),
 				real: "of teleportation ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -790,7 +813,7 @@ pub static mut id_rings: [id; 11] = unsafe {
 				value: 255 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of regeneration ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -799,7 +822,7 @@ pub static mut id_rings: [id; 11] = unsafe {
 				value: 295 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of slow digestion ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -808,7 +831,7 @@ pub static mut id_rings: [id; 11] = unsafe {
 				value: 200,
 				title: "                                 ".to_string(),
 				real: "of add strength ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -818,7 +841,7 @@ pub static mut id_rings: [id; 11] = unsafe {
 				title: "                                 ".to_string(),
 				real: "of sustain strength ".to_string(),
 
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -827,7 +850,7 @@ pub static mut id_rings: [id; 11] = unsafe {
 				value: 250,
 				title: "                                 ".to_string(),
 				real: "of dexterity ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -836,7 +859,7 @@ pub static mut id_rings: [id; 11] = unsafe {
 				value: 25 as i64 as libc::c_short,
 				title: "                                 ".to_string(),
 				real: "of adornment ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -845,7 +868,7 @@ pub static mut id_rings: [id; 11] = unsafe {
 				value: 300,
 				title: "                                 ".to_string(),
 				real: "of see invisible ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -854,7 +877,7 @@ pub static mut id_rings: [id; 11] = unsafe {
 				value: 290,
 				title: "                                 ".to_string(),
 				real: "of maintain armor ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -863,7 +886,7 @@ pub static mut id_rings: [id; 11] = unsafe {
 				value: 270,
 				title: "                                 ".to_string(),
 				real: "of searching ".to_string(),
-				id_status: 0,
+				id_status: IdStatus::Unidentified,
 			};
 			init
 		},
@@ -955,24 +978,28 @@ pub unsafe extern "C" fn free_stuff(mut objlist: *mut object) -> i64 {
 	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn name_of(obj: &object) -> String {
-	match obj.what_is {
-		object_what::SCROLL => if obj.quantity > 1 { "scrolls " } else { "scroll " },
-		object_what::POTION => if obj.quantity > 1 { "potions " } else { "potion " },
-		object_what::FOOD => if obj.which_kind == food_kind::RATION { "food " } else { &fruit(); },
-		object_what::WAND => if *is_wood.as_mut_ptr().offset(obj.which_kind as isize) != 0 { "staff " } else { "wand " },
-		object_what::WEAPON => match obj.which_kind {
-			weapon_kind::DART => if obj.quantity > 1 { "darts " } else { "dart " },
-			weapon_kind::ARROW => if obj.quantity > 1 { "arrows " } else { "arrow " },
-			weapon_kind::DAGGER => if obj.quantity > 1 { "daggers " } else { "dagger " },
-			weapon_kind::SHURIKEN => if obj.quantity > 1 { "shurikens " } else { "shuriken " },
-			_ => &id_weapons[obj.which_kind as usize].title
-		},
-		object_what::ARMOR => "armor ",
-		object_what::RING => "ring ",
-		object_what::AMULET => "amulet ",
-		_ => "unknown ",
+pub unsafe fn name_of(obj: &object) -> String {
+	match &obj.what_is {
+		WhatIs(what_is) => {
+			match what_is {
+				ObjectWhat::Armor => "armor ",
+				ObjectWhat::Weapon => match obj.which_kind {
+					weapon_kind::DART => if obj.quantity > 1 { "darts " } else { "dart " },
+					weapon_kind::ARROW => if obj.quantity > 1 { "arrows " } else { "arrow " },
+					weapon_kind::DAGGER => if obj.quantity > 1 { "daggers " } else { "dagger " },
+					weapon_kind::SHURIKEN => if obj.quantity > 1 { "shurikens " } else { "shuriken " },
+					_ => &id_weapons[obj.which_kind].title
+				},
+				ObjectWhat::Scroll => if obj.quantity > 1 { "scrolls " } else { "scroll " }
+				ObjectWhat::Potion => if obj.quantity > 1 { "potions " } else { "potion " }
+				ObjectWhat::Food => if obj.which_kind == RATION { "food " } else { &fruit(); }
+				ObjectWhat::Wand => if is_wood[obj.which_kind] { "staff " } else { "wand " },
+				ObjectWhat::Ring => "ring ",
+				ObjectWhat::Amulet => "amulet ",
+				_ => "unknown ",
+			}
+		}
+		WhatIsOrDisguise::Disguise(_) => "disguise ",
 	}.to_string()
 }
 
@@ -1038,7 +1065,7 @@ pub unsafe extern "C" fn gr_what_is() -> libc::c_ushort {
 }
 
 pub fn get_food(obj: &mut obj, force_ration: bool) {
-	obj.what_is = FOOD;
+	obj.what_is = WhatIs(Food);
 	if force_ration || rand_percent(80) {
 		obj.which_kind = RATION;
 	} else {
@@ -1063,12 +1090,8 @@ pub unsafe extern "C" fn put_stairs() -> libc::c_int {
 	panic!("Reached end of non-void function without returning");
 }
 
-pub unsafe fn get_armor_class(mut obj: *mut obj) -> isize {
-	if !obj.is_null() {
-		(*obj).class + (*obj).d_enchant
-	} else {
-		0
-	}
+pub fn get_armor_class(obj: &obj) -> isize {
+	obj.class + obj.d_enchant
 }
 
 #[no_mangle]

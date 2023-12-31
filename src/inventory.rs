@@ -1,7 +1,6 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-use libc::{strcpy, strlen};
-use ncurses::{clrtoeol, refresh, waddnstr};
+use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
 use crate::message;
 use crate::pack::wait_for_ack;
 use crate::random::get_rand;
@@ -9,10 +8,7 @@ use crate::random::get_rand;
 extern "C" {
 	pub type ldat;
 
-	static mut id_weapons: [id; 0];
-	static mut id_armors: [id; 0];
 	fn strcat(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
-	fn name_of() -> *mut libc::c_char;
 	fn get_letter_object() -> *mut object;
 	fn strncmp(
 		_: *const libc::c_char,
@@ -22,6 +18,13 @@ extern "C" {
 }
 
 use crate::prelude::*;
+use crate::prelude::food_kind::RATION;
+use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_LEFT_HAND, ON_RIGHT_HAND};
+use crate::prelude::object_what::{InventoryFilter};
+use crate::prelude::object_what::ObjectWhat::{Amulet, Armor, Food, Gold, Potion, Ring, Scroll, Wand, Weapon};
+use crate::prelude::potion_kind::POTIONS;
+use crate::prelude::ring_kind::{ADD_STRENGTH, DEXTERITY, RINGS};
+use crate::prelude::scroll_kind::SCROLLS;
 use crate::prelude::wand_kind::WANDS;
 
 
@@ -41,342 +44,350 @@ pub type attr_t = ncurses::chtype;
 
 
 pub static mut is_wood: [bool; WANDS] = [false; WANDS];
-#[no_mangle]
-pub static mut wand_materials: [*mut libc::c_char; 30] = [
-	b"steel \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"bronze \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"gold \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"silver \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"copper \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"nickel \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"cobalt \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"tin \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"iron \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"magnesium \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"chrome \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"carbon \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"platinum \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"silicon \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"titanium \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"teak \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"oak \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"cherry \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"birch \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"pine \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"cedar \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"redwood \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"balsa \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"ivory \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"walnut \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"maple \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"mahogany \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"elm \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"palm \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"wooden \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-];
-#[no_mangle]
-pub static mut gems: [*mut libc::c_char; 14] = [
-	b"diamond \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"stibotantalite \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"lapi-lazuli \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"ruby \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"emerald \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"sapphire \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"amethyst \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"quartz \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"tiger-eye \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"opal \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"agate \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"turquoise \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"pearl \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"garnet \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-];
-#[no_mangle]
-pub static mut syllables: [*mut libc::c_char; 40] = [
-	b"blech \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"foo \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"barf \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"rech \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"bar \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"blech \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"quo \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"bloto \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"woh \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"caca \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"blorp \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"erp \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"festr \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"rot \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"slie \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"snorf \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"iky \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"yuky \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"ooze \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"ah \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"bahl \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"zep \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"druhl \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"flem \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"behil \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"arek \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"mep \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"zihr \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"grit \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"kona \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"kini \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"ichi \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"niah \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"ogr \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"ooh \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"ighr \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"coph \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"swerr \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"mihln \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-	b"poxi \0" as *const u8 as *const libc::c_char as *mut libc::c_char,
+pub static wand_materials: [&'static str; WAND_MATERIALS] = [
+	"steel ",
+	"bronze ",
+	"gold ",
+	"silver ",
+	"copper ",
+	"nickel ",
+	"cobalt ",
+	"tin ",
+	"iron ",
+	"magnesium ",
+	"chrome ",
+	"carbon ",
+	"platinum ",
+	"silicon ",
+	"titanium ",
+	"teak ",
+	"oak ",
+	"cherry ",
+	"birch ",
+	"pine ",
+	"cedar ",
+	"redwood ",
+	"balsa ",
+	"ivory ",
+	"walnut ",
+	"maple ",
+	"mahogany ",
+	"elm ",
+	"palm ",
+	"wooden ",
 ];
 
-#[no_mangle]
-pub unsafe extern "C" fn inventory(
-	mut pack: *mut object,
-	mut mask: libc::c_ushort,
-) -> i64 {
-	let mut obj: *mut object = 0 as *mut object;
-	let mut i: libc::c_short = 0;
-	let mut j: libc::c_short = 0;
-	let mut maxlen: libc::c_short = 0;
-	let mut n: libc::c_short = 0;
-	let mut descs: [[libc::c_char; 80]; 25] = [[0; 80]; 25];
-	let mut row: libc::c_short = 0;
-	let mut col: libc::c_short = 0;
-	obj = (*pack).next_object;
+pub static gems: [&'static str; GEMS] = [
+	"diamond ",
+	"stibotantalite ",
+	"lapi-lazuli ",
+	"ruby ",
+	"emerald ",
+	"sapphire ",
+	"amethyst ",
+	"quartz ",
+	"tiger-eye ",
+	"opal ",
+	"agate ",
+	"turquoise ",
+	"pearl ",
+	"garnet ",
+];
+const SYLLABLES: [&'static str; MAXSYLLABLES] = [
+	"blech ",
+	"foo ",
+	"barf ",
+	"rech ",
+	"bar ",
+	"blech ",
+	"quo ",
+	"bloto ",
+	"woh ",
+	"caca ",
+	"blorp ",
+	"erp ",
+	"festr ",
+	"rot ",
+	"slie ",
+	"snorf ",
+	"iky ",
+	"yuky ",
+	"ooze ",
+	"ah ",
+	"bahl ",
+	"zep ",
+	"druhl ",
+	"flem ",
+	"behil ",
+	"arek ",
+	"mep ",
+	"zihr ",
+	"grit ",
+	"kona ",
+	"kini ",
+	"ichi ",
+	"niah ",
+	"ogr ",
+	"ooh ",
+	"ighr ",
+	"coph ",
+	"swerr ",
+	"mihln ",
+	"poxi ",
+];
+
+fn random_syllable() -> &'static str {
+	SYLLABLES[get_rand(1, MAXSYLLABLES - 1)]
+}
+
+pub unsafe fn inventory(pack: &object, filter: InventoryFilter) {
+	let mut obj = pack.next_object;
 	if obj.is_null() {
-		message(
-			b"your pack is empty\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+		message("your pack is empty", 0);
 		return;
 	}
-	while !obj.is_null() {
-		if (*obj).what_is as i64 & mask as i64 != 0 {
-			descs[i as usize][0 as i64 as usize] = ' ' as i32 as libc::c_char;
-			descs[i as usize][1 as usize] = (*obj).ichar as libc::c_char;
-			descs[i
-				as usize][2 as i64
-				as usize] = (if (*obj).what_is as i64
-				& 0o1 as libc::c_ushort as i64 != 0
-				&& (*obj).is_protected as i64 != 0
+	let item_lines = {
+		let mut item_lines = Vec::new();
+		while !obj.is_null() {
 			{
-				'}' as i32
-			} else {
-				')' as i32
-			}) as libc::c_char;
-			descs[i as usize][3 as i64 as usize] = ' ' as i32 as libc::c_char;
-			get_desc(
-				obj,
-				(descs[i as usize]).as_mut_ptr().offset(4 as i64 as isize),
-			);
-			n = strlen(descs[i as usize].as_mut_ptr()) as libc::c_short;
-			if n as i64 > maxlen as i64 {
-				maxlen = n;
+				let obj = &*obj;
+				let what = obj.what_is.what_is();
+				if filter.includes(what) {
+					let close_char = if what == Armor && obj.is_protected != 0 { '}' } else { ')' };
+					let line = format!(" {}{} {}", obj.m_char() as u8 as char, close_char, get_desc(obj));
+					item_lines.push(line);
+				}
 			}
-			i += 1;
-			i;
+			obj = (*obj).next_object;
 		}
-		obj = (*obj).next_object;
-	}
-	let fresh0 = i;
-	i = i + 1;
-	strcpy(
-		(descs[fresh0 as usize]).as_mut_ptr(),
-		b" --press space to continue--\0" as *const u8 as *const libc::c_char,
-	);
-	if (maxlen as i64) < 27 as i64 {
-		maxlen = 27 as i64 as libc::c_short;
-	}
-	col = (80 as i64 - (maxlen as i64 + 2 as i64))
-		as libc::c_short;
-	row = 0;
-	while (row as i64) < i as i64
-		&& (row as i64) < 24 as i64
-	{
-		if row as i64 > 0 as i64 {
-			j = col;
-			while (j as i64) < 80 as i64 {
-				descs[(row as i64 - 1)
-					as usize][(j as i64 - col as i64)
-					as usize] = (if ncurses::wmove(ncurses::stdscr(), row as i64, j as i64)
-					== -(1)
-				{
-					-(1) as ncurses::chtype
-				} else {
-					ncurses::winch(ncurses::stdscr())
-				}) as libc::c_char;
-				j += 1;
-				j;
+		{
+			let prompt_line = " --press space to continue--";
+			item_lines.push(prompt_line.to_string());
+		}
+		item_lines
+	};
+	let item_lines_max_len = item_lines.iter().map(|it| it.chars().count()).max().expect("max length");
+
+	let mut old_lines = Vec::new();
+	let start_col = DCOLS - (item_lines_max_len + 2);
+	let max_row = item_lines.len().min(DROWS);
+	for row in 0..max_row {
+		if row > 0 {
+			let mut old_line: Vec<u8> = Vec::new();
+			for col in start_col..DCOLS {
+				let ch = mvinch(row as i32, col as i32);
+				old_line.push(ch as u8)
 			}
-			descs[(row as i64 - 1)
-				as usize][(j as i64 - col as i64)
-				as usize] = 0 as i64 as libc::c_char;
+			old_lines.push(String::from_utf8(old_line).expect("utf8"));
 		}
-		if ncurses::wmove(ncurses::stdscr(), row as i64, col as i64) == -(1) {
-			-(1);
-		} else {
-			waddnstr(ncurses::stdscr(), (descs[row as usize]).as_mut_ptr(), -(1));
-		};
+		mvaddstr(row as i32, start_col as i32, &item_lines[row]);
 		clrtoeol();
-		row += 1;
-		row;
 	}
 	refresh();
 	wait_for_ack();
-	ncurses::wmove(ncurses::stdscr(), 0 as i64, 0 as i64);
+
+	mv(0, 0);
 	clrtoeol();
-	j = 1 as libc::c_short;
-	while (j as i64) < i as i64 && (j as i64) < 24 as i64
-	{
-		if ncurses::wmove(ncurses::stdscr(), j as i64, col as i64) == -(1) {
-			-(1);
+	for row in 1..max_row {
+		mvaddstr(row as i32, start_col as i32, &old_lines[row - 1]);
+	}
+}
+
+pub unsafe fn mix_colors() {
+	for _ in 0..=32 {
+		let j = get_rand(0, POTIONS - 1);
+		let k = get_rand(0, POTIONS - 1);
+		let t = id_potions[j].title.to_string();
+		id_potions[j].title = id_potions[k].title.to_string();
+		id_potions[k].title = t;
+	}
+}
+
+pub unsafe fn make_scroll_titles() {
+	for i in 0..SCROLLS {
+		let syllables = (0..get_rand(2, 5)).map(|_| random_syllable().to_string()).collect::<Vec<_>>();
+		id_scrolls[i].title = format!("'{}' ", syllables.join(""));
+	}
+}
+
+fn get_quantity(obj: &object) -> String {
+	match &obj.what_is {
+		WhatIsOrDisguise::WhatIs(what) => {
+			match what {
+				Armor => "".to_string(),
+				_ => {
+					if obj.quantity == 1 {
+						"a ".to_string()
+					} else {
+						format!("{} ", obj.quantity)
+					}
+				}
+			}
+		}
+		WhatIsOrDisguise::Disguise(_) => "".to_string()
+	}
+}
+
+unsafe fn get_title(obj: &object) -> &String {
+	let id_table = get_id_table(obj);
+	&id_table[obj.which_kind as usize].title
+}
+
+unsafe fn get_id_status(obj: &object) -> IdStatus {
+	get_id_table(obj)[obj.which_kind as usize].id_status
+}
+
+unsafe fn get_id_real(obj: &object) -> &String {
+	&get_id_table(obj)[obj.which_kind as usize].real
+}
+
+unsafe fn get_identified(obj: &object) -> String {
+	match obj.what_is.what_is() {
+		Scroll | Potion => format!("{}{}{}", get_quantity(obj), name_of(obj), get_id_real(obj)),
+		Ring => {
+			let more_info = if (wizard || obj.identified) && (obj.which_kind == DEXTERITY || obj.which_kind == ADD_STRENGTH) {
+				format!("{}{} ", if obj.class > 0 { "+" } else { "" }, obj.class)
+			} else {
+				"".to_string()
+			};
+			format!("{}{}{}{}", get_quantity(obj), more_info, name_of(obj), get_id_real(obj))
+		}
+		Wand => {
+			let more_info = if wizard || obj.identified { format!("[{}]", obj.class) } else { "".to_string() };
+			format!("{}{}{}{}", get_quantity(obj), name_of(obj), get_id_real(obj), more_info)
+		}
+		Armor => format!("{}{} {}[{}]", if obj.d_enchant >= 0 { "+" } else { "" }, obj.d_enchant, get_title(obj), get_armor_class(obj)),
+		Weapon => format!("{}{}{},{}{} {}",
+		                  get_quantity(obj),
+		                  if obj.hit_enchant >= 0 { "+" } else { "" }, obj.hit_enchant,
+		                  if obj.d_enchant >= 0 { "+" } else { "" }, obj.d_enchant,
+		                  name_of(obj)
+		),
+		_ => panic!("invalid identified object")
+	}
+}
+
+unsafe fn get_called(obj: &object) -> String {
+	match obj.what_is.what_is() {
+		Scroll | Potion | Wand | Ring => format!("{}{}called {}", get_quantity(obj), name_of(obj), get_title(obj)),
+		_ => panic!("invalid called object"),
+	}
+}
+
+unsafe fn get_unidentified(obj: &object) -> String {
+	let what = obj.what_is.what_is();
+	match what {
+		Scroll => format!("{}{}entitled: {}", get_quantity(obj), name_of(obj), get_title(obj)),
+		Potion => format!("{}{}{}", get_quantity(obj), get_title(obj), name_of(obj)),
+		Wand | Ring => if obj.identified || get_id_status(obj) == IdStatus::Identified {
+			get_identified(obj)
+		} else if get_id_status(obj) == IdStatus::Called {
+			get_called(obj)
 		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				(descs[(j as i64 - 1) as usize]).as_mut_ptr(),
-				-(1),
-			);
+			format!("{}{}{}", get_quantity(obj), get_title(obj), name_of(obj))
+		},
+		Armor => if obj.identified {
+			get_identified(obj)
+		} else {
+			get_title(obj).to_string()
+		},
+		Weapon => if obj.identified {
+			get_identified(obj)
+		} else {
+			name_of(obj)
+		},
+		_ => panic!("invalid unidentified object")
+	}
+}
+
+pub unsafe fn get_desc(obj: &object) -> String {
+	let what_is = obj.what_is.what_is();
+	if what_is == Amulet {
+		return "the amulet of Yendor ".to_string();
+	}
+	if what_is == Gold {
+		return format!("{} pieces of gold", obj.quantity);
+	}
+
+	let desc = if what_is == Food {
+		let quantity = if obj.which_kind == RATION {
+			if obj.quantity > 1 {
+				format!("{} rations of ", obj.quantity)
+			} else {
+				"some ".to_string()
+			}
+		} else {
+			"a ".to_string()
 		};
-		j += 1;
-		j;
-	}
-	panic!("Reached end of non-void function without returning");
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn mix_colors() -> i64 {
-	let mut i: libc::c_short = 0;
-	let mut j: libc::c_short = 0;
-	let mut k: libc::c_short = 0;
-	let mut t: [libc::c_char; 128] = [0; 128];
-	i = 0;
-	while i as i64 <= 32 as i64 {
-		j = get_rand(0 as i64, 14 as i64 - 1)
-			as libc::c_short;
-		k = get_rand(0 as i64, 14 as i64 - 1)
-			as libc::c_short;
-		strcpy(
-			t.as_mut_ptr(),
-			((*id_potions.as_mut_ptr().offset(j as isize)).title).as_mut_ptr(),
-		);
-		strcpy(
-			((*id_potions.as_mut_ptr().offset(j as isize)).title).as_mut_ptr(),
-			((*id_potions.as_mut_ptr().offset(k as isize)).title).as_mut_ptr(),
-		);
-		strcpy(
-			((*id_potions.as_mut_ptr().offset(k as isize)).title).as_mut_ptr(),
-			t.as_mut_ptr(),
-		);
-		i += 1;
-		i;
-	}
-	panic!("Reached end of non-void function without returning");
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn make_scroll_titles() -> i64 {
-	let mut i: libc::c_short = 0;
-	let mut j: libc::c_short = 0;
-	let mut n: libc::c_short = 0;
-	let mut sylls: libc::c_short = 0;
-	let mut s: libc::c_short = 0;
-	i = 0;
-	while (i as i64) < 12 as i64 {
-		sylls = get_rand(2 as i64, 5 as i64) as libc::c_short;
-		strcpy(
-			((*id_scrolls.as_mut_ptr().offset(i as isize)).title).as_mut_ptr(),
-			b"'\0" as *const u8 as *const libc::c_char,
-		);
-		j = 0;
-		while (j as i64) < sylls as i64 {
-			s = get_rand(1, 40 as i64 - 1)
-				as libc::c_short;
-			strcat(
-				((*id_scrolls.as_mut_ptr().offset(i as isize)).title).as_mut_ptr(),
-				syllables[s as usize],
-			);
-			j += 1;
-			j;
-		}
-		n = strlen(((*id_scrolls.as_mut_ptr().offset(i as isize)).title).as_mut_ptr())
-			as libc::c_short;
-		strcpy(
-			((*id_scrolls.as_mut_ptr().offset(i as isize)).title)
-				.as_mut_ptr()
-				.offset((n as i64 - 1) as isize),
-			b"' \0" as *const u8 as *const libc::c_char,
-		);
-		i += 1;
-		i;
-	}
-	panic!("Reached end of non-void function without returning");
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn get_wand_and_ring_materials() -> i64 {
-	let mut i: libc::c_short = 0;
-	let mut j: libc::c_short = 0;
-	let mut used: [libc::c_char; 30] = [0; 30];
-	i = 0;
-	while (i as i64) < 30 as i64 {
-		used[i as usize] = 0 as i64 as libc::c_char;
-		i += 1;
-		i;
-	}
-	i = 0;
-	while (i as i64) < 10 as i64 {
-		loop {
-			j = get_rand(0 as i64, 30 as i64 - 1)
-				as libc::c_short;
-			if !(used[j as usize] != 0) {
-				break;
+		format!("{}{}", quantity, name_of(obj))
+	} else {
+		if wizard {
+			get_identified(obj)
+		} else {
+			match what_is {
+				Weapon | Armor | Wand | Ring => get_unidentified(obj),
+				_ => match get_id_status(obj) {
+					IdStatus::Unidentified => get_unidentified(obj),
+					IdStatus::Identified => get_identified(obj),
+					IdStatus::Called => get_called(obj),
+				}
 			}
 		}
-		used[j as usize] = 1 as libc::c_char;
-		strcpy(
-			((*id_wands.as_mut_ptr().offset(i as isize)).title).as_mut_ptr(),
-			wand_materials[j as usize],
-		);
-		is_wood[i
-			as usize] = (j as i64 > 14 as i64) as i64
-			as libc::c_char;
-		i += 1;
-		i;
-	}
-	i = 0;
-	while (i as i64) < 14 as i64 {
-		used[i as usize] = 0 as i64 as libc::c_char;
-		i += 1;
-		i;
-	}
-	i = 0;
-	while (i as i64) < 11 {
-		loop {
-			j = get_rand(0 as i64, 14 as i64 - 1)
-				as libc::c_short;
-			if !(used[j as usize] != 0) {
-				break;
-			}
-		}
-		used[j as usize] = 1 as libc::c_char;
-		strcpy(
-			((*id_rings.as_mut_ptr().offset(i as isize)).title).as_mut_ptr(),
-			gems[j as usize],
-		);
-		i += 1;
-		i;
-	}
-	panic!("Reached end of non-void function without returning");
+	};
+	let desc = if desc.starts_with("a ") && is_vowel(desc.chars().nth(2).expect("char at 2")) {
+		format!("an {}", &desc[2..])
+	} else {
+		desc
+	};
+	format!("{}{}", desc, get_in_use_description(obj))
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn single_inv(mut ichar: libc::c_short) -> i64 {
+fn get_in_use_description(obj: &object) -> &'static str {
+	if obj.in_use_flags & BEING_WIELDED != 0 {
+		"in hand"
+	} else if obj.in_use_flags & BEING_WORN != 0 {
+		"being worn"
+	} else if obj.in_use_flags & ON_LEFT_HAND != 0 {
+		"on left hand"
+	} else if obj.in_use_flags & ON_RIGHT_HAND != 0 {
+		"on right hand"
+	} else {
+		""
+	}
+}
+
+
+pub unsafe fn get_wand_and_ring_materials() {
+	{
+		let mut used = [false; WAND_MATERIALS];
+		for i in 0..WANDS {
+			let j = take_unused(&mut used);
+			id_wands[i].title = wand_materials[j].to_string();
+			is_wood[i] = j > MAX_METAL;
+		}
+	}
+	{
+		let mut used = [false; GEMS];
+		for i in 0..RINGS {
+			let j = take_unused(&mut used);
+			id_rings[i].title = gems[j].to_string();
+		}
+	}
+}
+
+fn take_unused<const N: usize>(used: &mut [bool; N]) -> usize {
+	let mut j = 0;
+	loop {
+		j = get_rand(0, used.len() - 1);
+		if !used[j] {
+			break;
+		}
+	}
+	used[j] = true;
+	j
+}
+
+pub unsafe fn single_inv(mut ichar: libc::c_short) {
 	let mut ch: libc::c_short = 0;
 	let mut desc: [libc::c_char; 80] = [0; 80];
 	let mut obj: *mut object = 0 as *mut object;
@@ -384,7 +395,7 @@ pub unsafe extern "C" fn single_inv(mut ichar: libc::c_short) -> i64 {
 		ichar as i64
 	} else {
 		pack_letter(
-			b"inventory what?\0" as *const u8 as *const libc::c_char,
+			"inventory what?",
 			0o777 as i64 as libc::c_ushort as i64,
 		)
 	}) as libc::c_short;
@@ -393,10 +404,7 @@ pub unsafe extern "C" fn single_inv(mut ichar: libc::c_short) -> i64 {
 	}
 	obj = get_letter_object(ch as i64);
 	if obj.is_null() {
-		message(
-			b"no such item.\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+		message("no such item.", 0);
 		return;
 	}
 	desc[0 as i64 as usize] = ch as libc::c_char;
@@ -416,18 +424,21 @@ pub unsafe extern "C" fn single_inv(mut ichar: libc::c_short) -> i64 {
 	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn get_id_table(mut obj: *mut object) -> *mut id {
-	match (*obj).what_is as libc::c_int {
-		4 => return id_scrolls.as_mut_ptr(),
-		8 => return id_potions.as_mut_ptr(),
-		64 => return id_wands.as_mut_ptr(),
-		128 => return id_rings.as_mut_ptr(),
-		2 => return id_weapons.as_mut_ptr(),
-		1 => return id_armors.as_mut_ptr(),
-		_ => {}
-	}
-	return 0 as *mut id;
+pub unsafe fn get_id_table(obj: &object) -> Vec<&'static id> {
+	match obj.what_is {
+		WhatIsOrDisguise::WhatIs(what_is) => {
+			match what_is {
+				Scroll => &id_scrolls,
+				Potion => &id_potions,
+				Wand => &id_wands,
+				Ring => &id_rings,
+				Weapon => &id_weapons,
+				Armor => &id_armors,
+				_ => &[],
+			}
+		}
+		WhatIsOrDisguise::Disguise(_) => &[],
+	}.iter().map(|it| it).collect()
 }
 
 #[no_mangle]

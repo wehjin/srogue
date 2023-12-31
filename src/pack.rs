@@ -1,19 +1,19 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
 use libc::{c_short, strcpy, strlen};
+use InventoryFilter::Some;
 use crate::{get_input_line, message, mv_aquatars, print_stats};
 use crate::objects::place_at;
 
 extern "C" {
 	fn reg_move() -> libc::c_char;
 	fn alloc_object() -> *mut object;
-	fn get_id_table() -> *mut id;
 }
 
 use crate::prelude::*;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
-use crate::prelude::object_what::{AMULET, ARMOR, RING, WEAPON};
-
+use crate::prelude::object_what::{InventoryFilter, ObjectWhat};
+use crate::prelude::object_what::ObjectWhat::{Amulet, Armor, Food, Potion, Ring, Scroll, Wand, Weapon};
 
 #[no_mangle]
 pub static mut curse_message: &'static str = "you can't, it appears to be cursed";
@@ -241,10 +241,41 @@ pub unsafe extern "C" fn check_duplicate(
 	return 0 as *mut object;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn wait_for_ack() -> i64 {
-	while rgetchar() != ' ' as i32 {}
-	panic!("Reached end of non-void function without returning");
+
+pub unsafe fn wait_for_ack() {
+	while rgetchar() != ' ' {}
+}
+
+pub unsafe fn pack_letter(prompt: &str, mut mask: ObjectWhat) -> char {
+	// TODO Fix this!!!!  Also is_pack_letter.
+	let tmask = mask.clone();
+	if !mask_pack(&*rogue.pack, mask.clone()) {
+		message("nothing appropriate", 0);
+		return CANCEL;
+	}
+	let mut ch = 0 as char;
+	loop {
+		message(prompt, 0);
+
+		loop {
+			ch = rgetchar() as u8 as char;
+			if !is_pack_letter(&mut ch, &mut mask) {
+				sound_bell();
+			} else {
+				break;
+			}
+		}
+
+		if ch == LIST {
+			check_message();
+			inventory(&*rogue.pack, mask.clone());
+		} else {
+			break;
+		}
+		mask = tmask.clone();
+	}
+	check_message();
+	return ch;
 }
 
 #[no_mangle]
@@ -334,7 +365,7 @@ pub unsafe extern "C" fn wield() {
 		message(curse_message, 0);
 		return;
 	}
-	let ch = pack_letter(b"wield what?\0" as *const u8 as *const libc::c_char as *mut libc::c_char, WEAPON);
+	let ch = pack_letter(b"wield what?\0" as *const u8 as *const libc::c_char as *mut libc::c_char, Some(Weapon));
 
 	if ch == CANCEL {
 		return;
@@ -344,9 +375,12 @@ pub unsafe extern "C" fn wield() {
 		message("No such item.", 0);
 		return;
 	}
-	if ((*obj).what_is & (ARMOR | RING)) != 0 {
-		let desc = format!("you can't wield {}", if (*obj).what_is == ARMOR { "armor" } else { "rings" });
-		message(&desc, 0);
+	let what = (*obj).what_is.what_is();
+	if what == Armor || what == Ring {
+		let desc = format!("you can't wield {}",
+		                   if what == Armor { "armor" } else { "rings" });
+		message(&desc,
+		        0);
 		return;
 	}
 	if ((*obj).in_use_flags & BEING_WIELDED) != 0 {
@@ -425,19 +459,37 @@ pub unsafe extern "C" fn call_it() -> i64 {
 }
 
 
-pub unsafe fn mask_pack(mut pack: *mut object, mut mask: libc::c_ushort) -> bool {
+pub unsafe fn mask_pack(mut pack: *mut object, mask: InventoryFilter) -> bool {
 	while !((*pack).next_object).is_null() {
 		pack = (*pack).next_object;
-		if (*pack).what_is as i64 & mask as i64 != 0 {
+		if mask.includes((*pack).what_is.what_is()) {
 			return true;
 		}
 	}
 	return false;
 }
 
+pub fn is_pack_letter(c: &mut char, mask: &mut InventoryFilter) -> bool {
+	if (*c == '?') || (*c == '!') || (*c == ':') || (*c == '=') || (*c == ')') || (*c == ']') || (*c == '/') || (*c == ',') {
+		*mask = match c {
+			'?' => Some(vec![Scroll]),
+			'!' => Some(vec![Potion]),
+			':' => Some(vec![Food]),
+			')' => Some(vec![Weapon]),
+			']' => Some(vec![Armor]),
+			'/' => Some(vec![Wand]),
+			'=' => Some(vec![Ring]),
+			',' => Some(vec![Amulet]),
+			_ => unreachable!("match all chars"),
+		};
+		*c = LIST;
+		return true;
+	}
+	return ((*c >= 'a') && (*c <= 'z')) || (*c == CANCEL) || (*c == LIST);
+}
 
 pub unsafe fn has_amulet() -> bool {
-	mask_pack(&mut rogue.pack, AMULET)
+	mask_pack(&mut rogue.pack, Some(vec![Amulet]))
 }
 
 #[no_mangle]

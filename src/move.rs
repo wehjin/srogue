@@ -150,7 +150,7 @@ pub unsafe extern "C" fn one_move_rogue(mut dirch: libc::c_short, pickup: bool) 
 		if pickup as i64 != 0 && levitate == 0 {
 			obj = pick_up(row as i64, col as i64, &mut status);
 			if !obj.is_null() {
-				get_desc(obj, desc.as_mut_ptr());
+				let desc = get_desc(&obj);
 				if (*obj).what_is as i64
 					== 0o20 as i64 as libc::c_ushort as i64
 				{

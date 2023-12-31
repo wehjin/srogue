@@ -35,9 +35,7 @@ pub fn save_file() -> &'static Option<String> {
 	&get().save_file
 }
 
-pub fn fruit() -> &'static str {
-	&get().fruit
-}
+pub fn fruit() -> &'static str { &get().fruit }
 
 pub fn jump() -> bool { get().jump }
 
