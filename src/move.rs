@@ -2,16 +2,19 @@
 
 extern "C" {
 	pub type ldat;
-	fn object_at() -> *mut object;
 	static mut regeneration: libc::c_short;
 	static mut auto_search: libc::c_short;
-	static mut r_teleport: libc::c_char;
 }
 
-use libc::{strcpy, strlen};
-use ncurses::{addch};
+use libc::{c_short, strcpy, strlen};
+use ncurses::{addch, chtype, mvaddch, refresh};
+use MoveResult::MoveFailed;
+use crate::odds::R_TELE_PERCENT;
 use crate::prelude::*;
-use crate::prelude::SpotFlag::{Door, Nothing};
+use crate::prelude::object_what::ObjectWhat::Gold;
+use crate::prelude::SpotFlag::{Door, Monster, Nothing, Object, Stairs, Trap, Tunnel};
+use crate::prelude::stat_const::STAT_HUNGER;
+use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
 use crate::settings::jump;
 
 
@@ -31,210 +34,135 @@ pub type attr_t = ncurses::chtype;
 
 
 pub static mut m_moves: i16 = 0;
-#[no_mangle]
-pub static mut you_can_move_again: *mut libc::c_char = b"you can move again\0"
-	as *const u8 as *const libc::c_char as *mut libc::c_char;
+pub static you_can_move_again: &'static str = "you can move again";
 
-#[no_mangle]
-pub unsafe extern "C" fn one_move_rogue(mut dirch: libc::c_short, pickup: bool) -> i64 {
-	let mut current_block: u64;
-	let mut row: libc::c_short = 0;
-	let mut col: libc::c_short = 0;
-	let mut obj: *mut object = 0 as *mut object;
-	let mut desc: [libc::c_char; 80] = [0; 80];
-	let mut n: libc::c_short = 0;
-	let mut status: libc::c_short = 0;
-	row = rogue.row;
-	col = rogue.col;
-	if confused {
-		dirch = gr_dir() as libc::c_short;
-	}
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum MoveResult {
+	Moved,
+	MoveFailed,
+	StoppedOnSomething,
+}
+
+
+pub unsafe fn one_move_rogue(dirch: char, pickup: bool) -> MoveResult {
+	let dirch = if confused { Move::random8().to_char() } else { dirch };
+	let mut row = rogue.row;
+	let mut col = rogue.col;
 	get_dir_rc(dirch, &mut row, &mut col, true);
-	if can_move(rogue.row as usize, rogue.col as usize, row as usize, col as usize) == false {
-		return -(1);
+	if !can_move(rogue.row as i64, rogue.col as i64, row, col) {
+		return MoveFailed;
 	}
-	if being_held as i64 != 0 || bear_trap as i64 != 0 {
-		if dungeon[row as usize][col as usize] as i64
-			& 0o2 as i64 as libc::c_ushort as i64 == 0
-		{
-			if being_held != 0 {
-				message(
-					b"you are being held\0" as *const u8 as *const libc::c_char,
-					1,
-				);
+	if being_held || bear_trap {
+		if !Monster.is_set(dungeon[row as usize][col as usize]) {
+			if being_held {
+				message("you are being held", 1);
 			} else {
-				message(
-					b"you are still stuck in the bear trap\0" as *const u8
-						as *const libc::c_char,
-					0 as i64,
-				);
+				message("you are still stuck in the bear trap", 0);
 				reg_move();
 			}
-			return -(1);
+			return MoveFailed;
 		}
 	}
-	if r_teleport != 0 {
-		if rand_percent(8) != 0 {
+	if r_teleport {
+		if rand_percent(R_TELE_PERCENT) {
 			tele();
-			return -(2 as i64);
+			return StoppedOnSomething;
 		}
 	}
-	if dungeon[row as usize][col as usize] as i64
-		& 0o2 as i64 as libc::c_ushort as i64 != 0
-	{
-		rogue_hit(
-			object_at(&mut level_monsters, row as i64, col as i64),
-			0 as i64,
-		);
+	if Monster.is_set(dungeon[row as usize][col as usize]) {
+		rogue_hit(object_at(&mut level_monsters, row, col), false);
 		reg_move();
-		return -(1);
+		return MoveFailed;
 	}
-	if dungeon[row as usize][col as usize] as i64
-		& 0o40 as i64 as libc::c_ushort as i64 != 0
-	{
-		if cur_room as i64 == -(3 as i64) {
-			cur_room = get_room_number(row as i64, col as i64)
-				as libc::c_short;
-			light_up_room(cur_room as i64);
-			wake_room(
-				cur_room as i64,
-				1,
-				row as i64,
-				col as i64,
-			);
+	if Door.is_set(dungeon[row as usize][col as usize]) {
+		if cur_room == PASSAGE {
+			cur_room = get_room_number(row as i64, col as i64);
+			light_up_room(cur_room);
+			wake_room(cur_room, true, row, col);
 		} else {
-			light_passage(row as i64, col as i64);
+			light_passage(row, col);
 		}
-	} else if dungeon[rogue.row as usize][rogue.col as usize] as i64
-		& 0o40 as i64 as libc::c_ushort as i64 != 0
-		&& dungeon[row as usize][col as usize] as i64
-		& 0o200 as i64 as libc::c_ushort as i64 != 0
-	{
+	} else if Door.is_set(dungeon[rogue.row as usize][rogue.col as usize]) && Tunnel.is_set(dungeon[row as usize][col as usize]) {
 		light_passage(row as i64, col as i64);
-		wake_room(
-			cur_room as i64,
-			0 as i64,
-			rogue.row as i64,
-			rogue.col as i64,
-		);
-		darken_room(cur_room as i64);
-		cur_room = -(3 as i64) as libc::c_short;
-	} else if dungeon[row as usize][col as usize] as i64
-		& 0o200 as i64 as libc::c_ushort as i64 != 0
-	{
-		light_passage(row as i64, col as i64);
+		wake_room(cur_room, false, rogue.row as i64, rogue.col as i64);
+		darken_room(cur_room);
+		cur_room = PASSAGE;
+	} else if Tunnel.is_set(dungeon[row as usize][col as usize]) {
+		light_passage(row, col);
 	}
-	if ncurses::wmove(ncurses::stdscr(), rogue.row as i64, rogue.col as i64)
-		== -(1)
-	{
-		-(1);
-	} else {
-		addch(get_dungeon_char(rogue.row as usize, rogue.col as usize) as ncurses::chtype);
-	};
-	if ncurses::wmove(ncurses::stdscr(), row as i64, col as i64) == -(1) {
-		-(1);
-	} else {
-		addch(rogue.fchar as ncurses::chtype);
-	};
+	mvaddch(rogue.row as i32, rogue.col as i32, get_dungeon_char(rogue.row as i64, rogue.col as i64));
+	mvaddch(row as i32, col as i32, chtype::from(rogue.fchar));
 	if !jump() {
-		ncurses::refresh();
+		refresh();
 	}
 	rogue.row = row;
 	rogue.col = col;
-	if dungeon[row as usize][col as usize] as i64
-		& 0o1 as libc::c_ushort as i64 != 0
-	{
-		if levitate as i64 != 0 && pickup as i64 != 0 {
-			return -(2 as i64);
+	if Object.is_set(dungeon[row as usize][col as usize]) {
+		if levitate && pickup {
+			return StoppedOnSomething;
 		}
-		if pickup as i64 != 0 && levitate == 0 {
-			obj = pick_up(row as i64, col as i64, &mut status);
+		if pickup && !levitate {
+			let mut status = 0;
+			let obj = pick_up(row, col, &mut status);
 			if !obj.is_null() {
-				let desc = get_desc(&obj);
-				if (*obj).what_is as i64
-					== 0o20 as i64 as libc::c_ushort as i64
-				{
+				if (*obj).what_is.what_is() == Gold {
 					free_object(obj);
+					return not_in_pack(&get_desc(&*obj));
 				} else {
-					n = strlen(desc.as_mut_ptr()) as libc::c_short;
-					desc[n as usize] = '(' as i32 as libc::c_char;
-					desc[(n as i64 + 1)
-						as usize] = (*obj).ichar as libc::c_char;
-					desc[(n as i64 + 2 as i64)
-						as usize] = ')' as i32 as libc::c_char;
-					desc[(n as i64 + 3 as i64)
-						as usize] = 0 as i64 as libc::c_char;
+					let desc = format!("{}({})", get_desc(&*obj), (*obj).ichar);
+					return not_in_pack(&desc);
 				}
-				current_block = 18080986910393262295;
-			} else if status == 0 {
-				current_block = 5297757197365674617;
+			} else if status != 0 {
+				return mved();
 			} else {
-				current_block = 11696287569021009278;
+				return move_on(row, col);
 			}
 		} else {
-			current_block = 11696287569021009278;
+			return move_on(row, col);
 		}
-		match current_block {
-			5297757197365674617 => {}
-			_ => {
-				match current_block {
-					11696287569021009278 => {
-						obj = object_at(
-							&mut level_objects,
-							row as i64,
-							col as i64,
-						);
-						strcpy(
-							desc.as_mut_ptr(),
-							b"moved onto \0" as *const u8 as *const libc::c_char,
-						);
-						get_desc(
-							obj,
-							desc.as_mut_ptr().offset(11 as isize),
-						);
-					}
-					_ => {}
-				}
-				message(desc.as_mut_ptr(), 1);
-				reg_move();
-				return -(2 as i64);
-			}
-		}
-	} else if dungeon[row as usize][col as usize] as i64
-		& (0o40 as i64 as libc::c_ushort as i64
-		| 0o4 as i64 as libc::c_ushort as i64
-		| 0o400 as i64 as libc::c_ushort as i64) != 0
-	{
-		if levitate == 0
-			&& dungeon[row as usize][col as usize] as i64
-			& 0o400 as i64 as libc::c_ushort as i64 != 0
-		{
-			trap_player(row as i64, col as i64);
+	} else if SpotFlag::is_any_set(&vec![Door, Stairs, Trap], dungeon[row as usize][col as usize]) {
+		if !levitate && Trap.is_set(dungeon[row as usize][col as usize]) {
+			trap_player(row, col);
 		}
 		reg_move();
-		return -(2 as i64);
-	}
-	if reg_move() != 0 {
-		return -(2 as i64);
-	}
-	return if confused as i64 != 0 {
-		-(2 as i64)
+		return StoppedOnSomething;
 	} else {
-		0 as i64
-	};
+		return mved();
+	}
+}
+
+unsafe fn move_on(row: i64, col: i64) -> MoveResult {
+	let obj = object_at(&mut level_objects, row, col);
+	let desc = format!("moved onto {}", get_desc(&*obj));
+	return not_in_pack(&desc);
+}
+
+unsafe fn not_in_pack(desc: &str) -> MoveResult {
+	message(desc, 1);
+	reg_move();
+	return StoppedOnSomething;
+}
+
+unsafe fn mved() -> MoveResult {
+	if reg_move() != 0 {
+		/* fainted from hunger */
+		return StoppedOnSomething;
+	} else {
+		return if confused { StoppedOnSomething } else { Moved };
+	}
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn multiple_move_rogue(mut dirch: i64) -> i64 {
-	let mut row: libc::c_short = 0;
-	let mut col: libc::c_short = 0;
+	let mut row = 0;
+	let mut col = 0;
 	let mut m: libc::c_short = 0;
 	match dirch {
 		8 | 10 | 11 | 12 | 25 | 21 | 14 | 2 => {
 			loop {
 				row = rogue.row;
 				col = rogue.col;
-				m = one_move_rogue(dirch + 96 as i64, 1)
+				m = one_move_rogue((dirch as u8 + 96) as char, true)
 					as libc::c_short;
 				if m as i64 == -(1)
 					|| m as libc::c_int == -(2 as libc::c_int)
@@ -248,10 +176,7 @@ pub unsafe extern "C" fn multiple_move_rogue(mut dirch: i64) -> i64 {
 			}
 		}
 		72 | 74 | 75 | 76 | 66 | 89 | 85 | 78 => {
-			while interrupted == 0
-				&& one_move_rogue(dirch + 32 as libc::c_int, 1 as libc::c_int)
-				== 0 as libc::c_int
-			{}
+			while !interrupted && one_move_rogue((dirch as u8 + 32) as char, true) == Moved {}
 		}
 		_ => {}
 	}
@@ -283,13 +208,13 @@ pub unsafe extern "C" fn is_passable(
 	return SpotFlag::is_any_set(&flags, dungeon[row as usize][col as usize]);
 }
 
-pub unsafe fn can_move(row1: usize, col1: usize, row2: usize, col2: usize) -> bool {
+pub unsafe fn can_move(row1: i64, col1: i64, row2: i64, col2: i64) -> bool {
 	if is_passable(row2 as libc::c_int, col2 as libc::c_int) {
 		if row1 != row2 && col1 != col2 {
-			if Door.is_set(dungeon[row1][col1]) || Door::is_set(dungeon[row2][col2]) {
+			if Door.is_set(dungeon[row1 as usize][col1 as usize]) || Door.is_set(dungeon[row2 as usize][col2 as usize]) {
 				return false;
 			}
-			if Nothing.is_set(dungeon[row1][col2]) || Nothing.is_set(dungeon[row2][col1]) {
+			if Nothing.is_set(dungeon[row1 as usize][col2 as usize]) || Nothing.is_set(dungeon[row2 as usize][col1 as usize]) {
 				return false;
 			}
 		}
@@ -310,16 +235,14 @@ pub unsafe extern "C" fn move_onto() -> libc::c_int {
 		}
 		sound_bell();
 		if first_miss != 0 {
-			message(
-				b"direction? \0" as *const u8 as *const libc::c_char,
-				0 as libc::c_int,
-			);
+			message("direction? ", 0);
 			first_miss = 0 as libc::c_int as libc::c_char;
 		}
 	}
 	check_message();
-	if ch as libc::c_int != '\u{1b}' as i32 {
-		one_move_rogue(ch as libc::c_int, 0 as libc::c_int);
+	let ch = ch as u8 as char;
+	if ch != '\u{1b}' {
+		one_move_rogue(ch, false);
 	}
 	panic!("Reached end of non-void function without returning");
 }
@@ -337,23 +260,20 @@ pub unsafe extern "C" fn check_hunger(mut messages_only: libc::c_char) -> libc::
 	let mut n: libc::c_short = 0;
 	let mut fainted: libc::c_char = 0 as libc::c_int as libc::c_char;
 	if rogue.moves_left as libc::c_int == 300 as libc::c_int {
-		strcpy(hunger_str.as_mut_ptr(), b"hungry\0" as *const u8 as *const libc::c_char);
-		message(hunger_str.as_mut_ptr(), 0 as libc::c_int);
-		print_stats(0o100 as libc::c_int);
+		hunger_str = "hungry".to_string();
+		message(&hunger_str, 0);
+		print_stats(STAT_HUNGER);
 	}
 	if rogue.moves_left as libc::c_int == 150 as libc::c_int {
-		strcpy(hunger_str.as_mut_ptr(), b"weak\0" as *const u8 as *const libc::c_char);
-		message(hunger_str.as_mut_ptr(), 1 as libc::c_int);
-		print_stats(0o100 as libc::c_int);
+		hunger_str = "weak".to_string();
+		message(&hunger_str, 1);
+		print_stats(STAT_HUNGER);
 	}
 	if rogue.moves_left as libc::c_int <= 20 as libc::c_int {
 		if rogue.moves_left as libc::c_int == 20 as libc::c_int {
-			strcpy(
-				hunger_str.as_mut_ptr(),
-				b"faint\0" as *const u8 as *const libc::c_char,
-			);
-			message(hunger_str.as_mut_ptr(), 1 as libc::c_int);
-			print_stats(0o100 as libc::c_int);
+			hunger_str = "faint".to_string();
+			message(&hunger_str, 1);
+			print_stats(STAT_HUNGER);
 		}
 		n = get_rand(
 			0 as libc::c_int,
@@ -361,30 +281,27 @@ pub unsafe extern "C" fn check_hunger(mut messages_only: libc::c_char) -> libc::
 		) as libc::c_short;
 		if n as libc::c_int > 0 as libc::c_int {
 			fainted = 1 as libc::c_int as libc::c_char;
-			if rand_percent(40) != 0 {
+			if rand_percent(40) {
 				rogue.moves_left += 1;
 				rogue.moves_left;
 			}
-			message(
-				b"you faint\0" as *const u8 as *const libc::c_char,
-				1 as libc::c_int,
-			);
+			message("you faint", 1);
 			i = 0 as libc::c_int as libc::c_short;
 			while (i as libc::c_int) < n as libc::c_int {
-				if coin_toss() != 0 {
+				if coin_toss() {
 					mv_mons();
 				}
 				i += 1;
 				i;
 			}
-			message(you_can_move_again, 1 as libc::c_int);
+			message(you_can_move_again, 1);
 		}
 	}
 	if messages_only != 0 {
 		return fainted;
 	}
 	if rogue.moves_left as libc::c_int <= 0 as libc::c_int {
-		killed_by(0 as *mut object, 2 as libc::c_int);
+		killed_by(0 as *mut object, 2);
 	}
 	match e_rings as libc::c_int {
 		-1 => {
@@ -399,7 +316,7 @@ pub unsafe extern "C" fn check_hunger(mut messages_only: libc::c_char) -> libc::
 		1 => {
 			rogue.moves_left -= 1;
 			rogue.moves_left;
-			check_hunger(1 as libc::c_int);
+			check_hunger(1);
 			rogue
 				.moves_left = (rogue.moves_left as libc::c_int
 				- rogue.moves_left as libc::c_int % 2 as libc::c_int) as libc::c_short;
@@ -407,7 +324,7 @@ pub unsafe extern "C" fn check_hunger(mut messages_only: libc::c_char) -> libc::
 		2 => {
 			rogue.moves_left -= 1;
 			rogue.moves_left;
-			check_hunger(1 as libc::c_int);
+			check_hunger(1);
 			rogue.moves_left -= 1;
 			rogue.moves_left;
 		}
@@ -422,7 +339,7 @@ pub unsafe extern "C" fn reg_move() -> libc::c_char {
 	if rogue.moves_left as libc::c_int <= 300 as libc::c_int
 		|| cur_level as libc::c_int >= max_level as libc::c_int
 	{
-		fainted = check_hunger(0 as libc::c_int);
+		fainted = check_hunger(0);
 	} else {
 		fainted = 0 as libc::c_int as libc::c_char;
 	}
@@ -489,10 +406,10 @@ pub unsafe extern "C" fn reg_move() -> libc::c_char {
 #[no_mangle]
 pub unsafe extern "C" fn rest(mut count: libc::c_int) -> libc::c_int {
 	let mut i: libc::c_int = 0;
-	interrupted = 0 as libc::c_int as libc::c_char;
+	interrupted = false;
 	i = 0 as libc::c_int;
 	while i < count {
-		if interrupted != 0 {
+		if interrupted {
 			break;
 		}
 		reg_move();

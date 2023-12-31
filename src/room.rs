@@ -3,7 +3,6 @@
 extern "C" {
 	pub type ldat;
 
-	fn mon_sees() -> libc::c_char;
 	fn gr_object() -> *mut object;
 }
 
@@ -33,11 +32,11 @@ pub type attr_t = ncurses::chtype;
 
 #[derive(Copy, Clone, Default, Serialize)]
 pub struct dr {
-	pub oth_room: Option<usize>,
-	pub oth_row: Option<usize>,
-	pub oth_col: Option<usize>,
-	pub door_row: i16,
-	pub door_col: i16,
+	pub oth_room: Option<i64>,
+	pub oth_row: Option<i64>,
+	pub oth_col: Option<i64>,
+	pub door_row: i64,
+	pub door_col: i64,
 }
 
 pub type door = dr;
@@ -96,14 +95,14 @@ pub struct rm {
 
 pub type room = rm;
 
-pub static mut rooms: [room; MAXROOMS] = [rm {
+pub static mut rooms: [room; MAXROOMS as usize] = [rm {
 	bottom_row: 0,
 	right_col: 0,
 	left_col: 0,
 	top_row: 0,
 	doors: [dr::default(); 4],
 	room_type: RoomType::Nothing,
-}; MAXROOMS];
+}; MAXROOMS as usize];
 #[no_mangle]
 pub static mut rooms_visited: [libc::c_char; 9] = [0; 9];
 
@@ -216,7 +215,7 @@ pub unsafe extern "C" fn light_passage(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn darken_room(mut rn: libc::c_short) -> i64 {
+pub unsafe extern "C" fn darken_room(rn: i64) -> i64 {
 	let mut i: libc::c_short = 0;
 	let mut j: libc::c_short = 0;
 	i = (rooms[rn as usize].top_row as i64 + 1) as libc::c_short;
@@ -225,7 +224,7 @@ pub unsafe extern "C" fn darken_room(mut rn: libc::c_short) -> i64 {
 			as libc::c_short;
 		while (j as i64) < rooms[rn as usize].right_col as i64 {
 			if blind != 0 {
-				if ncurses::wmove(ncurses::stdscr(), i as i64, j as i64)
+				if ncurses::wmove(ncurses::stdscr(), i as i32, j as i32)
 					== -(1)
 				{
 					-(1);
@@ -239,8 +238,8 @@ pub unsafe extern "C" fn darken_room(mut rn: libc::c_short) -> i64 {
 				&& dungeon[i as usize][j as usize] as i64
 				& 0o2 as i64 as libc::c_ushort as i64 != 0)
 			{
-				if imitating(i as i64, j as i64) == 0 {
-					if ncurses::wmove(ncurses::stdscr(), i as i64, j as i64)
+				if imitating(i, j) == 0 {
+					if ncurses::wmove(ncurses::stdscr(), i as i32, j as i32)
 						== -(1)
 					{
 						-(1);
@@ -253,7 +252,7 @@ pub unsafe extern "C" fn darken_room(mut rn: libc::c_short) -> i64 {
 					&& dungeon[i as usize][j as usize] as i64
 					& 0o1000 as i64 as libc::c_ushort as i64 == 0
 				{
-					if ncurses::wmove(ncurses::stdscr(), i as i64, j as i64)
+					if ncurses::wmove(ncurses::stdscr(), i as i32, j as i32)
 						== -(1)
 					{
 						-(1);
@@ -271,10 +270,10 @@ pub unsafe extern "C" fn darken_room(mut rn: libc::c_short) -> i64 {
 	panic!("Reached end of non-void function without returning");
 }
 
-pub unsafe fn get_dungeon_char(row: usize, col: usize) -> ncurses::chtype {
-	let mask = dungeon[row][col];
+pub unsafe fn get_dungeon_char(row: i64, col: i64) -> ncurses::chtype {
+	let mask = dungeon[row as usize][col as usize];
 	if Monster.is_set(mask) {
-		return gmc_row_col(row as i64, col as i64);
+		return gmc_row_col(row, col);
 	}
 	if Object.is_set(mask) {
 		let obj = objects::object_at(&mut level_objects, row as libc::c_short, col as libc::c_short);
@@ -319,11 +318,7 @@ pub unsafe fn get_dungeon_char(row: usize, col: usize) -> ncurses::chtype {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn gr_row_col(
-	mut row: *mut libc::c_short,
-	mut col: *mut libc::c_short,
-	mut mask: libc::c_ushort,
-) -> i64 {
+pub unsafe extern "C" fn gr_row_col(mut row: *mut i64, mut col: *mut i64, mut mask: libc::c_ushort) -> i64 {
 	let mut rn: libc::c_short = 0;
 	let mut r: libc::c_short = 0;
 	let mut c: libc::c_short = 0;
@@ -575,12 +570,7 @@ pub unsafe extern "C" fn draw_magic_map() -> libc::c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn dr_course(
-	mut monster: *mut object,
-	entering: bool,
-	mut row: libc::c_short,
-	mut col: libc::c_short,
-) -> libc::c_int {
+pub unsafe extern "C" fn dr_course(mut monster: *mut object, entering: bool, mut row: i64, mut col: i64) -> libc::c_int {
 	let mut i: libc::c_short = 0;
 	let mut j: libc::c_short = 0;
 	let mut k: libc::c_short = 0;
@@ -589,8 +579,8 @@ pub unsafe extern "C" fn dr_course(
 	let mut rr: libc::c_short = 0;
 	(*monster).row = row;
 	(*monster).col = col;
-	if mon_sees(monster, rogue.row as libc::c_int, rogue.col as libc::c_int) != 0 {
-		(*monster).trow = -(1 as libc::c_int) as libc::c_short;
+	if mon_sees(monster, rogue.row, rogue.col) != 0 {
+		(*monster).trow = -(1);
 		return;
 	}
 	rn = get_room_number(row as libc::c_int, col as libc::c_int) as libc::c_short;

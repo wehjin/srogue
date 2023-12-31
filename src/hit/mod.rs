@@ -200,9 +200,9 @@ pub unsafe extern "C" fn damage_for_strength() -> i64 {
 pub unsafe fn mon_damage(monster: &mut object, damage: usize) -> bool {
 	monster.set_hp_to_kill(monster.hp_to_kill() - damage as libc::c_short);
 	if monster.hp_to_kill() <= 0 {
-		let row = monster.row as usize;
-		let col = monster.col as usize;
-		SpotFlag::Monster.clear(&mut dungeon[row][col]);
+		let row = monster.row as i64;
+		let col = monster.col as i64;
+		SpotFlag::Monster.clear(&mut dungeon[row as usize][col as usize]);
 		ncurses::mvaddch(row as i32, col as i32, get_dungeon_char(row, col));
 
 		fight_monster = 0 as *const object as *mut object;
@@ -227,9 +227,9 @@ pub unsafe fn mon_damage(monster: &mut object, damage: usize) -> bool {
 pub unsafe extern "C" fn fight(to_the_death: bool) {
 	let mut first_miss: libc::c_char = 1 as libc::c_char;
 	let mut monster: *mut object = 0 as *mut object;
-	let mut ch: libc::c_short = 0;
+	let mut ch: char = 0 as char;
 	loop {
-		ch = rgetchar() as libc::c_short;
+		ch = rgetchar() as u8 as char;
 		if !(is_direction(ch as i32) == 0) {
 			break;
 		}
@@ -249,7 +249,7 @@ pub unsafe extern "C" fn fight(to_the_death: bool) {
 	let c = ncurses::mvinch(row as i32, col as i32);
 	{
 		let not_a_monster = (c as i64) < 'A' as i64 || c as i64 > 'Z' as i64;
-		let cannot_move = !can_move(rogue.row as usize, rogue.col as usize, row as usize, col as usize);
+		let cannot_move = !can_move(rogue.row as i64, rogue.col as i64, row , col );
 		if not_a_monster || cannot_move {
 			message("I see no monster there", 0);
 			return;
@@ -279,8 +279,7 @@ pub unsafe extern "C" fn fight(to_the_death: bool) {
 	}
 }
 
-pub fn get_dir_rc(dir: c_short, row: &mut c_short, col: &mut c_short, allow_off_screen: bool) {
-	let dir = char::from(dir as u8);
+pub fn get_dir_rc(dir: char, row: &mut i64, col: &mut i64, allow_off_screen: bool) {
 	match dir {
 		'h' => {
 			if allow_off_screen || (*col > 0) {
@@ -288,40 +287,40 @@ pub fn get_dir_rc(dir: c_short, row: &mut c_short, col: &mut c_short, allow_off_
 			}
 		}
 		'j' => {
-			if allow_off_screen || (*row < (DROWS - 2) as i16) {
+			if allow_off_screen || (*row < (DROWS - 2) as i64) {
 				*row += 1
 			}
 		}
 		'k' => {
-			if allow_off_screen || (*row > MIN_ROW as i16) {
+			if allow_off_screen || (*row > MIN_ROW as i64) {
 				*row -= 1;
 			}
 		}
 		'l' => {
-			if allow_off_screen || (*col < (DCOLS - 1) as i16) {
+			if allow_off_screen || (*col < (DCOLS - 1) as i64) {
 				*col += 1;
 			}
 		}
 		'y' => {
-			if allow_off_screen || ((*row > MIN_ROW as i16) && (*col > 0)) {
+			if allow_off_screen || ((*row > MIN_ROW) && (*col > 0)) {
 				*row -= 1;
 				*col -= 1;
 			}
 		}
 		'u' => {
-			if allow_off_screen || ((*row > MIN_ROW as i16) & &(*col < (DCOLS - 1) as i16)) {
+			if allow_off_screen || ((*row > MIN_ROW) & &(*col < (DCOLS - 1) as i64)) {
 				*row -= 1;
 				*col += 1;
 			}
 		}
 		'n' => {
-			if allow_off_screen || ((*row < (DROWS - 2) as i16) && (*col < (DCOLS - 1) as i16)) {
+			if allow_off_screen || ((*row < (DROWS - 2) as i64) && (*col < (DCOLS - 1) as i64)) {
 				*row += 1;
 				*col += 1;
 			}
 		}
 		'b' => {
-			if allow_off_screen || ((*row < (DROWS - 2) as i16) && (*col > 0)) {
+			if allow_off_screen || ((*row < (DROWS - 2) as i64) && (*col > 0)) {
 				*row += 1;
 				*col -= 1;
 			}

@@ -23,8 +23,9 @@ pub use crate::r#use::*;
 pub use crate::zap::*;
 
 
-pub const MAXROOMS: usize = 9;
-pub const NO_ROOM: i16 = -1;
+pub const MAXROOMS: i64 = 9;
+pub const NO_ROOM: i64 = -1;
+pub const PASSAGE: i64 = -3;
 pub const BIG_ROOM: usize = 10;
 pub const R_ROOM: c_ushort = 2;
 pub const MIN_ROW: i64 = 1;
@@ -56,8 +57,8 @@ pub const INIT_HP: isize = 12;
 
 #[derive(Copy, Clone)]
 pub struct DungeonSpot {
-	pub col: usize,
-	pub row: usize,
+	pub col: i64,
+	pub row: i64,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -173,7 +174,7 @@ pub mod object_what {
 				PackFilter::Rings => what == ObjectWhat::Ring,
 				PackFilter::Foods => what == ObjectWhat::Food,
 				PackFilter::Amulets => what == ObjectWhat::Amulet,
-				PackFilter::AnyFrom(choices) => choices.iter().position(|choice| choice == what).is_some(),
+				PackFilter::AnyFrom(choices) => choices.iter().position(|choice| *choice == what).is_some(),
 			}
 		}
 	}

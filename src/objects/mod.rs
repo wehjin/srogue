@@ -4,7 +4,6 @@ extern "C" {
 	pub type ldat;
 
 	fn md_malloc() -> *mut libc::c_char;
-	fn add_to_pack() -> *mut object;
 	static mut error_file: *mut libc::c_char;
 }
 
@@ -142,15 +141,15 @@ pub struct obj {
 	pub class: isize,
 	pub identified: bool,
 	pub which_kind: u16,
-	pub o_row: i16,
-	pub o_col: i16,
+	pub o_row: i64,
+	pub o_col: i64,
 	pub o: i16,
-	pub row: i16,
-	pub col: i16,
+	pub row: i64,
+	pub col: i64,
 	pub d_enchant: isize,
 	pub quiver: i16,
-	pub trow: i16,
-	pub tcol: i16,
+	pub trow: i64,
+	pub tcol: i64,
 	pub hit_enchant: i16,
 	pub what_is: WhatIsOrDisguise,
 	pub picked_up: i16,
@@ -219,9 +218,9 @@ impl obj {
 			self.quiver = 1;
 		}
 	}
-	pub fn in_room(&self, rn: usize) -> bool {
-		let object_rn = get_room_number(self.row as c_int, self.col as c_int);
-		object_rn != NO_ROOM && object_rn as usize == rn
+	pub fn in_room(&self, rn: i64) -> bool {
+		let object_rn = get_room_number(self.row as i64, self.col as i64);
+		object_rn != NO_ROOM && object_rn == rn
 	}
 }
 
@@ -304,7 +303,7 @@ pub static mut rogue: fighter = {
 		exp_points: 0,
 		row: 0,
 		col: 0,
-		fchar: '@' as libc::c_short,
+		fchar: '@',
 		moves_left: 1250,
 	};
 	init
@@ -942,11 +941,7 @@ pub unsafe extern "C" fn place_at(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn object_at(
-	mut pack: *mut object,
-	mut row: libc::c_short,
-	mut col: libc::c_short,
-) -> *mut object {
+pub unsafe extern "C" fn object_at(mut pack: *mut object, mut row: i64, mut col: i64) -> *mut object {
 	let mut obj: *mut object = (*pack).next_object;
 	while !obj.is_null()
 		&& ((*obj).row as i64 != row as i64

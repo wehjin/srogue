@@ -223,7 +223,7 @@ pub unsafe extern "C" fn check_imitator(mut monster: *mut object) -> bool {
 			{
 				-(1);
 			} else {
-				addch(get_dungeon_char((*monster).row as usize, (*monster).col as usize) as ncurses::chtype);
+				addch(get_dungeon_char((*monster).row as i64, (*monster).col as i64) as ncurses::chtype);
 			};
 			check_message();
 			let msg = format!("wait, that's a {}!", mon_name(monster));

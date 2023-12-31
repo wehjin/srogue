@@ -55,9 +55,9 @@ pub struct fight {
 	pub gold: isize,
 	pub exp: isize,
 	pub exp_points: isize,
-	pub row: i16,
-	pub col: i16,
-	pub fchar: i16,
+	pub row: i64,
+	pub col: i64,
+	pub fchar: char,
 	pub moves_left: i16,
 }
 
@@ -887,8 +887,8 @@ pub unsafe extern "C" fn put_mons() {
 		if (*monster).m_flags.wanders && coin_toss() {
 			wake_up(&mut *monster);
 		}
-		let mut row: libc::c_short = 0;
-		let mut col: libc::c_short = 0;
+		let mut row = 0;
+		let mut col = 0;
 		gr_row_col(
 			&mut row,
 			&mut col,
@@ -926,7 +926,7 @@ pub unsafe extern "C" fn gr_monster(
 	if cur_level as libc::c_int > 26 as libc::c_int + 2 as libc::c_int {
 		(*monster).m_flags.hasted = true;
 	}
-	(*monster).trow = -(1 as libc::c_int) as libc::c_short;
+	(*monster).trow = -1;
 	return monster;
 }
 
@@ -941,7 +941,7 @@ pub unsafe extern "C" fn mv_mons() {
 		let next_monster = (*monster).next_object;
 		if (*monster).m_flags.hasted {
 			mon_disappeared = 0;
-			mv_monster(&mut *monster, rogue.row as isize, rogue.col as isize);
+			mv_monster(&mut *monster, rogue.row, rogue.col);
 			if mon_disappeared != 0 {
 				done_with_monster = true;
 			}
@@ -956,12 +956,12 @@ pub unsafe extern "C" fn mv_mons() {
 		}
 		if !done_with_monster {
 			let mut flew = false;
-			if (*monster).m_flags.flies && !(*monster).m_flags.napping && !mon_can_go(&*monster, rogue.row as usize, rogue.col as usize) {
+			if (*monster).m_flags.flies && !(*monster).m_flags.napping && !mon_can_go(&*monster, rogue.row, rogue.col) {
 				flew = true;
-				mv_monster(&mut *monster, rogue.row as isize, rogue.col as isize);
+				mv_monster(&mut *monster, rogue.row, rogue.col);
 			}
-			if !flew || !mon_can_go(&*monster, rogue.row as usize, rogue.col as usize) {
-				mv_monster(&mut *monster, rogue.row as isize, rogue.col as isize);
+			if !flew || !mon_can_go(&*monster, rogue.row, rogue.col) {
+				mv_monster(&mut *monster, rogue.row, rogue.col);
 			}
 		}
 		monster = next_monster;
@@ -980,8 +980,8 @@ pub unsafe extern "C" fn party_monsters(rn: usize, n: usize) {
 		}
 		let mut found: Option<(i64, i64)> = None;
 		for _j in 0..250 {
-			let row = get_rand(rooms[rn].top_row + 1, rooms[rn].bottom_row - 1);
-			let col = get_rand(rooms[rn].left_col + 1, rooms[rn].right_col - 1);
+			let row = get_rand(rooms[rn as usize].top_row + 1, rooms[rn as usize].bottom_row - 1);
+			let col = get_rand(rooms[rn as usize].left_col + 1, rooms[rn as usize].right_col - 1);
 			let dungeon_spot = dungeon[row as usize][col as usize];
 			if !Monster.is_set(dungeon_spot) && SpotFlag::is_any_set(&vec![Floor, Tunnel], dungeon_spot) {
 				found = Some((row, col));
@@ -993,7 +993,7 @@ pub unsafe extern "C" fn party_monsters(rn: usize, n: usize) {
 			if !(*monster).m_flags.imitates {
 				(*monster).m_flags.wakens = true;
 			}
-			put_m_at(row as c_short, col as c_short, &mut *monster);
+			put_m_at(row, col, &mut *monster);
 		}
 	}
 	for i in 0..MONSTERS {
@@ -1002,8 +1002,8 @@ pub unsafe extern "C" fn party_monsters(rn: usize, n: usize) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn gmc_row_col(row: usize, col: usize) -> ncurses::chtype {
-	let monster = objects::object_at(&mut level_monsters, row as c_short, col as c_short);
+pub unsafe extern "C" fn gmc_row_col(row: i64, col: i64) -> ncurses::chtype {
+	let monster = objects::object_at(&mut level_monsters, row, col);
 	if !monster.is_null() {
 		let invisible = (*monster).m_flags.invisible;
 		let bypass_invisible = detect_monster || see_invisible || r_see_invisible;
@@ -1034,7 +1034,7 @@ pub unsafe extern "C" fn gmc(mut monster: *mut object) -> chtype {
 	}
 }
 
-pub unsafe fn mv_monster(monster: &mut object, row: isize, col: isize) {
+pub unsafe fn mv_monster(monster: &mut object, row: i64, col: i64) {
 	if monster.m_flags.asleep {
 		if monster.m_flags.napping {
 			monster.decrement_nap();
@@ -1054,7 +1054,7 @@ pub unsafe fn mv_monster(monster: &mut object, row: isize, col: isize) {
 	if monster.m_flags.flits && flit(monster) {
 		return;
 	}
-	if monster.m_flags.stationary && !mon_can_go(monster, rogue.row as usize, rogue.col as usize) {
+	if monster.m_flags.stationary && !mon_can_go(monster, rogue.row, rogue.col as i64) {
 		return;
 	}
 	if monster.m_flags.freezing_rogue {
@@ -1063,7 +1063,7 @@ pub unsafe fn mv_monster(monster: &mut object, row: isize, col: isize) {
 	if monster.m_flags.confuses && m_confuse(monster) {
 		return;
 	}
-	if mon_can_go(monster, rogue.row as usize, rogue.col as usize) {
+	if mon_can_go(monster, rogue.row as i64, rogue.col as i64) {
 		mon_hit(monster, None, false);
 		return;
 	}
@@ -1076,28 +1076,28 @@ pub unsafe fn mv_monster(monster: &mut object, row: isize, col: isize) {
 
 	let (mut row, mut col) = (row, col);
 	if monster.trow == monster.row && monster.tcol == monster.col {
-		monster.trow = NO_ROOM as c_short;
-	} else if monster.trow != NO_ROOM as i16 {
-		row = monster.trow as isize;
-		col = monster.tcol as isize;
+		monster.trow = NO_ROOM;
+	} else if monster.trow != NO_ROOM {
+		row = monster.trow;
+		col = monster.tcol;
 	}
-	if monster.row > row as i16 {
-		row = (monster.row - 1) as isize;
-	} else if monster.row < row as i16 {
-		row = (monster.row + 1) as isize;
+	if monster.row > row {
+		row = (monster.row - 1);
+	} else if monster.row < row {
+		row = (monster.row + 1);
 	}
-	if Door.is_set(dungeon[row as usize][monster.col as usize]) && mtry(monster, row as usize, monster.col as usize) {
+	if Door.is_set(dungeon[row as usize][monster.col as usize]) && mtry(monster, row, monster.col as i64) {
 		return;
 	}
-	if monster.col > col as i16 {
-		col = (monster.col - 1) as isize;
-	} else if monster.col < col as i16 {
-		col = (monster.col + 1) as isize;
+	if monster.col > col {
+		col = (monster.col - 1);
+	} else if monster.col < col {
+		col = (monster.col + 1);
 	}
-	if Door.is_set(dungeon[monster.row as usize][col as usize]) && mtry(monster, monster.row as usize, col as usize) {
+	if Door.is_set(dungeon[monster.row as usize][col as usize]) && mtry(monster, monster.row as i64, col) {
 		return;
 	}
-	if mtry(monster, row as usize, col as usize) {
+	if mtry(monster, row, col) {
 		return;
 	}
 
@@ -1108,12 +1108,12 @@ pub unsafe fn mv_monster(monster: &mut object, row: isize, col: isize) {
 				let n = get_rand(0, 5) as usize;
 				if !tried[n] {
 					match n {
-						0 => if mtry(monster, row as usize, (monster.col - 1) as usize) { break 'moved; }
-						1 => if mtry(monster, row as usize, monster.col as usize) { break 'moved; }
-						2 => if mtry(monster, row as usize, (monster.col + 1) as usize) { break 'moved; }
-						3 => if mtry(monster, (monster.row - 1) as usize, col as usize) { break 'moved; }
-						4 => if mtry(monster, monster.row as usize, col as usize) { break 'moved; }
-						5 => if mtry(monster, (monster.row + 1) as usize, col as usize) { break 'moved; }
+						0 => if mtry(monster, row, (monster.col - 1)) { break 'moved; }
+						1 => if mtry(monster, row, monster.col as i64) { break 'moved; }
+						2 => if mtry(monster, row, (monster.col + 1)) { break 'moved; }
+						3 => if mtry(monster, (monster.row - 1), col) { break 'moved; }
+						4 => if mtry(monster, monster.row as i64, col) { break 'moved; }
+						5 => if mtry(monster, (monster.row + 1), col) { break 'moved; }
 						_ => unreachable!("0 <= n  <= 5")
 					}
 					tried[n] = true;
@@ -1129,11 +1129,11 @@ pub unsafe fn mv_monster(monster: &mut object, row: isize, col: isize) {
 	if monster.row == monster.o_row && monster.col == monster.o_col {
 		monster.o += 1;
 		if monster.o > 4 {
-			if monster.trow == NO_ROOM as i16 && !mon_sees(monster, rogue.row as c_int, rogue.col as c_int) {
-				monster.trow = get_rand(1, (DROWS - 2) as c_int) as c_short;
-				monster.tcol = get_rand(0, (DCOLS - 1) as c_int) as c_short;
+			if monster.trow == NO_ROOM && !mon_sees(monster, rogue.row, rogue.col) {
+				monster.trow = get_rand(1, (DROWS - 2) as i64);
+				monster.tcol = get_rand(0, (DCOLS - 1) as i64);
 			} else {
-				monster.trow = NO_ROOM as c_short;
+				monster.trow = NO_ROOM;
 				monster.o = 0;
 			}
 		}
@@ -1144,7 +1144,7 @@ pub unsafe fn mv_monster(monster: &mut object, row: isize, col: isize) {
 	}
 }
 
-pub unsafe fn mtry(monster: &mut object, row: usize, col: usize) -> bool {
+pub unsafe fn mtry(monster: &mut object, row: i64, col: i64) -> bool {
 	if mon_can_go(monster, row, col) {
 		move_mon_to(monster, row, col);
 		return true;
@@ -1152,21 +1152,18 @@ pub unsafe fn mtry(monster: &mut object, row: usize, col: usize) -> bool {
 	return false;
 }
 
-pub unsafe fn move_mon_to(monster: &mut object, row: usize, col: usize) {
-	let mrow = monster.row as usize;
-	let mcol = monster.col as usize;
-
-	Monster.clear(&mut dungeon[mrow][mcol]);
-	Monster.set(&mut dungeon[row][col]);
-	let c = ncurses::mvinch(mrow as i32, mcol as i32);
+pub unsafe fn move_mon_to(monster: &mut object, row: i64, col: i64) {
+	Monster.clear(&mut dungeon[monster.row as usize][monster.col as usize]);
+	Monster.set(&mut dungeon[row as usize][col as usize]);
+	let c = ncurses::mvinch((monster.row as usize) as i32, (monster.col as usize) as i32);
 	if (c >= chtype::from('A')) && (c <= chtype::from('Z'))
 	{
-		let (mrow, mcol) = (mrow as i32, mcol as i32);
+		let (mrow, mcol) = ((monster.row as usize) as i32, (monster.col as usize) as i32);
 		let no_detect_monster = !detect_monster;
 		if no_detect_monster {
 			ncurses::mvaddch(mrow, mcol, monster.trail_char());
 		} else {
-			if rogue_can_see(mrow as usize, mcol as usize) {
+			if rogue_can_see(mrow as i64, mcol as i64) {
 				ncurses::mvaddch(mrow, mcol, monster.trail_char());
 			} else {
 				if monster.trail_char() == chtype::from('.') {
@@ -1183,22 +1180,22 @@ pub unsafe fn move_mon_to(monster: &mut object, row: usize, col: usize) {
 			ncurses::mvaddch(row as i32, col as i32, gmc(monster));
 		}
 	}
-	if Door.is_set(dungeon[row][col])
+	if Door.is_set(dungeon[row as usize][col as usize])
 		&& (get_room_number(row as i64, col as i64) != cur_room as i64)
-		&& Floor.is_only(dungeon[mrow][mcol])
+		&& Floor.is_only(dungeon[monster.row as usize][monster.col as usize])
 		&& !blind {
-		ncurses::mvaddch(mrow as i32, mcol as i32, chtype::from(' '));
+		ncurses::mvaddch((monster.row as usize) as i32, (monster.col as usize) as i32, chtype::from(' '));
 	}
-	if Door.is_set(dungeon[row][col]) {
-		let entering = Tunnel.is_set(dungeon[mrow][mcol]);
-		dr_course(monster, entering, row as c_short, col as c_short);
+	if Door.is_set(dungeon[row as usize][col as usize]) {
+		let entering = Tunnel.is_set(dungeon[monster.row as usize][monster.col as usize]);
+		dr_course(monster, entering, row, col);
 	} else {
-		monster.row = row as c_short;
-		monster.col = col as c_short;
+		monster.row = row;
+		monster.col = col;
 	}
 }
 
-pub unsafe fn mon_can_go(monster: &obj, row: usize, col: usize) -> bool {
+pub unsafe fn mon_can_go(monster: &obj, row: i64, col: i64) -> bool {
 	let dr = monster.row as isize - row as isize;        /* check if move distance > 1 */
 	if (dr >= 2) || (dr <= -2) {
 		return false;
@@ -1207,28 +1204,28 @@ pub unsafe fn mon_can_go(monster: &obj, row: usize, col: usize) -> bool {
 	if (dc >= 2) || (dc <= -2) {
 		return false;
 	}
-	if SpotFlag::Nothing.is_set(dungeon[monster.row as usize][col]) || SpotFlag::Nothing.is_set(dungeon[row][monster.col as usize]) {
+	if SpotFlag::Nothing.is_set(dungeon[monster.row as usize][col as usize]) || SpotFlag::Nothing.is_set(dungeon[row as usize][monster.col as usize]) {
 		return false;
 	}
-	if !is_passable(row as c_int, col as c_int) || Monster.is_set(dungeon[row][col]) {
+	if !is_passable(row as c_int, col as c_int) || Monster.is_set(dungeon[row as usize][col as usize]) {
 		return false;
 	}
-	if (monster.row != row as i16) && (monster.col != col as i16)
-		&& (Door.is_set(dungeon[row][col]) || Door.is_set(dungeon[monster.row as usize][monster.col as usize])) {
+	if (monster.row != row) && (monster.col != col)
+		&& (Door.is_set(dungeon[row as usize][col as usize]) || Door.is_set(dungeon[monster.row as usize][monster.col as usize])) {
 		return false;
 	}
-	if (monster.trow == NO_ROOM as i16)
+	if (monster.trow == NO_ROOM)
 		&& !monster.m_flags.flits
 		&& !monster.m_flags.confused
 		&& !monster.m_flags.can_flit
 	{
-		if (monster.row < rogue.row) && (row < monster.row as usize) { return false; }
-		if (monster.row > rogue.row) && (row > monster.row as usize) { return false; }
-		if (monster.col < rogue.col) && (col < monster.col as usize) { return false; }
-		if (monster.col > rogue.col) && (col > monster.col as usize) { return false; }
+		if (monster.row < rogue.row) && (row < monster.row as i64) { return false; }
+		if (monster.row > rogue.row) && (row > monster.row as i64) { return false; }
+		if (monster.col < rogue.col) && (col < monster.col as i64) { return false; }
+		if (monster.col > rogue.col) && (col > monster.col as i64) { return false; }
 	}
-	if Object.is_set(dungeon[row][col]) {
-		let obj = objects::object_at(&mut level_objects, row as c_short, col as c_short);
+	if Object.is_set(dungeon[row as usize][col as usize]) {
+		let obj = objects::object_at(&mut level_objects, row, col);
 		if (*obj).what_is.what_is() == Scroll && (*obj).which_kind == scroll_kind::SCARE_MONSTER {
 			return false;
 		}
@@ -1241,9 +1238,9 @@ pub fn wake_up(monster: &mut object) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn wake_room(rn: usize, entering: bool, row: usize, col: usize) {
+pub unsafe extern "C" fn wake_room(rn: i64, entering: bool, row: i64, col: i64) {
 	let wake_percent = {
-		let wake_percent = if rn == party_room as usize { odds::PARTY_WAKE_PERCENT } else { odds::WAKE_PERCENT };
+		let wake_percent = if rn == party_room { odds::PARTY_WAKE_PERCENT } else { odds::WAKE_PERCENT };
 		if stealthy > 0 {
 			wake_percent / (odds::STEALTH_FACTOR + stealthy as usize)
 		} else {
@@ -1254,10 +1251,10 @@ pub unsafe extern "C" fn wake_room(rn: usize, entering: bool, row: usize, col: u
 	while !monster.is_null() {
 		if (*monster).in_room(rn) {
 			if entering {
-				(*monster).trow = NO_ROOM as c_short;
+				(*monster).trow = NO_ROOM;
 			} else {
-				(*monster).trow = row as c_short;
-				(*monster).tcol = col as c_short;
+				(*monster).trow = row;
+				(*monster).tcol = col;
 			}
 		}
 		if (*monster).m_flags.wakens && (*monster).in_room(rn) {
@@ -1285,7 +1282,7 @@ pub unsafe fn player_is_blind() -> bool { blind }
 
 pub unsafe fn bypass_invisibility() -> bool { detect_monster || see_invisible || r_see_invisible }
 
-pub unsafe fn rogue_is_around(row: c_short, col: c_short) -> bool {
+pub unsafe fn rogue_is_around(row: i64, col: i64) -> bool {
 	let rdif = row - rogue.row;
 	let cdif = col - rogue.col;
 	(rdif >= -1) && (rdif <= 1) && (cdif >= -1) && (cdif <= 1)
@@ -1294,8 +1291,8 @@ pub unsafe fn rogue_is_around(row: c_short, col: c_short) -> bool {
 #[no_mangle]
 pub unsafe extern "C" fn wanderer() {
 	let mut monster: *mut object = 0 as *mut object;
-	let mut row: c_short = 0;
-	let mut col: c_short = 0;
+	let mut row: i64 = 0;
+	let mut col: i64 = 0;
 	let mut found = false;
 	{
 		let mut i: c_short = 0;
@@ -1316,7 +1313,7 @@ pub unsafe extern "C" fn wanderer() {
 		let mut i = 0;
 		while i < 25 && !found {
 			gr_row_col(&mut row, &mut col, SpotFlag::union(&vec![Floor, Tunnel, Stairs, Object]));
-			if rogue_can_see(row as usize, col as usize) == false {
+			if rogue_can_see(row, col) == false {
 				put_m_at(row, col, &mut *monster);
 				found = true;
 			}
@@ -1348,16 +1345,16 @@ pub unsafe extern "C" fn show_monsters() {
 #[no_mangle]
 pub unsafe extern "C" fn create_monster() {
 	let mut found = false;
-	let mut row = rogue.row as isize;
-	let mut col = rogue.col as isize;
+	let mut row = rogue.row as i64;
+	let mut col = rogue.col as i64;
 	for i in 0..9 {
 		{
 			let (r_moved, c_moved) = rand_around(i, row, col);
 			row = r_moved;
 			col = c_moved;
 		}
-		let on_rogue = row == rogue.row as isize && col == rogue.col as isize;
-		let out_of_bounds = row < MIN_ROW as isize || row > (DROWS - 2) as isize || col < 0 || col > (DCOLS - 1) as isize;
+		let on_rogue = row == rogue.row && col == rogue.col;
+		let out_of_bounds = row < MIN_ROW || row > (DROWS - 2) as i64 || col < 0 || col > (DCOLS - 1) as i64;
 		if on_rogue || out_of_bounds {
 			continue;
 		}
@@ -1369,7 +1366,7 @@ pub unsafe extern "C" fn create_monster() {
 	}
 	if found {
 		let mut monster = gr_monster(0 as *mut object, 0);
-		put_m_at(row as c_short, col as c_short, &mut *monster);
+		put_m_at(row, col, &mut *monster);
 		ncurses::mvaddch(row as i32, col as i32, gmc(monster));
 		if (*monster).m_flags.wanders || (*monster).m_flags.wakens {
 			wake_up(&mut *monster);
@@ -1379,7 +1376,7 @@ pub unsafe extern "C" fn create_monster() {
 	}
 }
 
-pub unsafe fn put_m_at(row: c_short, col: c_short, monster: &mut object) {
+pub unsafe fn put_m_at(row: i64, col: i64, monster: &mut object) {
 	monster.row = row;
 	monster.col = col;
 	Monster.set(&mut dungeon[row as usize][col as usize]);
@@ -1388,10 +1385,10 @@ pub unsafe fn put_m_at(row: c_short, col: c_short, monster: &mut object) {
 	aim_monster(monster);
 }
 
-pub unsafe fn rogue_can_see(row: usize, col: usize) -> bool {
+pub unsafe fn rogue_can_see(row: i64, col: i64) -> bool {
 	let in_current_room = get_room_number(row as i64, col as i64) == cur_room as i64;
 	let not_in_maze = rooms[cur_room as usize].room_type != RoomType::Maze;
-	let is_very_close = rogue_is_around(row as c_short, col as c_short);
+	let is_very_close = rogue_is_around(row, col);
 	!blind && ((in_current_room && not_in_maze) || is_very_close)
 }
 
@@ -1403,19 +1400,19 @@ pub unsafe fn move_confused(monster: &mut object) -> bool {
 		} else if rand_percent(15) {
 			return true;
 		} else {
-			let mut row = monster.row as isize;
-			let mut col = monster.col as isize;
+			let mut row = monster.row;
+			let mut col = monster.col;
 			for i in 0..9 {
 				{
 					let (r_moved, c_moved) = rand_around(i, row, col);
 					row = r_moved;
 					col = c_moved;
 				}
-				let on_rogue = row == rogue.row as isize && col == rogue.col as isize;
+				let on_rogue = row == rogue.row && col == rogue.col;
 				if on_rogue {
 					return false;
 				}
-				if mtry(monster, row as usize, col as usize) {
+				if mtry(monster, row, col) {
 					return true;
 				}
 			}
@@ -1431,19 +1428,19 @@ pub unsafe fn flit(monster: &mut object) -> bool {
 	if rand_percent(10) {
 		return true;
 	}
-	let mut row = monster.row as isize;
-	let mut col = monster.col as isize;
+	let mut row = monster.row;
+	let mut col = monster.col;
 	for i in 0..9 {
 		{
 			let (r_moved, c_moved) = rand_around(i, row, col);
 			row = r_moved;
 			col = c_moved;
 		}
-		let on_rogue = row == rogue.row as isize && col == rogue.col as isize;
+		let on_rogue = row == rogue.row && col == rogue.col;
 		if on_rogue {
 			continue;
 		}
-		if mtry(monster, row as usize, col as usize) {
+		if mtry(monster, row, col) {
 			return true;
 		}
 	}
@@ -1462,16 +1459,16 @@ pub unsafe fn aim_monster(monster: &mut object) {
 
 	for i in 0..4 {
 		let d = ((r + i) % 4) as usize;
-		if rooms[rn].doors[d].oth_room.is_some() {
-			monster.trow = rooms[rn].doors[d].door_row;
-			monster.tcol = rooms[rn].doors[d].door_col;
+		if rooms[rn as usize].doors[d].oth_room.is_some() {
+			monster.trow = rooms[rn as usize].doors[d].door_row;
+			monster.tcol = rooms[rn as usize].doors[d].door_col;
 			break;
 		}
 	}
 }
 
 pub unsafe fn no_room_for_monster(rn: usize) -> bool {
-	let room = &rooms[rn];
+	let room = &rooms[rn as usize];
 	for i in (room.top_row + 1)..room.bottom_row {
 		for j in (room.left_col + 1)..room.right_col {
 			if !Monster.is_set(dungeon[i as usize][j as usize]) {
@@ -1491,7 +1488,7 @@ pub unsafe extern "C" fn aggravate() {
 	while !monster.is_null() {
 		wake_up(&mut *monster);
 		(*monster).m_flags.imitates = false;
-		if rogue_can_see((*monster).row as usize, (*monster).col as usize) {
+		if rogue_can_see((*monster).row as i64, (*monster).col as i64) {
 			ncurses::mvaddch((*monster).row as i32, (*monster).col as i32, (*monster).m_char());
 		}
 		monster = (*monster).next_object;
@@ -1501,8 +1498,8 @@ pub unsafe extern "C" fn aggravate() {
 #[no_mangle]
 pub unsafe extern "C" fn mon_sees(
 	mut monster: *mut object,
-	mut row: c_int,
-	mut col: c_int,
+	mut row: i64,
+	mut col: i64,
 ) -> bool {
 	let mut rn: i64 = 0;
 	let mut rdif: libc::c_short = 0;
@@ -1513,8 +1510,8 @@ pub unsafe extern "C" fn mon_sees(
 		&& (*rooms.as_mut_ptr().offset(rn as isize)).room_type as i64 & 0o4i64 == 0 {
 		return true;
 	}
-	rdif = (row - (*monster).row as libc::c_int) as libc::c_short;
-	cdif = (col - (*monster).col as libc::c_int) as libc::c_short;
+	rdif = (row - (*monster).row) as libc::c_short;
+	cdif = (col - (*monster).col) as libc::c_short;
 	return rdif as libc::c_int >= -(1 as libc::c_int)
 		&& rdif as libc::c_int <= 1 as libc::c_int
 		&& cdif as libc::c_int >= -(1 as libc::c_int)
@@ -1526,8 +1523,8 @@ pub unsafe extern "C" fn mv_aquatars() {
 	let mut monster: *mut object = 0 as *mut object;
 	monster = level_monsters.next_object;
 	while !monster.is_null() {
-		if (*monster).m_char() == chtype::from('A') && mon_can_go(&*monster, rogue.row as usize, rogue.col as usize) {
-			mv_monster(&mut *monster, rogue.row as isize, rogue.col as isize);
+		if (*monster).m_char() == chtype::from('A') && mon_can_go(&*monster, rogue.row as i64, rogue.col as i64) {
+			mv_monster(&mut *monster, rogue.row, rogue.col);
 			(*monster).m_flags.already_moved = true;
 		}
 		monster = (*monster).next_object;

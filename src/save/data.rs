@@ -44,9 +44,9 @@ pub struct SaveFighter {
 	pub gold: isize,
 	pub exp: isize,
 	pub exp_points: isize,
-	pub row: i16,
-	pub col: i16,
-	pub fchar: i16,
+	pub row: i64,
+	pub col: i64,
+	pub fchar: char,
 	pub moves_left: i16,
 }
 

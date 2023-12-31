@@ -26,8 +26,7 @@ pub static mut regeneration: libc::c_short = 0;
 pub static mut ring_exp: isize = 0;
 #[no_mangle]
 pub static mut auto_search: libc::c_short = 0;
-#[no_mangle]
-pub static mut r_teleport: libc::c_char = 0;
+pub static mut r_teleport: bool = false;
 pub static mut r_see_invisible: bool = false;
 #[no_mangle]
 pub static mut sustain_strength: libc::c_char = 0;

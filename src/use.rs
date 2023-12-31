@@ -9,7 +9,8 @@ extern "C" {
 	static mut sustain_strength: libc::c_char;
 }
 
-use ncurses::addch;
+use libc::c_short;
+use ncurses::{addch, mvaddch};
 use crate::prelude::*;
 use crate::prelude::object_what::PackFilter::{Foods, Potions, Scrolls};
 use crate::settings::fruit;
@@ -386,8 +387,18 @@ pub unsafe extern "C" fn eat() {
 	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn hallucinate() -> libc::c_int {
+pub unsafe fn tele() {
+	mvaddch(rogue.row as i32, rogue.col as i32, get_dungeon_char(rogue.row as i64, rogue.col as i64));
+
+	if (cur_room >= 0) {
+		darken_room(cur_room);
+	}
+	put_player(get_room_number(rogue.row as i64, rogue.col as i64) as c_short);
+	being_held = false;
+	bear_trap = false;
+}
+
+pub unsafe fn hallucinate() {
 	let mut obj: *mut object = 0 as *mut object;
 	let mut monster: *mut object = 0 as *mut object;
 	let mut ch: libc::c_short = 0;
@@ -432,7 +443,6 @@ pub unsafe extern "C" fn hallucinate() -> libc::c_int {
 		}
 		monster = (*monster).next_object;
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
 #[no_mangle]

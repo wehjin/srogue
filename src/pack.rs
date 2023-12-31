@@ -66,7 +66,7 @@ pub unsafe extern "C" fn pick_up(
 	mut status: *mut libc::c_short,
 ) -> *mut object {
 	let mut obj: *mut object = 0 as *mut object;
-	obj = object_at(&mut level_objects, row as c_short, col as c_short);
+	obj = object_at(&mut level_objects, row, col);
 	*status = 1 as libc::c_short;
 	if (*obj).what_is as i64
 		== 0o4 as i64 as libc::c_ushort as i64

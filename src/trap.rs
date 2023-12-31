@@ -13,8 +13,6 @@ use serde::Serialize;
 use crate::prelude::*;
 
 
-
-
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct pdat {
@@ -90,10 +88,7 @@ pub unsafe extern "C" fn trap_at(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn trap_player(
-	mut row: libc::c_short,
-	mut col: libc::c_short,
-) -> i64 {
+pub unsafe extern "C" fn trap_player(mut row: i64, mut col: i64) -> i64 {
 	let mut t: libc::c_short = 0;
 	t = trap_at(row as i64, col as i64) as libc::c_short;
 	if t as i64 == -(1) {
@@ -157,7 +152,7 @@ pub unsafe extern "C" fn trap_player(
 			}
 			print_stats(0o4 as i64 | 0o10 as i64);
 			if rogue.hp_current as i64 <= 0 as i64 {
-				killed_by(0 as *mut object, 3 );
+				killed_by(0 as *mut object, 3);
 			}
 		}
 		4 => {
@@ -392,7 +387,7 @@ pub unsafe extern "C" fn search(
 					{
 						if rand_percent(
 							17
-								+ (rogue.exp + ring_exp ) as usize,
+								+ (rogue.exp + ring_exp) as usize,
 						) != 0
 						{
 							dungeon[row

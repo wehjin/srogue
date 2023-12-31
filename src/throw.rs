@@ -229,13 +229,54 @@ impl Move {
 			Left => (0, -1),
 		}
 	}
-	pub fn apply(&self, row: isize, col: isize) -> (isize, isize) {
+	pub fn random8() -> Self {
+		match get_rand(1, 8) {
+			1 => Up,
+			2 => Down,
+			3 => Right,
+			4 => Left,
+			5 => UpLeft,
+			6 => UpRight,
+			7 => DownLeft,
+			8 => DownRight,
+			_ => unreachable!("out of bounds")
+		}
+	}
+
+	pub fn to_char(&self) -> char {
+		match self {
+			DownRight => 'n',
+			DownLeft => 'b',
+			UpRight => 'u',
+			UpLeft => 'y',
+			Right => 'l',
+			Down => 'k',
+			Same => ' ',
+			Up => 'j',
+			Left => 'h',
+		}
+	}
+	pub fn from_char(ch: char) -> Self {
+		match ch {
+			'n' => DownRight,
+			'b' => DownLeft,
+			'u' => UpRight,
+			'y' => UpLeft,
+			'l' => Right,
+			'k' => Down,
+			'j' => Up,
+			'h' => Left,
+			_ => Same,
+		}
+	}
+
+	pub fn apply(&self, row: i64, col: i64) -> (i64, i64) {
 		let (r_delta, c_delta) = self.delta();
 		(row + r_delta, col + c_delta)
 	}
 }
 
-pub unsafe fn rand_around(i: u8, r: isize, c: isize) -> (isize, isize) {
+pub unsafe fn rand_around(i: u8, r: i64, c: i64) -> (i64, i64) {
 	static mut moves: [Move; 9] = [Left, Up, DownLeft, UpLeft, Right, Down, UpRight, Same, DownRight];
 	static mut row: usize = 0;
 	static mut col: usize = 0;
