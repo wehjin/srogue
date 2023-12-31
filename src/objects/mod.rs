@@ -176,7 +176,7 @@ impl obj {
 		self.d_enchant as chtype
 	}
 	pub fn disguise(&self) -> chtype {
-		self.what_is as chtype
+		self.disguise as chtype
 	}
 	pub fn nap_length(&self) -> c_short {
 		self.picked_up
@@ -907,7 +907,7 @@ pub unsafe extern "C" fn put_objects() {
 		n += 1;
 		n;
 	}
-	if cur_level as i64 == party_counter as i64 {
+	if cur_level == party_counter {
 		make_party();
 		party_counter = next_party() as libc::c_short;
 	}

@@ -249,7 +249,7 @@ pub unsafe extern "C" fn fight(to_the_death: bool) {
 	let c = ncurses::mvinch(row as i32, col as i32);
 	{
 		let not_a_monster = (c as i64) < 'A' as i64 || c as i64 > 'Z' as i64;
-		let cannot_move = !can_move(rogue.row as i64, rogue.col as i64, row , col );
+		let cannot_move = !can_move(rogue.row as i64, rogue.col as i64, row, col);
 		if not_a_monster || cannot_move {
 			message("I see no monster there", 0);
 			return;
