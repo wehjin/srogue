@@ -135,7 +135,7 @@ pub struct obj {
 	pub m_flags: MonsterFlags,
 	pub damage: &'static str,
 	pub quantity: i16,
-	pub ichar: i16,
+	pub ichar: char,
 	pub kill_exp: isize,
 	pub is_protected: i16,
 	pub is_cursed: i16,
@@ -232,7 +232,7 @@ pub static mut level_objects: object = obj {
 	m_flags: MonsterFlags::default(),
 	damage: "",
 	quantity: 0,
-	ichar: 0,
+	ichar: '\u{00}',
 	kill_exp: 0,
 	is_protected: 0,
 	is_cursed: 0,
@@ -275,7 +275,7 @@ pub static mut rogue: fighter = {
 				m_flags: MonsterFlags::default(),
 				damage: "",
 				quantity: 0,
-				ichar: 0,
+				ichar: '\u{00}',
 				kill_exp: 0,
 				is_protected: 0,
 				is_cursed: 0,
@@ -957,8 +957,7 @@ pub unsafe extern "C" fn object_at(
 	return obj;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn get_letter_object(mut ch: i64) -> *mut object {
+pub unsafe fn get_letter_object(ch: char) -> *mut object {
 	let mut obj: *mut object = 0 as *mut object;
 	obj = rogue.pack.next_object;
 	while !obj.is_null() && (*obj).ichar as i64 != ch {

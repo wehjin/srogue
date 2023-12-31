@@ -15,6 +15,7 @@ extern "C" {
 
 use libc::strlen;
 use crate::prelude::*;
+use crate::prelude::object_what::PackFilter::Wands;
 use crate::settings::set_score_only;
 
 #[derive(Copy, Clone)]
@@ -92,10 +93,7 @@ pub unsafe extern "C" fn zapp() -> i64 {
 	if dir as i64 == '\u{1b}' as i32 {
 		return;
 	}
-	wch = pack_letter(
-		b"zap with what?\0" as *const u8 as *const libc::c_char,
-		0o100 as i64 as libc::c_ushort as i64,
-	) as libc::c_short;
+	wch = pack_letter("zap with what?", Wands) as libc::c_short;
 	if wch as i64 == '\u{1b}' as i32 {
 		return;
 	}

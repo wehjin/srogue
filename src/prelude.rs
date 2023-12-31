@@ -148,16 +148,32 @@ pub mod object_what {
 	}
 
 	#[derive(Clone, Eq, PartialEq)]
-	pub enum InventoryFilter {
-		All,
-		Some(Vec<ObjectWhat>),
+	pub enum PackFilter {
+		AllObjects,
+		Armors,
+		Weapons,
+		Scrolls,
+		Potions,
+		Wands,
+		Rings,
+		Foods,
+		Amulets,
+		AnyFrom(Vec<ObjectWhat>),
 	}
 
-	impl InventoryFilter {
+	impl PackFilter {
 		pub fn includes(&self, what: ObjectWhat) -> bool {
 			match self {
-				InventoryFilter::All => true,
-				InventoryFilter::Some(filter) => filter.iter().find(what).is_some()
+				PackFilter::AllObjects => true,
+				PackFilter::Armors => what == ObjectWhat::Armor,
+				PackFilter::Weapons => what == ObjectWhat::Weapon,
+				PackFilter::Scrolls => what == ObjectWhat::Scroll,
+				PackFilter::Potions => what == ObjectWhat::Potion,
+				PackFilter::Wands => what == ObjectWhat::Wand,
+				PackFilter::Rings => what == ObjectWhat::Ring,
+				PackFilter::Foods => what == ObjectWhat::Food,
+				PackFilter::Amulets => what == ObjectWhat::Amulet,
+				PackFilter::AnyFrom(choices) => choices.iter().position(|choice| choice == what).is_some(),
 			}
 		}
 	}

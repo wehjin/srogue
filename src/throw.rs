@@ -3,7 +3,6 @@
 extern "C" {
 	pub type ldat;
 
-
 	fn strcat(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
 	fn is_direction() -> libc::c_char;
 	fn alloc_object() -> *mut object;
@@ -12,9 +11,8 @@ extern "C" {
 
 use ncurses::addch;
 use crate::prelude::*;
+use crate::prelude::object_what::PackFilter::Weapons;
 use crate::throw::Move::{Up, UpLeft, UpRight, Left, Right, Same, Down, DownLeft, DownRight};
-
-
 
 
 #[derive(Copy, Clone)]
@@ -30,7 +28,6 @@ pub struct pdat {
 
 pub type WINDOW = _win_st;
 pub type attr_t = ncurses::chtype;
-
 
 
 #[no_mangle]
@@ -60,10 +57,7 @@ pub unsafe extern "C" fn throw() -> i64 {
 	if dir as i64 == '\u{1b}' as i32 {
 		return;
 	}
-	wch = pack_letter(
-		b"throw what?\0" as *const u8 as *const libc::c_char,
-		0o2 as i64 as libc::c_ushort as i64,
-	) as libc::c_short;
+	wch = pack_letter("throw what?", Weapons) as libc::c_short;
 	if wch as i64 == '\u{1b}' as i32 {
 		return;
 	}

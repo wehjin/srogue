@@ -6,6 +6,7 @@ extern "C" {
 }
 
 use crate::prelude::*;
+use crate::prelude::object_what::PackFilter::Rings;
 use crate::prelude::ring_kind::RingKind;
 use crate::prelude::stat_const::STAT_STRENGTH;
 
@@ -39,16 +40,10 @@ pub unsafe extern "C" fn put_on_ring() -> i64 {
 	let mut desc: [libc::c_char; 80] = [0; 80];
 	let mut ring: *mut object = 0 as *mut object;
 	if r_rings as i64 == 2 as i64 {
-		message(
-			b"wearing two rings already\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+		message("wearing two rings already", 0);
 		return;
 	}
-	ch = pack_letter(
-		b"put on what?\0" as *const u8 as *const libc::c_char,
-		0o200 as i64 as libc::c_ushort as i64,
-	) as libc::c_short;
+	ch = pack_letter("put on what?", Rings) as libc::c_short;
 	if ch as i64 == '\u{1b}' as i32 {
 		return;
 	}

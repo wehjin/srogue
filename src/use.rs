@@ -11,6 +11,7 @@ extern "C" {
 
 use ncurses::addch;
 use crate::prelude::*;
+use crate::prelude::object_what::PackFilter::{Foods, Potions, Scrolls};
 use crate::settings::fruit;
 
 
@@ -44,10 +45,7 @@ pub unsafe extern "C" fn quaff() {
 	let mut ch: libc::c_short = 0;
 	let mut buf: [libc::c_char; 80] = [0; 80];
 	let mut obj: *mut object = 0 as *mut object;
-	ch = pack_letter(
-		b"quaff what?\0" as *const u8 as *const libc::c_char,
-		0o10 as i64 as libc::c_ushort as i64,
-	) as libc::c_short;
+	ch = pack_letter("quaff what?", Potions) as libc::c_short;
 	if ch as i64 == '\u{1b}' as i32 {
 		return;
 	}
@@ -211,10 +209,7 @@ pub unsafe extern "C" fn read_scroll() -> i64 {
 		);
 		return;
 	}
-	ch = pack_letter(
-		b"read what?\0" as *const u8 as *const libc::c_char,
-		0o4 as i64 as libc::c_ushort as i64,
-	) as libc::c_short;
+	ch = pack_letter("read what?", Scrolls) as libc::c_short;
 	if ch as i64 == '\u{1b}' as i32 {
 		return;
 	}
@@ -347,10 +342,7 @@ pub unsafe extern "C" fn eat() {
 	let mut moves: libc::c_short = 0;
 	let mut obj: *mut object = 0 as *mut object;
 	let mut buf: [libc::c_char; 70] = [0; 70];
-	ch = pack_letter(
-		b"eat what?\0" as *const u8 as *const libc::c_char,
-		0o40 as libc::c_int as libc::c_ushort as libc::c_int,
-	) as libc::c_short;
+	ch = pack_letter("eat what?", Foods) as libc::c_short;
 	if ch as libc::c_int == '\u{1b}' as i32 {
 		return;
 	}

@@ -9,7 +9,6 @@ extern "C" {
 	pub type ldat;
 
 	fn strcat(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
-	fn get_letter_object() -> *mut object;
 	fn strncmp(
 		_: *const libc::c_char,
 		_: *const libc::c_char,
@@ -20,8 +19,9 @@ extern "C" {
 use crate::prelude::*;
 use crate::prelude::food_kind::RATION;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_LEFT_HAND, ON_RIGHT_HAND};
-use crate::prelude::object_what::{InventoryFilter};
+use crate::prelude::object_what::{PackFilter};
 use crate::prelude::object_what::ObjectWhat::{Amulet, Armor, Food, Gold, Potion, Ring, Scroll, Wand, Weapon};
+use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::prelude::potion_kind::POTIONS;
 use crate::prelude::ring_kind::{ADD_STRENGTH, DEXTERITY, RINGS};
 use crate::prelude::scroll_kind::SCROLLS;
@@ -140,7 +140,7 @@ fn random_syllable() -> &'static str {
 	SYLLABLES[get_rand(1, MAXSYLLABLES - 1)]
 }
 
-pub unsafe fn inventory(pack: &object, filter: InventoryFilter) {
+pub unsafe fn inventory(pack: &object, filter: PackFilter) {
 	let mut obj = pack.next_object;
 	if obj.is_null() {
 		message("your pack is empty", 0);
@@ -387,53 +387,36 @@ fn take_unused<const N: usize>(used: &mut [bool; N]) -> usize {
 	j
 }
 
-pub unsafe fn single_inv(mut ichar: libc::c_short) {
-	let mut ch: libc::c_short = 0;
-	let mut desc: [libc::c_char; 80] = [0; 80];
-	let mut obj: *mut object = 0 as *mut object;
-	ch = (if ichar as i64 != 0 {
-		ichar as i64
+pub unsafe fn single_inv(ichar: Option<char>) {
+	let ch = if let Some(ichar) = ichar {
+		ichar
 	} else {
-		pack_letter(
-			"inventory what?",
-			0o777 as i64 as libc::c_ushort as i64,
-		)
-	}) as libc::c_short;
-	if ch as i64 == '\u{1b}' as i32 {
+		pack_letter("inventory what?", AllObjects)
+	};
+	if ch == CANCEL {
 		return;
 	}
-	obj = get_letter_object(ch as i64);
+
+	let obj = get_letter_object(ch);
 	if obj.is_null() {
 		message("no such item.", 0);
-		return;
-	}
-	desc[0 as i64 as usize] = ch as libc::c_char;
-	desc[1
-		as usize] = (if (*obj).what_is as i64
-		& 0o1 as libc::c_ushort as i64 != 0
-		&& (*obj).is_protected as i64 != 0
-	{
-		'}' as i32
 	} else {
-		')' as i32
-	}) as libc::c_char;
-	desc[2 as libc::c_int as usize] = ' ' as i32 as libc::c_char;
-	desc[3 as libc::c_int as usize] = 0 as libc::c_int as libc::c_char;
-	get_desc(obj, desc.as_mut_ptr().offset(3 as libc::c_int as isize));
-	message(desc.as_mut_ptr(), 0 as libc::c_int);
-	panic!("Reached end of non-void function without returning");
+		let closing_symbol = if (*obj).what_is.what_is() == Armor && (*obj).is_protected != 0 { '}' } else { ')' };
+		let desc = format!("{}{} {}", ch, closing_symbol, get_desc(&*obj));
+		message(&desc, 0);
+	}
 }
 
 pub unsafe fn get_id_table(obj: &object) -> Vec<&'static id> {
 	match obj.what_is {
 		WhatIsOrDisguise::WhatIs(what_is) => {
 			match what_is {
-				Scroll => &id_scrolls,
-				Potion => &id_potions,
-				Wand => &id_wands,
-				Ring => &id_rings,
-				Weapon => &id_weapons,
-				Armor => &id_armors,
+				Scroll => &id_scrolls[..],
+				Potion => &id_potions[..],
+				Wand => &id_wands[..],
+				Ring => &id_rings[..],
+				Weapon => &id_weapons[..],
+				Armor => &id_armors[..],
 				_ => &[],
 			}
 		}
@@ -442,23 +425,16 @@ pub unsafe fn get_id_table(obj: &object) -> Vec<&'static id> {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn inv_armor_weapon(mut is_weapon: libc::c_char) -> libc::c_int {
+pub unsafe extern "C" fn inv_armor_weapon(is_weapon: libc::c_char) {
 	if is_weapon != 0 {
-		if !(rogue.weapon).is_null() {
-			single_inv((*rogue.weapon).ichar as libc::c_int);
+		if !rogue.weapon.is_null() {
+			single_inv(Some((*rogue.weapon).ichar));
 		} else {
-			message(
-				b"not wielding anything\0" as *const u8 as *const libc::c_char,
-				0 as libc::c_int,
-			);
+			message("not wielding anything", 0);
 		}
-	} else if !(rogue.armor).is_null() {
-		single_inv((*rogue.armor).ichar as libc::c_int);
+	} else if !rogue.armor.is_null() {
+		single_inv(Some((*rogue.armor).ichar));
 	} else {
-		message(
-			b"not wearing anything\0" as *const u8 as *const libc::c_char,
-			0 as libc::c_int,
-		);
+		message("not wearing anything", 0);
 	}
-	panic!("Reached end of non-void function without returning");
 }

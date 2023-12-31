@@ -1,7 +1,6 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
 use libc::{c_short, strcpy, strlen};
-use InventoryFilter::Some;
 use crate::{get_input_line, message, mv_aquatars, print_stats};
 use crate::objects::place_at;
 
@@ -12,8 +11,9 @@ extern "C" {
 
 use crate::prelude::*;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
-use crate::prelude::object_what::{InventoryFilter, ObjectWhat};
-use crate::prelude::object_what::ObjectWhat::{Amulet, Armor, Food, Potion, Ring, Scroll, Wand, Weapon};
+use crate::prelude::object_what::{PackFilter};
+use crate::prelude::object_what::ObjectWhat::{Armor, Potion, Ring, Scroll, Wand};
+use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
 
 #[no_mangle]
 pub static mut curse_message: &'static str = "you can't, it appears to be cursed";
@@ -132,10 +132,7 @@ pub unsafe extern "C" fn drop_0() {
 		message("you have nothing to drop", 0 as i64);
 		return;
 	}
-	ch = pack_letter(
-		b"drop what?\0" as *const u8 as *const libc::c_char,
-		0o777 as i64 as libc::c_ushort as i64,
-	) as libc::c_short;
+	ch = pack_letter("drop what?", AllObjects) as libc::c_short;
 	if ch as i64 == '\u{1b}' as i32 {
 		return;
 	}
@@ -246,36 +243,40 @@ pub unsafe fn wait_for_ack() {
 	while rgetchar() != ' ' {}
 }
 
-pub unsafe fn pack_letter(prompt: &str, mut mask: ObjectWhat) -> char {
-	// TODO Fix this!!!!  Also is_pack_letter.
-	let tmask = mask.clone();
-	if !mask_pack(&*rogue.pack, mask.clone()) {
+pub unsafe fn pack_letter(prompt: &str, filter: PackFilter) -> char {
+	if !mask_pack(&*rogue.pack, filter.clone()) {
 		message("nothing appropriate", 0);
 		return CANCEL;
 	}
-	let mut ch = 0 as char;
+
 	loop {
 		message(prompt, 0);
-
-		loop {
-			ch = rgetchar() as u8 as char;
-			if !is_pack_letter(&mut ch, &mut mask) {
-				sound_bell();
-			} else {
-				break;
+		let pack_op = {
+			let mut pack_op = None;
+			loop {
+				let ch = rgetchar() as u8 as char;
+				pack_op = get_pack_op(ch, filter.clone());
+				if pack_op.is_none() {
+					sound_bell();
+				} else {
+					break;
+				}
+			}
+			pack_op.expect("some pack operation")
+		};
+		check_message();
+		match pack_op {
+			PackOp::List(filter) => {
+				inventory(&*rogue.pack, filter);
+			}
+			PackOp::Cancel => {
+				return CANCEL;
+			}
+			PackOp::Select(letter) => {
+				return letter;
 			}
 		}
-
-		if ch == LIST {
-			check_message();
-			inventory(&*rogue.pack, mask.clone());
-		} else {
-			break;
-		}
-		mask = tmask.clone();
 	}
-	check_message();
-	return ch;
 }
 
 #[no_mangle]
@@ -319,10 +320,7 @@ pub unsafe extern "C" fn wear() -> i64 {
 		);
 		return;
 	}
-	ch = pack_letter(
-		b"wear what?\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-		0o1 as libc::c_ushort as i64,
-	) as libc::c_short;
+	ch = pack_letter("wear what?", Armors) as libc::c_short;
 	if ch as i64 == '\u{1b}' as i32 {
 		return;
 	}
@@ -365,7 +363,7 @@ pub unsafe extern "C" fn wield() {
 		message(curse_message, 0);
 		return;
 	}
-	let ch = pack_letter(b"wield what?\0" as *const u8 as *const libc::c_char as *mut libc::c_char, Some(Weapon));
+	let ch = pack_letter("wield what?", Weapons);
 
 	if ch == CANCEL {
 		return;
@@ -407,13 +405,7 @@ pub unsafe extern "C" fn call_it() -> i64 {
 	let mut obj: *mut object = 0 as *mut object;
 	let mut id_table: *mut id = 0 as *mut id;
 	let mut buf: [libc::c_char; 32] = [0; 32];
-	ch = pack_letter(
-		b"call what?\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
-		0o4 as i64 as libc::c_ushort as i64
-			| 0o10 as i64 as libc::c_ushort as i64
-			| 0o100 as i64 as libc::c_ushort as i64
-			| 0o200 as i64 as libc::c_ushort as i64,
-	) as libc::c_short;
+	ch = pack_letter("call what?", AnyFrom(vec![Scroll, Potion, Wand, Ring])) as libc::c_short;
 	if ch as i64 == '\u{1b}' as i32 {
 		return;
 	}
@@ -459,37 +451,43 @@ pub unsafe extern "C" fn call_it() -> i64 {
 }
 
 
-pub unsafe fn mask_pack(mut pack: *mut object, mask: InventoryFilter) -> bool {
-	while !((*pack).next_object).is_null() {
-		pack = (*pack).next_object;
-		if mask.includes((*pack).what_is.what_is()) {
+pub unsafe fn mask_pack(pack: *const object, mask: PackFilter) -> bool {
+	let mut next = (*pack).next_object;
+	while !next.is_null() {
+		let what = (*next).what_is.what_is();
+		if mask.includes(what) {
 			return true;
 		}
+		next = (*next).next_object;
 	}
 	return false;
 }
 
-pub fn is_pack_letter(c: &mut char, mask: &mut InventoryFilter) -> bool {
-	if (*c == '?') || (*c == '!') || (*c == ':') || (*c == '=') || (*c == ')') || (*c == ']') || (*c == '/') || (*c == ',') {
-		*mask = match c {
-			'?' => Some(vec![Scroll]),
-			'!' => Some(vec![Potion]),
-			':' => Some(vec![Food]),
-			')' => Some(vec![Weapon]),
-			']' => Some(vec![Armor]),
-			'/' => Some(vec![Wand]),
-			'=' => Some(vec![Ring]),
-			',' => Some(vec![Amulet]),
-			_ => unreachable!("match all chars"),
-		};
-		*c = LIST;
-		return true;
+pub enum PackOp {
+	Cancel,
+	Select(char),
+	List(PackFilter),
+}
+
+pub fn get_pack_op(c: char, default_filter: PackFilter) -> Option<PackOp> {
+	match c {
+		LIST => Some(PackOp::List(default_filter)),
+		CANCEL => Some(PackOp::Cancel),
+		'?' => Some(PackOp::List(Scrolls)),
+		'!' => Some(PackOp::List(Potions)),
+		':' => Some(PackOp::List(Foods)),
+		')' => Some(PackOp::List(Weapons)),
+		']' => Some(PackOp::List(Armors)),
+		'/' => Some(PackOp::List(Wands)),
+		'=' => Some(PackOp::List(Rings)),
+		',' => Some(PackOp::List(Amulets)),
+		'a'..='z' => Some(PackOp::Select(c)),
+		_ => None
 	}
-	return ((*c >= 'a') && (*c <= 'z')) || (*c == CANCEL) || (*c == LIST);
 }
 
 pub unsafe fn has_amulet() -> bool {
-	mask_pack(&mut rogue.pack, Some(vec![Amulet]))
+	mask_pack(&rogue.pack, Amulets)
 }
 
 #[no_mangle]
