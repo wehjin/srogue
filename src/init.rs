@@ -28,7 +28,6 @@ use std::{io};
 use std::io::Write;
 use libc::c_short;
 use settings::nick_name;
-use WhatIsOrDisguise::WhatIs;
 use crate::{console, settings};
 use crate::prelude::*;
 use crate::prelude::armor_kind::RINGMAIL;
@@ -191,7 +190,7 @@ unsafe fn player_init() {
 	let obj = alloc_object();           /* initial armor */
 	{
 		let obj: &mut obj = &mut *obj;
-		obj.what_is = WhatIs(Armor);
+		obj.what_is = (Armor);
 		obj.which_kind = RINGMAIL;
 		obj.class = RINGMAIL as isize + 2;
 		obj.is_protected = 0;
@@ -203,7 +202,7 @@ unsafe fn player_init() {
 	let obj = alloc_object();           /* initial weapons */
 	{
 		let obj: &mut obj = &mut *obj;
-		obj.what_is = WhatIs(Weapon);
+		obj.what_is = (Weapon);
 		obj.which_kind = MACE;
 		obj.damage = "2d3";
 		obj.hit_enchant = 1;
@@ -216,7 +215,7 @@ unsafe fn player_init() {
 	let obj = alloc_object();
 	{
 		let obj: &mut obj = &mut *obj;
-		obj.what_is = WhatIs(Weapon);
+		obj.what_is = (Weapon);
 		obj.which_kind = BOW;
 		obj.damage = "1d2";
 		obj.hit_enchant = 1;
@@ -228,7 +227,7 @@ unsafe fn player_init() {
 	let obj = alloc_object();
 	{
 		let obj: &mut obj = &mut *obj;
-		obj.what_is = WhatIs(Weapon);
+		obj.what_is = (Weapon);
 		obj.which_kind = ARROW;
 		obj.quantity = get_rand(25, 35) as c_short;
 		obj.damage = "1d2";

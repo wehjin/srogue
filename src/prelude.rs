@@ -134,7 +134,9 @@ pub mod item_usage {
 }
 
 pub mod object_what {
-	#[derive(Copy, Clone, Eq, PartialEq)]
+	use serde::Serialize;
+
+	#[derive(Copy, Clone, Eq, PartialEq, Serialize)]
 	pub enum ObjectWhat {
 		Armor,
 		Weapon,

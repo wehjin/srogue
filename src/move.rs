@@ -2,8 +2,6 @@
 
 extern "C" {
 	pub type ldat;
-	static mut regeneration: libc::c_short;
-	static mut auto_search: libc::c_short;
 }
 
 use libc::{c_short, strcpy, strlen};
@@ -13,7 +11,7 @@ use crate::odds::R_TELE_PERCENT;
 use crate::prelude::*;
 use crate::prelude::object_what::ObjectWhat::Gold;
 use crate::prelude::SpotFlag::{Door, Hidden, Monster, Nothing, Object, Stairs, Trap, Tunnel};
-use crate::prelude::stat_const::STAT_HUNGER;
+use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
 use crate::settings::jump;
 
@@ -45,14 +43,14 @@ pub enum MoveResult {
 
 
 pub unsafe fn one_move_rogue(dirch: char, pickup: bool) -> MoveResult {
-	let dirch = if confused { Move::random8().to_char() } else { dirch };
+	let dirch = if confused != 0 { Move::random8().to_char() } else { dirch };
 	let mut row = rogue.row;
 	let mut col = rogue.col;
 	get_dir_rc(dirch, &mut row, &mut col, true);
 	if !can_move(rogue.row as i64, rogue.col as i64, row, col) {
 		return MoveFailed;
 	}
-	if being_held || bear_trap {
+	if being_held || bear_trap > 0 {
 		if !Monster.is_set(dungeon[row as usize][col as usize]) {
 			if being_held {
 				message("you are being held", 1);
@@ -98,14 +96,14 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool) -> MoveResult {
 	rogue.row = row;
 	rogue.col = col;
 	if Object.is_set(dungeon[row as usize][col as usize]) {
-		if levitate && pickup {
+		if levitate != 0 && pickup {
 			return StoppedOnSomething;
 		}
-		if pickup && !levitate {
+		if pickup && levitate == 0 {
 			let mut status = 0;
 			let obj = pick_up(row, col, &mut status);
 			if !obj.is_null() {
-				if (*obj).what_is.what_is() == Gold {
+				if (*obj).what_is == Gold {
 					free_object(obj);
 					return not_in_pack(&get_desc(&*obj));
 				} else {
@@ -121,7 +119,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool) -> MoveResult {
 			return move_on(row, col);
 		}
 	} else if SpotFlag::is_any_set(&vec![Door, Stairs, Trap], dungeon[row as usize][col as usize]) {
-		if !levitate && Trap.is_set(dungeon[row as usize][col as usize]) {
+		if levitate == 0 && Trap.is_set(dungeon[row as usize][col as usize]) {
 			trap_player(row, col);
 		}
 		reg_move();
@@ -148,7 +146,7 @@ unsafe fn mved() -> MoveResult {
 		/* fainted from hunger */
 		return StoppedOnSomething;
 	} else {
-		return if confused { StoppedOnSomething } else { Moved };
+		return if confused != 0 { StoppedOnSomething } else { Moved };
 	}
 }
 
@@ -209,10 +207,10 @@ pub unsafe extern "C" fn is_passable(
 }
 
 pub unsafe fn next_to_something(drow: i64, dcol: i64) -> bool {
-	if confused {
+	if confused != 0 {
 		return true;
 	}
-	if blind {
+	if blind != 0 {
 		return false;
 	}
 	let mut row = 0;
@@ -440,22 +438,19 @@ pub unsafe extern "C" fn reg_move() -> libc::c_char {
 			if dungeon[rogue.row as usize][rogue.col as usize] as libc::c_int
 				& 0o400 as libc::c_int as libc::c_ushort as libc::c_int != 0
 			{
-				trap_player(rogue.row as libc::c_int, rogue.col as libc::c_int);
+				trap_player(rogue.row, rogue.col);
 			}
 		}
 	}
-	if haste_self != 0 {
+	if haste_self > 0 {
 		haste_self -= 1;
 		if haste_self == 0 {
-			message(
-				b"you feel yourself slowing down\0" as *const u8 as *const libc::c_char,
-				0 as libc::c_int,
-			);
+			message("you feel yourself slowing down", 0);
 		}
 	}
 	heal();
-	if auto_search as libc::c_int > 0 as libc::c_int {
-		search(auto_search as libc::c_int, auto_search as libc::c_int);
+	if auto_search > 0 {
+		search(auto_search, auto_search > 0);
 	}
 	return fainted;
 }
@@ -474,4 +469,48 @@ pub unsafe extern "C" fn rest(mut count: libc::c_int) -> libc::c_int {
 		i;
 	}
 	panic!("Reached end of non-void function without returning");
+}
+
+
+pub unsafe fn heal() {
+	static mut heal_exp: isize = -1;
+	static mut n: isize = 0;
+	static mut c: isize = 0;
+	static mut alt: bool = false;
+
+	if rogue.hp_current == rogue.hp_max {
+		c = 0;
+		return;
+	}
+	if rogue.exp != heal_exp {
+		heal_exp = rogue.exp;
+		match heal_exp {
+			1 => { n = 20 }
+			2 => { n = 18 }
+			3 => { n = 17 }
+			4 => { n = 14 }
+			5 => { n = 13 }
+			6 => { n = 10 }
+			7 => { n = 9 }
+			8 => { n = 8 }
+			9 => { n = 7 }
+			10 => { n = 4 }
+			11 => { n = 3 }
+			_ => { n = 2; }
+		}
+	}
+	c += 1;
+	if c >= n {
+		c = 0;
+		rogue.hp_current += 1;
+		alt = !alt;
+		if alt {
+			rogue.hp_current += 1;
+		}
+		rogue.hp_current += regeneration;
+		if rogue.hp_current > rogue.hp_max {
+			rogue.hp_current = rogue.hp_max;
+		}
+		print_stats(STAT_HP);
+	}
 }

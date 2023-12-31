@@ -315,8 +315,8 @@ pub unsafe extern "C" fn clear_level() -> i64 {
 	}
 	see_invisible = false;
 	detect_monster = see_invisible;
-	bear_trap = false;
-	being_held = bear_trap;
+	bear_trap = 0;
+	being_held = bear_trap > 0;
 	party_room = NO_ROOM;
 	rogue.col = -1;
 	rogue.row = rogue.col;
@@ -727,7 +727,7 @@ pub unsafe extern "C" fn drop_check() -> bool {
 	if dungeon[rogue.row as usize][rogue.col as usize] as libc::c_int
 		& 0o4 as libc::c_int as c_ushort as libc::c_int != 0
 	{
-		if levitate {
+		if levitate != 0 {
 			message("you're floating in the air!", 0);
 			return false;
 		}

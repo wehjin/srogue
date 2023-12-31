@@ -31,10 +31,10 @@ pub type WINDOW = _win_st;
 pub type attr_t = ncurses::chtype;
 
 pub static mut halluc: usize = 0;
-pub static mut blind: bool = false;
-pub static mut confused: bool = false;
-pub static mut levitate: bool = false;
-pub static mut haste_self: bool = false;
+pub static mut blind: usize = 0;
+pub static mut confused: usize = 0;
+pub static mut levitate: usize = 0;
+pub static mut haste_self: usize = 0;
 pub static mut see_invisible: bool = false;
 pub static mut extra_hp: isize = 0;
 #[no_mangle]
@@ -373,12 +373,12 @@ pub unsafe extern "C" fn eat() {
 }
 
 pub unsafe fn tele() {
-	mvaddch(rogue.row as i32, rogue.col as i32, get_dungeon_char(rogue.row as i64, rogue.col as i64));
+	mvaddch(rogue.row as i32, rogue.col as i32, get_dungeon_char(rogue.row, rogue.col));
 
 	if (cur_room >= 0) {
 		darken_room(cur_room);
 	}
-	put_player(get_room_number(rogue.row as i64, rogue.col as i64) as c_short);
+	put_player(get_room_number(rogue.row, rogue.col));
 	being_held = false;
 	bear_trap = false;
 }
@@ -436,6 +436,19 @@ pub unsafe fn unhallucinate() {
 	message("everything looks SO boring now", 1);
 }
 
+pub unsafe fn unblind()
+{
+	blind = 0;
+	message("the veil of darkness lifts", 1);
+	relight();
+	if halluc {
+		hallucinate();
+	}
+	if detect_monster {
+		show_monsters();
+	}
+}
+
 pub unsafe fn relight() {
 	if cur_room == PASSAGE {
 		light_passage(rogue.row, rogue.col);
@@ -452,10 +465,20 @@ pub unsafe extern "C" fn get_ench_color() -> *mut libc::c_char {
 		return ((*id_potions
 			.as_mut_ptr()
 			.offset(
-				get_rand(0 as libc::c_int, 14 as libc::c_int - 1 as libc::c_int) as isize,
+				get_rand(0, 14 - 1) as isize,
 			))
 			.title)
 			.as_mut_ptr();
 	}
 	return b"blue \0" as *const u8 as *const libc::c_char as *mut libc::c_char;
+}
+
+pub unsafe fn confuse() {
+	confused += get_rand(12, 22);
+}
+
+pub unsafe fn unconfuse() {
+	confused = 0;
+	let msg = format!("you feel less {} now", if halluc > 0 { "trippy" } else { "confused" });
+	message(&msg, 1);
 }

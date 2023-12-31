@@ -21,8 +21,8 @@ use crate::prelude::*;
 pub use flags::MonsterFlags;
 use SpotFlag::{Door, Monster};
 use crate::{objects, odds, pack};
-use crate::objects::WhatIsOrDisguise::Disguise;
 use crate::prelude::flags::MONSTERS;
+use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::Scroll;
 use crate::prelude::SpotFlag::{Floor, Object, Stairs, Tunnel};
 
@@ -74,6 +74,7 @@ pub static mut level_monsters: object = obj {
 	is_cursed: 0,
 	class: 0,
 	identified: false,
+	stationary_damage: 0,
 	which_kind: 0,
 	o_row: 0,
 	o_col: 0,
@@ -85,7 +86,8 @@ pub static mut level_monsters: object = obj {
 	trow: 0,
 	tcol: 0,
 	hit_enchant: 0,
-	what_is: Disguise(0),
+	what_is: ObjectWhat::None,
+	disguise: 0,
 	picked_up: 0,
 	in_use_flags: 0,
 	next_object: 0 as *const obj as *mut obj,
@@ -134,6 +136,7 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 18,
 			class: 100,
 			identified: false,
+			stationary_damage: 0,
 			which_kind: 0,
 			o_row: 0,
 			o_col: 0,
@@ -145,7 +148,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -163,6 +167,7 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 8,
 			class: 60,
 			identified: false,
+			stationary_damage: 0,
 			which_kind: 0,
 			o_row: 0,
 			o_col: 0,
@@ -174,7 +179,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -192,6 +198,7 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 16,
 			class: 85,
 			identified: false,
+			stationary_damage: 0,
 			which_kind: 10,
 			o_row: 0,
 			o_col: 0,
@@ -203,7 +210,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -221,7 +229,9 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 126,
 			class: 100,
 			identified: false,
-			which_kind: 90,
+			stationary_damage: 0,
+			which_kind:
+			90,
 			o_row: 0,
 			o_col: 0,
 			o: 0,
@@ -232,7 +242,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -250,6 +261,7 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 7,
 			class: 65,
 			identified: false,
+			stationary_damage: 0,
 			which_kind: 0,
 			o_row: 0,
 			o_col: 0,
@@ -261,7 +273,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -279,6 +292,7 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 126,
 			class: 80,
 			identified: false,
+			stationary_damage: 0,
 			which_kind: 0,
 			o_row: 0,
 			o_col: 0,
@@ -290,7 +304,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -308,7 +323,9 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 126,
 			class: 85,
 			identified: false,
-			which_kind: 10,
+			stationary_damage: 0,
+			which_kind:
+			10,
 			o_row: 0,
 			o_col: 0,
 			o: 0,
@@ -319,7 +336,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -337,6 +355,7 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 10,
 			class: 67,
 			identified: false,
+			stationary_damage: 0,
 			which_kind: 0,
 			o_row: 0,
 			o_col: 0,
@@ -348,7 +367,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -366,6 +386,7 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 11,
 			class: 68,
 			identified: false,
+			stationary_damage: 0,
 			which_kind: 0,
 			o_row: 0,
 			o_col: 0,
@@ -377,7 +398,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -395,6 +417,7 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 126,
 			class: 100,
 			identified: false,
+			stationary_damage: 0,
 			which_kind: 0,
 			o_row: 0,
 			o_col: 0,
@@ -406,7 +429,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -424,6 +448,7 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 6,
 			class: 60,
 			identified: false,
+			stationary_damage: 0,
 			which_kind: 0,
 			o_row: 0,
 			o_col: 0,
@@ -435,7 +460,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -453,6 +479,7 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 16,
 			class: 75,
 			identified: false,
+			stationary_damage: 0,
 			which_kind: 0,
 			o_row: 0,
 			o_col: 0,
@@ -464,7 +491,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -482,7 +510,9 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 126,
 			class: 85,
 			identified: false,
-			which_kind: 25,
+			stationary_damage: 0,
+			which_kind:
+			25,
 			o_row: 0,
 			o_col: 0,
 			o: 0,
@@ -493,7 +523,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -511,7 +542,9 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 19,
 			class: 75,
 			identified: false,
-			which_kind: 100,
+			stationary_damage: 0,
+			which_kind:
+			100,
 			o_row: 0,
 			o_col: 0,
 			o: 0,
@@ -522,7 +555,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -540,7 +574,9 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 13,
 			class: 70,
 			identified: false,
-			which_kind: 10,
+			stationary_damage: 0,
+			which_kind:
+			10,
 			o_row: 0,
 			o_col: 0,
 			o: 0,
@@ -551,7 +587,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -569,7 +606,9 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 24,
 			class: 80,
 			identified: false,
-			which_kind: 50,
+			stationary_damage: 0,
+			which_kind:
+			50,
 			o_row: 0,
 			o_col: 0,
 			o: 0,
@@ -580,7 +619,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -598,7 +638,9 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 17,
 			class: 78,
 			identified: false,
-			which_kind: 20,
+			stationary_damage: 0,
+			which_kind:
+			20,
 			o_row: 0,
 			o_col: 0,
 			o: 0,
@@ -609,7 +651,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -627,6 +670,7 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 12,
 			class: 70,
 			identified: false,
+			stationary_damage: 0,
 			which_kind: 0,
 			o_row: 0,
 			o_col: 0,
@@ -638,7 +682,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -656,6 +701,7 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 9,
 			class: 50,
 			identified: false,
+			stationary_damage: 0,
 			which_kind: 0,
 			o_row: 0,
 			o_col: 0,
@@ -667,7 +713,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -685,7 +732,9 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 22,
 			class: 75,
 			identified: false,
-			which_kind: 33,
+			stationary_damage: 0,
+			which_kind:
+			33,
 			o_row: 0,
 			o_col: 0,
 			o: 0,
@@ -696,7 +745,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -714,7 +764,9 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 26,
 			class: 85,
 			identified: false,
-			which_kind: 33,
+			stationary_damage: 0,
+			which_kind:
+			33,
 			o_row: 0,
 			o_col: 0,
 			o: 0,
@@ -725,7 +777,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -743,7 +796,9 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 126,
 			class: 85,
 			identified: false,
-			which_kind: 18,
+			stationary_damage: 0,
+			which_kind:
+			18,
 			o_row: 0,
 			o_col: 0,
 			o: 0,
@@ -754,7 +809,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -772,6 +828,7 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 23,
 			class: 75,
 			identified: false,
+			stationary_damage: 0,
 			which_kind: 0,
 			o_row: 0,
 			o_col: 0,
@@ -783,7 +840,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -801,6 +859,7 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 25,
 			class: 75,
 			identified: false,
+			stationary_damage: 0,
 			which_kind: 0,
 			o_row: 0,
 			o_col: 0,
@@ -812,7 +871,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -830,7 +890,9 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 20,
 			class: 80,
 			identified: false,
-			which_kind: 20,
+			stationary_damage: 0,
+			which_kind:
+			20,
 			o_row: 0,
 			o_col: 0,
 			o: 0,
@@ -841,7 +903,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -859,6 +922,7 @@ pub static mut mon_tab: [object; 26] = [
 			is_cursed: 14,
 			class: 69,
 			identified: false,
+			stationary_damage: 0,
 			which_kind: 0,
 			o_row: 0,
 			o_col: 0,
@@ -870,7 +934,8 @@ pub static mut mon_tab: [object; 26] = [
 			trow: 0,
 			tcol: 0,
 			hit_enchant: 0,
-			what_is: Disguise(0),
+			what_is: ObjectWhat::None,
+			disguise: 0,
 			picked_up: 0,
 			in_use_flags: 0,
 			next_object: 0 as *const obj as *mut obj,
@@ -921,7 +986,7 @@ pub unsafe extern "C" fn gr_monster(
 	}
 	*monster = mon_tab[mn as usize];
 	if (*monster).m_flags.imitates {
-		(*monster).what_is = Disguise(gr_obj_char() as libc::c_ushort);
+		(*monster).disguise = gr_obj_char() as libc::c_ushort;
 	}
 	if cur_level as libc::c_int > 26 as libc::c_int + 2 as libc::c_int {
 		(*monster).m_flags.hasted = true;
@@ -1007,8 +1072,7 @@ pub unsafe extern "C" fn gmc_row_col(row: i64, col: i64) -> ncurses::chtype {
 	if !monster.is_null() {
 		let invisible = (*monster).m_flags.invisible;
 		let bypass_invisible = detect_monster || see_invisible || r_see_invisible;
-		let is_blind = blind;
-		if (invisible && !bypass_invisible) || is_blind {
+		if (invisible && !bypass_invisible) || (blind != 0) {
 			(*monster).trail_char()
 		} else {
 			if (*monster).m_flags.imitates {
@@ -1025,7 +1089,7 @@ pub unsafe extern "C" fn gmc_row_col(row: i64, col: i64) -> ncurses::chtype {
 #[no_mangle]
 pub unsafe extern "C" fn gmc(mut monster: *mut object) -> chtype {
 	let defeat_invisibility = detect_monster || see_invisible || r_see_invisible;
-	if ((*monster).m_flags.invisible && !defeat_invisibility) || (blind) {
+	if ((*monster).m_flags.invisible && !defeat_invisibility) || (blind != 0) {
 		(*monster).trail_char()
 	} else if (*monster).m_flags.imitates {
 		(*monster).disguise()
@@ -1174,7 +1238,7 @@ pub unsafe fn move_mon_to(monster: &mut object, row: i64, col: i64) {
 		}
 	}
 	monster.set_trail_char(ncurses::mvinch(row as i32, col as i32));
-	if !blind && ((detect_monster) || rogue_can_see(row, col)) {
+	if blind == 0 && ((detect_monster) || rogue_can_see(row, col)) {
 		let bypass_invisibility = (detect_monster) || (see_invisible) || (r_see_invisible);
 		if !monster.m_flags.invisible || bypass_invisibility {
 			ncurses::mvaddch(row as i32, col as i32, gmc(monster));
@@ -1183,7 +1247,7 @@ pub unsafe fn move_mon_to(monster: &mut object, row: i64, col: i64) {
 	if Door.is_set(dungeon[row as usize][col as usize])
 		&& (get_room_number(row as i64, col as i64) != cur_room as i64)
 		&& Floor.is_only(dungeon[monster.row as usize][monster.col as usize])
-		&& !blind {
+		&& blind == 0 {
 		ncurses::mvaddch((monster.row as usize) as i32, (monster.col as usize) as i32, chtype::from(' '));
 	}
 	if Door.is_set(dungeon[row as usize][col as usize]) {
@@ -1226,7 +1290,7 @@ pub unsafe fn mon_can_go(monster: &obj, row: i64, col: i64) -> bool {
 	}
 	if Object.is_set(dungeon[row as usize][col as usize]) {
 		let obj = objects::object_at(&mut level_objects, row, col);
-		if (*obj).what_is.what_is() == Scroll && (*obj).which_kind == scroll_kind::SCARE_MONSTER {
+		if (*obj).what_is == Scroll && (*obj).which_kind == scroll_kind::SCARE_MONSTER {
 			return false;
 		}
 	}
@@ -1278,7 +1342,7 @@ pub unsafe extern "C" fn mon_name(monster: *mut object) -> String {
 
 pub unsafe fn player_hallucinating() -> bool { halluc != 0 }
 
-pub unsafe fn player_is_blind() -> bool { blind }
+pub unsafe fn player_is_blind() -> bool { blind != 0 }
 
 pub unsafe fn bypass_invisibility() -> bool { detect_monster || see_invisible || r_see_invisible }
 
@@ -1328,7 +1392,7 @@ pub unsafe extern "C" fn wanderer() {
 #[no_mangle]
 pub unsafe extern "C" fn show_monsters() {
 	detect_monster = true;
-	if blind {
+	if blind != 0 {
 		return;
 	}
 	let mut monster: *mut object = level_monsters.next_object;
@@ -1389,7 +1453,7 @@ pub unsafe fn rogue_can_see(row: i64, col: i64) -> bool {
 	let in_current_room = get_room_number(row as i64, col as i64) == cur_room as i64;
 	let not_in_maze = rooms[cur_room as usize].room_type != RoomType::Maze;
 	let is_very_close = rogue_is_around(row, col);
-	!blind && ((in_current_room && not_in_maze) || is_very_close)
+	blind == 0 && ((in_current_room && not_in_maze) || is_very_close)
 }
 
 pub unsafe fn move_confused(monster: &mut object) -> bool {

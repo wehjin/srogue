@@ -45,7 +45,7 @@ pub static mut traps: [trap; 10] = [tr {
 }; 10];
 #[no_mangle]
 pub static mut trap_door: libc::c_char = 0 as i64 as libc::c_char;
-pub static mut bear_trap: bool = false;
+pub static mut bear_trap: usize = 0;
 #[no_mangle]
 pub static mut trap_strings: [*mut libc::c_char; 12] = [
 	b"trap door\0" as *const u8 as *const libc::c_char as *mut libc::c_char,
@@ -334,7 +334,7 @@ pub unsafe extern "C" fn show_traps() -> libc::c_int {
 #[no_mangle]
 pub unsafe extern "C" fn search(
 	mut n: libc::c_short,
-	mut is_auto: libc::c_char,
+	is_auto: bool,
 ) -> libc::c_int {
 	let mut s: libc::c_short = 0;
 	let mut i: libc::c_short = 0;

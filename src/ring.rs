@@ -21,8 +21,7 @@ pub static mut r_rings: isize = 0;
 pub static mut add_strength: isize = 0;
 #[no_mangle]
 pub static mut e_rings: libc::c_short = 0;
-#[no_mangle]
-pub static mut regeneration: libc::c_short = 0;
+pub static mut regeneration: isize = 0;
 pub static mut ring_exp: isize = 0;
 #[no_mangle]
 pub static mut auto_search: libc::c_short = 0;

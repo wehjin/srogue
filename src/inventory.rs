@@ -151,7 +151,7 @@ pub unsafe fn inventory(pack: &object, filter: PackFilter) {
 		while !obj.is_null() {
 			{
 				let obj = &*obj;
-				let what = obj.what_is.what_is();
+				let what = obj.what_is;
 				if filter.includes(what) {
 					let close_char = if what == Armor && obj.is_protected != 0 { '}' } else { ')' };
 					let line = format!(" {}{} {}", obj.m_char() as u8 as char, close_char, get_desc(obj));
@@ -242,7 +242,7 @@ unsafe fn get_id_real(obj: &object) -> &String {
 }
 
 unsafe fn get_identified(obj: &object) -> String {
-	match obj.what_is.what_is() {
+	match obj.what_is {
 		Scroll | Potion => format!("{}{}{}", get_quantity(obj), name_of(obj), get_id_real(obj)),
 		Ring => {
 			let more_info = if (wizard || obj.identified) && (obj.which_kind == DEXTERITY || obj.which_kind == ADD_STRENGTH) {
@@ -268,14 +268,14 @@ unsafe fn get_identified(obj: &object) -> String {
 }
 
 unsafe fn get_called(obj: &object) -> String {
-	match obj.what_is.what_is() {
+	match obj.what_is {
 		Scroll | Potion | Wand | Ring => format!("{}{}called {}", get_quantity(obj), name_of(obj), get_title(obj)),
 		_ => panic!("invalid called object"),
 	}
 }
 
 unsafe fn get_unidentified(obj: &object) -> String {
-	let what = obj.what_is.what_is();
+	let what = obj.what_is;
 	match what {
 		Scroll => format!("{}{}entitled: {}", get_quantity(obj), name_of(obj), get_title(obj)),
 		Potion => format!("{}{}{}", get_quantity(obj), get_title(obj), name_of(obj)),
@@ -301,7 +301,7 @@ unsafe fn get_unidentified(obj: &object) -> String {
 }
 
 pub unsafe fn get_desc(obj: &object) -> String {
-	let what_is = obj.what_is.what_is();
+	let what_is = obj.what_is;
 	if what_is == Amulet {
 		return "the amulet of Yendor ".to_string();
 	}
@@ -401,7 +401,7 @@ pub unsafe fn single_inv(ichar: Option<char>) {
 	if obj.is_null() {
 		message("no such item.", 0);
 	} else {
-		let closing_symbol = if (*obj).what_is.what_is() == Armor && (*obj).is_protected != 0 { '}' } else { ')' };
+		let closing_symbol = if (*obj).what_is == Armor && (*obj).is_protected != 0 { '}' } else { ')' };
 		let desc = format!("{}{} {}", ch, closing_symbol, get_desc(&*obj));
 		message(&desc, 0);
 	}

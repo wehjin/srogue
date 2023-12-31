@@ -373,7 +373,7 @@ pub unsafe extern "C" fn wield() {
 		message("No such item.", 0);
 		return;
 	}
-	let what = (*obj).what_is.what_is();
+	let what = (*obj).what_is;
 	if what == Armor || what == Ring {
 		let desc = format!("you can't wield {}",
 		                   if what == Armor { "armor" } else { "rings" });
@@ -454,7 +454,7 @@ pub unsafe extern "C" fn call_it() -> i64 {
 pub unsafe fn mask_pack(pack: *const object, mask: PackFilter) -> bool {
 	let mut next = (*pack).next_object;
 	while !next.is_null() {
-		let what = (*next).what_is.what_is();
+		let what = (*next).what_is;
 		if mask.includes(what) {
 			return true;
 		}

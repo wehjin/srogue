@@ -10,7 +10,6 @@ extern "C" {
 use libc::{c_int, c_short};
 use ncurses::{addch, chtype};
 use serde::Serialize;
-use WhatIsOrDisguise::WhatIs;
 use crate::prelude::*;
 use crate::prelude::armor_kind::ARMORS;
 use crate::prelude::food_kind::{FRUIT, RATION};
@@ -46,7 +45,7 @@ pub struct id {
 	pub id_status: IdStatus,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize)]
 pub enum IdStatus {
 	Unidentified,
 	Identified,
@@ -58,51 +57,42 @@ pub struct SaveObj {
 	pub m_flags: MonsterFlags,
 	pub damage: String,
 	pub quantity: i16,
-	pub ichar: i16,
+	pub ichar: char,
 	pub kill_exp: isize,
 	pub is_protected: i16,
 	pub is_cursed: i16,
 	pub class: isize,
-	pub identified: i16,
+	pub identified: bool,
+	pub stationary_damage: isize,
 	pub which_kind: u16,
-	pub o_row: i16,
-	pub o_col: i16,
+	pub o_row: i64,
+	pub o_col: i64,
 	pub o: i16,
-	pub row: i16,
-	pub col: i16,
+	pub row: i64,
+	pub col: i64,
 	pub d_enchant: isize,
 	pub quiver: i16,
-	pub trow: i16,
-	pub tcol: i16,
+	pub trow: i64,
+	pub tcol: i64,
 	pub hit_enchant: i16,
-	pub what_is: WhatIsOrDisguise,
+	pub what_is: ObjectWhat,
+	pub disguise: u16,
 	pub picked_up: i16,
 	pub in_use_flags: u16,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
-pub enum WhatIsOrDisguise {
-	WhatIs(ObjectWhat),
-	Disguise(u16),
-}
-
-impl WhatIsOrDisguise {
-	pub fn what_is(&self) -> ObjectWhat {
-		match self {
-			WhatIs(object_what) => *object_what,
-			WhatIsOrDisguise::Disguise(_) => panic!("not a what_is"),
-		}
-	}
-}
-
 impl SaveObj {
 	pub unsafe fn option_save_obj(obj: *const object) -> Option<SaveObj> {
-		if obj.is_null() { None } else { Self::from_obj(&*obj) }
+		if obj.is_null() {
+			None
+		} else {
+			Some(Self::from_obj(&*obj))
+		}
 	}
 	pub fn from_obj(obj: &obj) -> Self {
 		Self {
 			m_flags: obj.m_flags,
-			damage: obj.to_string(),
+			damage: obj.damage.to_string(),
 			quantity: obj.quantity,
 			ichar: obj.ichar,
 			kill_exp: obj.kill_exp,
@@ -110,6 +100,7 @@ impl SaveObj {
 			is_cursed: obj.is_cursed,
 			class: obj.class,
 			identified: obj.identified,
+			stationary_damage: obj.stationary_damage,
 			which_kind: obj.which_kind,
 			o_row: obj.o_row,
 			o_col: obj.o_col,
@@ -122,6 +113,7 @@ impl SaveObj {
 			tcol: obj.tcol,
 			hit_enchant: obj.hit_enchant,
 			what_is: obj.what_is,
+			disguise: obj.disguise,
 			picked_up: obj.picked_up,
 			in_use_flags: obj.in_use_flags,
 		}
@@ -140,6 +132,7 @@ pub struct obj {
 	pub is_cursed: i16,
 	pub class: isize,
 	pub identified: bool,
+	pub stationary_damage: isize,
 	pub which_kind: u16,
 	pub o_row: i64,
 	pub o_col: i64,
@@ -151,7 +144,8 @@ pub struct obj {
 	pub trow: i64,
 	pub tcol: i64,
 	pub hit_enchant: i16,
-	pub what_is: WhatIsOrDisguise,
+	pub what_is: ObjectWhat,
+	pub disguise: u16,
 	pub picked_up: i16,
 	pub in_use_flags: u16,
 	pub next_object: *mut obj,
@@ -166,10 +160,10 @@ impl obj {
 	pub fn m_char(&self) -> chtype {
 		self.ichar as ncurses::chtype
 	}
-	pub fn stationary_damage(&self) -> isize { self.identified as isize }
+	pub fn stationary_damage(&self) -> isize { self.stationary_damage }
 
 	pub fn set_stationary_damage(&mut self, value: isize) {
-		self.identified = value as i16
+		self.stationary_damage = value;
 	}
 	pub fn first_level(&self) -> isize {
 		self.is_protected as isize
@@ -237,6 +231,7 @@ pub static mut level_objects: object = obj {
 	is_cursed: 0,
 	class: 0,
 	identified: false,
+	stationary_damage: 0,
 	which_kind: 0,
 	o_row: 0,
 	o_col: 0,
@@ -248,7 +243,8 @@ pub static mut level_objects: object = obj {
 	trow: 0,
 	tcol: 0,
 	hit_enchant: 0,
-	what_is: WhatIs(ObjectWhat::None),
+	what_is: ObjectWhat::None,
+	disguise: 0,
 	picked_up: 0,
 	in_use_flags: 0,
 	next_object: 0 as *const obj as *mut obj,
@@ -280,6 +276,7 @@ pub static mut rogue: fighter = {
 				is_cursed: 0,
 				class: 0,
 				identified: false,
+				stationary_damage: 0,
 				which_kind: 0,
 				o_row: 0,
 				o_col: 0,
@@ -291,7 +288,8 @@ pub static mut rogue: fighter = {
 				trow: 0,
 				tcol: 0,
 				hit_enchant: 0,
-				what_is: WhatIs(ObjectWhat::None),
+				what_is: ObjectWhat::None,
+				disguise: 0,
 				picked_up: 0,
 				in_use_flags: 0,
 				next_object: 0 as *const obj as *mut obj,
@@ -893,19 +891,19 @@ pub static mut id_rings: [id; RINGS] = {
 };
 
 #[no_mangle]
-pub unsafe extern "C" fn put_objects() -> i64 {
+pub unsafe extern "C" fn put_objects() {
 	let mut i: libc::c_short = 0;
 	let mut n: libc::c_short = 0;
 	let mut obj: *mut object = 0 as *mut object;
 	if (cur_level as i64) < max_level as i64 {
 		return;
 	}
-	n = (if coin_toss() != 0 {
+	n = (if coin_toss() {
 		get_rand(2 as i64, 4 as i64)
 	} else {
 		get_rand(3 as i64, 5 as i64)
 	}) as libc::c_short;
-	while rand_percent(33) != 0 {
+	while rand_percent(33) {
 		n += 1;
 		n;
 	}
@@ -973,27 +971,22 @@ pub unsafe extern "C" fn free_stuff(mut objlist: *mut object) -> i64 {
 }
 
 pub unsafe fn name_of(obj: &object) -> String {
-	match &obj.what_is {
-		WhatIs(what_is) => {
-			match what_is {
-				ObjectWhat::Armor => "armor ",
-				ObjectWhat::Weapon => match obj.which_kind {
-					weapon_kind::DART => if obj.quantity > 1 { "darts " } else { "dart " },
-					weapon_kind::ARROW => if obj.quantity > 1 { "arrows " } else { "arrow " },
-					weapon_kind::DAGGER => if obj.quantity > 1 { "daggers " } else { "dagger " },
-					weapon_kind::SHURIKEN => if obj.quantity > 1 { "shurikens " } else { "shuriken " },
-					_ => &id_weapons[obj.which_kind].title
-				},
-				ObjectWhat::Scroll => if obj.quantity > 1 { "scrolls " } else { "scroll " }
-				ObjectWhat::Potion => if obj.quantity > 1 { "potions " } else { "potion " }
-				ObjectWhat::Food => if obj.which_kind == RATION { "food " } else { &fruit(); }
-				ObjectWhat::Wand => if is_wood[obj.which_kind] { "staff " } else { "wand " },
-				ObjectWhat::Ring => "ring ",
-				ObjectWhat::Amulet => "amulet ",
-				_ => "unknown ",
-			}
-		}
-		WhatIsOrDisguise::Disguise(_) => "disguise ",
+	match obj.what_is {
+		ObjectWhat::Armor => "armor ",
+		ObjectWhat::Weapon => match obj.which_kind {
+			weapon_kind::DART => if obj.quantity > 1 { "darts " } else { "dart " },
+			weapon_kind::ARROW => if obj.quantity > 1 { "arrows " } else { "arrow " },
+			weapon_kind::DAGGER => if obj.quantity > 1 { "daggers " } else { "dagger " },
+			weapon_kind::SHURIKEN => if obj.quantity > 1 { "shurikens " } else { "shuriken " },
+			_ => &id_weapons[obj.which_kind].title
+		},
+		ObjectWhat::Scroll => if obj.quantity > 1 { "scrolls " } else { "scroll " }
+		ObjectWhat::Potion => if obj.quantity > 1 { "potions " } else { "potion " }
+		ObjectWhat::Food => if obj.which_kind == RATION { "food " } else { &fruit(); }
+		ObjectWhat::Wand => if is_wood[obj.which_kind] { "staff " } else { "wand " },
+		ObjectWhat::Ring => "ring ",
+		ObjectWhat::Amulet => "amulet ",
+		_ => "unknown ",
 	}.to_string()
 }
 
