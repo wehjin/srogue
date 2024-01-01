@@ -150,7 +150,7 @@ pub unsafe fn save_into_file(sfile: &str) {
 	}
 	md_ignore_signals();
 	xxx(true);
-	let save_data = data::from_statics(file_id as i32);
+	let save_data = data::from_statics(file_id);
 	let json = serde_json::to_string_pretty(&save_data).expect("serialize data");
 	let buf = json.as_bytes();
 	let write_failed = if let Err(_) = file.write(buf) {

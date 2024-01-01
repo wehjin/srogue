@@ -173,7 +173,7 @@ pub unsafe fn make_level() {
 					}
 				}
 			}
-			if is_all_connected() != 0 {
+			if is_all_connected() {
 				break;
 			}
 			j += 1;
