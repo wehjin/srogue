@@ -31,7 +31,7 @@ pub unsafe extern "C" fn add_to_pack(
 			free_object(obj);
 			return op;
 		} else {
-			(*obj).ichar = next_avail_ichar() as libc::c_short;
+			(*obj).ichar = next_avail_ichar();
 		}
 	}
 	if ((*pack).next_object).is_null() {

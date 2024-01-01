@@ -11,6 +11,7 @@ extern "C" {
 use ncurses::addch;
 use serde::Serialize;
 use crate::prelude::*;
+use crate::prelude::SpotFlag::{Floor, Monster};
 
 
 #[derive(Copy, Clone)]
@@ -181,8 +182,8 @@ pub unsafe extern "C" fn add_traps() -> libc::c_int {
 	let mut i: libc::c_short = 0;
 	let mut n: libc::c_short = 0;
 	let mut tries: libc::c_short = 0 as libc::c_int as libc::c_short;
-	let mut row: libc::c_short = 0;
-	let mut col: libc::c_short = 0;
+	let mut row: i64 = 0;
+	let mut col: i64 = 0;
 	if cur_level as libc::c_int <= 2 as libc::c_int {
 		n = 0 as libc::c_int as libc::c_short;
 	} else if cur_level as libc::c_int <= 7 as libc::c_int {
@@ -208,17 +209,13 @@ pub unsafe extern "C" fn add_traps() -> libc::c_int {
 		{
 			loop {
 				row = get_rand(
-					(*rooms.as_mut_ptr().offset(party_room as isize)).top_row
-						as libc::c_int + 1 as libc::c_int,
-					(*rooms.as_mut_ptr().offset(party_room as isize)).bottom_row
-						as libc::c_int - 1 as libc::c_int,
-				) as libc::c_short;
+					(*rooms.as_mut_ptr().offset(party_room as isize)).top_row + 1,
+					(*rooms.as_mut_ptr().offset(party_room as isize)).bottom_row - 1,
+				);
 				col = get_rand(
-					(*rooms.as_mut_ptr().offset(party_room as isize)).left_col
-						as libc::c_int + 1 as libc::c_int,
-					(*rooms.as_mut_ptr().offset(party_room as isize)).right_col
-						as libc::c_int - 1 as libc::c_int,
-				) as libc::c_short;
+					(*rooms.as_mut_ptr().offset(party_room as isize)).left_col + 1,
+					(*rooms.as_mut_ptr().offset(party_room as isize)).right_col - 1,
+				);
 				tries += 1;
 				tries;
 				if !((dungeon[row as usize][col as usize] as libc::c_int
@@ -234,19 +231,10 @@ pub unsafe extern "C" fn add_traps() -> libc::c_int {
 				}
 			}
 			if tries as libc::c_int >= 15 as libc::c_int {
-				gr_row_col(
-					&mut row,
-					&mut col,
-					0o100 as libc::c_int as libc::c_ushort as libc::c_int
-						| 0o2 as libc::c_int as libc::c_ushort as libc::c_int,
-				);
+				gr_row_col(&mut row, &mut col, vec![Floor, Monster]);
 			}
 		} else {
-			gr_row_col(
-				&mut row,
-				&mut col,
-				0o100 as libc::c_int as libc::c_ushort as libc::c_int
-					| 0o2 as libc::c_int as libc::c_ushort as libc::c_int,
+			gr_row_col(&mut row, &mut col, vec![Floor, Monster],
 			);
 		}
 		traps[i as usize].trap_row = row;

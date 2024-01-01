@@ -12,7 +12,7 @@ use crate::random::{get_rand, rand_percent};
 use crate::room::{gr_row_col, is_all_connected, light_passage, light_up_room};
 use crate::score::win;
 use crate::prelude::*;
-use crate::prelude::SpotFlag::{HorWall, Stairs, Tunnel, VertWall};
+use crate::prelude::SpotFlag::{Floor, HorWall, Object, Stairs, Tunnel, VertWall};
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
 
 
@@ -686,14 +686,7 @@ pub unsafe extern "C" fn put_player(mut nr: i64) {
 	while (misses as i64) < 2 as i64
 		&& rn as i64 == nr as i64
 	{
-		gr_row_col(
-			&mut row,
-			&mut col,
-			(0o100 as c_ushort
-				| 0o200 as c_ushort
-				| 0o1 as c_ushort
-				| 0o4) as c_ushort,
-		);
+		gr_row_col(&mut row, &mut col, vec![Floor, Tunnel, Object, Stairs]);
 		rn = get_room_number(row, col);
 		misses += 1;
 	}

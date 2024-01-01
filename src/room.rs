@@ -317,37 +317,27 @@ pub unsafe fn get_dungeon_char(row: i64, col: i64) -> ncurses::chtype {
 	return ncurses::chtype::from(' ');
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn gr_row_col(mut row: *mut i64, mut col: *mut i64, mut mask: libc::c_ushort) -> i64 {
-	let mut rn: libc::c_short = 0;
-	let mut r: libc::c_short = 0;
-	let mut c: libc::c_short = 0;
+pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, spots: Vec<SpotFlag>) {
+	let mut r = 0;
+	let mut c = 0;
 	loop {
-		r = get_rand(1, 24 as i64 - 2 as i64)
-			as libc::c_short;
-		c = get_rand(0 as i64, 80 as i64 - 1)
-			as libc::c_short;
-		rn = get_room_number(r as i64, c as i64) as libc::c_short;
-		if !(rn as i64 == -(1)
-			|| dungeon[r as usize][c as usize] as i64 & mask as i64 == 0
-			|| dungeon[r as usize][c as usize] as i64 & !(mask as i64)
-			!= 0
-			|| rooms[rn as usize].room_type as i64
-			& (0o2 as i64 as libc::c_ushort as i64
-			| 0o4 as i64 as libc::c_ushort as i64) == 0
-			|| r as i64 == rogue.row as i64
-			&& c as i64 == rogue.col as i64)
-		{
+		r = get_rand(1, 24 as i64 - 2 as i64);
+		c = get_rand(0 as i64, 80 as i64 - 1);
+		let rn = get_room_number(r, c);
+		let keep_looking = rn == NO_ROOM
+			|| !SpotFlag::is_any_set(&spots, dungeon[r as usize][c as usize])
+			|| SpotFlag::are_others_set(&spots, dungeon[r as usize][c as usize])
+			|| !(rooms[rn as usize].room_type == RoomType::Room || rooms[rn as usize].room_type == RoomType::Maze)
+			|| ((r == rogue.row) && (c == rogue.col));
+		if !keep_looking {
 			break;
 		}
 	}
 	*row = r;
 	*col = c;
-	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn gr_room() -> i64 {
+pub unsafe fn gr_room() -> i64 {
 	let mut i: libc::c_short = 0;
 	loop {
 		i = get_rand(0 as i64, 9 as i64 - 1)

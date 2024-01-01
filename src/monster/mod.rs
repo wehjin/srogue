@@ -954,14 +954,7 @@ pub unsafe extern "C" fn put_mons() {
 		}
 		let mut row = 0;
 		let mut col = 0;
-		gr_row_col(
-			&mut row,
-			&mut col,
-			0o100 as libc::c_int as libc::c_ushort
-				| 0o200 as libc::c_int as libc::c_ushort
-				| 0o4 as libc::c_int as libc::c_ushort
-				| 0o1 as libc::c_int as libc::c_ushort,
-		);
+		gr_row_col(&mut row, &mut col, vec![Floor, Tunnel, Stairs, Object]);
 		put_m_at(row, col, &mut *monster);
 	}
 }
@@ -1034,7 +1027,7 @@ pub unsafe extern "C" fn mv_mons() {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn party_monsters(rn: usize, n: usize) {
+pub unsafe extern "C" fn party_monsters(rn: i64, n: i64) {
 	for i in 0..MONSTERS {
 		mon_tab[i].set_first_level(mon_tab[i].first_level() - (cur_level % 3))
 	}
@@ -1376,7 +1369,7 @@ pub unsafe extern "C" fn wanderer() {
 		wake_up(&mut *monster);
 		let mut i = 0;
 		while i < 25 && !found {
-			gr_row_col(&mut row, &mut col, SpotFlag::union(&vec![Floor, Tunnel, Stairs, Object]));
+			gr_row_col(&mut row, &mut col, vec![Floor, Tunnel, Stairs, Object]);
 			if rogue_can_see(row, col) == false {
 				put_m_at(row, col, &mut *monster);
 				found = true;

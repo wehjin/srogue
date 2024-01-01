@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+use chrono::Weekday::Mon;
 use libc::{c_ushort};
 pub use crate::message::*;
 pub use crate::level::*;
@@ -11,6 +13,7 @@ pub use crate::r#move::*;
 pub use crate::objects::*;
 pub use crate::pack::*;
 pub use crate::play::*;
+use crate::prelude::SpotFlag::{Door, Floor, Hidden, HorWall, Monster, Object, Stairs, Trap, Tunnel, VertWall};
 pub use crate::random::*;
 pub use crate::ring::*;
 pub use crate::room::*;
@@ -54,6 +57,7 @@ pub const MAX_HP: isize = 800;
 pub const MAX_STRENGTH: isize = 99;
 pub const LAST_DUNGEON: usize = 99;
 pub const INIT_HP: isize = 12;
+pub const PARTY_TIME: isize = 10;   /* one party somewhere in each 10 level span */
 
 #[derive(Copy, Clone)]
 pub struct DungeonSpot {
@@ -87,6 +91,14 @@ impl SpotFlag {
 			}
 		}
 		return false;
+	}
+
+	pub fn are_others_set(flags: &Vec<SpotFlag>, value: c_ushort) -> bool {
+		let all = vec![Object, Monster, Stairs, HorWall, VertWall, Door, Floor, Tunnel, Trap, Hidden];
+		let a = all.into_iter().collect::<HashSet<_>>();
+		let b = flags.iter().cloned().collect::<HashSet<_>>();
+		let c = a.difference(&b).cloned().collect::<Vec<_>>();
+		SpotFlag::is_any_set(&c, value)
 	}
 
 	pub fn is_set(&self, value: c_ushort) -> bool {

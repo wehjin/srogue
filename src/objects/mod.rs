@@ -2,22 +2,22 @@
 
 extern "C" {
 	pub type ldat;
-
-	fn md_malloc() -> *mut libc::c_char;
-	static mut error_file: *mut libc::c_char;
 }
 
 use libc::{c_int, c_short};
 use ncurses::{addch, chtype};
 use serde::Serialize;
+use ObjectWhat::{Armor, Potion, Scroll, Weapon};
+use crate::odds::GOLD_PERCENT;
 use crate::prelude::*;
 use crate::prelude::armor_kind::ARMORS;
 use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::object_what::{ObjectWhat};
-use crate::prelude::object_what::ObjectWhat::Food;
+use crate::prelude::object_what::ObjectWhat::{Food, Gold, Ring, Wand};
 use crate::prelude::potion_kind::POTIONS;
 use crate::prelude::ring_kind::RINGS;
 use crate::prelude::scroll_kind::SCROLLS;
+use crate::prelude::SpotFlag::{Floor, Tunnel};
 use crate::prelude::wand_kind::WANDS;
 use crate::prelude::weapon_kind::WEAPONS;
 use crate::settings::fruit;
@@ -251,7 +251,7 @@ pub static mut level_objects: object = obj {
 };
 pub static mut dungeon: [[u16; DCOLS]; DROWS] = [[0; DCOLS]; DROWS];
 pub static mut foods: i16 = 0;
-pub static mut party_counter: i16 = 0;
+pub static mut party_counter: isize = 0;
 #[no_mangle]
 pub static mut free_list: *mut object = 0 as *const object as *mut object;
 #[no_mangle]
@@ -909,18 +909,51 @@ pub unsafe extern "C" fn put_objects() {
 	}
 	if cur_level == party_counter {
 		make_party();
-		party_counter = next_party() as libc::c_short;
+		party_counter = next_party();
 	}
 	i = 0;
 	while (i as i64) < n as i64 {
 		obj = gr_object();
-		rand_place(obj);
+		rand_place(&mut *obj);
 		i += 1;
-		i;
 	}
 	put_gold();
 	panic!("Reached end of non-void function without returning");
 }
+
+pub unsafe fn put_gold() {
+	for i in 0..MAXROOMS as usize {
+		let is_maze = rooms[i].room_type == RoomType::Maze;
+		let is_room = rooms[i].room_type == RoomType::Room;
+		if !(is_room || is_maze) {
+			continue;
+		}
+		if is_maze || rand_percent(GOLD_PERCENT) {
+			for j in 0..50 {
+				let row = get_rand(rooms[i].top_row + 1, rooms[i].bottom_row - 1);
+				let col = get_rand(rooms[i].left_col + 1, rooms[i].right_col - 1);
+				if Floor.is_set(dungeon[row as usize][col as usize]) || Tunnel.is_set(dungeon[row as usize][col as usize]) {
+					plant_gold(row, col, is_maze);
+					break;
+				}
+			}
+		}
+	}
+}
+
+pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool) {
+	let obj = alloc_object();
+	(*obj).row = row;
+	(*obj).col = col;
+	(*obj).what_is = Gold;
+	(*obj).quantity = get_rand((2 * cur_level) as i16, (16 * cur_level) as i16);
+	if is_maze {
+		(*obj).quantity += (*obj).quantity / 2;
+	}
+	dungeon[row as usize][col as usize] |= SpotFlag::Object.code();
+	add_to_pack(obj, &mut level_objects, 0);
+}
+
 
 #[no_mangle]
 pub unsafe extern "C" fn place_at(
@@ -928,8 +961,8 @@ pub unsafe extern "C" fn place_at(
 	mut row: i64,
 	mut col: i64,
 ) -> i64 {
-	(*obj).row = row as libc::c_short;
-	(*obj).col = col as libc::c_short;
+	(*obj).row = row;
+	(*obj).col = col;
 	dungeon[row
 		as usize][col
 		as usize] = (dungeon[row as usize][col as usize] as i64
@@ -953,7 +986,7 @@ pub unsafe extern "C" fn object_at(mut pack: *mut object, mut row: i64, mut col:
 pub unsafe fn get_letter_object(ch: char) -> *mut object {
 	let mut obj: *mut object = 0 as *mut object;
 	obj = rogue.pack.next_object;
-	while !obj.is_null() && (*obj).ichar as i64 != ch {
+	while !obj.is_null() && (*obj).ichar != ch {
 		obj = (*obj).next_object;
 	}
 	return obj;
@@ -972,87 +1005,82 @@ pub unsafe extern "C" fn free_stuff(mut objlist: *mut object) -> i64 {
 
 pub unsafe fn name_of(obj: &object) -> String {
 	match obj.what_is {
-		ObjectWhat::Armor => "armor ",
-		ObjectWhat::Weapon => match obj.which_kind {
+		Armor => "armor ",
+		Weapon => match obj.which_kind {
 			weapon_kind::DART => if obj.quantity > 1 { "darts " } else { "dart " },
 			weapon_kind::ARROW => if obj.quantity > 1 { "arrows " } else { "arrow " },
 			weapon_kind::DAGGER => if obj.quantity > 1 { "daggers " } else { "dagger " },
 			weapon_kind::SHURIKEN => if obj.quantity > 1 { "shurikens " } else { "shuriken " },
-			_ => &id_weapons[obj.which_kind].title
+			_ => &id_weapons[obj.which_kind as usize].title
 		},
-		ObjectWhat::Scroll => if obj.quantity > 1 { "scrolls " } else { "scroll " }
-		ObjectWhat::Potion => if obj.quantity > 1 { "potions " } else { "potion " }
-		ObjectWhat::Food => if obj.which_kind == RATION { "food " } else { &fruit(); }
-		ObjectWhat::Wand => if is_wood[obj.which_kind] { "staff " } else { "wand " },
+		Scroll => if obj.quantity > 1 { "scrolls " } else { "scroll " }
+		Potion => if obj.quantity > 1 { "potions " } else { "potion " }
+		ObjectWhat::Food => if obj.which_kind == RATION { "food " } else { &fruit() }
+		ObjectWhat::Wand => if is_wood[obj.which_kind as usize] { "staff " } else { "wand " },
 		ObjectWhat::Ring => "ring ",
 		ObjectWhat::Amulet => "amulet ",
 		_ => "unknown ",
 	}.to_string()
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn gr_object() -> *mut object {
+pub unsafe fn gr_object() -> *mut object {
 	let mut obj: *mut object = 0 as *mut object;
 	obj = alloc_object();
-	if (foods as i64) < cur_level as i64 / 2 as i64 {
-		(*obj).what_is = 0o40 as i64 as libc::c_ushort;
+	if foods < (cur_level / 2) as i16 {
+		(*obj).what_is = Food;
 		foods += 1;
-		foods;
 	} else {
 		(*obj).what_is = gr_what_is();
 	}
-	match (*obj).what_is as i64 {
-		4 => {
+	match (*obj).what_is {
+		Scroll => {
 			gr_scroll(obj);
 		}
-		8 => {
+		Potion => {
 			gr_potion(obj);
 		}
-		2 => {
+		Weapon => {
 			gr_weapon(obj, 1);
 		}
-		1 => {
+		Armor => {
 			gr_armor(obj);
 		}
-		64 => {
+		Wand => {
 			gr_wand(obj);
 		}
-		32 => {
+		Food => {
 			get_food(&mut *obj, false);
 		}
-		128 => {
-			gr_ring(obj, 1 as libc::c_int);
+		Ring => {
+			gr_ring(obj, 1);
 		}
 		_ => {}
 	}
 	return obj;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn gr_what_is() -> libc::c_ushort {
-	let mut percent: libc::c_short = 0;
-	let mut what_is: libc::c_ushort = 0;
-	percent = get_rand(1 as libc::c_int, 91 as libc::c_int) as libc::c_short;
-	if percent as libc::c_int <= 30 as libc::c_int {
-		what_is = 0o4 as libc::c_int as libc::c_ushort;
-	} else if percent as libc::c_int <= 60 as libc::c_int {
-		what_is = 0o10 as libc::c_int as libc::c_ushort;
-	} else if percent as libc::c_int <= 64 as libc::c_int {
-		what_is = 0o100 as libc::c_int as libc::c_ushort;
-	} else if percent as libc::c_int <= 74 as libc::c_int {
-		what_is = 0o2 as libc::c_int as libc::c_ushort;
-	} else if percent as libc::c_int <= 83 as libc::c_int {
-		what_is = 0o1 as libc::c_int as libc::c_ushort;
-	} else if percent as libc::c_int <= 88 as libc::c_int {
-		what_is = 0o40 as libc::c_int as libc::c_ushort;
+
+pub unsafe fn gr_what_is() -> ObjectWhat {
+	let percent = get_rand(1, 91);
+	if percent <= 30 {
+		Scroll
+	} else if percent <= 60 {
+		Potion
+	} else if percent <= 64 {
+		Wand
+	} else if percent <= 74 {
+		Weapon
+	} else if percent <= 83 {
+		Armor
+	} else if percent <= 88 {
+		Food
 	} else {
-		what_is = 0o200 as libc::c_int as libc::c_ushort;
+		Ring
 	}
-	return what_is;
 }
 
 pub fn get_food(obj: &mut obj, force_ration: bool) {
-	obj.what_is = WhatIs(Food);
+	obj.what_is = (Food);
 	if force_ration || rand_percent(80) {
 		obj.which_kind = RATION;
 	} else {
@@ -1062,14 +1090,9 @@ pub fn get_food(obj: &mut obj, force_ration: bool) {
 
 #[no_mangle]
 pub unsafe extern "C" fn put_stairs() -> libc::c_int {
-	let mut row: libc::c_short = 0;
-	let mut col: libc::c_short = 0;
-	gr_row_col(
-		&mut row,
-		&mut col,
-		0o100 as libc::c_int as libc::c_ushort as libc::c_int
-			| 0o200 as libc::c_int as libc::c_ushort as libc::c_int,
-	);
+	let mut row = 0;
+	let mut col = 0;
+	gr_row_col(&mut row, &mut col, vec![Floor, Tunnel]);
 	dungeon[row
 		as usize][col
 		as usize] = (dungeon[row as usize][col as usize] as libc::c_int
@@ -1088,19 +1111,18 @@ pub unsafe extern "C" fn alloc_object() -> *mut object {
 		obj = free_list;
 		free_list = (*free_list).next_object;
 	} else {
-		obj = md_malloc(::core::mem::size_of::<object>() as libc::c_ulong)
-			as *mut object;
+		obj = md_malloc(::core::mem::size_of::<object>() as i64) as *mut object;
 		if obj.is_null() {
-			message("cannot allocate object, saving game", 0 as libc::c_int);
+			message("cannot allocate object, saving game", 0);
 			save_into_file(error_file);
 		}
 	}
-	(*obj).quantity = 1 as libc::c_int as libc::c_short;
-	(*obj).ichar = 'L' as i32 as libc::c_short;
-	(*obj).is_cursed = 0 as libc::c_int as libc::c_short;
+	(*obj).quantity = 1;
+	(*obj).ichar = 'L';
+	(*obj).is_cursed = 0;
 	(*obj).picked_up = (*obj).is_cursed;
-	(*obj).in_use_flags = 0 as libc::c_int as libc::c_ushort;
-	(*obj).identified = 0 as libc::c_int as libc::c_ushort as libc::c_short;
+	(*obj).in_use_flags = 0;
+	(*obj).identified = false;
 	(*obj).damage = "1d1";
 	return obj;
 }
@@ -1108,6 +1130,14 @@ pub unsafe extern "C" fn alloc_object() -> *mut object {
 pub unsafe fn free_object(obj: *mut object) {
 	(*obj).next_object = free_list;
 	free_list = obj;
+}
+
+pub unsafe fn make_party() {
+	party_room = gr_room();
+	let n = if rand_percent(99) { party_objects(party_room) } else { 11 };
+	if rand_percent(99) {
+		party_monsters(party_room, n);
+	}
 }
 
 #[no_mangle]
@@ -1174,6 +1204,7 @@ pub unsafe extern "C" fn show_objects() {
 	}
 }
 
+
 #[no_mangle]
 pub unsafe extern "C" fn put_amulet() -> libc::c_int {
 	let mut obj: *mut object = 0 as *mut object;
@@ -1181,6 +1212,13 @@ pub unsafe extern "C" fn put_amulet() -> libc::c_int {
 	(*obj).what_is = 0o400 as libc::c_int as libc::c_ushort;
 	rand_place(obj);
 	panic!("Reached end of non-void function without returning");
+}
+
+pub unsafe fn rand_place(obj: &mut obj) {
+	let mut row = 0;
+	let mut col = 0;
+	gr_row_col(&mut row, &mut col, vec![Floor, Tunnel]);
+	place_at(obj, row, col);
 }
 
 #[no_mangle]
@@ -1194,13 +1232,13 @@ pub unsafe extern "C" fn new_object_for_wizard() -> libc::c_int {
 		message(b"pack full\0" as *const u8 as *const libc::c_char, 0 as libc::c_int);
 		return;
 	}
-	message(b"type of object?\0" as *const u8 as *const libc::c_char, 0 as libc::c_int);
+	message("type of object?", 0);
 	loop {
 		ch = rgetchar() as libc::c_short;
 		if !(r_index(
 			b"!?:)]=/,\x1B\0" as *const u8 as *const libc::c_char,
 			ch as libc::c_int,
-			0 as libc::c_int,
+			0,
 		) == -(1 as libc::c_int))
 		{
 			break;
@@ -1280,6 +1318,14 @@ pub unsafe extern "C" fn new_object_for_wizard() -> libc::c_int {
 	}
 	get_desc(obj, buf.as_mut_ptr());
 	message(buf.as_mut_ptr(), 0 as libc::c_int);
-	add_to_pack(obj, &mut rogue.pack, 1 as libc::c_int);
+	add_to_pack(obj, &mut rogue.pack, 1);
 	panic!("Reached end of non-void function without returning");
+}
+
+pub unsafe fn next_party() -> isize {
+	let mut n = cur_level;
+	while (n % PARTY_TIME) > 0 {
+		n += 1;
+	}
+	return get_rand(n + 1, n + PARTY_TIME);
 }
