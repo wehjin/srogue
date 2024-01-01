@@ -12,7 +12,9 @@ extern "C" {
 use libc::c_short;
 use ncurses::{addch, chtype, mvaddch};
 use crate::prelude::*;
+use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_EITHER_HAND};
 use crate::prelude::object_what::PackFilter::{Foods, Potions, Scrolls};
+use crate::prelude::scroll_kind::SLEEP;
 use crate::settings::fruit;
 
 
@@ -179,7 +181,7 @@ pub unsafe extern "C" fn quaff() {
 		(*id_potions.as_mut_ptr().offset((*obj).which_kind as isize))
 			.id_status = 0o1 as libc::c_ushort;
 	}
-	vanish(obj, 1, &mut rogue.pack);
+	vanish(&mut obj, true, &mut rogue.pack);
 	panic!("Reached end of non-void function without returning");
 }
 
@@ -314,13 +316,32 @@ pub unsafe extern "C" fn read_scroll() -> i64 {
 		(*id_scrolls.as_mut_ptr().offset((*obj).which_kind as isize))
 			.id_status = 0o1 as libc::c_int as libc::c_ushort;
 	}
-	vanish(
-		obj,
-		((*obj).which_kind as libc::c_int != 6 as libc::c_int) as libc::c_int,
-		&mut rogue.pack,
-	);
+	vanish(&mut *obj, (*obj).which_kind != SLEEP, &mut rogue.pack);
 	panic!("Reached end of non-void function without returning");
 }
+
+pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj) {
+	/* vanish() does NOT handle a quiver of weapons with more than one
+	   arrow (or whatever) in the quiver.  It will only decrement the count.
+	*/
+	if (*obj).quantity > 1 {
+		(*obj).quantity -= 1;
+	} else {
+		if (*obj).in_use_flags & BEING_WIELDED {
+			unwield(obj);
+		} else if ((*obj).in_use_flags & BEING_WORN) {
+			unwear(obj);
+		} else if ((*obj).in_use_flags & ON_EITHER_HAND) {
+			un_put_on(obj);
+		}
+		take_from_pack(obj, pack);
+		free_object(obj);
+	}
+	if do_regular_move {
+		reg_move();
+	}
+}
+
 
 #[no_mangle]
 pub unsafe extern "C" fn eat() {
@@ -368,7 +389,7 @@ pub unsafe extern "C" fn eat() {
 		.as_mut_ptr()
 		.offset(0 as libc::c_int as isize) = 0 as libc::c_int as libc::c_char;
 	print_stats(0o100 as libc::c_int);
-	vanish(obj, 1 as libc::c_int, &mut rogue.pack);
+	vanish(&mut *obj, true, &mut rogue.pack);
 	panic!("Reached end of non-void function without returning");
 }
 

@@ -1,7 +1,9 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
 use libc::{c_short, strcpy, strlen};
+use scroll_kind::SCARE_MONSTER;
 use crate::{get_input_line, message, mv_aquatars, print_stats};
+use crate::objects::IdStatus::Identified;
 use crate::objects::place_at;
 
 extern "C" {
@@ -10,10 +12,12 @@ extern "C" {
 }
 
 use crate::prelude::*;
+use crate::prelude::IdStatus::Unidentified;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::object_what::{PackFilter};
-use crate::prelude::object_what::ObjectWhat::{Armor, Potion, Ring, Scroll, Wand, Weapon};
+use crate::prelude::object_what::ObjectWhat::{Armor, Gold, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
+use crate::prelude::stat_const::STAT_GOLD;
 
 
 pub static mut curse_message: &'static str = "you can't, it appears to be cursed";
@@ -60,58 +64,37 @@ pub unsafe extern "C" fn take_from_pack(
 	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn pick_up(
-	mut row: i64,
-	mut col: i64,
-	mut status: *mut libc::c_short,
-) -> *mut object {
-	let mut obj: *mut object = 0 as *mut object;
-	obj = object_at(&mut level_objects, row, col);
-	*status = 1 as libc::c_short;
-	if (*obj).what_is as i64
-		== 0o4 as i64 as libc::c_ushort as i64
-		&& (*obj).which_kind as i64 == 7 as i64
-		&& (*obj).picked_up as i64 != 0
-	{
+pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short) -> *mut object {
+	let obj = object_at(&mut level_objects, row, col);
+	*status = 1;
+	if (*obj).what_is == Scroll
+		&& (*obj).which_kind == SCARE_MONSTER
+		&& (*obj).picked_up != 0 {
 		message("the scroll turns to dust as you pick it up", 0);
-		dungeon[row
-			as usize][col
-			as usize] = (dungeon[row as usize][col as usize] as i64
-			& !(0o1 as libc::c_ushort as i64)) as libc::c_ushort;
-		vanish(obj, 0 as i64, &mut level_objects);
+		dungeon[row as usize][col as usize] = dungeon[row as usize][col as usize] & !SpotFlag::Object.code();
+		vanish(&mut *obj, false, &mut level_objects);
 		*status = 0;
-		if (*id_scrolls.as_mut_ptr().offset(7 as i64 as isize)).id_status
-			as i64 == 0 as i64 as libc::c_ushort as i64
-		{
-			(*id_scrolls.as_mut_ptr().offset(7 as i64 as isize))
-				.id_status = 0o1 as libc::c_ushort;
+		if id_scrolls[SCARE_MONSTER as usize].id_status == Unidentified {
+			id_scrolls[SCARE_MONSTER as usize].id_status = Identified
 		}
 		return 0 as *mut object;
 	}
-	if (*obj).what_is as i64
-		== 0o20 as i64 as libc::c_ushort as i64
-	{
-		rogue.gold += (*obj).quantity as libc::c_long;
-		dungeon[row
-			as usize][col
-			as usize] = (dungeon[row as usize][col as usize] as i64
-			& !(0o1 as libc::c_ushort as i64)) as libc::c_ushort;
+	if (*obj).what_is == Gold {
+		rogue.gold += (*obj).quantity as isize;
+		dungeon[row as usize][col as usize] = dungeon[row as usize][col as usize] & !SpotFlag::Object.code();
 		take_from_pack(obj, &mut level_objects);
-		print_stats(0o2 as i64);
+		print_stats(STAT_GOLD);
 		return obj;
 	}
-	if pack_count(obj) >= 24 as i64 {
+	if pack_count(obj) >= MAX_PACK_COUNT {
 		message("pack too full", 1);
 		return 0 as *mut object;
 	}
-	dungeon[row
-		as usize][col
-		as usize] = (dungeon[row as usize][col as usize] as i64
-		& !(0o1 as libc::c_ushort as i64)) as libc::c_ushort;
+	dungeon[row as usize][col as usize] = dungeon[row as usize][col as usize] & !SpotFlag::Object.code();
 	take_from_pack(obj, &mut level_objects);
-	obj = add_to_pack(obj, &mut rogue.pack, 1);
-	(*obj).picked_up = 1 as libc::c_short;
+
+	let obj = add_to_pack(obj, &mut rogue.pack, 1);
+	(*obj).picked_up = 1;
 	return obj;
 }
 
@@ -239,6 +222,22 @@ pub unsafe extern "C" fn check_duplicate(
 	return 0 as *mut object;
 }
 
+pub unsafe fn next_avail_ichar() -> char {
+	let mut used = [false; 26];
+	{
+		let mut obj = rogue.pack.next_object;
+		while !obj.is_null() {
+			used[(*obj).ichar as u8 - 'a' as u8] = true;
+			obj = (*obj).next_object;
+		}
+	}
+	let unused = used.into_iter().position(|used| used == false);
+	if let Some(unused) = unused {
+		(unused as u8 + 'a' as u8) as char
+	} else {
+		'?'
+	}
+}
 
 pub unsafe fn wait_for_ack() {
 	while rgetchar() != ' ' {}

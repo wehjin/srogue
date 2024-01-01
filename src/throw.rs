@@ -123,7 +123,7 @@ pub unsafe extern "C" fn throw() -> i64 {
 	} else {
 		flop_weapon(weapon, row as i64, col as i64);
 	}
-	vanish(weapon, 1, &mut rogue.pack);
+	vanish(&mut weapon, true, &mut rogue.pack);
 	panic!("Reached end of non-void function without returning");
 }
 
