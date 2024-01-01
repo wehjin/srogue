@@ -1,35 +1,12 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-extern "C" {
-	pub type ldat;
-	fn is_digit() -> libc::c_char;
-	static mut trap_door: libc::c_char;
-}
-
 use libc::c_short;
 use crate::prelude::*;
 
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct pdat {
-	pub _pad_y: libc::c_short,
-	pub _pad_x: libc::c_short,
-	pub _pad_top: libc::c_short,
-	pub _pad_left: libc::c_short,
-	pub _pad_bottom: libc::c_short,
-	pub _pad_right: libc::c_short,
-}
-
-pub type WINDOW = _win_st;
-pub type attr_t = ncurses::chtype;
-
-
-#[no_mangle]
 pub static mut interrupted: bool = false;
-#[no_mangle]
-pub static mut unknown_command: *mut libc::c_char = b"unknown command\0" as *const u8
-	as *const libc::c_char as *mut libc::c_char;
+
+pub static unknown_command: &'static str = "unknown command";
 
 #[no_mangle]
 pub unsafe extern "C" fn play_level() {
@@ -200,7 +177,7 @@ pub unsafe extern "C" fn play_level() {
 							0o777 as i64 as libc::c_ushort as i64,
 						);
 					} else {
-						message(unknown_command, 0 as i64);
+						message(unknown_command, 0);
 					}
 					break;
 				}
@@ -208,7 +185,7 @@ pub unsafe extern "C" fn play_level() {
 					if wizard != 0 {
 						draw_magic_map();
 					} else {
-						message(unknown_command, 0 as i64);
+						message(unknown_command, 0);
 					}
 					break;
 				}
@@ -216,7 +193,7 @@ pub unsafe extern "C" fn play_level() {
 					if wizard != 0 {
 						show_traps();
 					} else {
-						message(unknown_command, 0 as i64);
+						message(unknown_command, 0);
 					}
 					break;
 				}
@@ -224,7 +201,7 @@ pub unsafe extern "C" fn play_level() {
 					if wizard != 0 {
 						show_objects();
 					} else {
-						message(unknown_command, 0 as i64);
+						message(unknown_command, 0);
 					}
 					break;
 				}
@@ -236,7 +213,7 @@ pub unsafe extern "C" fn play_level() {
 					if wizard != 0 {
 						new_object_for_wizard();
 					} else {
-						message(unknown_command, 0 as i64);
+						message(unknown_command, 0);
 					}
 					break;
 				}
@@ -244,7 +221,7 @@ pub unsafe extern "C" fn play_level() {
 					if wizard != 0 {
 						show_monsters();
 					} else {
-						message(unknown_command, 0 as i64);
+						message(unknown_command, 0);
 					}
 					break;
 				}
@@ -257,7 +234,7 @@ pub unsafe extern "C" fn play_level() {
 					break;
 				}
 				_ => {
-					message(unknown_command, 0 as i64);
+					message(unknown_command, 0);
 					break;
 				}
 			}
