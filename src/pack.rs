@@ -3,7 +3,7 @@
 use libc::{c_short, strcpy, strlen};
 use scroll_kind::SCARE_MONSTER;
 use crate::{get_input_line, message, mv_aquatars, print_stats};
-use crate::objects::IdStatus::Identified;
+use crate::objects::IdStatus::{Called, Identified};
 use crate::objects::place_at;
 
 extern "C" {
@@ -356,55 +356,27 @@ pub unsafe fn unwield(obj: *mut obj) {
 	rogue.weapon = 0 as *mut object;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn call_it() -> i64 {
-	let mut ch: libc::c_short = 0;
-	let mut obj: *mut object = 0 as *mut object;
-	let mut id_table: *mut id = 0 as *mut id;
-	let mut buf: [libc::c_char; 32] = [0; 32];
-	ch = pack_letter("call what?", AnyFrom(vec![Scroll, Potion, Wand, Ring])) as libc::c_short;
-	if ch as i64 == '\u{1b}' as i32 {
+pub unsafe fn call_it() {
+	let ch = pack_letter("call what?", AnyFrom(vec![Scroll, Potion, Wand, Ring]));
+	if ch == CANCEL {
 		return;
 	}
-	obj = get_letter_object(ch as i64);
+
+	let obj = get_letter_object(ch);
 	if obj.is_null() {
-		message(
-			b"no such item.\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+		message("no such item.", 0);
 		return;
 	}
-	if (*obj).what_is as i64
-		& (0o4 as i64 as libc::c_ushort as i64
-		| 0o10 as i64 as libc::c_ushort as i64
-		| 0o100 as i64 as libc::c_ushort as i64
-		| 0o200 as i64 as libc::c_ushort as i64) == 0
-	{
-		message(
-			b"surely you already know what that's called\0" as *const u8
-				as *const libc::c_char,
-			0 as i64,
-		);
+	if (*obj).what_is != Scroll && (*obj).what_is != Potion && (*obj).what_is != Wand && (*obj).what_is == Ring {
+		message("surely you already know what that's called", 0);
 		return;
 	}
-	id_table = get_id_table(obj);
-	if get_input_line(
-		b"call it:\0" as *const u8 as *const libc::c_char,
-		b"\0" as *const u8 as *const libc::c_char,
-		buf.as_mut_ptr(),
-		((*id_table.offset((*obj).which_kind as isize)).title).as_mut_ptr(),
-		1,
-		1,
-	) != 0
-	{
-		(*id_table.offset((*obj).which_kind as isize))
-			.id_status = 0o2 as i64 as libc::c_ushort;
-		strcpy(
-			((*id_table.offset((*obj).which_kind as isize)).title).as_mut_ptr(),
-			buf.as_mut_ptr(),
-		);
+	let id_table = get_id_table(&*obj);
+	let new_name = get_input_line("call it:", None, Some(&id_table[(*obj).which_kind as usize].title), true, true);
+	if !new_name.is_empty() {
+		id_table[(*obj).which_kind as usize].id_status = Called;
+		id_table[(*obj).which_kind as usize].title = new_name;
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
 pub unsafe fn pack_count(new_obj: *const obj) -> usize {

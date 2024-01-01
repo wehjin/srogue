@@ -407,21 +407,16 @@ pub unsafe fn single_inv(ichar: Option<char>) {
 	}
 }
 
-pub unsafe fn get_id_table(obj: &object) -> Vec<&'static id> {
+pub unsafe fn get_id_table(obj: &object) -> &'static mut [id] {
 	match obj.what_is {
-		WhatIsOrDisguise::WhatIs(what_is) => {
-			match what_is {
-				Scroll => &id_scrolls[..],
-				Potion => &id_potions[..],
-				Wand => &id_wands[..],
-				Ring => &id_rings[..],
-				Weapon => &id_weapons[..],
-				Armor => &id_armors[..],
-				_ => &[],
-			}
-		}
-		WhatIsOrDisguise::Disguise(_) => &[],
-	}.iter().map(|it| it).collect()
+		Scroll => &mut id_scrolls[..],
+		Potion => &mut id_potions[..],
+		Wand => &mut id_wands[..],
+		Ring => &mut id_rings[..],
+		Weapon => &mut id_weapons[..],
+		Armor => &mut id_armors[..],
+		_ => panic!("no id table"),
+	}
 }
 
 #[no_mangle]
