@@ -8,18 +8,19 @@ use libc::{c_int, c_short};
 use ncurses::{addch, chtype};
 use serde::Serialize;
 use ObjectWhat::{Armor, Potion, Scroll, Weapon};
+use weapon_kind::{LONG_SWORD, MACE, TWO_HANDED_SWORD};
 use crate::odds::GOLD_PERCENT;
 use crate::prelude::*;
-use crate::prelude::armor_kind::ARMORS;
+use crate::prelude::armor_kind::{ARMORS, PLATE, SPLINT};
 use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::object_what::{ObjectWhat};
 use crate::prelude::object_what::ObjectWhat::{Food, Gold, Ring, Wand};
-use crate::prelude::potion_kind::POTIONS;
+use crate::prelude::potion_kind::{BLINDNESS, CONFUSION, DETECT_MONSTER, DETECT_OBJECTS, EXTRA_HEALING, HALLUCINATION, HASTE_SELF, HEALING, INCREASE_STRENGTH, LEVITATION, POISON, POTIONS, RAISE_LEVEL, RESTORE_STRENGTH, SEE_INVISIBLE};
 use crate::prelude::ring_kind::RINGS;
-use crate::prelude::scroll_kind::SCROLLS;
+use crate::prelude::scroll_kind::{AGGRAVATE_MONSTER, CREATE_MONSTER, ENCH_ARMOR, ENCH_WEAPON, HOLD_MONSTER, IDENTIFY, MAGIC_MAPPING, PROTECT_ARMOR, REMOVE_CURSE, SCARE_MONSTER, SCROLLS, SLEEP, TELEPORT};
 use crate::prelude::SpotFlag::{Floor, Tunnel};
-use crate::prelude::wand_kind::WANDS;
-use crate::prelude::weapon_kind::WEAPONS;
+use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, WANDS};
+use crate::prelude::weapon_kind::{ARROW, BOW, DAGGER, DART, SHURIKEN, WEAPONS};
 use crate::settings::fruit;
 
 
@@ -1034,19 +1035,19 @@ pub unsafe fn gr_object() -> *mut object {
 	}
 	match (*obj).what_is {
 		Scroll => {
-			gr_scroll(obj);
+			gr_scroll(&mut *obj);
 		}
 		Potion => {
-			gr_potion(obj);
+			gr_potion(&mut *obj);
 		}
 		Weapon => {
-			gr_weapon(obj, 1);
+			gr_weapon(&mut *obj, true);
 		}
 		Armor => {
-			gr_armor(obj);
+			gr_armor(&mut *obj);
 		}
 		Wand => {
-			gr_wand(obj);
+			gr_wand(&mut *obj);
 		}
 		Food => {
 			get_food(&mut *obj, false);
@@ -1076,6 +1077,167 @@ pub unsafe fn gr_what_is() -> ObjectWhat {
 		Food
 	} else {
 		Ring
+	}
+}
+
+
+pub fn gr_scroll(obj: &mut obj) {
+	let percent = get_rand(0, 85);
+	(*obj).what_is = Scroll;
+
+	if percent <= 5 {
+		(*obj).which_kind = PROTECT_ARMOR;
+	} else if (percent <= 11) {
+		(*obj).which_kind = HOLD_MONSTER;
+	} else if (percent <= 20) {
+		(*obj).which_kind = CREATE_MONSTER;
+	} else if (percent <= 35) {
+		(*obj).which_kind = IDENTIFY;
+	} else if (percent <= 43) {
+		(*obj).which_kind = TELEPORT;
+	} else if (percent <= 50) {
+		(*obj).which_kind = SLEEP;
+	} else if (percent <= 55) {
+		(*obj).which_kind = SCARE_MONSTER;
+	} else if (percent <= 64) {
+		(*obj).which_kind = REMOVE_CURSE;
+	} else if (percent <= 69) {
+		(*obj).which_kind = ENCH_ARMOR;
+	} else if (percent <= 74) {
+		(*obj).which_kind = ENCH_WEAPON;
+	} else if (percent <= 80) {
+		(*obj).which_kind = AGGRAVATE_MONSTER;
+	} else {
+		(*obj).which_kind = MAGIC_MAPPING;
+	}
+}
+
+pub fn gr_potion(obj: &mut obj) {
+	let percent = get_rand(1, 118);
+	(*obj).what_is = Potion;
+
+	if percent <= 5 {
+		(*obj).which_kind = RAISE_LEVEL;
+	} else if (percent <= 15) {
+		(*obj).which_kind = DETECT_OBJECTS;
+	} else if (percent <= 25) {
+		(*obj).which_kind = DETECT_MONSTER;
+	} else if (percent <= 35) {
+		(*obj).which_kind = INCREASE_STRENGTH;
+	} else if (percent <= 45) {
+		(*obj).which_kind = RESTORE_STRENGTH;
+	} else if (percent <= 55) {
+		(*obj).which_kind = HEALING;
+	} else if (percent <= 65) {
+		(*obj).which_kind = EXTRA_HEALING;
+	} else if (percent <= 75) {
+		(*obj).which_kind = BLINDNESS;
+	} else if (percent <= 85) {
+		(*obj).which_kind = HALLUCINATION;
+	} else if (percent <= 95) {
+		(*obj).which_kind = CONFUSION;
+	} else if (percent <= 105) {
+		(*obj).which_kind = POISON;
+	} else if (percent <= 110) {
+		(*obj).which_kind = LEVITATION;
+	} else if (percent <= 114) {
+		(*obj).which_kind = HASTE_SELF;
+	} else {
+		(*obj).which_kind = SEE_INVISIBLE;
+	}
+}
+
+pub fn gr_weapon(obj: &mut obj, assign_wk: bool) {
+	(*obj).what_is = Weapon;
+	if assign_wk {
+		(*obj).which_kind = get_rand(0, (WEAPONS - 1) as u16);
+	}
+	if (((*obj).which_kind == ARROW) || ((*obj).which_kind == DAGGER) || ((*obj).which_kind == SHURIKEN) | ((*obj).which_kind == DART)) {
+		(*obj).quantity = get_rand(3, 15);
+		(*obj).quiver = get_rand(0, 126);
+	} else {
+		(*obj).quantity = 1;
+	}
+	(*obj).hit_enchant = 0;
+	(*obj).d_enchant = 0;
+
+	let percent = get_rand(1, 96);
+	let blessing = get_rand(1, 3);
+
+	let mut increment = 0;
+	if percent <= 16 {
+		increment = 1;
+	} else if (percent <= 32) {
+		increment = -1;
+		(*obj).is_cursed = 1;
+	}
+	if percent <= 32 {
+		for _ in 0..blessing {
+			if coin_toss() {
+				(*obj).hit_enchant += increment;
+			} else {
+				(*obj).d_enchant += increment as isize;
+			}
+		}
+	}
+
+	match (*obj).which_kind {
+		BOW | DART => {
+			(*obj).damage = "1d1";
+		}
+		ARROW => {
+			(*obj).damage = "1d2";
+		}
+		DAGGER => {
+			(*obj).damage = "1d3";
+		}
+		SHURIKEN => {
+			(*obj).damage = "1d4";
+		}
+		MACE => {
+			(*obj).damage = "2d3";
+		}
+		LONG_SWORD => {
+			(*obj).damage = "3d4";
+		}
+		TWO_HANDED_SWORD => {
+			(*obj).damage = "4d5";
+		}
+		_ => unreachable!("invalid weapon kind")
+	}
+}
+
+
+pub fn gr_armor(obj: &mut obj) {
+	(*obj).what_is = Armor;
+	(*obj).which_kind = get_rand(0, (ARMORS - 1) as u16);
+	(*obj).class = ((*obj).which_kind + 2) as isize;
+	if ((*obj).which_kind == PLATE) || ((*obj).which_kind == SPLINT) {
+		(*obj).class -= 1;
+	}
+	(*obj).is_protected = 0;
+	(*obj).d_enchant = 0;
+
+	let percent = get_rand(1, 100);
+	let blessing = get_rand(1, 3);
+
+	if percent <= 16 {
+		(*obj).is_cursed = 1;
+		(*obj).d_enchant -= blessing;
+	} else if percent <= 33 {
+		(*obj).d_enchant += blessing;
+	}
+}
+
+pub fn gr_wand(obj: &mut obj) {
+	(*obj).what_is = Wand;
+	(*obj).which_kind = get_rand(0, (WANDS - 1) as u16);
+	if (*obj).which_kind == MAGIC_MISSILE {
+		(*obj).class = get_rand(6, 12);
+	} else if (*obj).which_kind == CANCELLATION {
+		(*obj).class = get_rand(5, 9);
+	} else {
+		(*obj).class = get_rand(3, 6);
 	}
 }
 
@@ -1145,22 +1307,18 @@ pub unsafe extern "C" fn show_objects() {
 	let mut obj: *mut object = 0 as *mut object;
 	let mut mc: libc::c_short = 0;
 	let mut rc: libc::c_short = 0;
-	let mut row: libc::c_short = 0;
-	let mut col: libc::c_short = 0;
+	let mut row = 0;
+	let mut col = 0;
 	let mut monster: *mut object = 0 as *mut object;
 	obj = level_objects.next_object;
 	while !obj.is_null() {
 		row = (*obj).row;
 		col = (*obj).col;
-		rc = get_mask_char((*obj).what_is as libc::c_int) as libc::c_short;
+		rc = get_mask_char((*obj).what_is);
 		if dungeon[row as usize][col as usize] as libc::c_int
 			& 0o2 as libc::c_int as libc::c_ushort as libc::c_int != 0
 		{
-			monster = object_at(
-				&mut level_monsters,
-				row as libc::c_int,
-				col as libc::c_int,
-			);
+			monster = object_at(&mut level_monsters, row, col);
 			if !monster.is_null() {
 				(*monster).d_enchant = rc;
 			}
@@ -1239,7 +1397,7 @@ pub unsafe extern "C" fn new_object_for_wizard() -> libc::c_int {
 			b"!?:)]=/,\x1B\0" as *const u8 as *const libc::c_char,
 			ch as libc::c_int,
 			0,
-		) == -(1 as libc::c_int))
+		) == -1)
 		{
 			break;
 		}
