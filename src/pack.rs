@@ -12,7 +12,7 @@ extern "C" {
 use crate::prelude::*;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::object_what::{PackFilter};
-use crate::prelude::object_what::ObjectWhat::{Armor, Potion, Ring, Scroll, Wand};
+use crate::prelude::object_what::ObjectWhat::{Armor, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
 
 #[no_mangle]
@@ -448,6 +448,25 @@ pub unsafe extern "C" fn call_it() -> i64 {
 		);
 	}
 	panic!("Reached end of non-void function without returning");
+}
+
+pub unsafe fn pack_count(new_obj: *const obj) -> usize {
+	let mut count = 0;
+	let mut obj = rogue.pack.next_object;
+	while !obj.is_null() {
+		if (*obj).what_is != Weapon {
+			count += (*obj).quantity;
+		} else if new_obj.is_null() {
+			count += 1;
+		} else if ((*new_obj).what_is != Weapon)
+			|| (((*obj).which_kind != weapon_kind::ARROW) && ((*obj).which_kind != weapon_kind::DAGGER) && ((*obj).which_kind != weapon_kind::DART) && ((*obj).which_kind != weapon_kind::SHURIKEN))
+			|| ((*new_obj).which_kind != (*obj).which_kind)
+			|| ((*obj).quiver != (*new_obj).quiver) {
+			count += 1;
+		}
+		obj = (*obj).next_object;
+	}
+	count as usize
 }
 
 

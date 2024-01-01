@@ -1349,7 +1349,7 @@ pub unsafe extern "C" fn new_object_for_wizard() {
 	let mut wk: libc::c_short = 0;
 	let mut obj: *mut object = 0 as *mut object;
 	let mut buf: [libc::c_char; 80] = [0; 80];
-	if pack_count(0 as *mut object) >= 24 as libc::c_int {
+	if pack_count(0 as *mut object) >= 24 {
 		message("pack full", 0);
 		return;
 	}
