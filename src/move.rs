@@ -1,9 +1,5 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-extern "C" {
-	pub type ldat;
-}
-
 use ncurses::{chtype, mvaddch, refresh};
 use MoveResult::MoveFailed;
 use crate::odds::R_TELE_PERCENT;
@@ -13,22 +9,6 @@ use crate::prelude::SpotFlag::{Door, Hidden, Monster, Nothing, Object, Stairs, T
 use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
 use crate::settings::jump;
-
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct pdat {
-	pub _pad_y: libc::c_short,
-	pub _pad_x: libc::c_short,
-	pub _pad_top: libc::c_short,
-	pub _pad_left: libc::c_short,
-	pub _pad_bottom: libc::c_short,
-	pub _pad_right: libc::c_short,
-}
-
-pub type WINDOW = _win_st;
-pub type attr_t = ncurses::chtype;
-
 
 pub static mut m_moves: i16 = 0;
 pub static you_can_move_again: &'static str = "you can move again";
@@ -46,7 +26,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool) -> MoveResult {
 	let mut row = rogue.row;
 	let mut col = rogue.col;
 	get_dir_rc(dirch, &mut row, &mut col, true);
-	if !can_move(rogue.row as i64, rogue.col as i64, row, col) {
+	if !can_move(rogue.row, rogue.col, row, col) {
 		return MoveFailed;
 	}
 	if being_held || bear_trap > 0 {
@@ -73,21 +53,21 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool) -> MoveResult {
 	}
 	if Door.is_set(dungeon[row as usize][col as usize]) {
 		if cur_room == PASSAGE {
-			cur_room = get_room_number(row as i64, col as i64);
+			cur_room = get_room_number(row, col);
 			light_up_room(cur_room);
 			wake_room(cur_room, true, row, col);
 		} else {
 			light_passage(row, col);
 		}
 	} else if Door.is_set(dungeon[rogue.row as usize][rogue.col as usize]) && Tunnel.is_set(dungeon[row as usize][col as usize]) {
-		light_passage(row as i64, col as i64);
-		wake_room(cur_room, false, rogue.row as i64, rogue.col as i64);
+		light_passage(row, col);
+		wake_room(cur_room, false, rogue.row, rogue.col);
 		darken_room(cur_room);
 		cur_room = PASSAGE;
 	} else if Tunnel.is_set(dungeon[row as usize][col as usize]) {
 		light_passage(row, col);
 	}
-	mvaddch(rogue.row as i32, rogue.col as i32, get_dungeon_char(rogue.row as i64, rogue.col as i64));
+	mvaddch(rogue.row as i32, rogue.col as i32, get_dungeon_char(rogue.row, rogue.col));
 	mvaddch(row as i32, col as i32, chtype::from(rogue.fchar));
 	if !jump() {
 		refresh();
@@ -104,27 +84,27 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool) -> MoveResult {
 			if !obj.is_null() {
 				if (*obj).what_is == Gold {
 					free_object(obj);
-					return not_in_pack(&get_desc(&*obj));
+					not_in_pack(&get_desc(&*obj))
 				} else {
 					let desc = format!("{}({})", get_desc(&*obj), (*obj).ichar);
-					return not_in_pack(&desc);
+					not_in_pack(&desc)
 				}
 			} else if status != 0 {
-				return mved();
+				mved()
 			} else {
-				return move_on(row, col);
+				move_on(row, col)
 			}
 		} else {
-			return move_on(row, col);
+			move_on(row, col)
 		}
 	} else if SpotFlag::is_any_set(&vec![Door, Stairs, Trap], dungeon[row as usize][col as usize]) {
 		if levitate == 0 && Trap.is_set(dungeon[row as usize][col as usize]) {
 			trap_player(row, col);
 		}
 		reg_move();
-		return StoppedOnSomething;
+		StoppedOnSomething
 	} else {
-		return mved();
+		mved()
 	}
 }
 
@@ -143,9 +123,9 @@ unsafe fn not_in_pack(desc: &str) -> MoveResult {
 unsafe fn mved() -> MoveResult {
 	if reg_move() != 0 {
 		/* fainted from hunger */
-		return StoppedOnSomething;
+		StoppedOnSomething
 	} else {
-		return if confused != 0 { StoppedOnSomething } else { Moved };
+		if confused != 0 { StoppedOnSomething } else { Moved }
 	}
 }
 
@@ -161,7 +141,7 @@ pub unsafe extern "C" fn multiple_move_rogue(mut dirch: i64) -> i64 {
 				col = rogue.col;
 				m = one_move_rogue((dirch as u8 + 96) as char, true)
 					as libc::c_short;
-				if m as i64 == -(1)
+				if m as i64 == -1
 					|| m as libc::c_int == -(2 as libc::c_int)
 					|| interrupted as libc::c_int != 0
 				{
@@ -201,7 +181,7 @@ pub unsafe extern "C" fn is_passable(
 			false
 		};
 	}
-	const flags: Vec<SpotFlag> = vec![SpotFlag::Floor, SpotFlag::Tunnel, SpotFlag::Door, SpotFlag::Stairs, SpotFlag::Trap];
+	const flags: Vec<SpotFlag> = vec![SpotFlag::Floor, Tunnel, Door, Stairs, Trap];
 	return SpotFlag::is_any_set(&flags, dungeon[row as usize][col as usize]);
 }
 
@@ -215,16 +195,16 @@ pub unsafe fn next_to_something(drow: i64, dcol: i64) -> bool {
 	let mut row = 0;
 	let mut col = 0;
 	let mut pass_count = 0;
-	let i_end = if (rogue.row < (DROWS as i64 - 2)) { 1 } else { 0 };
-	let j_end = if (rogue.col < (DCOLS as i64 - 1)) { 1 } else { 0 };
-	let i_start = if (rogue.row > MIN_ROW) { -1 } else { 0 };
-	let j_start = if (rogue.col > 0) { -1 } else { 0 };
+	let i_end = if rogue.row < (DROWS as i64 - 2) { 1 } else { 0 };
+	let j_end = if rogue.col < (DCOLS as i64 - 1) { 1 } else { 0 };
+	let i_start = if rogue.row > MIN_ROW { -1 } else { 0 };
+	let j_start = if rogue.col > 0 { -1 } else { 0 };
 	for i in i_start..=i_end {
 		for j in j_start..=j_end {
-			if ((i == 0) && (j == 0)) {
+			if (i == 0) && (j == 0) {
 				continue;
 			}
-			if (((rogue.row + i) == drow) && ((rogue.col + j) == dcol)) {
+			if ((rogue.row + i) == drow) && ((rogue.col + j) == dcol) {
 				continue;
 			}
 			row = rogue.row + i;
@@ -236,22 +216,22 @@ pub unsafe fn next_to_something(drow: i64, dcol: i64) -> bool {
 			/* If the rogue used to be right, up, left, down, or right of
 			 * row,col, and now isn't, then don't stop */
 			if SpotFlag::is_any_set(&vec![Monster, Object, Stairs], s) {
-				if (((row == drow) || (col == dcol)) &&
-					(!((row == rogue.row) || (col == rogue.col)))) {
+				if ((row == drow) || (col == dcol)) &&
+					(!((row == rogue.row) || (col == rogue.col))) {
 					continue;
 				}
 				return true;
 			}
 			if Trap.is_set(s) {
 				if !Hidden.is_set(s) {
-					if (((row == drow) || (col == dcol)) &&
-						(!((row == rogue.row) || (col == rogue.col)))) {
+					if ((row == drow) || (col == dcol)) &&
+						(!((row == rogue.row) || (col == rogue.col))) {
 						continue;
 					}
 					return true;
 				}
 			}
-			if ((((i - j) == 1) || ((i - j) == -1)) && (Tunnel.is_set(s))) {
+			if (((i - j) == 1) || ((i - j) == -1)) && (Tunnel.is_set(s)) {
 				pass_count += 1;
 				if pass_count > 1 {
 					return true;
@@ -275,9 +255,9 @@ pub unsafe fn can_move(row1: i64, col1: i64, row2: i64, col2: i64) -> bool {
 				return false;
 			}
 		}
-		return true;
+		true
 	} else {
-		return false;
+		false
 	}
 }
 
@@ -349,7 +329,6 @@ pub unsafe extern "C" fn check_hunger(mut messages_only: libc::c_char) -> libc::
 					mv_mons();
 				}
 				i += 1;
-				i;
 			}
 			message(you_can_move_again, 1);
 		}
@@ -428,7 +407,6 @@ pub unsafe extern "C" fn reg_move() -> libc::c_char {
 	}
 	if bear_trap != 0 {
 		bear_trap -= 1;
-		bear_trap;
 	}
 	if levitate != 0 {
 		levitate -= 1;
@@ -465,7 +443,6 @@ pub unsafe extern "C" fn rest(mut count: libc::c_int) -> libc::c_int {
 		}
 		reg_move();
 		i += 1;
-		i;
 	}
 	panic!("Reached end of non-void function without returning");
 }

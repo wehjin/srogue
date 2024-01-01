@@ -6,15 +6,6 @@ use crate::message::message;
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::room::gr_row_col;
 
-extern "C" {
-	pub type ldat;
-	fn waddch(_: *mut WINDOW, _: chtype) -> i64;
-	fn add_to_pack() -> *mut object;
-	fn alloc_object() -> *mut object;
-	fn object_at() -> *mut object;
-	static mut stealthy: c_short;
-}
-
 pub mod flags;
 
 use crate::prelude::*;
