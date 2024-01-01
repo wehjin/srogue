@@ -6,6 +6,7 @@ extern "C" {
 }
 
 use crate::prelude::*;
+use crate::prelude::item_usage::{ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat::Ring;
 use crate::prelude::object_what::PackFilter::Rings;
 use crate::prelude::ring_kind::{RingKind, RINGS};
@@ -163,6 +164,17 @@ pub unsafe extern "C" fn remove_ring() -> i64 {
 		}
 	}
 	panic!("Reached end of non-void function without returning");
+}
+
+pub unsafe fn un_put_on(ring: *mut obj) {
+	if !ring.is_null() && ((*ring).in_use_flags & ON_LEFT_HAND != 0) {
+		(*ring).in_use_flags &= !ON_LEFT_HAND;
+		rogue.left_ring = 0 as *mut object;
+	} else if (!ring.is_null() && ((*ring).in_use_flags & ON_RIGHT_HAND != 0)) {
+		(*ring).in_use_flags &= !ON_RIGHT_HAND;
+		rogue.right_ring = 0 as *mut object;
+	}
+	ring_stats(true);
 }
 
 pub fn gr_ring(ring: &mut object, assign_wk: bool) {

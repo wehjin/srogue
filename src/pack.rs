@@ -13,11 +13,12 @@ extern "C" {
 
 use crate::prelude::*;
 use crate::prelude::IdStatus::Unidentified;
-use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
+use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_EITHER_HAND};
 use crate::prelude::object_what::{PackFilter};
 use crate::prelude::object_what::ObjectWhat::{Armor, Gold, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
-use crate::prelude::stat_const::STAT_GOLD;
+use crate::prelude::SpotFlag::{Object, Stairs, Trap};
+use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD};
 
 
 pub static mut curse_message: &'static str = "you can't, it appears to be cursed";
@@ -98,82 +99,61 @@ pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short) -> *mut obje
 	return obj;
 }
 
-#[export_name = "drop"]
-pub unsafe extern "C" fn drop_0() {
-	let mut obj: *mut object = 0 as *mut object;
-	let mut new: *mut object = 0 as *mut object;
-	let mut ch: libc::c_short = 0;
-	let mut desc: [libc::c_char; 80] = [0; 80];
-	if dungeon[rogue.row as usize][rogue.col as usize] as i64
-		& (0o1 as libc::c_ushort as i64
-		| 0o4 as i64 as libc::c_ushort as i64
-		| 0o400 as i64 as libc::c_ushort as i64) != 0
-	{
-		message("there's already something there", 0 as i64);
+pub unsafe fn drop_0() {
+	if SpotFlag::is_any_set(&vec![Object, Stairs, Trap], dungeon[rogue.row as usize][rogue.col as usize]) {
+		message("there's already something there", 0);
 		return;
 	}
-	if (rogue.pack.next_object).is_null() {
-		message("you have nothing to drop", 0 as i64);
+	if rogue.pack.next_object.is_null() {
+		message("you have nothing to drop", 0);
 		return;
 	}
-	ch = pack_letter("drop what?", AllObjects) as libc::c_short;
-	if ch as i64 == '\u{1b}' as i32 {
+	let ch = pack_letter("drop what?", AllObjects);
+	if ch == CANCEL {
 		return;
 	}
-	obj = get_letter_object(ch as i64);
+	let mut obj = get_letter_object(ch);
 	if obj.is_null() {
-		message("no such item.", 0 as i64);
+		message("no such item.", 0);
 		return;
 	}
-	if (*obj).in_use_flags as i64
-		& 0o1 as libc::c_ushort as i64 != 0
-	{
+	if (*obj).in_use_flags & BEING_WIELDED != 0 {
 		if (*obj).is_cursed != 0 {
-			message(curse_message, 0 as i64);
+			message(curse_message, 0);
 			return;
 		}
 		unwield(rogue.weapon);
-	} else if (*obj).in_use_flags as i64
-		& 0o2 as i64 as libc::c_ushort as i64 != 0
-	{
+	} else if (*obj).in_use_flags & BEING_WORN != 0 {
 		if (*obj).is_cursed != 0 {
-			message(curse_message, 0 as i64);
+			message(curse_message, 0);
 			return;
 		}
 		mv_aquatars();
 		unwear(rogue.armor);
-		print_stats(0o20 as i64);
-	} else if (*obj).in_use_flags as i64
-		& 0o14 as i64 as libc::c_ushort as i64 != 0
-	{
+		print_stats(STAT_ARMOR);
+	} else if (*obj).in_use_flags & ON_EITHER_HAND != 0 {
 		if (*obj).is_cursed != 0 {
-			message(curse_message, 0 as i64);
+			message(curse_message, 0);
 			return;
 		}
 		un_put_on(obj);
 	}
 	(*obj).row = rogue.row;
 	(*obj).col = rogue.col;
-	if (*obj).quantity as i64 > 1
-		&& (*obj).what_is as i64
-		!= 0o2 as i64 as libc::c_ushort as i64
-	{
+
+	if (*obj).quantity > 1 && (*obj).what_is != Weapon {
 		(*obj).quantity -= 1;
-		(*obj).quantity;
-		new = alloc_object();
+		let new = alloc_object();
 		*new = *obj;
-		(*new).quantity = 1 as libc::c_short;
+		(*new).quantity = 1;
 		obj = new;
 	} else {
-		(*obj).ichar = 'L' as i32 as libc::c_short;
+		(*obj).ichar = 'L';
 		take_from_pack(obj, &mut rogue.pack);
 	}
-	place_at(obj, rogue.row as i64, rogue.col as i64);
-	let desc = "dropped ";
-	let full_desc = get_desc(obj, desc.as_mut_ptr().offset(8 as i64 as isize));
-	message(&full_desc, 0 as i64);
+	place_at(obj, rogue.row, rogue.col);
+	message(&format!("dropped {}", get_desc(&*obj)), 0);
 	reg_move();
-	panic!("Reached end of non-void function without returning");
 }
 
 #[no_mangle]
@@ -227,7 +207,7 @@ pub unsafe fn next_avail_ichar() -> char {
 	{
 		let mut obj = rogue.pack.next_object;
 		while !obj.is_null() {
-			used[(*obj).ichar as u8 - 'a' as u8] = true;
+			used[((*obj).ichar as u8 - 'a' as u8) as usize] = true;
 			obj = (*obj).next_object;
 		}
 	}
@@ -244,7 +224,7 @@ pub unsafe fn wait_for_ack() {
 }
 
 pub unsafe fn pack_letter(prompt: &str, filter: PackFilter) -> char {
-	if !mask_pack(&*rogue.pack, filter.clone()) {
+	if !mask_pack(&rogue.pack, filter.clone()) {
 		message("nothing appropriate", 0);
 		return CANCEL;
 	}
@@ -267,7 +247,7 @@ pub unsafe fn pack_letter(prompt: &str, filter: PackFilter) -> char {
 		check_message();
 		match pack_op {
 			PackOp::List(filter) => {
-				inventory(&*rogue.pack, filter);
+				inventory(&rogue.pack, filter);
 			}
 			PackOp::Cancel => {
 				return CANCEL;
@@ -357,6 +337,14 @@ pub unsafe fn do_wear(obj: &mut obj) {
 	obj.identified = 1;
 }
 
+pub unsafe fn unwear(obj: *mut object) {
+	if !obj.is_null() {
+		(*obj).in_use_flags &= !BEING_WORN;
+	}
+	rogue.armor = 0 as *mut object;
+}
+
+
 #[no_mangle]
 pub unsafe extern "C" fn wield() {
 	if !rogue.weapon.is_null() && (*rogue.weapon).is_cursed != 0 {
@@ -397,6 +385,13 @@ pub unsafe extern "C" fn wield() {
 pub unsafe fn do_wield(obj: &mut obj) {
 	rogue.weapon = obj;
 	obj.in_use_flags |= BEING_WIELDED;
+}
+
+pub unsafe fn unwield(obj: *mut obj) {
+	if !obj.is_null() {
+		(*obj).in_use_flags &= !BEING_WIELDED;
+	}
+	rogue.weapon = 0 as *mut object;
 }
 
 #[no_mangle]
