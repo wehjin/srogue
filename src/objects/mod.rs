@@ -1,9 +1,5 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-extern "C" {
-	pub type ldat;
-}
-
 use libc::{c_short};
 use ncurses::{chtype, mvaddch, mvinch};
 use serde::Serialize;
@@ -144,7 +140,7 @@ impl obj {
 	pub fn hp_to_kill(&self) -> c_short { self.quantity }
 	pub fn set_hp_to_kill(&mut self, value: c_short) { self.quantity = value }
 	pub fn m_char(&self) -> chtype {
-		self.ichar as ncurses::chtype
+		self.ichar as chtype
 	}
 	pub fn stationary_damage(&self) -> isize { self.stationary_damage }
 
@@ -199,7 +195,7 @@ impl obj {
 		}
 	}
 	pub fn in_room(&self, rn: i64) -> bool {
-		let object_rn = get_room_number(self.row as i64, self.col as i64);
+		let object_rn = get_room_number(self.row, self.col);
 		object_rn != NO_ROOM && object_rn == rn
 	}
 }
@@ -359,7 +355,7 @@ pub static mut id_potions: [id; POTIONS] = {
 		},
 		{
 			let mut init = id {
-				value: 25 as i64 as libc::c_short,
+				value: 25,
 				title: "white ".to_string(),
 				real: "of hallucination ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -413,7 +409,7 @@ pub static mut id_potions: [id; POTIONS] = {
 		},
 		{
 			let mut init = id {
-				value: 145 as i64 as libc::c_short,
+				value: 145,
 				title: "beige ".to_string(),
 				real: "of see invisible ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -426,7 +422,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 	[
 		{
 			let mut init = id {
-				value: 505 as i64 as libc::c_short,
+				value: 505,
 				title: "                                   ".to_string(),
 				real: "of protect armor ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -444,7 +440,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 		},
 		{
 			let mut init = id {
-				value: 235 as i64 as libc::c_short,
+				value: 235,
 				title: "                                   ".to_string(),
 				real: "of enchant weapon ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -453,7 +449,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 		},
 		{
 			let mut init = id {
-				value: 235 as i64 as libc::c_short,
+				value: 235,
 				title: "                                   ".to_string(),
 				real: "of enchant armor ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -462,7 +458,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 		},
 		{
 			let mut init = id {
-				value: 175 as i64 as libc::c_short,
+				value: 175,
 				title: "                                   ".to_string(),
 				real: "of identify ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -480,7 +476,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 		},
 		{
 			let mut init = id {
-				value: 25 as i64 as libc::c_short,
+				value: 25,
 				title: "                                   ".to_string(),
 				real: "of sleep ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -516,7 +512,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 		},
 		{
 			let mut init = id {
-				value: 25 as i64 as libc::c_short,
+				value: 25,
 				title: "                                   ".to_string(),
 				real: "of aggravate monster ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -547,7 +543,7 @@ pub static mut id_weapons: [id; WEAPONS] = {
 		},
 		{
 			let mut init = id {
-				value: 8 as i64 as libc::c_short,
+				value: 8,
 				title: "darts ".to_string(),
 				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -556,7 +552,7 @@ pub static mut id_weapons: [id; WEAPONS] = {
 		},
 		{
 			let mut init = id {
-				value: 15 as i64 as libc::c_short,
+				value: 15,
 				title: "arrows ".to_string(),
 				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -565,7 +561,7 @@ pub static mut id_weapons: [id; WEAPONS] = {
 		},
 		{
 			let mut init = id {
-				value: 27 as i64 as libc::c_short,
+				value: 27,
 				title: "daggers ".to_string(),
 				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -574,7 +570,7 @@ pub static mut id_weapons: [id; WEAPONS] = {
 		},
 		{
 			let mut init = id {
-				value: 35 as i64 as libc::c_short,
+				value: 35,
 				title: "shurikens ".to_string(),
 				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -681,7 +677,7 @@ pub static mut id_wands: [id; WANDS] = {
 	[
 		{
 			let mut init = id {
-				value: 25 as i64 as libc::c_short,
+				value: 25,
 				title: "                                 ".to_string(),
 				real: "of teleport away ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -699,7 +695,7 @@ pub static mut id_wands: [id; WANDS] = {
 		},
 		{
 			let mut init = id {
-				value: 45 as i64 as libc::c_short,
+				value: 45,
 				title: "                                 ".to_string(),
 				real: "of confuse monster ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -708,7 +704,7 @@ pub static mut id_wands: [id; WANDS] = {
 		},
 		{
 			let mut init = id {
-				value: 8 as i64 as libc::c_short,
+				value: 8,
 				title: "                                 ".to_string(),
 				real: "of invisibility ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -717,7 +713,7 @@ pub static mut id_wands: [id; WANDS] = {
 		},
 		{
 			let mut init = id {
-				value: 55 as i64 as libc::c_short,
+				value: 55,
 				title: "                                 ".to_string(),
 				real: "of polymorph ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -735,7 +731,7 @@ pub static mut id_wands: [id; WANDS] = {
 		},
 		{
 			let mut init = id {
-				value: 25 as i64 as libc::c_short,
+				value: 25,
 				title: "                                 ".to_string(),
 				real: "of sleep ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -793,7 +789,7 @@ pub static mut id_rings: [id; RINGS] = {
 		},
 		{
 			let mut init = id {
-				value: 255 as i64 as libc::c_short,
+				value: 255,
 				title: "                                 ".to_string(),
 				real: "of regeneration ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -802,7 +798,7 @@ pub static mut id_rings: [id; RINGS] = {
 		},
 		{
 			let mut init = id {
-				value: 295 as i64 as libc::c_short,
+				value: 295,
 				title: "                                 ".to_string(),
 				real: "of slow digestion ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -839,7 +835,7 @@ pub static mut id_rings: [id; RINGS] = {
 		},
 		{
 			let mut init = id {
-				value: 25 as i64 as libc::c_short,
+				value: 25,
 				title: "                                 ".to_string(),
 				real: "of adornment ".to_string(),
 				id_status: IdStatus::Unidentified,
@@ -878,20 +874,19 @@ pub static mut id_rings: [id; RINGS] = {
 
 #[no_mangle]
 pub unsafe extern "C" fn put_objects() {
-	let mut i: libc::c_short = 0;
-	let mut n: libc::c_short = 0;
+	let mut i: c_short = 0;
+	let mut n: c_short = 0;
 	let mut obj: *mut object = 0 as *mut object;
 	if (cur_level as i64) < max_level as i64 {
 		return;
 	}
 	n = (if coin_toss() {
-		get_rand(2 as i64, 4 as i64)
+		get_rand(2, 4)
 	} else {
-		get_rand(3 as i64, 5 as i64)
-	}) as libc::c_short;
+		get_rand(3, 5)
+	}) as c_short;
 	while rand_percent(33) {
 		n += 1;
-		n;
 	}
 	if cur_level == party_counter {
 		make_party();
@@ -977,7 +972,7 @@ pub unsafe fn get_letter_object(ch: char) -> *mut object {
 #[no_mangle]
 pub unsafe extern "C" fn free_stuff(mut objlist: *mut object) -> i64 {
 	let mut obj: *mut object = 0 as *mut object;
-	while !((*objlist).next_object).is_null() {
+	while !(*objlist).next_object.is_null() {
 		obj = (*objlist).next_object;
 		(*objlist).next_object = (*(*objlist).next_object).next_object;
 		free_object(obj);
@@ -989,18 +984,18 @@ pub unsafe fn name_of(obj: &object) -> String {
 	match obj.what_is {
 		Armor => "armor ",
 		Weapon => match obj.which_kind {
-			weapon_kind::DART => if obj.quantity > 1 { "darts " } else { "dart " },
-			weapon_kind::ARROW => if obj.quantity > 1 { "arrows " } else { "arrow " },
-			weapon_kind::DAGGER => if obj.quantity > 1 { "daggers " } else { "dagger " },
-			weapon_kind::SHURIKEN => if obj.quantity > 1 { "shurikens " } else { "shuriken " },
+			DART => if obj.quantity > 1 { "darts " } else { "dart " },
+			ARROW => if obj.quantity > 1 { "arrows " } else { "arrow " },
+			DAGGER => if obj.quantity > 1 { "daggers " } else { "dagger " },
+			SHURIKEN => if obj.quantity > 1 { "shurikens " } else { "shuriken " },
 			_ => &id_weapons[obj.which_kind as usize].title
 		},
 		Scroll => if obj.quantity > 1 { "scrolls " } else { "scroll " }
 		Potion => if obj.quantity > 1 { "potions " } else { "potion " }
-		ObjectWhat::Food => if obj.which_kind == RATION { "food " } else { &fruit() }
-		ObjectWhat::Wand => if is_wood[obj.which_kind as usize] { "staff " } else { "wand " },
-		ObjectWhat::Ring => "ring ",
-		ObjectWhat::Amulet => "amulet ",
+		Food => if obj.which_kind == RATION { "food " } else { &fruit() }
+		Wand => if is_wood[obj.which_kind as usize] { "staff " } else { "wand " },
+		Ring => "ring ",
+		Amulet => "amulet ",
 		_ => "unknown ",
 	}.to_string()
 }
@@ -1068,25 +1063,25 @@ pub fn gr_scroll(obj: &mut obj) {
 
 	if percent <= 5 {
 		(*obj).which_kind = PROTECT_ARMOR;
-	} else if (percent <= 11) {
+	} else if percent <= 11 {
 		(*obj).which_kind = HOLD_MONSTER;
-	} else if (percent <= 20) {
+	} else if percent <= 20 {
 		(*obj).which_kind = CREATE_MONSTER;
-	} else if (percent <= 35) {
+	} else if percent <= 35 {
 		(*obj).which_kind = IDENTIFY;
-	} else if (percent <= 43) {
+	} else if percent <= 43 {
 		(*obj).which_kind = TELEPORT;
-	} else if (percent <= 50) {
+	} else if percent <= 50 {
 		(*obj).which_kind = SLEEP;
-	} else if (percent <= 55) {
+	} else if percent <= 55 {
 		(*obj).which_kind = SCARE_MONSTER;
-	} else if (percent <= 64) {
+	} else if percent <= 64 {
 		(*obj).which_kind = REMOVE_CURSE;
-	} else if (percent <= 69) {
+	} else if percent <= 69 {
 		(*obj).which_kind = ENCH_ARMOR;
-	} else if (percent <= 74) {
+	} else if percent <= 74 {
 		(*obj).which_kind = ENCH_WEAPON;
-	} else if (percent <= 80) {
+	} else if percent <= 80 {
 		(*obj).which_kind = AGGRAVATE_MONSTER;
 	} else {
 		(*obj).which_kind = MAGIC_MAPPING;
@@ -1099,29 +1094,29 @@ pub fn gr_potion(obj: &mut obj) {
 
 	if percent <= 5 {
 		(*obj).which_kind = RAISE_LEVEL;
-	} else if (percent <= 15) {
+	} else if percent <= 15 {
 		(*obj).which_kind = DETECT_OBJECTS;
-	} else if (percent <= 25) {
+	} else if percent <= 25 {
 		(*obj).which_kind = DETECT_MONSTER;
-	} else if (percent <= 35) {
+	} else if percent <= 35 {
 		(*obj).which_kind = INCREASE_STRENGTH;
-	} else if (percent <= 45) {
+	} else if percent <= 45 {
 		(*obj).which_kind = RESTORE_STRENGTH;
-	} else if (percent <= 55) {
+	} else if percent <= 55 {
 		(*obj).which_kind = HEALING;
-	} else if (percent <= 65) {
+	} else if percent <= 65 {
 		(*obj).which_kind = EXTRA_HEALING;
-	} else if (percent <= 75) {
+	} else if percent <= 75 {
 		(*obj).which_kind = BLINDNESS;
-	} else if (percent <= 85) {
+	} else if percent <= 85 {
 		(*obj).which_kind = HALLUCINATION;
-	} else if (percent <= 95) {
+	} else if percent <= 95 {
 		(*obj).which_kind = CONFUSION;
-	} else if (percent <= 105) {
+	} else if percent <= 105 {
 		(*obj).which_kind = POISON;
-	} else if (percent <= 110) {
+	} else if percent <= 110 {
 		(*obj).which_kind = LEVITATION;
-	} else if (percent <= 114) {
+	} else if percent <= 114 {
 		(*obj).which_kind = HASTE_SELF;
 	} else {
 		(*obj).which_kind = SEE_INVISIBLE;
@@ -1133,7 +1128,7 @@ pub fn gr_weapon(obj: &mut obj, assign_wk: bool) {
 	if assign_wk {
 		(*obj).which_kind = get_rand(0, (WEAPONS - 1) as u16);
 	}
-	if (((*obj).which_kind == ARROW) || ((*obj).which_kind == DAGGER) || ((*obj).which_kind == SHURIKEN) | ((*obj).which_kind == DART)) {
+	if ((*obj).which_kind == ARROW) || ((*obj).which_kind == DAGGER) || ((*obj).which_kind == SHURIKEN) | ((*obj).which_kind == DART) {
 		(*obj).quantity = get_rand(3, 15);
 		(*obj).quiver = get_rand(0, 126);
 	} else {
@@ -1148,7 +1143,7 @@ pub fn gr_weapon(obj: &mut obj, assign_wk: bool) {
 	let mut increment = 0;
 	if percent <= 16 {
 		increment = 1;
-	} else if (percent <= 32) {
+	} else if percent <= 32 {
 		increment = -1;
 		(*obj).is_cursed = 1;
 	}
@@ -1223,7 +1218,7 @@ pub fn gr_wand(obj: &mut obj) {
 }
 
 pub fn get_food(obj: &mut obj, force_ration: bool) {
-	obj.what_is = (Food);
+	obj.what_is = Food;
 	if force_ration || rand_percent(80) {
 		obj.which_kind = RATION;
 	} else {
@@ -1254,7 +1249,7 @@ pub unsafe extern "C" fn alloc_object() -> *mut object {
 		obj = free_list;
 		free_list = (*free_list).next_object;
 	} else {
-		obj = md_malloc(::core::mem::size_of::<object>() as i64) as *mut object;
+		obj = md_malloc(core::mem::size_of::<object>() as i64) as *mut object;
 		if obj.is_null() {
 			message("cannot allocate object, saving game", 0);
 			save_into_file(error_file);
