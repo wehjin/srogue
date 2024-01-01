@@ -11,6 +11,7 @@ use serde::Serialize;
 use crate::objects;
 use crate::prelude::*;
 use crate::prelude::DoorDirection::{Left, Right};
+use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::SpotFlag::{Door, Floor, Hidden, HorWall, Monster, Object, Stairs, Trap, Tunnel, VertWall};
 use crate::room::DoorDirection::{Up, Down};
 
@@ -316,6 +317,22 @@ pub unsafe fn get_dungeon_char(row: i64, col: i64) -> ncurses::chtype {
 	}
 	return ncurses::chtype::from(' ');
 }
+
+pub fn get_mask_char(mask: ObjectWhat) -> char {
+	match mask {
+		ObjectWhat::Scroll => '?',
+		ObjectWhat::Potion => '!',
+		ObjectWhat::Gold => '*',
+		ObjectWhat::Food => ':',
+		ObjectWhat::Wand => '/',
+		ObjectWhat::Armor => ']',
+		ObjectWhat::Weapon => ')',
+		ObjectWhat::Ring => '=',
+		ObjectWhat::Amulet => ',',
+		_ => '~',
+	}
+}
+
 
 pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, spots: Vec<SpotFlag>) {
 	let mut r = 0;

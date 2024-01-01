@@ -5,7 +5,7 @@ extern "C" {
 }
 
 use libc::{c_int, c_short};
-use ncurses::{addch, chtype};
+use ncurses::{addch, chtype, mvaddch, mvinch};
 use serde::Serialize;
 use ObjectWhat::{Armor, Potion, Scroll, Weapon};
 use weapon_kind::{LONG_SWORD, MACE, TWO_HANDED_SWORD};
@@ -14,11 +14,11 @@ use crate::prelude::*;
 use crate::prelude::armor_kind::{ARMORS, PLATE, SPLINT};
 use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::object_what::{ObjectWhat};
-use crate::prelude::object_what::ObjectWhat::{Food, Gold, Ring, Wand};
+use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
 use crate::prelude::potion_kind::{BLINDNESS, CONFUSION, DETECT_MONSTER, DETECT_OBJECTS, EXTRA_HEALING, HALLUCINATION, HASTE_SELF, HEALING, INCREASE_STRENGTH, LEVITATION, POISON, POTIONS, RAISE_LEVEL, RESTORE_STRENGTH, SEE_INVISIBLE};
 use crate::prelude::ring_kind::RINGS;
 use crate::prelude::scroll_kind::{AGGRAVATE_MONSTER, CREATE_MONSTER, ENCH_ARMOR, ENCH_WEAPON, HOLD_MONSTER, IDENTIFY, MAGIC_MAPPING, PROTECT_ARMOR, REMOVE_CURSE, SCARE_MONSTER, SCROLLS, SLEEP, TELEPORT};
-use crate::prelude::SpotFlag::{Floor, Tunnel};
+use crate::prelude::SpotFlag::{Floor, Monster, Tunnel};
 use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, WANDS};
 use crate::prelude::weapon_kind::{ARROW, BOW, DAGGER, DART, SHURIKEN, WEAPONS};
 use crate::settings::fruit;
@@ -1302,74 +1302,37 @@ pub unsafe fn make_party() {
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn show_objects() {
-	let mut obj: *mut object = 0 as *mut object;
-	let mut mc: libc::c_short = 0;
-	let mut rc: libc::c_short = 0;
-	let mut row = 0;
-	let mut col = 0;
-	let mut monster: *mut object = 0 as *mut object;
-	obj = level_objects.next_object;
+pub unsafe fn show_objects() {
+	let mut obj = level_objects.next_object;
 	while !obj.is_null() {
-		row = (*obj).row;
-		col = (*obj).col;
-		rc = get_mask_char((*obj).what_is);
-		if dungeon[row as usize][col as usize] as libc::c_int
-			& 0o2 as libc::c_int as libc::c_ushort as libc::c_int != 0
-		{
-			monster = object_at(&mut level_monsters, row, col);
+		let row = (*obj).row;
+		let col = (*obj).col;
+		let rc = get_mask_char((*obj).what_is) as chtype;
+		if Monster.is_set(dungeon[row as usize][col as usize]) {
+			let monster = object_at(&mut level_monsters, row, col);
 			if !monster.is_null() {
-				(*monster).d_enchant = rc;
+				(*monster).set_trail_char(rc);
 			}
 		}
-		mc = (if ncurses::wmove(ncurses::stdscr(), row as libc::c_int, col as libc::c_int)
-			== -(1 as libc::c_int)
-		{
-			-(1 as libc::c_int) as ncurses::chtype
-		} else {
-			ncurses::winch(ncurses::stdscr())
-		}) as libc::c_short;
-		if ((mc as libc::c_int) < 'A' as i32 || mc as libc::c_int > 'Z' as i32)
-			&& (row as libc::c_int != rogue.row as libc::c_int
-			|| col as libc::c_int != rogue.col as libc::c_int)
-		{
-			if ncurses::wmove(ncurses::stdscr(), row as libc::c_int, col as libc::c_int)
-				== -(1 as libc::c_int)
-			{
-				-(1 as libc::c_int);
-			} else {
-				addch(rc as ncurses::chtype);
-			};
+		let mc = mvinch(row as i32, col as i32);
+		if (mc < 'A' as chtype || mc > 'Z' as chtype) && (row != rogue.row || col != rogue.col) {
+			mvaddch(row as i32, col as i32, rc);
 		}
 		obj = (*obj).next_object;
 	}
-	monster = level_monsters.next_object;
+	let mut monster = level_monsters.next_object;
 	while !monster.is_null() {
-		if (*monster).m_flags & 0o20000000 as libc::c_long as libc::c_ulong != 0 {
-			if ncurses::wmove(
-				ncurses::stdscr(),
-				(*monster).row as libc::c_int,
-				(*monster).col as libc::c_int,
-			) == -(1 as libc::c_int)
-			{
-				-(1 as libc::c_int);
-			} else {
-				addch((*monster).what_is as libc::c_int as ncurses::chtype);
-			};
+		if (*monster).m_flags.imitates {
+			mvaddch((*monster).row as i32, (*monster).col as i32, (*monster).disguise as chtype);
 		}
 		monster = (*monster).next_object;
 	}
 }
 
-
-#[no_mangle]
-pub unsafe extern "C" fn put_amulet() -> libc::c_int {
-	let mut obj: *mut object = 0 as *mut object;
-	obj = alloc_object();
-	(*obj).what_is = 0o400 as libc::c_int as libc::c_ushort;
-	rand_place(obj);
-	panic!("Reached end of non-void function without returning");
+pub unsafe fn put_amulet() {
+	let mut obj = alloc_object();
+	(*obj).what_is = Amulet;
+	rand_place(&mut *obj);
 }
 
 pub unsafe fn rand_place(obj: &mut obj) {
@@ -1380,14 +1343,14 @@ pub unsafe fn rand_place(obj: &mut obj) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn new_object_for_wizard() -> libc::c_int {
+pub unsafe extern "C" fn new_object_for_wizard() {
 	let mut ch: libc::c_short = 0;
 	let mut max: libc::c_short = 0;
 	let mut wk: libc::c_short = 0;
 	let mut obj: *mut object = 0 as *mut object;
 	let mut buf: [libc::c_char; 80] = [0; 80];
 	if pack_count(0 as *mut object) >= 24 as libc::c_int {
-		message(b"pack full\0" as *const u8 as *const libc::c_char, 0 as libc::c_int);
+		message("pack full", 0);
 		return;
 	}
 	message("type of object?", 0);
