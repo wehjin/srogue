@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use chrono::Weekday::Mon;
 use libc::{c_ushort};
 pub use crate::message::*;
 pub use crate::level::*;
@@ -65,7 +64,7 @@ pub struct DungeonSpot {
 	pub row: i64,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub enum SpotFlag {
 	Nothing = 0x0,
 	Object = 0o1,

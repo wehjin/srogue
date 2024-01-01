@@ -4,7 +4,7 @@ extern "C" {
 	pub type ldat;
 }
 
-use ncurses::{addch, chtype, mvaddch, refresh};
+use ncurses::{chtype, mvaddch, refresh};
 use MoveResult::MoveFailed;
 use crate::odds::R_TELE_PERCENT;
 use crate::prelude::*;
