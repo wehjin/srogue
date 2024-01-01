@@ -31,7 +31,6 @@ extern "C" {
 	fn strcat(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
 	static mut m_names: [*mut libc::c_char; 0];
 	static mut msg_cleared: libc::c_char;
-	static mut byebye_string: *mut libc::c_char;
 	fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> i64;
 }
 
@@ -488,7 +487,7 @@ pub unsafe extern "C" fn quit(mut from_intrpt: libc::c_char) {
 
 pub unsafe fn sf_error() {
 	message("", 1);
-	clean_up(b"sorry, score file is out of order\0" as *const u8 as *const libc::c_char);
+	clean_up("sorry, score file is out of order");
 }
 
 pub unsafe fn put_scores(monster: Option<&object>, other: i16) {
@@ -625,7 +624,7 @@ pub unsafe fn put_scores(monster: Option<&object>, other: i16) {
 	refresh();
 	drop(file);
 	message("", 0);
-	clean_up(b"\n\0" as *const u8 as *const libc::c_char);
+	clean_up("\n");
 }
 
 pub fn is_vowel(ch: char) -> bool {

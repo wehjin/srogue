@@ -52,7 +52,7 @@ pub fn user() -> &'static User {
 pub unsafe extern "C" fn turn_into_games() {
 	if setuid(user().saved_uid) == -1 {
 		perror(b"setuid(restore)\0" as *const u8 as *const libc::c_char);
-		clean_up(b"\0" as *const u8 as *const libc::c_char);
+		clean_up("");
 	}
 }
 
@@ -60,7 +60,7 @@ pub unsafe extern "C" fn turn_into_games() {
 pub unsafe extern "C" fn turn_into_user() {
 	if setuid(user().true_uid) == -1 {
 		perror(b"setuid(restore)\0" as *const u8 as *const libc::c_char);
-		clean_up(b"\0" as *const u8 as *const libc::c_char);
+		clean_up("");
 	}
 }
 

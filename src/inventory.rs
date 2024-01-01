@@ -211,20 +211,15 @@ pub unsafe fn make_scroll_titles() {
 }
 
 fn get_quantity(obj: &object) -> String {
-	match &obj.what_is {
-		WhatIsOrDisguise::WhatIs(what) => {
-			match what {
-				Armor => "".to_string(),
-				_ => {
-					if obj.quantity == 1 {
-						"a ".to_string()
-					} else {
-						format!("{} ", obj.quantity)
-					}
-				}
+	match obj.what_is {
+		Armor => "".to_string(),
+		_ => {
+			if obj.quantity == 1 {
+				"a ".to_string()
+			} else {
+				format!("{} ", obj.quantity)
 			}
 		}
-		WhatIsOrDisguise::Disguise(_) => "".to_string()
 	}
 }
 

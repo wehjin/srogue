@@ -164,7 +164,7 @@ pub unsafe fn save_into_file(sfile: &str) {
 	if write_failed {
 		md_df(&sfile);
 	} else {
-		clean_up(b"\0" as *const u8 as *const libc::c_char);
+		clean_up("");
 	}
 }
 
@@ -210,10 +210,10 @@ pub unsafe extern "C" fn restore(fname: &str) -> i64 {
 		fp.is_null()
 	}
 	{
-		clean_up(b"cannot open file\0" as *const u8 as *const libc::c_char);
+		clean_up("cannot open file");
 	}
 	if md_link_count(fname) > 1 {
-		clean_up(b"file has link\0" as *const u8 as *const libc::c_char);
+		clean_up("file has link");
 	}
 	xxx(1);
 	r_read(
@@ -235,9 +235,7 @@ pub unsafe extern "C" fn restore(fname: &str) -> i64 {
 	strcpy(tbuf.as_mut_ptr(), &login_name());
 	read_string(&login_name(), fp);
 	if strcmp(tbuf.as_mut_ptr(), &login_name()) != 0 {
-		clean_up(
-			b"you're not the original player\0" as *const u8 as *const libc::c_char,
-		);
+		clean_up("you're not the original player");
 	}
 	r_read(
 		fp,
@@ -257,10 +255,7 @@ pub unsafe extern "C" fn restore(fname: &str) -> i64 {
 		::core::mem::size_of::<i64>() as libc::c_ulong,
 	);
 	if new_file_id != saved_file_id {
-		clean_up(
-			b"sorry, saved game is not in the same file\0" as *const u8
-				as *const libc::c_char,
-		);
+		clean_up("sorry, saved game is not in the same file");
 	}
 	rw_dungeon(fp, 0 as i64);
 	r_read(
@@ -369,15 +364,15 @@ pub unsafe extern "C" fn restore(fname: &str) -> i64 {
 	) > 0 as i64 as libc::c_ulong
 	{
 		ncurses::wclear(ncurses::stdscr());
-		clean_up(b"extra characters in file\0" as *const u8 as *const libc::c_char);
+		clean_up("extra characters in file");
 	}
 	let mod_time = md_gfmt(fname);
 	if has_been_touched(&mut saved_time, &mut mod_time) != 0 {
 		ncurses::wclear(ncurses::stdscr());
-		clean_up(b"sorry, file has been touched\0" as *const u8 as *const libc::c_char);
+		clean_up("sorry, file has been touched");
 	}
 	if wizard == 0 && md_df(fname) == 0 {
-		clean_up(b"cannot delete file\0" as *const u8 as *const libc::c_char);
+		clean_up("cannot delete file");
 	}
 	msg_cleared = 0 as i64 as libc::c_char;
 	ring_stats(0 as i64);
