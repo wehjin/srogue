@@ -203,6 +203,29 @@ pub fn gr_ring(ring: &mut object, assign_wk: bool) {
 	}
 }
 
+pub unsafe fn inv_rings() {
+	if (r_rings == 0) {
+		message("not wearing any rings", 0);
+	} else {
+		if !rogue.left_ring.is_null() {
+			message(&get_desc(&rogue.left_ring), 0);
+		}
+		if &rogue.right_ring.is_null() {
+			message(&get_desc(&rogue.right_ring), 0);
+		}
+	}
+	if wizard {
+		message(
+			&format!("ste {}, r_r {}, e_r {}, r_t {}, s_s {}, a_s {}, reg {}, r_e {}, s_i {}, m_a {}, aus {}",
+			         stealthy, r_rings, e_rings, r_teleport, sustain_strength,
+			         add_strength, regeneration, ring_exp, r_see_invisible,
+			         maintain_armor, auto_search),
+			0,
+		);
+	}
+}
+
+
 enum RingHand {
 	Left,
 	Right,

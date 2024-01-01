@@ -414,9 +414,8 @@ pub unsafe fn get_id_table(obj: &object) -> &'static mut [id] {
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn inv_armor_weapon(is_weapon: libc::c_char) {
-	if is_weapon != 0 {
+pub unsafe fn inv_armor_weapon(is_weapon: bool) {
+	if is_weapon != false {
 		if !rogue.weapon.is_null() {
 			single_inv(Some((*rogue.weapon).ichar));
 		} else {

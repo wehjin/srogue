@@ -44,8 +44,7 @@ pub static mut traps: [trap; 10] = [tr {
 	trap_row: 0,
 	trap_col: 0,
 }; 10];
-#[no_mangle]
-pub static mut trap_door: libc::c_char = 0 as i64 as libc::c_char;
+pub static mut trap_door: libc::c_char = 0 as libc::c_char;
 pub static mut bear_trap: usize = 0;
 #[no_mangle]
 pub static mut trap_strings: [*mut libc::c_char; 12] = [
