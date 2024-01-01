@@ -259,33 +259,21 @@ pub unsafe fn pack_letter(prompt: &str, filter: PackFilter) -> char {
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn take_off() -> i64 {
-	let mut desc: [libc::c_char; 80] = [0; 80];
-	let mut obj: *mut object = 0 as *mut object;
-	if !(rogue.armor).is_null() {
+pub unsafe fn take_off() {
+	if !rogue.armor.is_null() {
 		if (*rogue.armor).is_cursed != 0 {
-			message(curse_message, 0 as i64);
+			message(curse_message, 0);
 		} else {
 			mv_aquatars();
-			obj = rogue.armor;
+			let obj = rogue.armor;
 			unwear(rogue.armor);
-			strcpy(
-				desc.as_mut_ptr(),
-				b"was wearing \0" as *const u8 as *const libc::c_char,
-			);
-			get_desc(obj, desc.as_mut_ptr().offset(12 as i64 as isize));
-			message(desc.as_mut_ptr(), 0 as i64);
-			print_stats(0o20 as i64);
+			message(&format!("was wearing {}", get_desc(&*obj)), 0);
+			print_stats(STAT_ARMOR);
 			reg_move();
 		}
 	} else {
-		message(
-			b"not wearing any\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+		message("not wearing any", 0);
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
 #[no_mangle]
@@ -294,10 +282,7 @@ pub unsafe extern "C" fn wear() -> i64 {
 	let mut obj: *mut object = 0 as *mut object;
 	let mut desc: [libc::c_char; 80] = [0; 80];
 	if !(rogue.armor).is_null() {
-		message(
-			b"your already wearing some\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+		message("your already wearing some", 0);
 		return;
 	}
 	ch = pack_letter("wear what?", Armors) as libc::c_short;
