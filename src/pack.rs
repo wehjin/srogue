@@ -1,6 +1,6 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-use libc::{c_short, strcpy, strlen};
+use libc::{c_short};
 use scroll_kind::SCARE_MONSTER;
 use crate::{get_input_line, message, mv_aquatars, print_stats};
 use crate::objects::IdStatus::{Called, Identified};
@@ -40,11 +40,11 @@ pub unsafe extern "C" fn add_to_pack(
 			(*obj).ichar = next_avail_ichar();
 		}
 	}
-	if ((*pack).next_object).is_null() {
+	if (*pack).next_object.is_null() {
 		(*pack).next_object = obj;
 	} else {
 		op = (*pack).next_object;
-		while !((*op).next_object).is_null() {
+		while !(*op).next_object.is_null() {
 			op = (*op).next_object;
 		}
 		(*op).next_object = obj;
@@ -72,7 +72,7 @@ pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short) -> *mut obje
 		&& (*obj).which_kind == SCARE_MONSTER
 		&& (*obj).picked_up != 0 {
 		message("the scroll turns to dust as you pick it up", 0);
-		dungeon[row as usize][col as usize] = dungeon[row as usize][col as usize] & !SpotFlag::Object.code();
+		dungeon[row as usize][col as usize] = dungeon[row as usize][col as usize] & !Object.code();
 		vanish(&mut *obj, false, &mut level_objects);
 		*status = 0;
 		if id_scrolls[SCARE_MONSTER as usize].id_status == Unidentified {
@@ -82,7 +82,7 @@ pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short) -> *mut obje
 	}
 	if (*obj).what_is == Gold {
 		rogue.gold += (*obj).quantity as isize;
-		dungeon[row as usize][col as usize] = dungeon[row as usize][col as usize] & !SpotFlag::Object.code();
+		dungeon[row as usize][col as usize] = dungeon[row as usize][col as usize] & !Object.code();
 		take_from_pack(obj, &mut level_objects);
 		print_stats(STAT_GOLD);
 		return obj;
@@ -91,7 +91,7 @@ pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short) -> *mut obje
 		message("pack too full", 1);
 		return 0 as *mut object;
 	}
-	dungeon[row as usize][col as usize] = dungeon[row as usize][col as usize] & !SpotFlag::Object.code();
+	dungeon[row as usize][col as usize] = dungeon[row as usize][col as usize] & !Object.code();
 	take_from_pack(obj, &mut level_objects);
 
 	let obj = add_to_pack(obj, &mut rogue.pack, 1);
@@ -438,39 +438,23 @@ pub unsafe fn has_amulet() -> bool {
 	mask_pack(&rogue.pack, Amulets)
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn kick_into_pack() -> i64 {
-	let mut obj: *mut object = 0 as *mut object;
-	let mut n: libc::c_short = 0;
-	let mut stat: libc::c_short = 0;
-	if dungeon[rogue.row as usize][rogue.col as usize] as i64
-		& 0o1 as libc::c_ushort as i64 == 0
-	{
-		message("nothing here", 0 as libc::c_int);
+pub unsafe fn kick_into_pack() {
+	if Object.is_set(dungeon[rogue.row as usize][rogue.col as usize]) {
+		message("nothing here", 0);
 	} else {
-		obj = pick_up(rogue.row as libc::c_int, rogue.col as libc::c_int, &mut stat);
+		let mut status = 0;
+		let obj = pick_up(rogue.row, rogue.col, &mut status);
 		if !obj.is_null() {
-			let desc = get_desc(obj, "");
-			if (*obj).what_is as libc::c_int
-				== 0o20 as libc::c_int as libc::c_ushort as libc::c_int
-			{
-				message(desc, 0 as libc::c_int);
+			let obj_desc = get_desc(&*obj);
+			if (*obj).what_is == Gold {
+				message(&obj_desc, 0);
 				free_object(obj);
 			} else {
-				n = strlen(desc.as_mut_ptr()) as libc::c_short;
-				desc[n as usize] = '(' as i32 as libc::c_char;
-				desc[(n as libc::c_int + 1 as libc::c_int)
-					as usize] = (*obj).ichar as libc::c_char;
-				desc[(n as libc::c_int + 2 as libc::c_int)
-					as usize] = ')' as i32 as libc::c_char;
-				desc[(n as libc::c_int + 3 as libc::c_int)
-					as usize] = 0 as libc::c_int as libc::c_char;
-				message(desc, 0 as libc::c_int);
+				message(&format!("{}({})", obj_desc, (*obj).ichar), 0);
 			}
 		}
-		if !obj.is_null() || stat == 0 {
+		if !obj.is_null() || status == 0 {
 			reg_move();
 		}
 	}
-	panic!("Reached end of non-void function without returning");
 }
