@@ -1,36 +1,12 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-extern "C" {
-	pub type ldat;
 
-	fn reg_move() -> libc::c_char;
-	static mut level_points: [libc::c_long; 0];
-	static mut you_can_move_again: *mut libc::c_char;
-	static mut sustain_strength: libc::c_char;
-}
-
-use libc::c_short;
 use ncurses::{addch, chtype, mvaddch};
 use crate::prelude::*;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_EITHER_HAND};
 use crate::prelude::object_what::PackFilter::{Foods, Potions, Scrolls};
 use crate::prelude::scroll_kind::SLEEP;
 use crate::settings::fruit;
-
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct pdat {
-	pub _pad_y: libc::c_short,
-	pub _pad_x: libc::c_short,
-	pub _pad_top: libc::c_short,
-	pub _pad_left: libc::c_short,
-	pub _pad_bottom: libc::c_short,
-	pub _pad_right: libc::c_short,
-}
-
-pub type WINDOW = _win_st;
-pub type attr_t = ncurses::chtype;
 
 pub static mut halluc: usize = 0;
 pub static mut blind: usize = 0;

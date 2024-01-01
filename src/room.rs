@@ -53,7 +53,7 @@ pub enum RoomType {
 
 impl RoomType {
 	pub fn is_nothing(&self) -> bool {
-		self == RoomType::Nothing
+		*self == RoomType::Nothing
 	}
 }
 

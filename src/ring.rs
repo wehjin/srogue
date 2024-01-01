@@ -1,10 +1,5 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-extern "C" {
-	fn reg_move() -> libc::c_char;
-	fn get_letter_object() -> *mut object;
-}
-
 use crate::prelude::*;
 use crate::prelude::item_usage::{ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat::Ring;
@@ -13,9 +8,7 @@ use crate::prelude::ring_kind::{RingKind, RINGS};
 use crate::prelude::stat_const::STAT_STRENGTH;
 
 
-#[no_mangle]
 pub static left_or_right: &'static str = "left or right hand?";
-#[no_mangle]
 pub static no_ring: &'static str = "there's no ring on that hand";
 #[no_mangle]
 pub static mut stealthy: libc::c_short = 0;
@@ -34,143 +27,121 @@ pub static mut sustain_strength: libc::c_char = 0;
 #[no_mangle]
 pub static mut maintain_armor: libc::c_char = 0;
 
-#[no_mangle]
-pub unsafe extern "C" fn put_on_ring() -> i64 {
-	let mut ch: libc::c_short = 0;
-	let mut desc: [libc::c_char; 80] = [0; 80];
-	let mut ring: *mut object = 0 as *mut object;
-	if r_rings as i64 == 2 as i64 {
+pub unsafe fn put_on_ring() {
+	if r_rings == 2 {
 		message("wearing two rings already", 0);
 		return;
 	}
-	ch = pack_letter("put on what?", Rings) as libc::c_short;
-	if ch as i64 == '\u{1b}' as i32 {
+	let ch = pack_letter("put on what?", Rings);
+	if ch == CANCEL {
 		return;
 	}
-	ring = get_letter_object(ch as i64);
+	let ring = get_letter_object(ch);
 	if ring.is_null() {
-		message(
-			b"no such item.\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+		message("no such item.", 0);
 		return;
 	}
-	if (*ring).what_is as i64
-		& 0o200 as i64 as libc::c_ushort as i64 == 0
-	{
-		message(
-			b"that's not a ring\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+	if (*ring).what_is != Ring {
+		message("that's not a ring", 0);
 		return;
 	}
-	if (*ring).in_use_flags as i64
-		& (0o4 as i64 as libc::c_ushort as i64
-		| 0o10 as i64 as libc::c_ushort as i64) != 0
-	{
-		message(
-			b"that ring is already being worn\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+	if (*ring).in_use_flags & (ON_LEFT_HAND | ON_RIGHT_HAND) != 0 {
+		message("that ring is already being worn", 0);
 		return;
 	}
-	if r_rings as i64 == 1 {
-		ch = (if !(rogue.left_ring).is_null() { 'r' as i32 } else { 'l' as i32 })
-			as libc::c_short;
+	let mut ch = char::default();
+	if r_rings == 1 {
+		ch = if !rogue.left_ring.is_null() { 'r' } else { 'l' };
 	} else {
-		message(left_or_right, 0 as i64);
-		loop {
-			ch = rgetchar() as libc::c_short;
-			if !(ch as i64 != '\u{1b}' as i32 && ch as i64 != 'l' as i32
-				&& ch as i64 != 'r' as i32 && ch as i64 != '\n' as i32
-				&& ch as i64 != '\r' as i32)
-			{
-				break;
-			}
-		}
+		ch = ask_left_or_right();
 	}
-	if ch as i64 != 'l' as i32 && ch as i64 != 'r' as i32 {
+	if ch != 'l' && ch != 'r' {
 		check_message();
 		return;
 	}
-	if ch as i64 == 'l' as i32 && !(rogue.left_ring).is_null()
-		|| ch as i64 == 'r' as i32 && !(rogue.right_ring).is_null()
+	if ch == 'l' && !rogue.left_ring.is_null() || ch == 'r' && !rogue.right_ring.is_null()
 	{
 		check_message();
-		message(
-			b"there's already a ring on that hand\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+		message("there's already a ring on that hand", 0);
 		return;
 	}
-	if ch as i64 == 'l' as i32 {
-		do_put_on(ring, 1);
+	if ch == 'l' {
+		do_put_on(&mut *ring, true);
 	} else {
-		do_put_on(ring, 0 as i64);
+		do_put_on(&mut *ring, false);
 	}
-	ring_stats(1);
+	ring_stats(true);
 	check_message();
-	get_desc(ring, desc.as_mut_ptr());
-	message(desc.as_mut_ptr(), 0 as i64);
+	message(&get_desc(&*ring), 0);
 	reg_move();
-	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn remove_ring() -> i64 {
-	let mut left: libc::c_char = 0 as i64 as libc::c_char;
-	let mut right: libc::c_char = 0 as i64 as libc::c_char;
-	let mut ch: libc::c_short = 0;
-	let mut ring: *mut object = 0 as *mut object;
-	if r_rings as i64 == 0 as i64 {
-		inv_rings();
-	} else if !(rogue.left_ring).is_null() && (rogue.right_ring).is_null() {
-		left = 1 as libc::c_char;
-	} else if (rogue.left_ring).is_null() && !(rogue.right_ring).is_null() {
-		right = 1 as libc::c_char;
-	} else {
-		message(left_or_right, 0 as i64);
-		loop {
-			ch = rgetchar() as libc::c_short;
-			if !(ch as i64 != '\u{1b}' as i32 && ch as i64 != 'l' as i32
-				&& ch as i64 != 'r' as i32 && ch as i64 != '\n' as i32
-				&& ch as i64 != '\r' as i32)
-			{
-				break;
-			}
+unsafe fn ask_left_or_right() -> char {
+	let mut ch = char::default();
+	message(left_or_right, 0);
+	loop {
+		ch = rgetchar();
+		let good_ch = ch == CANCEL || ch == 'l' || ch == 'r' || ch == '\n' || ch == '\r';
+		if good_ch {
+			break;
 		}
-		left = (ch as i64 == 'l' as i32) as i64 as libc::c_char;
-		right = (ch as i64 == 'r' as i32) as i64 as libc::c_char;
+	}
+	ch
+}
+
+pub unsafe fn do_put_on(ring: &mut obj, on_left: bool) {
+	if on_left {
+		ring.in_use_flags |= ON_LEFT_HAND;
+		rogue.left_ring = ring;
+	} else {
+		ring.in_use_flags |= ON_RIGHT_HAND;
+		rogue.right_ring = ring;
+	}
+}
+
+pub unsafe fn remove_ring() {
+	let mut left = false;
+	let mut right = false;
+	if r_rings == 0 {
+		inv_rings();
+	} else if !rogue.left_ring.is_null() && rogue.right_ring.is_null() {
+		left = true;
+	} else if rogue.left_ring.is_null() && !rogue.right_ring.is_null() {
+		right = true;
+	} else {
+		let ch = ask_left_or_right();
+		left = ch == 'l';
+		right = ch == 'r';
 		check_message();
 	}
-	if left as i64 != 0 || right as i64 != 0 {
-		if left != 0 {
-			if !(rogue.left_ring).is_null() {
+	if left || right {
+		let mut ring: *mut obj = 0 as *mut obj;
+		if left {
+			if !rogue.left_ring.is_null() {
 				ring = rogue.left_ring;
 			} else {
-				message(no_ring, 0 as i64);
+				message(no_ring, 0);
 			}
-		} else if !(rogue.right_ring).is_null() {
+		} else if !rogue.right_ring.is_null() {
 			ring = rogue.right_ring;
 		} else {
-			message(no_ring, 0 as i64);
+			message(no_ring, 0);
 		}
 		if (*ring).is_cursed != 0 {
-			message(curse_message, 0 as i64);
+			message(curse_message, 0);
 		} else {
 			un_put_on(ring);
-			message(&format!("removed {}", get_desc(ring)), 0 as i64);
+			message(&format!("removed {}", get_desc(&*ring)), 0);
 			reg_move();
 		}
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
 pub unsafe fn un_put_on(ring: *mut obj) {
 	if !ring.is_null() && ((*ring).in_use_flags & ON_LEFT_HAND != 0) {
 		(*ring).in_use_flags &= !ON_LEFT_HAND;
 		rogue.left_ring = 0 as *mut object;
-	} else if (!ring.is_null() && ((*ring).in_use_flags & ON_RIGHT_HAND != 0)) {
+	} else if !ring.is_null() && ((*ring).in_use_flags & ON_RIGHT_HAND != 0) {
 		(*ring).in_use_flags &= !ON_RIGHT_HAND;
 		rogue.right_ring = 0 as *mut object;
 	}
@@ -204,14 +175,14 @@ pub fn gr_ring(ring: &mut object, assign_wk: bool) {
 }
 
 pub unsafe fn inv_rings() {
-	if (r_rings == 0) {
+	if r_rings == 0 {
 		message("not wearing any rings", 0);
 	} else {
 		if !rogue.left_ring.is_null() {
-			message(&get_desc(&rogue.left_ring), 0);
+			message(&get_desc(&*rogue.left_ring), 0);
 		}
-		if &rogue.right_ring.is_null() {
-			message(&get_desc(&rogue.right_ring), 0);
+		if !rogue.right_ring.is_null() {
+			message(&get_desc(&*rogue.right_ring), 0);
 		}
 	}
 	if wizard {
@@ -238,12 +209,12 @@ impl RingHand {
 pub unsafe fn ring_stats(print: bool) {
 	r_rings = 0;
 	e_rings = 0;
-	r_teleport = 0;
+	r_teleport = false;
 	sustain_strength = 0;
 	add_strength = 0;
 	regeneration = 0;
 	ring_exp = 0;
-	r_see_invisible = 0;
+	r_see_invisible = false;
 	maintain_armor = 0;
 	auto_search = 0;
 
@@ -260,14 +231,14 @@ pub unsafe fn ring_stats(print: bool) {
 		e_rings += 1;
 		match RingKind::from_code((*ring).which_kind) {
 			RingKind::Stealth => { stealthy += 1; }
-			RingKind::RTeleport => { r_teleport = 1; }
+			RingKind::RTeleport => { r_teleport = true; }
 			RingKind::Regeneration => { regeneration += 1; }
 			RingKind::SlowDigest => { e_rings -= 2; }
 			RingKind::AddStrength => { add_strength += ring.class; }
 			RingKind::SustainStrength => { sustain_strength = 1; }
 			RingKind::Dexterity => { ring_exp += ring.class; }
 			RingKind::Adornment => {}
-			RingKind::RSeeInvisible => { r_see_invisible = 1; }
+			RingKind::RSeeInvisible => { r_see_invisible = true; }
 			RingKind::MaintainArmor => { maintain_armor = 1; }
 			RingKind::Searching => { auto_search += 2; }
 		}

@@ -1,19 +1,6 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-extern "C" {
-	pub type ldat;
-
-	fn reg_move() -> libc::c_char;
-	fn get_letter_object() -> *mut object;
-	fn gr_monster() -> *mut object;
-	fn strncmp(
-		_: *const libc::c_char,
-		_: *const libc::c_char,
-		_: libc::c_ulong,
-	) -> i64;
-}
-
-use libc::strlen;
+use libc::{strlen, strncmp};
 use crate::prelude::*;
 use crate::prelude::object_what::PackFilter::Wands;
 use crate::settings::set_score_only;
