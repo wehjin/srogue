@@ -315,41 +315,33 @@ pub unsafe fn unwear(obj: *mut object) {
 }
 
 
-#[no_mangle]
-pub unsafe extern "C" fn wield() {
+pub unsafe fn wield() {
 	if !rogue.weapon.is_null() && (*rogue.weapon).is_cursed != 0 {
 		message(curse_message, 0);
 		return;
 	}
 	let ch = pack_letter("wield what?", Weapons);
-
 	if ch == CANCEL {
 		return;
 	}
-	let obj = get_letter_object(ch as i64);
+	let obj = get_letter_object(ch);
 	if obj.is_null() {
 		message("No such item.", 0);
 		return;
 	}
-	let what = (*obj).what_is;
-	if what == Armor || what == Ring {
-		let desc = format!("you can't wield {}",
-		                   if what == Armor { "armor" } else { "rings" });
-		message(&desc,
-		        0);
+	if (*obj).what_is == Armor || (*obj).what_is == Ring {
+		let item_name = if (*obj).what_is == Armor { "armor" } else { "rings" };
+		message(&format!("you can't wield {}", item_name), 0);
 		return;
 	}
 	if ((*obj).in_use_flags & BEING_WIELDED) != 0 {
 		message("in use", 0);
 	} else {
 		unwield(rogue.weapon);
-		let desc = "wielding ";
-		let full_desc = get_desc(obj, desc.as_mut_ptr().offset(9 as i64 as isize));
-		message(full_desc, 0);
+		message(&format!("wielding {}", get_desc(&*obj)), 0);
 		do_wield(&mut *obj);
 		reg_move();
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
 pub unsafe fn do_wield(obj: &mut obj) {
