@@ -4,8 +4,8 @@ extern "C" {
 	pub type ldat;
 }
 
-use libc::{c_int, c_short};
-use ncurses::{addch, chtype, mvaddch, mvinch};
+use libc::{c_short};
+use ncurses::{chtype, mvaddch, mvinch};
 use serde::Serialize;
 use ObjectWhat::{Armor, Potion, Scroll, Weapon};
 use weapon_kind::{LONG_SWORD, MACE, TWO_HANDED_SWORD};
@@ -22,21 +22,6 @@ use crate::prelude::SpotFlag::{Floor, Monster, Tunnel};
 use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, WANDS};
 use crate::prelude::weapon_kind::{ARROW, BOW, DAGGER, DART, SHURIKEN, WEAPONS};
 use crate::settings::fruit;
-
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct pdat {
-	pub _pad_y: libc::c_short,
-	pub _pad_x: libc::c_short,
-	pub _pad_top: libc::c_short,
-	pub _pad_left: libc::c_short,
-	pub _pad_bottom: libc::c_short,
-	pub _pad_right: libc::c_short,
-}
-
-pub type WINDOW = _win_st;
-pub type attr_t = ncurses::chtype;
 
 #[derive(Clone, Serialize)]
 pub struct id {
@@ -930,7 +915,7 @@ pub unsafe fn put_gold() {
 			continue;
 		}
 		if is_maze || rand_percent(GOLD_PERCENT) {
-			for j in 0..50 {
+			for _j in 0..50 {
 				let row = get_rand(rooms[i].top_row + 1, rooms[i].bottom_row - 1);
 				let col = get_rand(rooms[i].left_col + 1, rooms[i].right_col - 1);
 				if Floor.is_set(dungeon[row as usize][col as usize]) || Tunnel.is_set(dungeon[row as usize][col as usize]) {
@@ -968,20 +953,16 @@ pub unsafe extern "C" fn place_at(
 		as usize][col
 		as usize] = (dungeon[row as usize][col as usize] as i64
 		| 0o1 as libc::c_ushort as i64) as libc::c_ushort;
-	add_to_pack(obj, &mut level_objects, 0 as i64);
+	add_to_pack(obj, &mut level_objects, 0);
 	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn object_at(mut pack: *mut object, mut row: i64, mut col: i64) -> *mut object {
+pub unsafe fn object_at(pack: *mut object, row: i64, col: i64) -> *mut object {
 	let mut obj: *mut object = (*pack).next_object;
-	while !obj.is_null()
-		&& ((*obj).row as i64 != row as i64
-		|| (*obj).col as i64 != col as i64)
-	{
+	while !obj.is_null() && ((*obj).row != row || (*obj).col != col) {
 		obj = (*obj).next_object;
 	}
-	return obj;
+	obj
 }
 
 pub unsafe fn get_letter_object(ch: char) -> *mut object {
@@ -1053,7 +1034,7 @@ pub unsafe fn gr_object() -> *mut object {
 			get_food(&mut *obj, false);
 		}
 		Ring => {
-			gr_ring(obj, 1);
+			gr_ring(&mut *obj, true);
 		}
 		_ => {}
 	}
@@ -1342,105 +1323,98 @@ pub unsafe fn rand_place(obj: &mut obj) {
 	place_at(obj, row, col);
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn new_object_for_wizard() {
-	let mut ch: libc::c_short = 0;
-	let mut max: libc::c_short = 0;
-	let mut wk: libc::c_short = 0;
-	let mut obj: *mut object = 0 as *mut object;
-	let mut buf: [libc::c_char; 80] = [0; 80];
-	if pack_count(0 as *mut object) >= 24 {
+pub unsafe fn new_object_for_wizard() {
+	if pack_count(0 as *mut object) >= MAX_PACK_COUNT {
 		message("pack full", 0);
 		return;
 	}
 	message("type of object?", 0);
-	loop {
-		ch = rgetchar() as libc::c_short;
-		if !(r_index(
-			b"!?:)]=/,\x1B\0" as *const u8 as *const libc::c_char,
-			ch as libc::c_int,
-			0,
-		) == -1)
-		{
-			break;
-		}
-		sound_bell();
-	}
-	check_message();
-	if ch as libc::c_int == '\u{1b}' as i32 {
-		return;
-	}
-	obj = alloc_object();
-	match ch as libc::c_int {
-		33 => {
-			(*obj).what_is = 0o10 as libc::c_int as libc::c_ushort;
-			max = (14 as libc::c_int - 1 as libc::c_int) as libc::c_short;
-		}
-		63 => {
-			(*obj).what_is = 0o4 as libc::c_int as libc::c_ushort;
-			max = (12 as libc::c_int - 1 as libc::c_int) as libc::c_short;
-		}
-		44 => {
-			(*obj).what_is = 0o400 as libc::c_int as libc::c_ushort;
-		}
-		58 => {
-			get_food(&mut *obj, false);
-		}
-		41 => {
-			gr_weapon(obj, 0 as libc::c_int);
-			max = (8 as libc::c_int - 1 as libc::c_int) as libc::c_short;
-		}
-		93 => {
-			gr_armor(obj);
-			max = (7 as libc::c_int - 1 as libc::c_int) as libc::c_short;
-		}
-		47 => {
-			gr_wand(obj);
-			max = (10 as libc::c_int - 1 as libc::c_int) as libc::c_short;
-		}
-		61 => {
-			max = (11 as libc::c_int - 1 as libc::c_int) as libc::c_short;
-			(*obj).what_is = 0o200 as libc::c_int as libc::c_ushort;
-		}
-		_ => {}
-	}
-	if ch as libc::c_int != ',' as i32 && ch as libc::c_int != ':' as i32 {
-		's_185: {
-			loop {
-				if get_input_line(
-					b"which kind?\0" as *const u8 as *const libc::c_char,
-					b"\0" as *const u8 as *const libc::c_char,
-					buf.as_mut_ptr(),
-					b"\0" as *const u8 as *const libc::c_char,
-					0 as libc::c_int,
-					1 as libc::c_int,
-				) != 0
-				{
-					wk = get_number(buf.as_mut_ptr()) as libc::c_short;
-					if wk as libc::c_int >= 0 as libc::c_int
-						&& wk as libc::c_int <= max as libc::c_int
-					{
-						(*obj).which_kind = wk as libc::c_ushort;
-						if (*obj).what_is as libc::c_int
-							== 0o200 as libc::c_int as libc::c_ushort as libc::c_int
-						{
-							gr_ring(obj, 0 as libc::c_int);
-						}
-						break 's_185;
-					} else {
-						sound_bell();
-					}
-				} else {
-					free_object(obj);
-					return;
+	let ch = {
+		const CHOICES: &'static str = "!?:)]=/,\x1B";
+		let mut ch: char = char::default();
+		loop {
+			ch = rgetchar();
+			match CHOICES.find(ch) {
+				None => {
+					sound_bell();
+				}
+				Some(_) => {
+					break;
 				}
 			}
 		}
+		ch
+	};
+	check_message();
+	if ch == CANCEL {
+		return;
 	}
-	get_desc(obj, buf.as_mut_ptr());
-	message(buf.as_mut_ptr(), 0 as libc::c_int);
+	let obj = alloc_object();
+	let max_kind = match ch {
+		'!' => {
+			(*obj).what_is = Potion;
+			Some(POTIONS - 1)
+		}
+		'?' => {
+			(*obj).what_is = Scroll;
+			Some(SCROLLS - 1)
+		}
+		',' => {
+			(*obj).what_is = Amulet;
+			None
+		}
+		':' => {
+			get_food(&mut *obj, false);
+			None
+		}
+		')' => {
+			gr_weapon(&mut *obj, false);
+			Some(WEAPONS - 1)
+		}
+		']' => {
+			gr_armor(&mut *obj);
+			Some(ARMORS - 1)
+		}
+		'/' => {
+			gr_wand(&mut *obj);
+			Some(WANDS - 1)
+		}
+		'=' => {
+			(*obj).what_is = Ring;
+			Some(RINGS - 1)
+		}
+		_ => None
+	};
+	if let Some(max_kind) = max_kind {
+		let good_kind = {
+			let mut good_kind = 0;
+			loop {
+				let input_line = get_input_line("which kind?", None, None, false, true).trim();
+				if input_line.is_empty() {
+					free_object(obj);
+					return;
+				}
+				match input_line.parse::<usize>() {
+					Err(_) => {
+						sound_bell();
+					}
+					Ok(kind) => {
+						if kind >= 0 && kind <= max_kind {
+							good_kind = kind;
+							break;
+						}
+					}
+				}
+			}
+			good_kind
+		};
+		(*obj).which_kind = good_kind as u16;
+		if (*obj).what_is == Ring {
+			gr_ring(&mut *obj, false);
+		}
+	}
+	message(&get_desc(&*obj), 0);
 	add_to_pack(obj, &mut rogue.pack, 1);
-	panic!("Reached end of non-void function without returning");
 }
 
 pub unsafe fn next_party() -> isize {

@@ -3,7 +3,6 @@
 extern "C" {
 	pub type __sFILEX;
 	pub type ldat;
-	static mut curscr: *mut WINDOW;
 	fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> *mut FILE;
 	static mut __stdoutp: *mut FILE;
 	fn fclose(_: *mut FILE) -> i64;
@@ -18,7 +17,7 @@ extern "C" {
 }
 
 use libc::{c_int};
-use ncurses::{addch, chtype, clrtoeol, mvaddstr};
+use ncurses::{addch, chtype, clrtoeol, curscr, mvaddstr, wrefresh};
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_EXP, STAT_GOLD, STAT_HP, STAT_HUNGER, STAT_LABEL, STAT_LEVEL, STAT_STRENGTH};
 
@@ -157,18 +156,21 @@ pub unsafe extern "C" fn get_input_line(prompt: &str, insert: Option<&str>, if_c
 const X_CHAR: c_int = 'X' as c_int;
 const CTRL_R_CHAR: c_int = 0o022 as c_int;
 
-pub unsafe fn rgetchar() -> c_int {
-	let mut done = false;
-	let mut ch = 0;
-	while !done {
-		ch = libc::getchar();
+pub fn rgetchar() -> char {
+	loop {
+		let ch = { unsafe { libc::getchar() } };
 		match ch {
-			CTRL_R_CHAR => { ncurses::wrefresh(ncurses::curscr()); }
-			X_CHAR => { save_screen(); }
-			_ => { done = true; }
+			CTRL_R_CHAR => {
+				wrefresh(curscr());
+			}
+			X_CHAR => {
+				save_screen();
+			}
+			_ => {
+				return ch as u8 as char;
+			}
 		}
 	}
-	return ch;
 }
 
 pub unsafe fn print_stats(stat_mask: usize) {
@@ -289,31 +291,4 @@ pub fn sound_bell() {
 #[no_mangle]
 pub unsafe extern "C" fn is_digit(mut ch: libc::c_short) -> libc::c_char {
 	return (ch as i64 >= '0' as i64 && ch as i64 <= '9' as i64) as libc::c_char;
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn r_index(
-	mut str: *mut libc::c_char,
-	mut ch: i64,
-	mut last: libc::c_char,
-) -> i64 {
-	let mut i: i64 = 0 as i64;
-	if last != 0 {
-		i = libc::strlen(str).wrapping_sub(1) as i64;
-		while i >= 0 as i64 {
-			if *str.offset(i as isize) as i64 == ch {
-				return i;
-			}
-			i -= 1;
-		}
-	} else {
-		i = 0 as i64;
-		while *str.offset(i as isize) != 0 {
-			if *str.offset(i as isize) as i64 == ch {
-				return i;
-			}
-			i += 1;
-		}
-	}
-	return -(1);
 }

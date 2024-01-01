@@ -15,8 +15,9 @@ use crate::prelude::object_what::{PackFilter};
 use crate::prelude::object_what::ObjectWhat::{Armor, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
 
-#[no_mangle]
+
 pub static mut curse_message: &'static str = "you can't, it appears to be cursed";
+pub const MAX_PACK_COUNT: usize = 24;
 
 #[no_mangle]
 pub unsafe extern "C" fn add_to_pack(

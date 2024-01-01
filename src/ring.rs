@@ -6,8 +6,9 @@ extern "C" {
 }
 
 use crate::prelude::*;
+use crate::prelude::object_what::ObjectWhat::Ring;
 use crate::prelude::object_what::PackFilter::Rings;
-use crate::prelude::ring_kind::RingKind;
+use crate::prelude::ring_kind::{RingKind, RINGS};
 use crate::prelude::stat_const::STAT_STRENGTH;
 
 
@@ -164,43 +165,30 @@ pub unsafe extern "C" fn remove_ring() -> i64 {
 	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn gr_ring(
-	mut ring: *mut object,
-	mut assign_wk: libc::c_char,
-) -> i64 {
-	(*ring).what_is = 0o200 as i64 as libc::c_ushort;
-	if assign_wk != 0 {
-		(*ring)
-			.which_kind = get_rand(
-			0 as i64,
-			11 - 1,
-		) as libc::c_ushort;
+pub fn gr_ring(ring: &mut object, assign_wk: bool) {
+	ring.what_is = Ring;
+	if assign_wk {
+		ring.which_kind = get_rand(0, (RINGS - 1) as u16);
 	}
-	(*ring).class = 0;
-	match (*ring).which_kind as i64 {
-		1 => {
-			(*ring).is_cursed = 1 as libc::c_short;
+	ring.class = 0;
+	match ring.which_kind {
+		ring_kind::R_TELEPORT => {
+			ring.is_cursed = 1;
 		}
-		4 | 6 => {
+		ring_kind::ADD_STRENGTH | ring_kind::DEXTERITY => {
 			loop {
-				(*ring)
-					.class = (get_rand(0 as i64, 4 as i64)
-					- 2 as i64) as libc::c_short;
-				if !((*ring).class as i64 == 0 as i64) {
+				ring.class = get_rand(0, 4) - 2;
+				if ring.class != 0 {
 					break;
 				}
 			}
-			(*ring)
-				.is_cursed = (((*ring).class as i64) < 0 as i64)
-				as i64 as libc::c_short;
+			ring.is_cursed = if ring.class < 0 { 1 } else { 0 };
 		}
-		7 => {
-			(*ring).is_cursed = coin_toss() as libc::c_short;
+		ring_kind::ADORNMENT => {
+			ring.is_cursed = if coin_toss() { 1 } else { 0 };
 		}
 		_ => {}
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
 enum RingHand {
