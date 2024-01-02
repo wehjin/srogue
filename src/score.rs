@@ -2,11 +2,9 @@
 
 use std::cmp::Ordering;
 use std::fs::File;
-use std::io::{BufReader, Read, Seek, Write};
-use std::num::ParseIntError;
+use std::io::{Read, Seek, Write};
 use std::sync::{RwLock};
-use ncurses::{addch, clear, mv, mvaddch, mvaddstr, mvinch, refresh, standend, standout};
-use ObjectWhat::{Amulet, Armor, Potion, Ring, Scroll, Wand, Weapon};
+use ncurses::{clear, mv, mvaddch, mvaddstr, mvinch, refresh, standend, standout};
 use settings::{score_only, show_skull};
 use crate::prelude::*;
 use crate::{settings, turn_into_games, turn_into_user};
@@ -14,7 +12,6 @@ use crate::objects::IdStatus::Identified;
 use crate::prelude::armor_kind::ARMORS;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat;
-use crate::prelude::object_what::ObjectWhat::{Food, Gold};
 use crate::prelude::potion_kind::POTIONS;
 use crate::prelude::scroll_kind::SCROLLS;
 use crate::prelude::wand_kind::WANDS;
@@ -173,7 +170,7 @@ pub unsafe fn put_scores(ending: Option<Ending>) {
 	let max_search = scores.len().min(n_names.len()).min(10);
 	for i in 0..max_search {
 		if !score_only {
-			let name_in_score = &scores[i][15..];
+			let name_in_score = &scores[i][START_OF_NAME..];
 			if name_cmp(name_in_score, login_name()) == Ordering::Equal {
 				if let Some(gold_in_score) = gold_in_score(&scores[i]) {
 					if rogue.gold < gold_in_score {
@@ -230,31 +227,26 @@ pub unsafe fn put_scores(ending: Option<Ending>) {
 
 	let ne = scores.len().min(n_names.len()).min(10);
 	for i in 0..ne {
+		let name = &n_names[i];
+		let score = &scores[i];
+		let revised_rank = format!("{:2}", i + 1) + &score[2..];
+		let revised_name = replace_name_in_score(&revised_rank, name);
 		if i == rank {
 			standout();
 		}
-		if i == 9 {
-			score[0] = '1' as u8;
-			score[1] = '0' as u8;
-		} else {
-			score[0] = ' ' as u8;
-			score[1] = i + '1';
-		}
-
-		let buf: String = nickize(score, name);
-		mvaddstr((i + 10) as i32, 0, buf.as_str());
-		if rank < 10 {
-			file.write(score).expect("write score");
-			file.write(name).expect("write name");
-		}
+		mvaddstr((i + 10) as i32, 0, &revised_name);
 		if i == rank {
 			standend();
+		}
+		if rank < 10 {
+			let score_and_name = format!("{}\n{}\n", revised_name, name);
+			file.write(score_and_name.as_bytes()).expect("write score and name");
 		}
 	}
 	refresh();
 	drop(file);
 	message("", 0);
-	clean_up("\n");
+	clean_up("");
 }
 
 fn gold_in_score(score: &str) -> Option<isize> {
@@ -300,7 +292,7 @@ pub unsafe fn sell_pack()
 	clear();
 	mvaddstr(1, 0, "Value      Item");
 	while !obj.is_null() {
-		if (*obj).what_is != Food {
+		if (*obj).what_is != ObjectWhat::Food {
 			(*obj).identified = true;
 			let val = get_value(&*obj);
 			rogue.gold += val;
@@ -320,39 +312,39 @@ pub unsafe fn sell_pack()
 	message("", 0);
 }
 
-unsafe fn get_value(obj: &obj) -> i64 {
-	let wc = obj.which_kind as usize;
+unsafe fn get_value(obj: &obj) -> isize {
+	let wc = obj.which_kind;
 	let mut val = match obj.what_is {
-		Weapon => {
-			let mut val = id_weapons[wc].value;
+		ObjectWhat::Weapon => {
+			let mut val = id_weapons[wc as usize].value;
 			if (wc == ARROW) || (wc == DAGGER) || (wc == SHURIKEN) || (wc == DART) {
 				val *= obj.quantity;
 			}
-			val += obj.d_enchant * 85;
+			val += obj.d_enchant as i16 * 85;
 			val += obj.hit_enchant * 85;
 			val
 		}
-		Armor => {
-			let mut val = id_armors[wc].value;
-			val += obj.d_enchant * 75;
-			if obj.is_protected {
+		ObjectWhat::Armor => {
+			let mut val = id_armors[wc as usize].value;
+			val += obj.d_enchant as i16 * 75;
+			if obj.is_protected != 0 {
 				val += 200;
 			}
 			val
 		}
-		Wand => id_wands[wc].value * (obj.class + 1),
-		Scroll => id_scrolls[wc].value * obj.quantity,
-		Potion => id_potions[wc].value * obj.quantity,
-		Amulet => 5000,
-		Ring => id_rings[wc].value * (obj.class + 1),
-		Gold => 0,
-		Food => 0,
-		None => 0,
+		ObjectWhat::Wand => id_wands[wc as usize].value * (obj.class as i16 + 1),
+		ObjectWhat::Scroll => id_scrolls[wc as usize].value * obj.quantity,
+		ObjectWhat::Potion => id_potions[wc as usize].value * obj.quantity,
+		ObjectWhat::Amulet => 5000,
+		ObjectWhat::Ring => id_rings[wc as usize].value * (obj.class as i16 + 1),
+		ObjectWhat::Gold => 0,
+		ObjectWhat::Food => 0,
+		ObjectWhat::None => 0,
 	};
 	if val <= 0 {
 		val = 10;
 	}
-	return val as i64;
+	return val as isize;
 }
 
 
@@ -393,20 +385,48 @@ pub fn xxxx<const N: usize>(buf: &mut [u8; N], n: usize) {
 	}
 }
 
-pub fn xxx(st: bool) -> isize {
+pub fn xxx(reset: bool) -> isize {
 	static FS: RwLock<(isize, isize)> = RwLock::new((0, 0));
-	if st {
+	if reset {
 		let write = FS.write().unwrap();
 		*write = (37, 7);
 		0
 	} else {
-		let read = FS.read().unwrap();
-		let (f, s) = *read;
+		let (f, s) = {
+			let read = FS.read().unwrap();
+			*read
+		};
 		let r = (f * s + 9337) % 8887;
-		FS.set((s, r));
+		{
+			let write = FS.write().unwrap();
+			*write = (s, r);
+		}
 		r
 	}
 }
+
+const START_OF_NAME: usize = 15;
+
+fn name_in_score(score: &str) -> String {
+	let name_and_more = &score[START_OF_NAME..];
+	if let Some(pos) = name_and_more.find(':') {
+		&name_and_more[..pos]
+	} else {
+		name_and_more
+	}.to_string()
+}
+
+fn replace_name_in_score(score: &str, new_name: &str) -> String {
+	if new_name.is_empty() {
+		score.to_string()
+	} else {
+		let left = &score[..START_OF_NAME];
+		let middle = new_name;
+		let right = &score[(START_OF_NAME + name_in_score(score).chars().count())..];
+		format!("{}{}{}", left, middle, right)
+	}
+}
+
 
 pub fn center(row: i64, msg: &str) {
 	let margin = (DCOLS - msg.len()) / 2;
