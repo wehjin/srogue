@@ -7,7 +7,7 @@ const QUIT: usize = 4;
 const WIN: usize = 5;
 
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone)]
 pub enum Ending<'a> {
 	Monster(&'a object),
 	Hypothermia,
@@ -20,6 +20,13 @@ pub enum Ending<'a> {
 impl<'a> Ending<'a> {
 	pub fn is_monster(&self) -> bool {
 		if let Ending::Monster(_) = self {
+			true
+		} else {
+			false
+		}
+	}
+	pub fn is_quit(&self) -> bool {
+		if let Ending::Quit = self {
 			true
 		} else {
 			false

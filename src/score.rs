@@ -3,18 +3,27 @@
 use std::fs::File;
 use std::io::{Read, Seek, Write};
 use std::sync::{RwLock};
-use ncurses::{addch, clear, mvaddstr, refresh, standend, standout, waddnstr};
+use ncurses::{addch, clear, mvaddstr, refresh, standend, standout};
+use ObjectWhat::{Amulet, Armor, Potion, Ring, Scroll, Wand, Weapon};
 use settings::{score_only, show_skull};
 use crate::prelude::*;
 use crate::{settings, turn_into_games, turn_into_user};
+use crate::objects::IdStatus::Identified;
+use crate::prelude::armor_kind::ARMORS;
 use crate::prelude::ending::Ending;
+use crate::prelude::object_what::ObjectWhat;
+use crate::prelude::object_what::ObjectWhat::{Food, Gold};
+use crate::prelude::potion_kind::POTIONS;
+use crate::prelude::scroll_kind::SCROLLS;
+use crate::prelude::wand_kind::WANDS;
+use crate::prelude::weapon_kind::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
 use crate::settings::{login_name, nick_name};
 
 pub const SCORE_FILE: &'static str = "/usr/games/rogue.scores";
 
 pub unsafe fn killed_by(ending: Ending) {
 	md_ignore_signals();
-	if ending != Ending::Quit {
+	if !ending.is_quit() {
 		rogue.gold = ((rogue.gold as f64 * 9.0) / 10.0) as isize;
 	}
 	let mut how_ended = match ending {
@@ -62,99 +71,26 @@ pub unsafe fn killed_by(ending: Ending) {
 	put_scores(Some(ending));
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn win() -> libc::c_int {
-	unwield(rogue.weapon);
+pub unsafe fn win() {
+	unwield(rogue.weapon);          /* disarm and relax */
 	unwear(rogue.armor);
 	un_put_on(rogue.left_ring);
 	un_put_on(rogue.right_ring);
-	ncurses::wclear(ncurses::stdscr());
-	if ncurses::wmove(ncurses::stdscr(), 10 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
-		-(1 as libc::c_int);
-	} else {
-		waddnstr(
-			ncurses::stdscr(),
-			b"@   @  @@@   @   @      @  @  @   @@@   @   @   @\0" as *const u8
-				as *const libc::c_char,
-			-(1 as libc::c_int),
-		);
-	};
-	if ncurses::wmove(ncurses::stdscr(), 11 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
-		-(1 as libc::c_int);
-	} else {
-		waddnstr(
-			ncurses::stdscr(),
-			b" @ @  @   @  @   @      @  @  @  @   @  @@  @   @\0" as *const u8
-				as *const libc::c_char,
-			-(1 as libc::c_int),
-		);
-	};
-	if ncurses::wmove(ncurses::stdscr(), 12 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
-		-(1 as libc::c_int);
-	} else {
-		waddnstr(
-			ncurses::stdscr(),
-			b"  @   @   @  @   @      @  @  @  @   @  @ @ @   @\0" as *const u8
-				as *const libc::c_char,
-			-(1 as libc::c_int),
-		);
-	};
-	if ncurses::wmove(ncurses::stdscr(), 13 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
-		-(1 as libc::c_int);
-	} else {
-		waddnstr(
-			ncurses::stdscr(),
-			b"  @   @   @  @   @      @  @  @  @   @  @  @@\0" as *const u8
-				as *const libc::c_char,
-			-(1 as libc::c_int),
-		);
-	};
-	if ncurses::wmove(ncurses::stdscr(), 14 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
-		-(1 as libc::c_int);
-	} else {
-		waddnstr(
-			ncurses::stdscr(),
-			b"  @    @@@    @@@        @@ @@    @@@   @   @   @\0" as *const u8
-				as *const libc::c_char,
-			-(1 as libc::c_int),
-		);
-	};
-	if ncurses::wmove(ncurses::stdscr(), 17 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
-		-(1 as libc::c_int);
-	} else {
-		waddnstr(
-			ncurses::stdscr(),
-			b"Congratulations,  you have  been admitted  to  the\0" as *const u8
-				as *const libc::c_char,
-			-(1 as libc::c_int),
-		);
-	};
-	if ncurses::wmove(ncurses::stdscr(), 18 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
-		-(1 as libc::c_int);
-	} else {
-		waddnstr(
-			ncurses::stdscr(),
-			b"Fighters' Guild.   You return home,  sell all your\0" as *const u8
-				as *const libc::c_char,
-			-(1 as libc::c_int),
-		);
-	};
-	if ncurses::wmove(ncurses::stdscr(), 19 as libc::c_int, 11 as libc::c_int) == -(1 as libc::c_int) {
-		-(1 as libc::c_int);
-	} else {
-		waddnstr(
-			ncurses::stdscr(),
-			b"treasures at great profit and retire into comfort.\0" as *const u8
-				as *const libc::c_char,
-			-(1 as libc::c_int),
-		);
-	};
-	message(b"\0" as *const u8 as *const libc::c_char, 0 as libc::c_int);
-	message(b"\0" as *const u8 as *const libc::c_char, 0 as libc::c_int);
+
+	clear();
+	mvaddstr(10, 11, "@   @  @@@   @   @      @  @  @   @@@   @   @   @");
+	mvaddstr(11, 11, " @ @  @   @  @   @      @  @  @  @   @  @@  @   @");
+	mvaddstr(12, 11, "  @   @   @  @   @      @  @  @  @   @  @ @ @   @");
+	mvaddstr(13, 11, "  @   @   @  @   @      @  @  @  @   @  @  @@");
+	mvaddstr(14, 11, "  @    @@@    @@@        @@ @@    @@@   @   @   @");
+	mvaddstr(17, 11, "Congratulations,  you have  been admitted  to  the");
+	mvaddstr(18, 11, "Fighters' Guild.   You return home,  sell all your");
+	mvaddstr(19, 11, "treasures at great profit and retire into comfort.");
+	message("", 0);
+	message("", 0);
 	id_all();
 	sell_pack();
-	put_scores(0 as *mut object, 5 as libc::c_int);
-	panic!("Reached end of non-void function without returning");
+	put_scores(Some(Ending::Win));
 }
 
 #[no_mangle]
@@ -356,6 +292,88 @@ pub fn is_vowel(ch: char) -> bool {
 	match ch {
 		'a' | 'e' | 'i' | 'o' | 'u' => true,
 		_ => false
+	}
+}
+
+pub unsafe fn sell_pack()
+{
+	let mut row: usize = 2;
+	let mut obj = rogue.pack.next_object;
+	clear();
+	mvaddstr(1, 0, "Value      Item");
+	while !obj.is_null() {
+		if (*obj).what_is != Food {
+			(*obj).identified = true;
+			let val = get_value(&*obj);
+			rogue.gold += val;
+
+			if row < DROWS {
+				let msg = format!("{:5}      {}", val, get_desc(&*obj));
+				mvaddstr(row as i32, 0, &msg);
+				row += 1;
+			}
+		}
+		obj = (*obj).next_object;
+	}
+	refresh();
+	if rogue.gold > MAX_GOLD {
+		rogue.gold = MAX_GOLD;
+	}
+	message("", 0);
+}
+
+unsafe fn get_value(obj: &obj) -> i64 {
+	let wc = obj.which_kind as usize;
+	let mut val = match obj.what_is {
+		Weapon => {
+			let mut val = id_weapons[wc].value;
+			if (wc == ARROW) || (wc == DAGGER) || (wc == SHURIKEN) || (wc == DART) {
+				val *= obj.quantity;
+			}
+			val += obj.d_enchant * 85;
+			val += obj.hit_enchant * 85;
+			val
+		}
+		Armor => {
+			let mut val = id_armors[wc].value;
+			val += obj.d_enchant * 75;
+			if obj.is_protected {
+				val += 200;
+			}
+			val
+		}
+		Wand => id_wands[wc].value * (obj.class + 1),
+		Scroll => id_scrolls[wc].value * obj.quantity,
+		Potion => id_potions[wc].value * obj.quantity,
+		Amulet => 5000,
+		Ring => id_rings[wc].value * (obj.class + 1),
+		Gold => 0,
+		Food => 0,
+		None => 0,
+	};
+	if val <= 0 {
+		val = 10;
+	}
+	return val as i64;
+}
+
+
+pub unsafe fn id_all()
+{
+	for i in 0..SCROLLS {
+		id_scrolls[i].id_status = Identified;
+	}
+	for i in 0..WEAPONS {
+		id_weapons[i].id_status = Identified;
+	}
+	for i in 0..ARMORS {
+		id_armors[i].id_status = Identified;
+	}
+	for i in 0..WANDS {
+		id_wands[i].id_status = Identified;
+	}
+	for i in 0..POTIONS {
+		id_potions[i].id_status = Identified;
 	}
 }
 
