@@ -3,231 +3,63 @@
 use std::fs::File;
 use std::io::{Read, Seek, Write};
 use std::sync::{RwLock};
-use libc::{sprintf, strcat, strcpy, strlen};
 use ncurses::{addch, clear, mvaddstr, refresh, standend, standout, waddnstr};
-use settings::score_only;
+use settings::{score_only, show_skull};
 use crate::prelude::*;
 use crate::{settings, turn_into_games, turn_into_user};
-use crate::settings::{login_name, nick_name, SETTINGS};
+use crate::prelude::ending::Ending;
+use crate::settings::{login_name, nick_name};
 
 pub const SCORE_FILE: &'static str = "/usr/games/rogue.scores";
 
-#[no_mangle]
-pub unsafe extern "C" fn killed_by(
-	mut monster: *mut object,
-	mut other: libc::c_short,
-) -> i64 {
-	let mut buf: [libc::c_char; 80] = [0; 80];
+pub unsafe fn killed_by(ending: Ending) {
 	md_ignore_signals();
-	if other as i64 != 4 as i64 {
-		rogue
-			.gold = rogue.gold * 9 as i64 as libc::c_long
-			/ 10 as i64 as libc::c_long;
+	if ending != Ending::Quit {
+		rogue.gold = ((rogue.gold as f64 * 9.0) / 10.0) as isize;
 	}
-	if other != 0 {
-		match other as i64 {
-			1 => {
-				strcpy(buf.as_mut_ptr(), b"died of hypothermia\0" as *const u8 as *const libc::c_char);
-			}
-			2 => {
-				strcpy(buf.as_mut_ptr(), b"died of starvation\0" as *const u8 as *const libc::c_char);
-			}
-			3 => {
-				strcpy(buf.as_mut_ptr(), b"killed by a dart\0" as *const u8 as *const libc::c_char);
-			}
-			4 => {
-				strcpy(buf.as_mut_ptr(), b"quit\0" as *const u8 as *const libc::c_char);
-			}
-			_ => {}
+	let mut how_ended = match ending {
+		Ending::Monster(monster) => {
+			let name = mon_real_name(&monster);
+			let article = if is_vowel(name.chars().nth(0).unwrap()) { "an" } else { "a" };
+			&format!("Killed by {} {}", article, name)
 		}
-	} else {
-		strcpy(buf.as_mut_ptr(), b"Killed by \0" as *const u8 as *const libc::c_char);
-		if is_vowel(
-			*(*m_names
-				.as_mut_ptr()
-				.offset(((*monster).ichar as i64 - 'A' as i32) as isize))
-				.offset(0 as i64 as isize) as i64,
-		) != 0
-		{
-			strcat(buf.as_mut_ptr(), b"an \0" as *const u8 as *const libc::c_char);
+		Ending::Hypothermia => "died of hypothermia",
+		Ending::Starvation => "died of starvation",
+		Ending::PoisonDart => "killed by a dart",
+		Ending::Quit => "quit",
+		Ending::Win => ""
+	}.to_string();
+	how_ended += &format!(" with {} gold", rogue.gold);
+	if ending.is_monster() && show_skull() {
+		clear();
+		mvaddstr(4, 32, "__---------__");
+		mvaddstr(5, 30, "_~             ~_");
+		mvaddstr(6, 29, "/                 \\");
+		mvaddstr(7, 28, "~                   ~");
+		mvaddstr(8, 27, "/                     \\");
+		mvaddstr(9, 27, "|    XXXX     XXXX    |");
+		mvaddstr(10, 27, "|    XXXX     XXXX    |");
+		mvaddstr(11, 27, "|    XXX       XXX    |");
+		mvaddstr(12, 28, "\\         @         /");
+		mvaddstr(13, 29, "--\\     @@@     /--");
+		mvaddstr(14, 30, "| |    @@@    | |");
+		mvaddstr(15, 30, "| |           | |");
+		mvaddstr(16, 30, "| vvVvvvvvvvVvv |");
+		mvaddstr(17, 30, "|  ^^^^^^^^^^^  |");
+		mvaddstr(18, 31, "\\_           _/");
+		mvaddstr(19, 33, "~---------~");
+		let skull_name = if let Some(nick_name) = nick_name() {
+			nick_name
 		} else {
-			strcat(buf.as_mut_ptr(), b"a \0" as *const u8 as *const libc::c_char);
-		}
-		strcat(
-			buf.as_mut_ptr(),
-			*m_names
-				.as_mut_ptr()
-				.offset(((*monster).ichar as i64 - 'A' as i32) as isize),
-		);
+			login_name()
+		};
+		center(21, skull_name);
+		center(22, &how_ended);
+	} else {
+		message(&how_ended, 0);
 	}
-	strcat(buf.as_mut_ptr(), b" with \0" as *const u8 as *const libc::c_char);
-	sprintf(
-		buf.as_mut_ptr().offset(strlen(buf.as_mut_ptr()) as isize),
-		b"%ld gold\0" as *const u8 as *const libc::c_char,
-		rogue.gold,
-	);
-	if other == 0 && SETTINGS.get().show_skull as i64 != 0 {
-		ncurses::wclear(ncurses::stdscr());
-		if ncurses::wmove(ncurses::stdscr(), 4 as i64, 32 as i64) == -(1) {
-			-(1);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"__---------__\0" as *const u8 as *const libc::c_char,
-				-(1),
-			);
-		};
-		if ncurses::wmove(ncurses::stdscr(), 5 as i64, 30 as i64) == -(1) {
-			-(1);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"_~             ~_\0" as *const u8 as *const libc::c_char,
-				-(1),
-			);
-		};
-		if ncurses::wmove(ncurses::stdscr(), 6 as i64, 29 as i64) == -(1) {
-			-(1);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"/                 \\\0" as *const u8 as *const libc::c_char,
-				-(1),
-			);
-		};
-		if ncurses::wmove(ncurses::stdscr(), 7 as i64, 28 as i64) == -(1) {
-			-(1);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"~                   ~\0" as *const u8 as *const libc::c_char,
-				-(1),
-			);
-		};
-		if ncurses::wmove(ncurses::stdscr(), 8 as i64, 27 as i64) == -(1) {
-			-(1);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"/                     \\\0" as *const u8 as *const libc::c_char,
-				-(1),
-			);
-		};
-		if ncurses::wmove(ncurses::stdscr(), 9 as libc::c_int, 27 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"|    XXXX     XXXX    |\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
-			);
-		};
-		if ncurses::wmove(ncurses::stdscr(), 10 as libc::c_int, 27 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"|    XXXX     XXXX    |\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
-			);
-		};
-		if ncurses::wmove(ncurses::stdscr(), 11 as libc::c_int, 27 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"|    XXX       XXX    |\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
-			);
-		};
-		if ncurses::wmove(ncurses::stdscr(), 12 as libc::c_int, 28 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"\\         @         /\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
-			);
-		};
-		if ncurses::wmove(ncurses::stdscr(), 13 as libc::c_int, 29 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"--\\     @@@     /--\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
-			);
-		};
-		if ncurses::wmove(ncurses::stdscr(), 14 as libc::c_int, 30 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"| |    @@@    | |\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
-			);
-		};
-		if ncurses::wmove(ncurses::stdscr(), 15 as libc::c_int, 30 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"| |           | |\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
-			);
-		};
-		if ncurses::wmove(ncurses::stdscr(), 16 as libc::c_int, 30 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"| vvVvvvvvvvVvv |\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
-			);
-		};
-		if ncurses::wmove(ncurses::stdscr(), 17 as libc::c_int, 30 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"|  ^^^^^^^^^^^  |\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
-			);
-		};
-		if ncurses::wmove(ncurses::stdscr(), 18 as libc::c_int, 31 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"\\_           _/\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
-			);
-		};
-		if ncurses::wmove(ncurses::stdscr(), 19 as libc::c_int, 33 as libc::c_int) == -(1 as libc::c_int) {
-			-(1 as libc::c_int);
-		} else {
-			waddnstr(
-				ncurses::stdscr(),
-				b"~---------~\0" as *const u8 as *const libc::c_char,
-				-(1 as libc::c_int),
-			);
-		};
-		center(
-			21 as libc::c_int,
-			if let Some(name) = &nick_name() { name.as_str() } else { &login_name() },
-		);
-		center(22 as libc::c_int, buf.as_mut_ptr());
-	} else {
-		message(buf.as_mut_ptr(), 0 as libc::c_int);
-	}
-	message("", 0 as libc::c_int);
-	let monster = if monster.is_null() {
-		None
-	} else {
-		Some(&*monster)
-	};
-	put_scores(monster, other);
-	panic!("Reached end of non-void function without returning");
+	message("", 0);
+	put_scores(Some(ending));
 }
 
 #[no_mangle]
@@ -379,16 +211,11 @@ pub unsafe extern "C" fn quit(mut from_intrpt: libc::c_char) {
 		clean_up(byebye_string);
 	}
 	check_message();
-	killed_by(0 as *mut object, 4);
+	killed_by(Ending::Quit);
 	panic!("Reached end of non-void function without returning");
 }
 
-pub unsafe fn sf_error() {
-	message("", 1);
-	clean_up("sorry, score file is out of order");
-}
-
-pub unsafe fn put_scores(monster: Option<&object>, other: i16) {
+pub unsafe fn put_scores(ending: Option<Ending>) {
 	turn_into_games();
 
 	let mut file = File::options().read(true).write(true).open(SCORE_FILE).unwrap_or_else(|_| {
@@ -478,7 +305,7 @@ pub unsafe fn put_scores(monster: Option<&object>, other: i16) {
 			rank = ne;
 		}
 		if rank < 10 {
-			insert_score(scores, n_names, nick_name(), rank, ne, monster, other);
+			insert_score(scores, n_names, nick_name(), rank, ne, ending);
 			if ne < 10 {
 				ne += 1;
 			}
@@ -553,4 +380,14 @@ pub fn xxx(st: bool) -> isize {
 		FS.set((s, r));
 		r
 	}
+}
+
+pub fn center(row: i64, msg: &str) {
+	let margin = (DCOLS - msg.len()) / 2;
+	mvaddstr(row as i32, margin as i32, msg);
+}
+
+pub unsafe fn sf_error() {
+	message("", 1);
+	clean_up("sorry, score file is out of order");
 }

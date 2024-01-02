@@ -162,6 +162,8 @@ pub mod item_usage {
 	}
 }
 
+pub mod ending;
+
 pub mod object_what {
 	use serde::{Deserialize, Serialize};
 

@@ -39,6 +39,8 @@ pub fn fruit() -> &'static str { &get().fruit }
 
 pub fn jump() -> bool { get().jump }
 
+pub fn show_skull() -> bool { get().show_skull }
+
 #[derive(Clone)]
 pub struct Settings {
 	pub score_only: bool,

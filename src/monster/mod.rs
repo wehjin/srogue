@@ -1275,10 +1275,15 @@ pub unsafe extern "C" fn mon_name(monster: *mut object) -> String {
 	if player_is_blind() || ((*monster).m_flags.invisible && !bypass_invisibility()) {
 		"something"
 	} else if player_hallucinating() {
-		m_names[(get_rand('A' as i32, 'Z' as i32) - 'A' as i32) as usize]
+		m_names[get_rand(0, m_names.len() - 1)]
 	} else {
-		m_names[((*monster).ichar as c_int - 'A' as i32) as usize]
+		mon_real_name(&*monster)
 	}.to_string()
+}
+
+pub unsafe fn mon_real_name(monster: &obj) -> &'static str {
+	let index = monster.m_char() as usize - 'A' as usize;
+	m_names[index]
 }
 
 pub unsafe fn player_hallucinating() -> bool { halluc != 0 }

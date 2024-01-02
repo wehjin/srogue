@@ -3,6 +3,7 @@
 use ncurses::addch;
 use serde::{Deserialize, Serialize};
 use crate::prelude::*;
+use crate::prelude::ending::Ending;
 use crate::prelude::SpotFlag::{Floor, Monster};
 
 
@@ -129,7 +130,7 @@ pub unsafe extern "C" fn trap_player(mut row: i64, mut col: i64) -> i64 {
 			}
 			print_stats(0o4 as i64 | 0o10 as i64);
 			if rogue.hp_current as i64 <= 0 as i64 {
-				killed_by(0 as *mut object, 3);
+				killed_by(Ending::PoisonDart);
 			}
 		}
 		4 => {

@@ -4,6 +4,7 @@ use ncurses::{chtype, mvaddch, refresh};
 use MoveResult::MoveFailed;
 use crate::odds::R_TELE_PERCENT;
 use crate::prelude::*;
+use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Gold;
 use crate::prelude::SpotFlag::{Door, Hidden, Monster, Nothing, Object, Stairs, Trap, Tunnel};
 use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
@@ -337,7 +338,7 @@ pub unsafe extern "C" fn check_hunger(mut messages_only: libc::c_char) -> libc::
 		return fainted;
 	}
 	if rogue.moves_left as libc::c_int <= 0 as libc::c_int {
-		killed_by(0 as *mut object, 2);
+		killed_by(Ending::Starvation);
 	}
 	match e_rings as libc::c_int {
 		-1 => {

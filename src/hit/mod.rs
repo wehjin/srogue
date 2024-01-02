@@ -113,7 +113,7 @@ pub unsafe fn rogue_damage(d: isize, monster: &mut object) {
 	if d >= rogue.hp_current {
 		rogue.hp_current = 0;
 		print_stats(STAT_HP);
-		killed_by(monster, 0);
+		killed_by(Ending::Monster(monster));
 	}
 	rogue.hp_current -= d;
 	print_stats(STAT_HP);
@@ -330,5 +330,6 @@ pub unsafe fn get_weapon_damage(weapon: &mut object) -> c_short {
 mod safe;
 
 pub use safe::*;
+use crate::prelude::ending::Ending;
 use crate::prelude::SpotFlag::Monster;
 use crate::prelude::stat_const::STAT_HP;

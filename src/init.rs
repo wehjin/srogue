@@ -69,7 +69,7 @@ pub unsafe fn init() -> bool {
 	md_heed_signals();
 
 	if score_only() {
-		put_scores(None, 0);
+		put_scores(None);
 	}
 	game.set_seed(md_get_seed());
 	if let Some(rest_file) = rest_file() {
