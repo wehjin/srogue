@@ -1,14 +1,16 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
+use std::string::ToString;
 use libc::{c_short};
 use ncurses::{chtype, mvaddch, mvinch};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use ObjectWhat::{Armor, Potion, Scroll, Weapon};
 use weapon_kind::{LONG_SWORD, MACE, TWO_HANDED_SWORD};
 use crate::odds::GOLD_PERCENT;
 use crate::prelude::*;
 use crate::prelude::armor_kind::{ARMORS, PLATE, SPLINT};
 use crate::prelude::food_kind::{FRUIT, RATION};
+use crate::prelude::item_usage::{being_wielded, being_worn, on_either_hand, on_left_hand};
 use crate::prelude::object_what::{ObjectWhat};
 use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
 use crate::prelude::potion_kind::{BLINDNESS, CONFUSION, DETECT_MONSTER, DETECT_OBJECTS, EXTRA_HEALING, HALLUCINATION, HASTE_SELF, HEALING, INCREASE_STRENGTH, LEVITATION, POISON, POTIONS, RAISE_LEVEL, RESTORE_STRENGTH, SEE_INVISIBLE};
@@ -19,7 +21,7 @@ use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, WANDS};
 use crate::prelude::weapon_kind::{ARROW, BOW, DAGGER, DART, SHURIKEN, WEAPONS};
 use crate::settings::fruit;
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct id {
 	pub value: i16,
 	pub title: String,
@@ -27,14 +29,14 @@ pub struct id {
 	pub id_status: IdStatus,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Serialize)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum IdStatus {
 	Unidentified,
 	Identified,
 	Called,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct SaveObj {
 	pub m_flags: MonsterFlags,
 	pub damage: String,
@@ -71,6 +73,47 @@ impl SaveObj {
 			Some(Self::from_obj(&*obj))
 		}
 	}
+	pub unsafe fn to_obj(&self, is_rogue: bool) -> *mut obj {
+		let heap_obj = alloc_object();
+		*heap_obj = obj {
+			m_flags: self.m_flags,
+			damage: self.damage.clone(),
+			quantity: self.quantity,
+			ichar: self.ichar,
+			kill_exp: self.kill_exp,
+			is_protected: self.is_protected,
+			is_cursed: self.is_cursed,
+			class: self.class,
+			identified: self.identified,
+			stationary_damage: self.stationary_damage,
+			which_kind: self.which_kind,
+			o_row: self.o_row,
+			o_col: self.o_col,
+			o: self.o,
+			row: self.row,
+			col: self.col,
+			d_enchant: self.d_enchant,
+			quiver: self.quiver,
+			trow: self.trow,
+			tcol: self.tcol,
+			hit_enchant: self.hit_enchant,
+			what_is: self.what_is,
+			disguise: self.disguise,
+			picked_up: self.picked_up,
+			in_use_flags: self.in_use_flags,
+			next_object: 0 as *mut obj,
+		};
+		if is_rogue {
+			if being_worn(&*heap_obj) {
+				do_wear(&mut *heap_obj);
+			} else if being_wielded(&*heap_obj) {
+				do_wield(&mut *heap_obj);
+			} else if on_either_hand(&*heap_obj) {
+				do_put_on(&mut *heap_obj, on_left_hand(&*heap_obj));
+			}
+		}
+		heap_obj
+	}
 	pub fn from_obj(obj: &obj) -> Self {
 		Self {
 			m_flags: obj.m_flags,
@@ -102,11 +145,10 @@ impl SaveObj {
 	}
 }
 
-#[derive(Copy, Clone)]
-#[repr(C)]
+#[derive(Clone)]
 pub struct obj {
 	pub m_flags: MonsterFlags,
-	pub damage: &'static str,
+	pub damage: String,
 	pub quantity: i16,
 	pub ichar: char,
 	pub kill_exp: isize,
@@ -131,6 +173,39 @@ pub struct obj {
 	pub picked_up: i16,
 	pub in_use_flags: u16,
 	pub next_object: *mut obj,
+}
+
+impl Default for obj {
+	fn default() -> Self {
+		obj {
+			m_flags: MonsterFlags::default(),
+			damage: "".to_string(),
+			quantity: 0,
+			ichar: char::default(),
+			kill_exp: 0,
+			is_protected: 0,
+			is_cursed: 0,
+			class: 0,
+			identified: false,
+			stationary_damage: 0,
+			which_kind: 0,
+			o_row: 0,
+			o_col: 0,
+			o: 0,
+			row: 0,
+			col: 0,
+			d_enchant: 0,
+			quiver: 0,
+			trow: 0,
+			tcol: 0,
+			hit_enchant: 0,
+			what_is: ObjectWhat::None,
+			disguise: 0,
+			picked_up: 0,
+			in_use_flags: 0,
+			next_object: 0 as *mut obj,
+		}
+	}
 }
 
 impl obj {
@@ -202,91 +277,28 @@ impl obj {
 
 pub type object = obj;
 
-#[no_mangle]
-pub static mut level_objects: object = obj {
-	m_flags: MonsterFlags::default(),
-	damage: "",
-	quantity: 0,
-	ichar: '\u{00}',
-	kill_exp: 0,
-	is_protected: 0,
-	is_cursed: 0,
-	class: 0,
-	identified: false,
-	stationary_damage: 0,
-	which_kind: 0,
-	o_row: 0,
-	o_col: 0,
-	o: 0,
-	row: 0,
-	col: 0,
-	d_enchant: 0,
-	quiver: 0,
-	trow: 0,
-	tcol: 0,
-	hit_enchant: 0,
-	what_is: ObjectWhat::None,
-	disguise: 0,
-	picked_up: 0,
-	in_use_flags: 0,
-	next_object: 0 as *const obj as *mut obj,
-};
+pub static mut level_objects: object = obj::default();
 pub static mut dungeon: [[u16; DCOLS]; DROWS] = [[0; DCOLS]; DROWS];
 pub static mut foods: i16 = 0;
 pub static mut party_counter: isize = 0;
-#[no_mangle]
-pub static mut free_list: *mut object = 0 as *const object as *mut object;
-#[no_mangle]
-pub static mut rogue: fighter = {
-	let mut init = fight {
-		armor: 0 as *const object as *mut object,
-		weapon: 0 as *const object as *mut object,
-		left_ring: 0 as *const object as *mut object,
-		right_ring: 0 as *const object as *mut object,
-		hp_current: 12,
-		hp_max: 12,
-		str_current: 16,
-		str_max: 16,
-		pack: {
-			let mut init = obj {
-				m_flags: MonsterFlags::default(),
-				damage: "",
-				quantity: 0,
-				ichar: '\u{00}',
-				kill_exp: 0,
-				is_protected: 0,
-				is_cursed: 0,
-				class: 0,
-				identified: false,
-				stationary_damage: 0,
-				which_kind: 0,
-				o_row: 0,
-				o_col: 0,
-				o: 0,
-				row: 0,
-				col: 0,
-				d_enchant: 0,
-				quiver: 0,
-				trow: 0,
-				tcol: 0,
-				hit_enchant: 0,
-				what_is: ObjectWhat::None,
-				disguise: 0,
-				picked_up: 0,
-				in_use_flags: 0,
-				next_object: 0 as *const obj as *mut obj,
-			};
-			init
-		},
-		gold: 0,
-		exp: 1,
-		exp_points: 0,
-		row: 0,
-		col: 0,
-		fchar: '@',
-		moves_left: 1250,
-	};
-	init
+pub static mut free_list: *mut object = 0 as *mut object;
+pub static mut rogue: fighter = fight {
+	armor: 0 as *mut object,
+	weapon: 0 as *mut object,
+	left_ring: 0 as *mut object,
+	right_ring: 0 as *mut object,
+	hp_current: 12,
+	hp_max: 12,
+	str_current: 16,
+	str_max: 16,
+	pack: obj::default(),
+	gold: 0,
+	exp: 1,
+	exp_points: 0,
+	row: 0,
+	col: 0,
+	fchar: '@',
+	moves_left: 1250,
 };
 pub static mut id_potions: [id; POTIONS] = {
 	[
@@ -1159,25 +1171,25 @@ pub fn gr_weapon(obj: &mut obj, assign_wk: bool) {
 
 	match (*obj).which_kind {
 		BOW | DART => {
-			(*obj).damage = "1d1";
+			(*obj).damage = "1d1".to_string();
 		}
 		ARROW => {
-			(*obj).damage = "1d2";
+			(*obj).damage = "1d2".to_string();
 		}
 		DAGGER => {
-			(*obj).damage = "1d3";
+			(*obj).damage = "1d3".to_string();
 		}
 		SHURIKEN => {
-			(*obj).damage = "1d4";
+			(*obj).damage = "1d4".to_string();
 		}
 		MACE => {
-			(*obj).damage = "2d3";
+			(*obj).damage = "2d3".to_string();
 		}
 		LONG_SWORD => {
-			(*obj).damage = "3d4";
+			(*obj).damage = "3d4".to_string();
 		}
 		TWO_HANDED_SWORD => {
-			(*obj).damage = "4d5";
+			(*obj).damage = "4d5".to_string();
 		}
 		_ => unreachable!("invalid weapon kind")
 	}
@@ -1242,8 +1254,7 @@ pub fn get_armor_class(obj: &obj) -> isize {
 	obj.class + obj.d_enchant
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn alloc_object() -> *mut object {
+pub unsafe fn alloc_object() -> *mut object {
 	let mut obj: *mut object = 0 as *mut object;
 	if !free_list.is_null() {
 		obj = free_list;
@@ -1261,7 +1272,7 @@ pub unsafe extern "C" fn alloc_object() -> *mut object {
 	(*obj).picked_up = (*obj).is_cursed;
 	(*obj).in_use_flags = 0;
 	(*obj).identified = false;
-	(*obj).damage = "1d1";
+	(*obj).damage = "1d1".to_string();
 	return obj;
 }
 

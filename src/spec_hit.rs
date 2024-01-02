@@ -1,39 +1,8 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-extern "C" {
-	pub type ldat;
-
-	fn wattrset(_: *mut WINDOW, _: i64) -> i64;
-
-	fn mon_sees() -> libc::c_char;
-	fn alloc_object() -> *mut object;
-	fn gr_object() -> *mut object;
-	static mut level_points: [libc::c_long; 0];
-	static mut mon_disappeared: libc::c_char;
-	static mut sustain_strength: libc::c_char;
-	static mut maintain_armor: libc::c_char;
-	static mut you_can_move_again: *mut libc::c_char;
-}
-
 use libc::sprintf;
-use ncurses::{addch, refresh};
+use ncurses::{addch, refresh, wattrset};
 use crate::prelude::*;
-
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct pdat {
-	pub _pad_y: libc::c_short,
-	pub _pad_x: libc::c_short,
-	pub _pad_top: libc::c_short,
-	pub _pad_left: libc::c_short,
-	pub _pad_bottom: libc::c_short,
-	pub _pad_right: libc::c_short,
-}
-
-pub type WINDOW = _win_st;
-pub type attr_t = ncurses::chtype;
-
 
 pub static mut less_hp: isize = 0;
 #[no_mangle]

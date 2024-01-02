@@ -6,11 +6,6 @@ use crate::{get_input_line, message, mv_aquatars, print_stats};
 use crate::objects::IdStatus::{Called, Identified};
 use crate::objects::place_at;
 
-extern "C" {
-	fn reg_move() -> libc::c_char;
-	fn alloc_object() -> *mut object;
-}
-
 use crate::prelude::*;
 use crate::prelude::IdStatus::Unidentified;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_EITHER_HAND};

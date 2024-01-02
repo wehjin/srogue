@@ -1,7 +1,7 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
 use ncurses::{addch, chtype, mvaddch, mvinch};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use crate::prelude::*;
 use crate::prelude::DoorDirection::{Left, Right};
 use crate::prelude::object_what::ObjectWhat;
@@ -9,7 +9,7 @@ use crate::prelude::SpotFlag::{Door, Floor, Hidden, HorWall, Monster, Object, St
 use crate::room::DoorDirection::{Up, Down};
 use crate::room::RoomType::{Maze, Room};
 
-#[derive(Copy, Clone, Default, Serialize)]
+#[derive(Copy, Clone, Default, Serialize, Deserialize)]
 pub struct dr {
 	pub oth_room: Option<i64>,
 	pub oth_row: Option<i64>,
@@ -20,7 +20,7 @@ pub struct dr {
 
 pub type door = dr;
 
-#[derive(Copy, Clone, Eq, PartialEq, Serialize)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum RoomType {
 	Nothing,
 	Room,
@@ -62,7 +62,7 @@ impl DoorDirection {
 	}
 }
 
-#[derive(Copy, Clone, Serialize)]
+#[derive(Copy, Clone, Serialize, Deserialize)]
 pub struct rm {
 	pub bottom_row: i64,
 	pub right_col: i64,

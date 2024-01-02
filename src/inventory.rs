@@ -27,22 +27,6 @@ use crate::prelude::ring_kind::{ADD_STRENGTH, DEXTERITY, RINGS};
 use crate::prelude::scroll_kind::SCROLLS;
 use crate::prelude::wand_kind::WANDS;
 
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct pdat {
-	pub _pad_y: libc::c_short,
-	pub _pad_x: libc::c_short,
-	pub _pad_top: libc::c_short,
-	pub _pad_left: libc::c_short,
-	pub _pad_bottom: libc::c_short,
-	pub _pad_right: libc::c_short,
-}
-
-pub type WINDOW = _win_st;
-pub type attr_t = ncurses::chtype;
-
-
 pub static mut is_wood: [bool; WANDS] = [false; WANDS];
 pub static wand_materials: [&'static str; WAND_MATERIALS] = [
 	"steel ",

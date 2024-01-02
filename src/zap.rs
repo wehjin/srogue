@@ -5,52 +5,6 @@ use crate::prelude::*;
 use crate::prelude::object_what::PackFilter::Wands;
 use crate::settings::set_score_only;
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _win_st {
-	pub _cury: libc::c_short,
-	pub _curx: libc::c_short,
-	pub _maxy: libc::c_short,
-	pub _maxx: libc::c_short,
-	pub _begy: libc::c_short,
-	pub _begx: libc::c_short,
-	pub _flags: libc::c_short,
-	pub _attrs: attr_t,
-	pub _bkgd: ncurses::chtype,
-	pub _notimeout: i64,
-	pub _clear: i64,
-	pub _leaveok: i64,
-	pub _scroll: i64,
-	pub _idlok: i64,
-	pub _idcok: i64,
-	pub _immed: i64,
-	pub _sync: i64,
-	pub _use_keypad: i64,
-	pub _delay: i64,
-	pub _line: *mut ldat,
-	pub _regtop: libc::c_short,
-	pub _regbottom: libc::c_short,
-	pub _parx: i64,
-	pub _pary: i64,
-	pub _parent: *mut WINDOW,
-	pub _pad: pdat,
-	pub _yoffset: libc::c_short,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct pdat {
-	pub _pad_y: libc::c_short,
-	pub _pad_x: libc::c_short,
-	pub _pad_top: libc::c_short,
-	pub _pad_left: libc::c_short,
-	pub _pad_bottom: libc::c_short,
-	pub _pad_right: libc::c_short,
-}
-
-pub type WINDOW = _win_st;
-pub type attr_t = ncurses::chtype;
-
 pub static mut wizard: bool = false;
 
 #[no_mangle]

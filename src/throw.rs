@@ -1,34 +1,9 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-extern "C" {
-	pub type ldat;
-
-	fn strcat(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
-	fn is_direction() -> libc::c_char;
-	fn alloc_object() -> *mut object;
-	fn get_letter_object() -> *mut object;
-}
-
 use ncurses::addch;
 use crate::prelude::*;
 use crate::prelude::object_what::PackFilter::Weapons;
 use crate::throw::Move::{Up, UpLeft, UpRight, Left, Right, Same, Down, DownLeft, DownRight};
-
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct pdat {
-	pub _pad_y: libc::c_short,
-	pub _pad_x: libc::c_short,
-	pub _pad_top: libc::c_short,
-	pub _pad_left: libc::c_short,
-	pub _pad_bottom: libc::c_short,
-	pub _pad_right: libc::c_short,
-}
-
-pub type WINDOW = _win_st;
-pub type attr_t = ncurses::chtype;
-
 
 #[no_mangle]
 pub unsafe extern "C" fn throw() -> i64 {

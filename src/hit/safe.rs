@@ -57,7 +57,7 @@ pub fn get_w_damage(obj: &object) -> Option<isize> {
 	if obj.what_is != Weapon {
 		return None;
 	}
-	let first = DamageStat::parse(obj.damage).first().expect("base damage stats for weapon");
+	let first = DamageStat::parse(&obj.damage).first().expect("base damage stats for weapon");
 	let DamageStat { hits, damage } = first;
 	let hits = *hits + obj.hit_enchant as usize;
 	let damage = *damage + obj.d_enchant as usize;

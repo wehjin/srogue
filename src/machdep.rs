@@ -1,9 +1,12 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
 use std::{fs, process};
+use std::error::Error;
 use std::ffi::CString;
-use std::time::SystemTime;
+use std::time::{Duration};
+use chrono::{Datelike, DateTime, Timelike, TimeZone, Utc};
 use libc::stat;
+use serde::{Deserialize, Serialize};
 
 extern "C" {
 	fn localtime(_: *const time_t) -> *mut tm;
@@ -104,15 +107,34 @@ pub struct passwd {
 	pub pw_expire: __darwin_time_t,
 }
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct rogue_time {
-	pub year: libc::c_short,
-	pub month: libc::c_short,
-	pub day: libc::c_short,
-	pub hour: libc::c_short,
-	pub minute: libc::c_short,
-	pub second: libc::c_short,
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct RogueTime {
+	pub year: i32,
+	pub month: u32,
+	pub day: u32,
+	pub hour: u32,
+	pub minute: u32,
+	pub second: u32,
+}
+
+impl RogueTime {
+	pub fn add_seconds(&self, seconds: u64) -> Self {
+		let utc: DateTime<Utc> = Utc.with_ymd_and_hms(self.year, self.month, self.day, self.hour, self.minute, self.second).unwrap();
+		Self::from(utc + Duration::from_secs(seconds))
+	}
+}
+
+impl From<DateTime<Utc>> for RogueTime {
+	fn from(value: DateTime<Utc>) -> Self {
+		RogueTime {
+			year: value.year(),
+			month: value.month(),
+			day: value.day(),
+			hour: value.hour(),
+			minute: value.minute(),
+			second: value.second(),
+		}
+	}
 }
 
 pub type tcflag_t = libc::c_ulong;
@@ -221,103 +243,38 @@ pub unsafe extern "C" fn md_ignore_signals() -> i64 {
 	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn md_get_file_id(fname: &str) -> i64 {
-	let mut sbuf = libc::stat {
-		st_dev: 0,
-		st_mode: 0,
-		st_nlink: 0,
-		st_ino: 0,
-		st_uid: 0,
-		st_gid: 0,
-		st_rdev: 0,
-		st_atime: 0,
-		st_atime_nsec: 0,
-		st_mtime: 0,
-		st_mtime_nsec: 0,
-		st_ctime: 0,
-		st_ctime_nsec: 0,
-		st_birthtime: 0,
-		st_size: 0,
-		st_blocks: 0,
-		st_blksize: 0,
-		st_flags: 0,
-		st_gen: 0,
-		st_lspare: 0,
-		st_qspare: [0; 2],
-		st_birthtime_nsec: 0,
-	};
-	let fname = CString::new(fname).unwrap();
-	if stat(fname.as_ptr(), &mut sbuf) == 0 {
-		sbuf.st_ino as i64
-	} else {
-		-(1)
-	}
+pub unsafe fn md_get_file_id(file_path: &str) -> i64 {
+	let mut sbuf = libc::stat { st_dev: 0, st_mode: 0, st_nlink: 0, st_ino: 0, st_uid: 0, st_gid: 0, st_rdev: 0, st_atime: 0, st_atime_nsec: 0, st_mtime: 0, st_mtime_nsec: 0, st_ctime: 0, st_ctime_nsec: 0, st_birthtime: 0, st_size: 0, st_blocks: 0, st_blksize: 0, st_flags: 0, st_gen: 0, st_lspare: 0, st_qspare: [0; 2], st_birthtime_nsec: 0 };
+	let file_path = CString::new(file_path).unwrap();
+	if stat(file_path.as_ptr(), &mut sbuf) == 0 { sbuf.st_ino as i64 } else { -1 }
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn md_link_count(mut fname: *mut libc::c_char) -> i64 {
-	let mut sbuf = stat {
-		st_dev: 0,
-		st_mode: 0,
-		st_nlink: 0,
-		st_ino: 0,
-		st_uid: 0,
-		st_gid: 0,
-		st_rdev: 0,
-		st_atime: 0,
-		st_atime_nsec: 0,
-		st_mtime: 0,
-		st_mtime_nsec: 0,
-		st_ctime: 0,
-		st_ctime_nsec: 0,
-		st_birthtime: 0,
-		st_birthtime_nsec: 0,
-		st_size: 0,
-		st_blocks: 0,
-		st_blksize: 0,
-		st_flags: 0,
-		st_gen: 0,
-		st_lspare: 0,
-		st_qspare: [0; 2],
-	};
-	stat(fname, &mut sbuf);
+pub unsafe fn md_link_count(file_path: &str) -> i64 {
+	let mut sbuf = stat { st_dev: 0, st_mode: 0, st_nlink: 0, st_ino: 0, st_uid: 0, st_gid: 0, st_rdev: 0, st_atime: 0, st_atime_nsec: 0, st_mtime: 0, st_mtime_nsec: 0, st_ctime: 0, st_ctime_nsec: 0, st_birthtime: 0, st_birthtime_nsec: 0, st_size: 0, st_blocks: 0, st_blksize: 0, st_flags: 0, st_gen: 0, st_lspare: 0, st_qspare: [0; 2] };
+	let file_path = CString::new(file_path).unwrap();
+	stat(file_path.as_ptr(), &mut sbuf);
 	return sbuf.st_nlink as i64;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn md_gct(mut rt_buf: *mut rogue_time) -> i64 {
-	let mut tv: timeval = timeval { tv_sec: 0, tv_usec: 0 };
-	let mut tzp: timezone = timezone {
-		tz_minuteswest: 0,
-		tz_dsttime: 0,
-	};
-	let mut t: *mut tm = 0 as *mut tm;
-	let mut seconds: libc::c_long = 0;
-	gettimeofday(&mut tv, &mut tzp as *mut timezone as *mut libc::c_void);
-	seconds = tv.tv_sec;
-	t = localtime(&mut seconds);
-	(*rt_buf).year = (*t).tm_year as libc::c_short;
-	(*rt_buf).month = ((*t).tm_mon + 1) as libc::c_short;
-	(*rt_buf).day = (*t).tm_mday as libc::c_short;
-	(*rt_buf).hour = (*t).tm_hour as libc::c_short;
-	(*rt_buf).minute = (*t).tm_min as libc::c_short;
-	(*rt_buf).second = (*t).tm_sec as libc::c_short;
-	panic!("Reached end of non-void function without returning");
+pub fn get_current_time() -> RogueTime {
+	let utc_now = Utc::now();
+	RogueTime::from(utc_now)
 }
 
-pub unsafe fn md_gfmt(file_name: &str) -> SystemTime {
-	let metadata = fs::metadata(file_name).expect("metadata");
-	metadata.modified().expect("modification time")
+pub fn get_file_modification_time(file_name: &str) -> Result<RogueTime, Box<dyn Error>> {
+	let metadata = fs::metadata(file_name)?;
+	let system_time = metadata.modified()?;
+	let utc = DateTime::<Utc>::from(system_time);
+	Ok(RogueTime::from(utc))
 }
 
-pub fn md_df(file_name: &str) -> bool {
+pub fn delete_file(file_name: &str) -> bool {
 	let result = fs::remove_file(file_name);
 	result.is_ok()
 }
 
 
-pub fn md_get_login_name() -> Option<String> {
+pub fn get_login_name() -> Option<String> {
 	let username = whoami::username();
 	if username.is_empty() {
 		None

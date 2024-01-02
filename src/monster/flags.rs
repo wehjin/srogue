@@ -1,6 +1,6 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Default, Serialize)]
+#[derive(Copy, Clone, Default, Serialize, Deserialize)]
 pub struct MonsterFlags {
 	pub hasted: bool,
 	pub slowed: bool,

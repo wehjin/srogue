@@ -1,59 +1,16 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-extern "C" {
-	pub type __sFILEX;
-	pub type ldat;
-	fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> *mut FILE;
-	static mut __stdoutp: *mut FILE;
-	fn fclose(_: *mut FILE) -> i64;
-	fn fflush(_: *mut FILE) -> i64;
-
-	fn putchar(_: i64) -> i64;
-	fn putc(_: i64, _: *mut FILE) -> i64;
-	fn getchar() -> i64;
-	fn fputs(_: *const libc::c_char, _: *mut FILE) -> i64;
-	fn onintr() -> i64;
-	static mut save_is_interactive: libc::c_char;
-}
-
 use libc::{c_int};
 use ncurses::{addch, chtype, clrtoeol, curscr, mvaddstr, wrefresh};
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_EXP, STAT_GOLD, STAT_HP, STAT_HUNGER, STAT_LABEL, STAT_LEVEL, STAT_STRENGTH};
-
-pub type __int64_t = libc::c_longlong;
-pub type __darwin_off_t = __int64_t;
-pub type fpos_t = __darwin_off_t;
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct __sbuf {
-	pub _base: *mut libc::c_uchar,
-	pub _size: i64,
-}
-
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct pdat {
-	pub _pad_y: libc::c_short,
-	pub _pad_x: libc::c_short,
-	pub _pad_top: libc::c_short,
-	pub _pad_left: libc::c_short,
-	pub _pad_bottom: libc::c_short,
-	pub _pad_right: libc::c_short,
-}
-
-pub type WINDOW = _win_st;
-pub type attr_t = ncurses::chtype;
-
 
 pub static mut msg_written: String = String::new();
 pub static mut msg_cleared: bool = true;
 pub static mut hunger_str: String = "".to_string();
 
 pub unsafe extern "C" fn message(msg: &str, intrpt: i64) {
-	if save_is_interactive == 0 {
+	if !save_is_interactive {
 		return;
 	}
 	if intrpt != 0 {
@@ -63,13 +20,13 @@ pub unsafe extern "C" fn message(msg: &str, intrpt: i64) {
 	cant_int = true;
 
 	if !msg_cleared {
-		ncurses::mvaddstr((MIN_ROW - 1) as i32, msg_written.len() as i32, MORE);
+		mvaddstr((MIN_ROW - 1) as i32, msg_written.len() as i32, MORE);
 		ncurses::refresh();
 		wait_for_ack();
 		check_message();
 	}
-	ncurses::mvaddstr((MIN_ROW - 1) as i32, 0, msg);
-	ncurses::addch(chtype::from(' '));
+	mvaddstr((MIN_ROW - 1) as i32, 0, msg);
+	addch(chtype::from(' '));
 	ncurses::refresh();
 	msg_written = msg.to_string();
 	msg_cleared = false;
@@ -91,7 +48,7 @@ pub unsafe fn check_message() {
 		return;
 	}
 	ncurses::mv((MIN_ROW - 1) as i32, 0);
-	ncurses::clrtoeol();
+	clrtoeol();
 	ncurses::refresh();
 	msg_cleared = true;
 }
@@ -106,7 +63,7 @@ pub unsafe extern "C" fn get_input_line(prompt: &str, insert: Option<&str>, if_c
 	let mut line: Vec<char> = Vec::new();
 	let n = prompt.len();
 	if let Some(insert) = insert {
-		ncurses::mvaddstr(0, (n + 1) as i32, insert);
+		mvaddstr(0, (n + 1) as i32, insert);
 		line.extend(insert.chars());
 		ncurses::mv(0, (n + line.len() + 1) as i32);
 		ncurses::refresh();
@@ -121,14 +78,14 @@ pub unsafe extern "C" fn get_input_line(prompt: &str, insert: Option<&str>, if_c
 			if ch != ' ' || line.len() > 0 {
 				line.push(ch);
 				if do_echo {
-					ncurses::addch(ch as ncurses::chtype);
+					addch(ch as chtype);
 				}
 			}
 		}
 		const BACKSPACE: char = '\u{8}';
 		if ch == BACKSPACE && line.len() > 0 {
 			if do_echo {
-				ncurses::mvaddch(0, (line.len() + n) as i32, ' ' as ncurses::chtype);
+				ncurses::mvaddch(0, (line.len() + n) as i32, ' ' as chtype);
 				ncurses::mv((MIN_ROW - 1) as i32, (line.len() + n) as i32);
 			}
 			line.pop();
@@ -249,7 +206,7 @@ pub unsafe fn print_stats(stat_mask: usize) {
 
 fn pad(s: &str, n: usize) {
 	for _ in s.len()..n {
-		addch(' ' as ncurses::chtype);
+		addch(' ' as chtype);
 	}
 }
 

@@ -17,7 +17,7 @@ use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::Scroll;
 use crate::prelude::SpotFlag::{Floor, Object, Stairs, Tunnel};
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct fight {
 	pub armor: *mut object,
 	pub weapon: *mut object,
@@ -39,35 +39,7 @@ pub struct fight {
 
 pub type fighter = fight;
 
-#[no_mangle]
-pub static mut level_monsters: object = obj {
-	m_flags: MonsterFlags::default(),
-	damage: "",
-	quantity: 0,
-	ichar: '\u{00}',
-	kill_exp: 0,
-	is_protected: 0,
-	is_cursed: 0,
-	class: 0,
-	identified: false,
-	stationary_damage: 0,
-	which_kind: 0,
-	o_row: 0,
-	o_col: 0,
-	o: 0,
-	row: 0,
-	col: 0,
-	d_enchant: 0,
-	quiver: 0,
-	trow: 0,
-	tcol: 0,
-	hit_enchant: 0,
-	what_is: ObjectWhat::None,
-	disguise: 0,
-	picked_up: 0,
-	in_use_flags: 0,
-	next_object: 0 as *const obj as *mut obj,
-};
+pub static mut level_monsters: object = obj::default();
 #[no_mangle]
 pub static mut mon_disappeared: libc::c_char = 0;
 
@@ -104,7 +76,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::a(),
-			damage: "0d0",
+			damage: "0d0".to_string(),
 			quantity: 25,
 			ichar: 'A',
 			kill_exp: 20,
@@ -135,7 +107,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::b(),
-			damage: "1d3",
+			damage: "1d3".to_string(),
 			quantity: 10,
 			ichar: 'B',
 			kill_exp: 2,
@@ -166,7 +138,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::c(),
-			damage: "3d3/2d5",
+			damage: "3d3/2d5".to_string(),
 			quantity: 32,
 			ichar: 'C',
 			kill_exp: 15,
@@ -197,7 +169,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::d(),
-			damage: "4d6/4d9",
+			damage: "4d6/4d9".to_string(),
 			quantity: 145,
 			ichar: 'D',
 			kill_exp: 5000,
@@ -229,7 +201,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::e(),
-			damage: "1d3",
+			damage: "1d3".to_string(),
 			quantity: 11,
 			ichar: 'E',
 			kill_exp: 2,
@@ -260,7 +232,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::f(),
-			damage: "5d5",
+			damage: "5d5".to_string(),
 			quantity: 73,
 			ichar: 'F',
 			kill_exp: 91,
@@ -291,7 +263,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::g(),
-			damage: "5d5/5d5",
+			damage: "5d5/5d5".to_string(),
 			quantity: 115,
 			ichar: 'G',
 			kill_exp: 2000,
@@ -323,7 +295,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::h(),
-			damage: "1d3/1d2",
+			damage: "1d3/1d2".to_string(),
 			quantity: 15,
 			ichar: 'H',
 			kill_exp: 3,
@@ -354,7 +326,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::i(),
-			damage: "0d0",
+			damage: "0d0".to_string(),
 			quantity: 15,
 			ichar: 'I',
 			kill_exp: 5,
@@ -385,7 +357,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::j(),
-			damage: "3d10/4d5",
+			damage: "3d10/4d5".to_string(),
 			quantity: 132,
 			ichar: 'J',
 			kill_exp: 3000,
@@ -416,7 +388,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::k(),
-			damage: "1d4",
+			damage: "1d4".to_string(),
 			quantity: 10,
 			ichar: 'K',
 			kill_exp: 2,
@@ -447,7 +419,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::l(),
-			damage: "0d0",
+			damage: "0d0".to_string(),
 			quantity: 25,
 			ichar: 'L',
 			kill_exp: 21,
@@ -478,7 +450,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::m(),
-			damage: "4d4/3d7",
+			damage: "4d4/3d7".to_string(),
 			quantity: 97,
 			ichar: 'M',
 			kill_exp: 250,
@@ -510,7 +482,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::n(),
-			damage: "0d0",
+			damage: "0d0".to_string(),
 			quantity: 25,
 			ichar: 'N',
 			kill_exp: 39,
@@ -542,7 +514,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::o(),
-			damage: "1d6",
+			damage: "1d6".to_string(),
 			quantity: 25,
 			ichar: 'O',
 			kill_exp: 5,
@@ -574,7 +546,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::p(),
-			damage: "5d4",
+			damage: "5d4".to_string(),
 			quantity: 76,
 			ichar: 'P',
 			kill_exp: 120,
@@ -606,7 +578,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::q(),
-			damage: "3d5",
+			damage: "3d5".to_string(),
 			quantity: 30,
 			ichar: 'Q',
 			kill_exp: 20,
@@ -638,7 +610,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::r(),
-			damage: "2d5",
+			damage: "2d5".to_string(),
 			quantity: 19,
 			ichar: 'R',
 			kill_exp: 10,
@@ -669,7 +641,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::s(),
-			damage: "1d3",
+			damage: "1d3".to_string(),
 			quantity: 8,
 			ichar: 'S',
 			kill_exp: 2,
@@ -700,7 +672,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::t(),
-			damage: "4d6/1d4",
+			damage: "4d6/1d4".to_string(),
 			quantity: 75,
 			ichar: 'T',
 			kill_exp: 125,
@@ -732,7 +704,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::u(),
-			damage: "4d10",
+			damage: "4d10".to_string(),
 			quantity: 90,
 			ichar: 'U',
 			kill_exp: 200,
@@ -764,7 +736,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::v(),
-			damage: "1d14/1d4",
+			damage: "1d14/1d4".to_string(),
 			quantity: 55,
 			ichar: 'V',
 			kill_exp: 350,
@@ -796,7 +768,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::w(),
-			damage: "2d8",
+			damage: "2d8".to_string(),
 			quantity: 45,
 			ichar: 'W',
 			kill_exp: 55,
@@ -827,7 +799,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::x(),
-			damage: "4d6",
+			damage: "4d6".to_string(),
 			quantity: 42,
 			ichar: 'X',
 			kill_exp: 110,
@@ -858,7 +830,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::y(),
-			damage: "3d6",
+			damage: "3d6".to_string(),
 			quantity: 35,
 			ichar: 'Y',
 			kill_exp: 50,
@@ -890,7 +862,7 @@ pub static mut mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::z(),
-			damage: "1d7",
+			damage: "1d7".to_string(),
 			quantity: 21,
 			ichar: 'Z',
 			kill_exp: 8,

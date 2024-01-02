@@ -135,19 +135,37 @@ impl SpotFlag {
 }
 
 pub mod item_usage {
+	use crate::objects::obj;
+
 	pub const NOT_USED: u16 = 0o0;
 	pub const BEING_WIELDED: u16 = 0o1;
 	pub const BEING_WORN: u16 = 0o2;
 	pub const ON_LEFT_HAND: u16 = 0o4;
 	pub const ON_RIGHT_HAND: u16 = 0o10;
-	pub const ON_EITHER_HAND: u16 = 0o14;
-	pub const BEING_USED: u16 = 0o17;
+	pub const ON_EITHER_HAND: u16 = ON_LEFT_HAND | ON_RIGHT_HAND;
+	pub const BEING_USED: u16 = BEING_WIELDED | BEING_WORN | ON_EITHER_HAND;
+
+	pub fn being_worn(obj: &obj) -> bool {
+		(obj.in_use_flags & BEING_WORN) != 0
+	}
+
+	pub fn being_wielded(obj: &obj) -> bool {
+		(obj.in_use_flags & BEING_WIELDED) != 0
+	}
+
+	pub fn on_either_hand(obj: &obj) -> bool {
+		(obj.in_use_flags & ON_EITHER_HAND) != 0
+	}
+
+	pub fn on_left_hand(obj: &obj) -> bool {
+		(obj.in_use_flags & ON_LEFT_HAND) != 0
+	}
 }
 
 pub mod object_what {
-	use serde::Serialize;
+	use serde::{Deserialize, Serialize};
 
-	#[derive(Copy, Clone, Eq, PartialEq, Serialize)]
+	#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 	pub enum ObjectWhat {
 		Armor,
 		Weapon,
@@ -293,44 +311,3 @@ pub mod stat_const {
 	pub const STAT_LABEL: usize = 0o200;
 	pub const STAT_ALL: usize = 0o377;
 }
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct __sFILE {
-	pub _p: *mut libc::c_uchar,
-	pub _r: libc::c_int,
-	pub _w: libc::c_int,
-	pub _flags: libc::c_short,
-	pub _file: libc::c_short,
-	pub _bf: crate::message::__sbuf,
-	pub _lbfsize: libc::c_int,
-	pub _cookie: *mut libc::c_void,
-	pub _close: Option::<unsafe extern "C" fn(*mut libc::c_void) -> libc::c_int>,
-	pub _read: Option::<
-		unsafe extern "C" fn(
-			*mut libc::c_void,
-			*mut libc::c_char,
-			libc::c_int,
-		) -> libc::c_int,
-	>,
-	pub _seek: Option::<
-		unsafe extern "C" fn(*mut libc::c_void, crate::message::fpos_t, libc::c_int) -> crate::message::fpos_t,
-	>,
-	pub _write: Option::<
-		unsafe extern "C" fn(
-			*mut libc::c_void,
-			*const libc::c_char,
-			libc::c_int,
-		) -> libc::c_int,
-	>,
-	pub _ub: crate::message::__sbuf,
-	pub _extra: *mut crate::message::__sFILEX,
-	pub _ur: libc::c_int,
-	pub _ubuf: [libc::c_uchar; 3],
-	pub _nbuf: [libc::c_uchar; 1],
-	pub _lb: crate::message::__sbuf,
-	pub _blksize: libc::c_int,
-	pub _offset: crate::message::fpos_t,
-}
-
-pub type FILE = __sFILE;

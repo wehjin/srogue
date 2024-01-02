@@ -15,10 +15,6 @@ use crate::prelude::*;
 use crate::prelude::SpotFlag::{Floor, HorWall, Object, Stairs, Tunnel, VertWall};
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
 
-
-pub type WINDOW = _win_st;
-pub type attr_t = ncurses::chtype;
-
 pub static mut cur_level: isize = 0;
 pub static mut max_level: isize = 1;
 pub static mut cur_room: i64 = 0;

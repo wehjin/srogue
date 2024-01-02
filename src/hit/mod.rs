@@ -8,22 +8,6 @@ use libc::{c_char, c_short};
 use crate::monster;
 use crate::prelude::*;
 
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct pdat {
-	pub _pad_y: libc::c_short,
-	pub _pad_x: libc::c_short,
-	pub _pad_top: libc::c_short,
-	pub _pad_left: libc::c_short,
-	pub _pad_bottom: libc::c_short,
-	pub _pad_right: libc::c_short,
-}
-
-pub type WINDOW = _win_st;
-pub type attr_t = ncurses::chtype;
-
-
 #[no_mangle]
 pub static mut fight_monster: *mut object = 0 as *const object as *mut object;
 pub static mut detect_monster: bool = false;
@@ -71,7 +55,7 @@ pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool) {
 		(*monster).set_stationary_damage(stationary_damage + 1);
 		stationary_damage
 	} else {
-		let mut damage = get_damage((*monster).damage, DamageEffect::Roll);
+		let mut damage = get_damage(&(*monster).damage, DamageEffect::Roll);
 		if other.is_some() && flame {
 			damage -= get_armor_class(&*rogue.armor);
 			if damage < 0 {
@@ -164,7 +148,7 @@ pub unsafe extern "C" fn to_hit(mut obj: *mut object) -> usize {
 	if obj.is_null() {
 		return 1;
 	}
-	let hits = DamageStat::parse_first((*obj).damage).hits;
+	let hits = DamageStat::parse_first(&(*obj).damage).hits;
 	return hits + (*obj).hit_enchant as usize;
 }
 
@@ -260,7 +244,7 @@ pub unsafe extern "C" fn fight(to_the_death: bool) {
 		return;
 	}
 	let possible_damage = if !(*fight_monster).m_flags.stationary {
-		get_damage((*fight_monster).damage, DamageEffect::None) * 2 / 3
+		get_damage(&(*fight_monster).damage, DamageEffect::None) * 2 / 3
 	} else {
 		(*fight_monster).stationary_damage() - 1
 	};
@@ -292,7 +276,7 @@ pub fn get_dir_rc(dir: char, row: &mut i64, col: &mut i64, allow_off_screen: boo
 			}
 		}
 		'k' => {
-			if allow_off_screen || (*row > MIN_ROW as i64) {
+			if allow_off_screen || (*row > MIN_ROW) {
 				*row -= 1;
 			}
 		}
@@ -332,14 +316,14 @@ pub fn get_dir_rc(dir: char, row: &mut i64, col: &mut i64, allow_off_screen: boo
 pub unsafe fn get_hit_chance(weapon: &mut object) -> c_short {
 	let mut hit_chance = 40isize;
 	hit_chance += 3 * to_hit(weapon) as isize;
-	hit_chance += ((2 * rogue.exp as isize) + (2 * ring_exp as isize)) - r_rings as isize;
+	hit_chance += ((2 * rogue.exp) + (2 * ring_exp)) - r_rings;
 	hit_chance as c_short
 }
 
 pub unsafe fn get_weapon_damage(weapon: &mut object) -> c_short {
-	let mut damage = get_w_damage(weapon).expect("damage") as isize;
+	let mut damage = get_w_damage(weapon).expect("damage");
 	damage += damage_for_strength() as isize;
-	damage += (((rogue.exp as isize + ring_exp as isize) - r_rings as isize) + 1) / 2;
+	damage += (((rogue.exp + ring_exp) - r_rings) + 1) / 2;
 	damage as c_short
 }
 

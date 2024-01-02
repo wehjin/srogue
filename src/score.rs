@@ -1,116 +1,14 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-extern "C" {
-	pub type __sFILEX;
-	pub type ldat;
-
-	fn wattrset(_: *mut WINDOW, _: i64) -> i64;
-	fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> *mut FILE;
-	fn fread(
-		_: *mut libc::c_void,
-		_: libc::c_ulong,
-		_: libc::c_ulong,
-		_: *mut FILE,
-	) -> libc::c_ulong;
-	fn fwrite(
-		_: *const libc::c_void,
-		_: libc::c_ulong,
-		_: libc::c_ulong,
-		_: *mut FILE,
-	) -> libc::c_ulong;
-	fn rewind(_: *mut FILE);
-
-	fn fclose(_: *mut FILE) -> i64;
-	static mut id_weapons: [id; 0];
-	static mut id_armors: [id; 0];
-	fn strncpy(
-		_: *mut libc::c_char,
-		_: *const libc::c_char,
-		_: libc::c_ulong,
-	) -> *mut libc::c_char;
-	fn strcat(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
-	static mut m_names: [*mut libc::c_char; 0];
-	static mut msg_cleared: libc::c_char;
-	fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> i64;
-}
-
 use std::fs::File;
 use std::io::{Read, Seek, Write};
 use std::sync::{RwLock};
-use libc::{sprintf, strcpy, strlen};
+use libc::{sprintf, strcat, strcpy, strlen};
 use ncurses::{addch, clear, mvaddstr, refresh, standend, standout, waddnstr};
 use settings::score_only;
 use crate::prelude::*;
 use crate::{settings, turn_into_games, turn_into_user};
 use crate::settings::{login_name, nick_name, SETTINGS};
-
-pub type __int64_t = libc::c_longlong;
-pub type __darwin_off_t = __int64_t;
-pub type fpos_t = __darwin_off_t;
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct __sbuf {
-	pub _base: *mut libc::c_uchar,
-	pub _size: i64,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct __sFILE {
-	pub _p: *mut libc::c_uchar,
-	pub _r: i64,
-	pub _w: i64,
-	pub _flags: libc::c_short,
-	pub _file: libc::c_short,
-	pub _bf: __sbuf,
-	pub _lbfsize: i64,
-	pub _cookie: *mut libc::c_void,
-	pub _close: Option::<unsafe extern "C" fn(*mut libc::c_void) -> i64>,
-	pub _read: Option::<
-		unsafe extern "C" fn(
-			*mut libc::c_void,
-			*mut libc::c_char,
-			i64,
-		) -> i64,
-	>,
-	pub _seek: Option::<
-		unsafe extern "C" fn(*mut libc::c_void, fpos_t, i64) -> fpos_t,
-	>,
-	pub _write: Option::<
-		unsafe extern "C" fn(
-			*mut libc::c_void,
-			*const libc::c_char,
-			i64,
-		) -> i64,
-	>,
-	pub _ub: __sbuf,
-	pub _extra: *mut __sFILEX,
-	pub _ur: i64,
-	pub _ubuf: [libc::c_uchar; 3],
-	pub _nbuf: [libc::c_uchar; 1],
-	pub _lb: __sbuf,
-	pub _blksize: i64,
-	pub _offset: fpos_t,
-}
-
-pub type FILE = __sFILE;
-
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct pdat {
-	pub _pad_y: libc::c_short,
-	pub _pad_x: libc::c_short,
-	pub _pad_top: libc::c_short,
-	pub _pad_left: libc::c_short,
-	pub _pad_bottom: libc::c_short,
-	pub _pad_right: libc::c_short,
-}
-
-pub type WINDOW = _win_st;
-pub type attr_t = ncurses::chtype;
-
 
 pub const SCORE_FILE: &'static str = "/usr/games/rogue.scores";
 

@@ -43,7 +43,7 @@ impl GameState {
 }
 
 pub unsafe fn init() -> bool {
-	match md_get_login_name() {
+	match get_login_name() {
 		None => {
 			clean_up("Hey!  Who are you?");
 		}
@@ -111,7 +111,7 @@ unsafe fn player_init() {
 		let obj: &mut obj = &mut *obj;
 		obj.what_is = Weapon;
 		obj.which_kind = MACE;
-		obj.damage = "2d3";
+		obj.damage = "2d3".to_string();
 		obj.hit_enchant = 1;
 		obj.d_enchant = 1;
 		obj.identified = true;
@@ -124,7 +124,7 @@ unsafe fn player_init() {
 		let obj: &mut obj = &mut *obj;
 		obj.what_is = Weapon;
 		obj.which_kind = BOW;
-		obj.damage = "1d2";
+		obj.damage = "1d2".to_string();
 		obj.hit_enchant = 1;
 		obj.d_enchant = 0;
 		obj.identified = true;
@@ -137,7 +137,7 @@ unsafe fn player_init() {
 		obj.what_is = Weapon;
 		obj.which_kind = ARROW;
 		obj.quantity = get_rand(25, 35) as c_short;
-		obj.damage = "1d2";
+		obj.damage = "1d2".to_string();
 		obj.hit_enchant = 0;
 		obj.d_enchant = 0;
 		obj.identified = true;
