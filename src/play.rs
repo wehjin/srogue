@@ -130,7 +130,7 @@ pub unsafe fn play_level() {
 				message("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims", 0);
 			}
 			'Q' => {
-				quit(0);
+				quit(false);
 			}
 			'0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
 				mv(rogue.row as i32, rogue.col as i32);

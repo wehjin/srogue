@@ -15,7 +15,7 @@ pub static mut cant_int: bool = false;
 pub static mut did_int: bool = false;
 pub static mut save_is_interactive: bool = true;
 pub static mut error_file: &'static str = "rogue.esave";
-pub static mut byebye_string: &'static str = "Okay, bye bye!";
+pub static BYEBYE_STRING: &'static str = "Okay, bye bye!";
 
 pub struct GameState {
 	seed: [u8; 32],
@@ -162,9 +162,9 @@ pub unsafe fn clean_up(estr: &str) {
 pub unsafe fn byebye(ask_quit: bool) {
 	md_ignore_signals();
 	if ask_quit {
-		quit(1);
+		quit(true);
 	} else {
-		clean_up(byebye_string);
+		clean_up(BYEBYE_STRING);
 	}
 	md_heed_signals();
 }

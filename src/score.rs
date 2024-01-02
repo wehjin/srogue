@@ -3,7 +3,7 @@
 use std::fs::File;
 use std::io::{Read, Seek, Write};
 use std::sync::{RwLock};
-use ncurses::{addch, clear, mvaddstr, refresh, standend, standout};
+use ncurses::{addch, clear, mv, mvaddch, mvaddstr, mvinch, refresh, standend, standout};
 use ObjectWhat::{Amulet, Armor, Potion, Ring, Scroll, Wand, Weapon};
 use settings::{score_only, show_skull};
 use crate::prelude::*;
@@ -93,62 +93,40 @@ pub unsafe fn win() {
 	put_scores(Some(Ending::Win));
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn quit(mut from_intrpt: libc::c_char) {
-	let mut buf: [libc::c_char; 128] = [0; 128];
-	let mut i: libc::c_short = 0;
-	let mut orow: libc::c_short = 0;
-	let mut ocol: libc::c_short = 0;
-	let mut mc: libc::c_char = 0;
+pub unsafe fn quit(from_intrpt: bool) {
 	md_ignore_signals();
-	if from_intrpt != 0 {
+	let mut orow = 0;
+	let mut ocol = 0;
+	let mut mc = false;
+	let mut buf = [0; 128];
+	if from_intrpt {
 		orow = rogue.row;
 		ocol = rogue.col;
 		mc = msg_cleared;
-		i = 0 as libc::c_int as libc::c_short;
-		while (i as libc::c_int) < 80 as libc::c_int {
-			buf[i
-				as usize] = (if ncurses::wmove(ncurses::stdscr(), 0 as libc::c_int, i as libc::c_int)
-				== -(1 as libc::c_int)
-			{
-				-(1 as libc::c_int) as ncurses::chtype
-			} else {
-				ncurses::winch(ncurses::stdscr())
-			}) as libc::c_char;
-			i += 1;
-			i;
+		for i in 0..DCOLS {
+			buf[i] = mvinch(0, i as i32);
 		}
 	}
 	check_message();
-	message("really quit?", 1 as libc::c_int);
-	if rgetchar() != 'y' as i32 {
+	message("really quit?", 1);
+	if rgetchar() != 'y' {
 		md_heed_signals();
 		check_message();
-		if from_intrpt != 0 {
-			i = 0 as libc::c_int as libc::c_short;
-			while (i as libc::c_int) < 80 as libc::c_int {
-				if ncurses::wmove(ncurses::stdscr(), 0 as libc::c_int, i as libc::c_int)
-					== -(1 as libc::c_int)
-				{
-					-(1 as libc::c_int);
-				} else {
-					addch(buf[i as usize] as ncurses::chtype);
-				};
-				i += 1;
-				i;
+		if from_intrpt {
+			for i in 0..DCOLS {
+				mvaddch(0, i as i32, buf[i]);
 			}
 			msg_cleared = mc;
-			ncurses::wmove(ncurses::stdscr(), orow as libc::c_int, ocol as libc::c_int);
-			ncurses::refresh();
+			mv(orow as i32, ocol as i32);
+			refresh();
 		}
 		return;
 	}
-	if from_intrpt != 0 {
-		clean_up(byebye_string);
+	if from_intrpt {
+		clean_up(BYEBYE_STRING);
 	}
 	check_message();
 	killed_by(Ending::Quit);
-	panic!("Reached end of non-void function without returning");
 }
 
 pub unsafe fn put_scores(ending: Option<Ending>) {
