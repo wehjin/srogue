@@ -1,8 +1,10 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-use libc::{strlen, strncmp};
+use libc::{c_int, strlen, strncmp};
+use crate::monster::flags::{MONSTERS};
 use crate::prelude::*;
 use crate::prelude::object_what::PackFilter::Wands;
+use crate::prelude::wand_kind::WandKind;
 use crate::settings::set_score_only;
 
 pub static mut wizard: bool = false;
@@ -111,6 +113,82 @@ pub unsafe extern "C" fn get_zapped_monster(
 			}
 		}
 	};
+}
+
+pub unsafe fn zap_monster(monster: &mut obj, which_kind: u16) {
+	let row = monster.row;
+	let col = monster.col;
+	let kind = WandKind::from_code(which_kind);
+	match kind {
+		WandKind::SlowMonster => {
+			if monster.m_flags.hasted {
+				monster.m_flags.hasted = false;
+			} else {
+				monster.set_slowed_toggle(false);
+				monster.m_flags.slowed = true;
+			}
+		}
+		WandKind::HasteMonster => {
+			if monster.m_flags.slowed {
+				monster.m_flags.slowed = false;
+			} else {
+				monster.m_flags.hasted = true;
+			}
+		}
+		WandKind::TeleAway => {
+			tele_away(monster);
+		}
+		WandKind::ConfuseMonster => {
+			monster.m_flags.confused = true;
+			monster.set_moves_confused(monster.moves_confused() + get_rand(12, 22));
+		}
+		WandKind::Invisibility => {
+			monster.m_flags.invisible = true;
+		}
+		WandKind::Polymorph => unsafe {
+			if monster.m_flags.holds {
+				being_held = false;
+			}
+			let nm = monster.next_monster();
+			let tc = monster.trail_char();
+			gr_monster(monster, get_rand(0, (MONSTERS - 1) as c_int));
+			monster.row = row;
+			monster.col = col;
+			monster.set_next_monster(nm);
+			monster.set_trail_char(tc);
+			if !monster.m_flags.imitates {
+				wake_up(monster);
+			}
+		}
+		WandKind::PutToSleep => {
+			monster.m_flags.asleep = true;
+			monster.m_flags.napping = true;
+			monster.set_nap_length(get_rand(3, 6));
+		}
+		WandKind::MagicMissile => {
+			rogue_hit(monster, true);
+		}
+		WandKind::Cancellation => {
+			if monster.m_flags.holds {
+				being_held = false;
+			}
+			if monster.m_flags.steals_item {
+				monster.set_drop_percent(0);
+			}
+			monster.m_flags.flies = false;
+			monster.m_flags.flits = false;
+			monster.m_flags.set_special_hit(false);
+			monster.m_flags.invisible = false;
+			monster.m_flags.flames = false;
+			monster.m_flags.imitates = false;
+			monster.m_flags.confuses = false;
+			monster.m_flags.seeks_gold = false;
+			monster.m_flags.holds = false;
+		}
+		WandKind::DoNothing => {
+			message("nothing happens", 0);
+		}
+	}
 }
 
 #[no_mangle]

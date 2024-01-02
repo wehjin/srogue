@@ -951,7 +951,7 @@ pub unsafe extern "C" fn mv_mons() {
 			}
 		} else if (*monster).m_flags.slowed {
 			(*monster).flip_slowed_toggle();
-			if (*monster).slowed_toggled() {
+			if (*monster).slowed_toggle() {
 				done_with_monster = true;
 			}
 		}

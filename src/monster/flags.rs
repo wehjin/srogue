@@ -43,6 +43,16 @@ impl MonsterFlags {
 	pub fn special_hit(&self) -> bool {
 		self.rusts || self.holds || self.freezes || self.steals_gold || self.steals_item || self.stings || self.drains_life || self.drops_level
 	}
+	pub fn set_special_hit(&mut self, value: bool) {
+		self.rusts = value;
+		self.holds = value;
+		self.freezes = value;
+		self.steals_gold = value;
+		self.steals_item = value;
+		self.stings = value;
+		self.drains_life = value;
+		self.drops_level = value;
+	}
 
 	pub fn a() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, rusts: true, ..Default::default() } }
 	pub fn b() -> Self { MonsterFlags { asleep: true, wanders: true, flits: true, ..Default::default() } }

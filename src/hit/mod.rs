@@ -84,7 +84,7 @@ pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rogue_hit(mut monster: *mut object, force_hit: bool) {
+pub unsafe extern "C" fn rogue_hit(monster: *mut object, force_hit: bool) {
 	if !monster.is_null() {
 		if check_imitator(&mut *monster) {
 			return;

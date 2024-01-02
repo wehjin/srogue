@@ -221,16 +221,35 @@ impl obj {
 	pub fn set_stationary_damage(&mut self, value: isize) {
 		self.stationary_damage = value;
 	}
-	pub fn drop_percent(&self) -> usize { self.which_kind as usize }
 	pub fn first_level(&self) -> isize {
 		self.is_protected as isize
 	}
 	pub fn set_first_level(&mut self, value: isize) {
 		self.is_protected = value as i16;
 	}
+	pub fn drop_percent(&self) -> usize { self.which_kind as usize }
+	pub fn set_drop_percent(&mut self, value: usize) {
+		self.which_kind = value as u16;
+	}
 	pub fn set_trail_char(&mut self, ch: chtype) { self.d_enchant = ch as isize; }
 	pub fn trail_char(&self) -> chtype {
 		self.d_enchant as chtype
+	}
+	pub fn slowed_toggle(&self) -> bool {
+		self.quiver != 0
+	}
+	pub fn set_slowed_toggle(&mut self, value: bool) {
+		self.quiver = match value {
+			true => 1,
+			false => 0,
+		}
+	}
+	pub fn flip_slowed_toggle(&mut self) {
+		if self.quiver == 1 {
+			self.quiver = 0;
+		} else {
+			self.quiver = 1;
+		}
 	}
 	pub fn disguise(&self) -> chtype {
 		self.disguise as chtype
@@ -251,6 +270,10 @@ impl obj {
 	pub fn moves_confused(&self) -> c_short {
 		self.hit_enchant
 	}
+	pub fn set_moves_confused(&mut self, value: c_short) {
+		self.hit_enchant = value;
+	}
+
 	pub fn decrement_moves_confused(&mut self) {
 		self.hit_enchant -= 1;
 		if self.hit_enchant <= 0 {
@@ -258,16 +281,11 @@ impl obj {
 		}
 	}
 
-	pub fn slowed_toggled(&self) -> bool {
-		self.quiver == 1
+	pub fn next_monster(&self) -> *mut obj {
+		self.next_object
 	}
-
-	pub fn flip_slowed_toggle(&mut self) {
-		if self.quiver == 1 {
-			self.quiver = 0;
-		} else {
-			self.quiver = 1;
-		}
+	pub fn set_next_monster(&mut self, value: *mut obj) {
+		self.next_object = value;
 	}
 	pub fn in_room(&self, rn: i64) -> bool {
 		let object_rn = get_room_number(self.row, self.col);
