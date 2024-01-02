@@ -1,7 +1,9 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
+use std::cmp::Ordering;
 use std::fs::File;
-use std::io::{Read, Seek, Write};
+use std::io::{BufReader, Read, Seek, Write};
+use std::num::ParseIntError;
 use std::sync::{RwLock};
 use ncurses::{addch, clear, mv, mvaddch, mvaddstr, mvinch, refresh, standend, standout};
 use ObjectWhat::{Amulet, Armor, Potion, Ring, Scroll, Wand, Weapon};
@@ -26,19 +28,10 @@ pub unsafe fn killed_by(ending: Ending) {
 	if !ending.is_quit() {
 		rogue.gold = ((rogue.gold as f64 * 9.0) / 10.0) as isize;
 	}
-	let mut how_ended = match ending {
-		Ending::Monster(monster) => {
-			let name = mon_real_name(&monster);
-			let article = if is_vowel(name.chars().nth(0).unwrap()) { "an" } else { "a" };
-			&format!("Killed by {} {}", article, name)
-		}
-		Ending::Hypothermia => "died of hypothermia",
-		Ending::Starvation => "died of starvation",
-		Ending::PoisonDart => "killed by a dart",
-		Ending::Quit => "quit",
-		Ending::Win => ""
-	}.to_string();
+
+	let mut how_ended = ending_string(&ending);
 	how_ended += &format!(" with {} gold", rogue.gold);
+
 	if ending.is_monster() && show_skull() {
 		clear();
 		mvaddstr(4, 32, "__---------__");
@@ -69,6 +62,21 @@ pub unsafe fn killed_by(ending: Ending) {
 	}
 	message("", 0);
 	put_scores(Some(ending));
+}
+
+unsafe fn ending_string(ending: &Ending) -> String {
+	match ending {
+		&Ending::Monster(monster) => {
+			let name = mon_real_name(&monster);
+			let article = if is_vowel(name.chars().nth(0).unwrap()) { "an" } else { "a" };
+			&format!("Killed by {} {}", article, name)
+		}
+		&Ending::Hypothermia => "died of hypothermia",
+		&Ending::Starvation => "died of starvation",
+		&Ending::PoisonDart => "killed by a dart",
+		&Ending::Quit => "quit",
+		&Ending::Win => "a total winner"
+	}.to_string()
 }
 
 pub unsafe fn win() {
@@ -131,7 +139,6 @@ pub unsafe fn quit(from_intrpt: bool) {
 
 pub unsafe fn put_scores(ending: Option<Ending>) {
 	turn_into_games();
-
 	let mut file = File::options().read(true).write(true).open(SCORE_FILE).unwrap_or_else(|_| {
 		match File::options().write(true).open(SCORE_FILE) {
 			Ok(file) => file,
@@ -145,72 +152,59 @@ pub unsafe fn put_scores(ending: Option<Ending>) {
 	turn_into_user();
 	xxx(true);
 
-	let mut scores: [[u8; 80]; 10];
-	let mut n_names: [[u8; 30]; 10];
-	let mut ne = 0;
-	let mut view_only = score_only();
-	let mut found_player = None;
-	for i in 0..10 {
-		let score = &mut scores[i];
-		let read_result = file.read(score).map_err(|_| ())
-			.and_then(|n| if n == 0 {
-				Ok(())
-			} else if n != scores.len() {
-				Err(())
+	let mut score_only = score_only();
+	let mut scores: Vec<String> = Vec::new();
+	let mut n_names: Vec<String> = Vec::new();
+	{
+		let mut scores_string = String::new();
+		if file.read_to_string(&mut scores_string).is_err() {
+			sf_error();
+			unreachable!("after sf_error");
+		};
+		for (i, line) in scores_string.lines().enumerate() {
+			if i & 1 == 0 {
+				scores.push(line.to_string());
 			} else {
-				xxxx(score, 80);
-				let name = &mut n_names[i];
-				file.read(name).map_err(|_| ()).and_then(|n| if n < name.len() {
-					Err(())
-				} else {
-					xxxx(name, 30);
-					Ok(())
-				})
-			});
-		match read_result {
-			Ok(_) => {}
-			Err(_) => {
-				sf_error();
-				unreachable!()
+				n_names.push(line.to_string());
 			}
 		}
-		ne += 1;
-		if !view_only {
-			if !name_cmp(score[15..].as_ptr(), settings::login_name().as_ptr()) {
-				let trimmed_score = {
-					let mut x = 5;
-					while score[x] == ' ' as u8 { x += 1; }
-					&score[x..]
-				};
-				let s = lget_number(trimmed_score);
-				if rogue.gold < s as i32 {
-					view_only = true;
+	}
+	let mut found_player = None;
+	let max_search = scores.len().min(n_names.len()).min(10);
+	for i in 0..max_search {
+		if !score_only {
+			let name_in_score = &scores[i][15..];
+			if name_cmp(name_in_score, login_name()) == Ordering::Equal {
+				if let Some(gold_in_score) = gold_in_score(&scores[i]) {
+					if rogue.gold < gold_in_score {
+						score_only = true;
+					} else {
+						found_player = Some(i);
+					}
 				} else {
-					found_player = Some(i);
+					sf_error();
+					unreachable!("sf error");
 				}
 			}
 		}
 	}
 	if let Some(found_player) = found_player {
-		ne -= 1;
-		for i in found_player..ne {
-			scores[i + 1].clone_into(&mut scores[i]);
-			n_names[i + 1].clone_into(&mut n_names[i]);
-		}
+		scores.remove(found_player);
+		n_names.remove(found_player);
 	}
+
 	let mut rank = 10;
-	if !view_only {
+	if !score_only {
+		let ne = scores.len().min(n_names.len()).min(10);
 		for i in 0..ne {
-			let score = &scores[i];
-			let trimmed_score = {
-				let mut x = 5;
-				while score[x] == ' ' as u8 { x += 1; }
-				&score[x..]
-			};
-			let s = lget_number(trimmed_score);
-			if rogue.gold >= s as i32 {
-				rank = i;
-				break;
+			if let Some(gold_in_score) = gold_in_score(&scores[i]) {
+				if rogue.gold >= gold_in_score {
+					rank = i;
+					break;
+				}
+			} else {
+				sf_error();
+				unreachable!("sf error");
 			}
 		}
 		if ne == 0 {
@@ -219,10 +213,11 @@ pub unsafe fn put_scores(ending: Option<Ending>) {
 			rank = ne;
 		}
 		if rank < 10 {
-			insert_score(scores, n_names, nick_name(), rank, ne, ending);
-			if ne < 10 {
-				ne += 1;
-			}
+			let name = match nick_name() {
+				None => "".to_string(),
+				Some(name) => name.to_string(),
+			};
+			insert_score(&mut scores, &mut n_names, &name, rank, ne, ending.expect("ending"));
 		}
 		file.rewind().expect("rewind file");
 	}
@@ -233,10 +228,8 @@ pub unsafe fn put_scores(ending: Option<Ending>) {
 
 	md_ignore_signals();
 
-	xxx(true);
+	let ne = scores.len().min(n_names.len()).min(10);
 	for i in 0..ne {
-		let score = &mut scores[i];
-		let name = &mut n_names[i];
 		if i == rank {
 			standout();
 		}
@@ -251,9 +244,7 @@ pub unsafe fn put_scores(ending: Option<Ending>) {
 		let buf: String = nickize(score, name);
 		mvaddstr((i + 10) as i32, 0, buf.as_str());
 		if rank < 10 {
-			xxxx(score, 80);
 			file.write(score).expect("write score");
-			xxxx(name, 30);
 			file.write(name).expect("write name");
 		}
 		if i == rank {
@@ -265,6 +256,35 @@ pub unsafe fn put_scores(ending: Option<Ending>) {
 	message("", 0);
 	clean_up("\n");
 }
+
+fn gold_in_score(score: &str) -> Option<isize> {
+	let slice = &score[6..12];
+	let trimmed = slice.trim();
+	trimmed.parse::<isize>().ok()
+}
+
+unsafe fn insert_score(scores: &mut Vec<String>, n_names: &mut Vec<String>, n_name: &str, rank: usize, n: usize, ending: Ending) {
+	let mut buf = format!("{:2}    {:6}   {}: ", rank + 1, rogue.gold, login_name());
+	buf += &ending_string(&ending);
+	buf += &format!(" on level {} ", max_level);
+	if (!ending.is_win()) && has_amulet() {
+		buf += "with amulet";
+	}
+	insert_to_limit(scores, &buf, rank, n);
+	insert_to_limit(n_names, n_name, rank, n);
+}
+
+fn insert_to_limit(vec: &mut Vec<String>, s: &str, rank: usize, limit: usize) {
+	if rank < vec.len() {
+		vec.insert(rank, s.to_string());
+	} else {
+		vec.push(s.to_string());
+	}
+	if vec.len() > limit {
+		vec.pop();
+	}
+}
+
 
 pub fn is_vowel(ch: char) -> bool {
 	match ch {
@@ -354,6 +374,16 @@ pub unsafe fn id_all()
 		id_potions[i].id_status = Identified;
 	}
 }
+
+pub fn name_cmp(s1: &str, s2: &str) -> Ordering {
+	let pre_colon = if let Some(pos) = s1.chars().position(|c| c == ':') {
+		&s1[0..pos]
+	} else {
+		&s1[..]
+	};
+	pre_colon.cmp(s2)
+}
+
 
 pub fn xxxx<const N: usize>(buf: &mut [u8; N], n: usize) {
 	for i in 0..n {

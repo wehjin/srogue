@@ -32,4 +32,11 @@ impl<'a> Ending<'a> {
 			false
 		}
 	}
+	pub fn is_win(&self) -> bool {
+		if let Ending::Win = self {
+			true
+		} else {
+			false
+		}
+	}
 }
