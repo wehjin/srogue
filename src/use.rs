@@ -305,9 +305,9 @@ pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj) {
 	} else {
 		if (*obj).in_use_flags & BEING_WIELDED {
 			unwield(obj);
-		} else if ((*obj).in_use_flags & BEING_WORN) {
+		} else if (*obj).in_use_flags & BEING_WORN {
 			unwear(obj);
-		} else if ((*obj).in_use_flags & ON_EITHER_HAND) {
+		} else if (*obj).in_use_flags & ON_EITHER_HAND {
 			un_put_on(obj);
 		}
 		take_from_pack(obj, pack);
@@ -372,12 +372,12 @@ pub unsafe extern "C" fn eat() {
 pub unsafe fn tele() {
 	mvaddch(rogue.row as i32, rogue.col as i32, get_dungeon_char(rogue.row, rogue.col));
 
-	if (cur_room >= 0) {
+	if cur_room >= 0 {
 		darken_room(cur_room);
 	}
 	put_player(get_room_number(rogue.row, rogue.col));
 	being_held = false;
-	bear_trap = false;
+	bear_trap = 0;
 }
 
 pub unsafe fn hallucinate() {

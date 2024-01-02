@@ -80,10 +80,10 @@ pub enum SpotFlag {
 }
 
 impl SpotFlag {
-	pub fn union(flags: &Vec<SpotFlag>) -> c_ushort {
+	pub fn union(flags: &Vec<SpotFlag>) -> u16 {
 		flags.iter().fold(0, |it, more| it & more.code())
 	}
-	pub fn is_any_set(flags: &Vec<SpotFlag>, value: c_ushort) -> bool {
+	pub fn is_any_set(flags: &Vec<SpotFlag>, value: u16) -> bool {
 		for flag in flags {
 			if flag.is_set(value) {
 				return true;
@@ -92,32 +92,35 @@ impl SpotFlag {
 		return false;
 	}
 
-	pub fn are_others_set(flags: &Vec<SpotFlag>, value: c_ushort) -> bool {
+	pub fn is_empty(value: u16) -> bool {
+		value == 0
+	}
+	pub fn are_others_set(flags: &Vec<SpotFlag>, value: u16) -> bool {
 		let all = vec![Object, Monster, Stairs, HorWall, VertWall, Door, Floor, Tunnel, Trap, Hidden];
-		let a = all.into_iter().collect::<HashSet<_>>();
-		let b = flags.iter().cloned().collect::<HashSet<_>>();
-		let c = a.difference(&b).cloned().collect::<Vec<_>>();
-		SpotFlag::is_any_set(&c, value)
+		let all_set = all.into_iter().collect::<HashSet<_>>();
+		let exclude_set = flags.iter().cloned().collect::<HashSet<_>>();
+		let difference_set = all_set.difference(&exclude_set).cloned().collect::<Vec<_>>();
+		SpotFlag::is_any_set(&difference_set, value)
 	}
 
-	pub fn is_set(&self, value: c_ushort) -> bool {
+	pub fn is_set(&self, value: u16) -> bool {
 		match self {
 			SpotFlag::Nothing => value == 0,
 			_ => (value & self.code()) != 0,
 		}
 	}
-	pub fn is_only(&self, value: c_ushort) -> bool {
+	pub fn is_only(&self, value: u16) -> bool {
 		value == self.code()
 	}
-	pub fn clear(&self, value: &mut c_ushort) {
+	pub fn clear(&self, value: &mut u16) {
 		let code = self.code();
 		*value &= !code;
 	}
-	pub fn set(&self, value: &mut c_ushort) {
+	pub fn set(&self, value: &mut u16) {
 		let code = self.code();
 		*value |= code;
 	}
-	pub fn code(&self) -> c_ushort {
+	pub fn code(&self) -> u16 {
 		match self {
 			SpotFlag::Nothing => 0o0,
 			SpotFlag::Object => 0o1,

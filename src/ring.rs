@@ -126,7 +126,7 @@ pub unsafe fn remove_ring() {
 			message(no_ring, 0);
 		}
 		if (*ring).is_cursed != 0 {
-			message(curse_message, 0);
+			message(CURSE_MESSAGE, 0);
 		} else {
 			un_put_on(ring);
 			message(&format!("removed {}", get_desc(&*ring)), 0);

@@ -1,180 +1,188 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-use ncurses::addch;
+use ncurses::{chtype, mvaddch, mvinch, refresh};
 use crate::prelude::*;
+use crate::prelude::item_usage::{BEING_USED, BEING_WIELDED, BEING_WORN, NOT_USED, ON_EITHER_HAND};
+use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Weapons;
+use crate::prelude::SpotFlag::{Door, Floor, Hidden, HorWall, Monster, Trap, Tunnel, VertWall};
+use crate::prelude::stat_const::STAT_ARMOR;
+use crate::prelude::weapon_kind::{ARROW, BOW, DAGGER, DART, SHURIKEN};
 use crate::throw::Move::{Up, UpLeft, UpRight, Left, Right, Same, Down, DownLeft, DownRight};
 
-#[no_mangle]
-pub unsafe extern "C" fn throw() -> i64 {
-	let mut wch: libc::c_short = 0;
-	let mut first_miss: libc::c_char = 1 as libc::c_char;
-	let mut weapon: *mut object = 0 as *mut object;
-	let mut dir: libc::c_short = 0;
-	let mut row: libc::c_short = 0;
-	let mut col: libc::c_short = 0;
-	let mut monster: *mut object = 0 as *mut object;
-	loop {
-		dir = rgetchar() as libc::c_short;
-		if !(is_direction(dir as i32) == 0) {
-			break;
-		}
-		sound_bell();
-		if first_miss != 0 {
-			message(
-				b"direction? \0" as *const u8 as *const libc::c_char,
-				0 as i64,
-			);
-			first_miss = 0 as i64 as libc::c_char;
-		}
-	}
+pub unsafe fn throw() {
+	let dir = get_dir_or_cancel();
 	check_message();
-	if dir as i64 == '\u{1b}' as i32 {
+	if dir == CANCEL {
 		return;
 	}
-	wch = pack_letter("throw what?", Weapons) as libc::c_short;
-	if wch as i64 == '\u{1b}' as i32 {
+	let wch = pack_letter("throw what?", Weapons);
+	if wch == CANCEL {
 		return;
 	}
 	check_message();
-	weapon = get_letter_object(wch as i64);
+
+	let weapon = get_letter_object(wch);
 	if weapon.is_null() {
-		message(
-			b"no such item.\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+		message("no such item.", 0);
 		return;
 	}
-	if (*weapon).in_use_flags as i64
-		& 0o17 as i64 as libc::c_ushort as i64 != 0
-		&& (*weapon).is_cursed as i64 != 0
-	{
-		message(curse_message, 0 as i64);
+	if ((*weapon).in_use_flags & BEING_USED) != 0 && (*weapon).is_cursed != 0 {
+		message(CURSE_MESSAGE, 0);
 		return;
 	}
-	row = rogue.row;
-	col = rogue.col;
-	if (*weapon).in_use_flags as i64
-		& 0o1 as libc::c_ushort as i64 != 0
-		&& (*weapon).quantity as i64 <= 1
-	{
+	let mut row = rogue.row;
+	let mut col = rogue.col;
+	if ((*weapon).in_use_flags & BEING_WIELDED) != 0 && (*weapon).quantity <= 1 {
 		unwield(rogue.weapon);
-	} else if (*weapon).in_use_flags as i64
-		& 0o2 as i64 as libc::c_ushort as i64 != 0
-	{
+	} else if ((*weapon).in_use_flags & BEING_WORN) != 0 {
 		mv_aquatars();
 		unwear(rogue.armor);
-		print_stats(0o20 as i64);
-	} else if (*weapon).in_use_flags as i64
-		& 0o14 as i64 as libc::c_ushort as i64 != 0
-	{
+		print_stats(STAT_ARMOR);
+	} else if ((*weapon).in_use_flags & ON_EITHER_HAND) != 0 {
 		un_put_on(weapon);
 	}
-	monster = get_thrown_at_monster(weapon, dir as i64, &mut row, &mut col);
-	if ncurses::wmove(ncurses::stdscr(), rogue.row as i64, rogue.col as i64)
-		== -(1)
-	{
-		-(1);
-	} else {
-		addch(rogue.fchar as ncurses::chtype);
-	};
-	ncurses::refresh();
-	if rogue_can_see(row as i64, col as i64) != 0
-		&& (row as i64 != rogue.row as i64
-		|| col as i64 != rogue.col as i64)
-	{
-		if ncurses::wmove(ncurses::stdscr(), row as i64, col as i64) == -(1) {
-			-(1);
-		} else {
-			addch(get_dungeon_char(row as usize, col as usize) as ncurses::chtype);
-		};
+	let monster = get_thrown_at_monster(weapon, dir, &mut row, &mut col);
+	mvaddch(rogue.row as i32, rogue.col as i32, chtype::from(rogue.fchar));
+	refresh();
+
+	if rogue_can_see(row, col) && (row != rogue.row || col != rogue.col) {
+		mvaddch(row as i32, col as i32, get_dungeon_char(row, col));
 	}
 	if !monster.is_null() {
-		wake_up(monster);
-		check_gold_seeker(monster);
-		if throw_at_monster(monster, weapon) == 0 {
-			flop_weapon(weapon, row as i64, col as i64);
+		wake_up(&mut *monster);
+		check_gold_seeker(&mut *monster);
+		if !throw_at_monster(&mut *monster, &mut *weapon) {
+			flop_weapon(&mut *weapon, row, col);
 		}
 	} else {
-		flop_weapon(weapon, row as i64, col as i64);
+		flop_weapon(&mut *weapon, row, col);
 	}
-	vanish(&mut weapon, true, &mut rogue.pack);
-	panic!("Reached end of non-void function without returning");
+	vanish(&mut *weapon, true, &mut rogue.pack);
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn get_thrown_at_monster(
-	mut obj: *mut object,
-	mut dir: libc::c_short,
-	mut row: *mut libc::c_short,
-	mut col: *mut libc::c_short,
-) -> *mut object {
-	let mut orow: libc::c_short = 0;
-	let mut ocol: libc::c_short = 0;
-	let mut i: libc::c_short = 0;
-	let mut ch: libc::c_short = 0;
-	orow = *row;
-	ocol = *col;
-	ch = get_mask_char((*obj).what_is as i64) as libc::c_short;
-	i = 0;
-	while (i as i64) < 24 as i64 {
-		get_dir_rc(dir as i64, row, col, 0 as i64);
-		if dungeon[*row as usize][*col as usize] as i64
-			== 0 as i64 as libc::c_ushort as i64
-			|| dungeon[*row as usize][*col as usize] as i64
-			& (0o10 as i64 as libc::c_ushort as i64
-			| 0o20 as i64 as libc::c_ushort as i64
-			| 0o1000 as i64 as libc::c_ushort as i64) != 0
-			&& dungeon[*row as usize][*col as usize] as i64
-			& 0o400 as i64 as libc::c_ushort as i64 == 0
-		{
+unsafe fn throw_at_monster(monster: &mut obj, weapon: &mut obj) -> bool {
+	let mut hit_chance = get_hit_chance(weapon);
+	let mut damage = get_weapon_damage(weapon);
+	if weapon.which_kind == ARROW && rogue_weapon_is_bow() {
+		damage += get_weapon_damage(&*rogue.weapon);
+		damage = (damage * 2) / 3;
+		hit_chance += hit_chance / 3;
+	} else if (weapon.in_use_flags & BEING_WIELDED) != 0
+		&& (weapon.which_kind == DAGGER || weapon.which_kind == SHURIKEN || weapon.which_kind == DART) {
+		damage = (damage * 3) / 2;
+		hit_chance += hit_chance / 3;
+	}
+
+	let t = weapon.quantity;
+	weapon.quantity = 1;
+	hit_message = format!("the {}", name_of(weapon));
+	weapon.quantity = t;
+
+	if !rand_percent(hit_chance) {
+		hit_message += "misses  ";
+		return false;
+	}
+	hit_message += "hit  ";
+	if weapon.what_is == Wand && rand_percent(75) {
+		zap_monster(monster, weapon.which_kind);
+	} else {
+		mon_damage(monster, damage as usize);
+	}
+	return true;
+}
+
+unsafe fn rogue_weapon_is_bow() -> bool {
+	!rogue.weapon.is_null() && (*rogue.weapon).which_kind == BOW
+}
+
+
+pub unsafe fn get_thrown_at_monster(obj: *mut object, dir: char, row: &mut i64, col: &mut i64) -> *mut object {
+	let mut orow = *row;
+	let mut ocol = *col;
+	let ch = get_mask_char((*obj).what_is);
+	for mut i in 0..24 {
+		get_dir_rc(dir, row, col, false);
+		if SpotFlag::is_empty(dungeon[*row as usize][*col as usize])
+			|| (SpotFlag::is_any_set(&vec![HorWall, VertWall, Hidden], dungeon[*row as usize][*col as usize]) && !Trap.is_set(dungeon[*row as usize][*col as usize])) {
 			*row = orow;
 			*col = ocol;
 			return 0 as *mut object;
 		}
-		if i as i64 != 0 as i64
-			&& rogue_can_see(orow as i64, ocol as i64) != 0
-		{
-			if ncurses::wmove(ncurses::stdscr(), orow as i64, ocol as i64)
-				== -(1)
-			{
-				-(1);
-			} else {
-				addch(get_dungeon_char(orow as usize, ocol as usize) as ncurses::chtype);
-			};
+		if i != 0 && rogue_can_see(orow, ocol) {
+			mvaddch(orow as i32, ocol as i32, get_dungeon_char(orow, ocol));
 		}
-		if rogue_can_see(*row as i64, *col as i64) != 0 {
-			if dungeon[*row as usize][*col as usize] as i64
-				& 0o2 as i64 as libc::c_ushort as i64 == 0
-			{
-				if ncurses::wmove(ncurses::stdscr(), *row as i64, *col as i64)
-					== -(1)
-				{
-					-(1);
-				} else {
-					addch(ch as ncurses::chtype);
-				};
+		if rogue_can_see(*row, *col) {
+			if !Monster.is_set(dungeon[*row as usize][*col as usize]) {
+				mvaddch(*row as i32, *col as i32, chtype::from(ch));
 			}
-			ncurses::refresh();
+			refresh();
 		}
 		orow = *row;
 		ocol = *col;
-		if dungeon[*row as usize][*col as usize] as i64
-			& 0o2 as i64 as libc::c_ushort as i64 != 0
-		{
-			if !imitating(*row as i64, *col as i64) {
-				return object_at(&level_monsters, *row as i64, *col as i64);
+		if Monster.is_set(dungeon[*row as usize][*col as usize]) {
+			if !imitating(*row, *col) {
+				return object_at(&level_monsters, *row, *col);
 			}
 		}
-		if dungeon[*row as usize][*col as usize] as i64
-			& 0o200 as i64 as libc::c_ushort as i64 != 0
-		{
-			i = (i as i64 + 2 as i64) as libc::c_short;
+		if Tunnel.is_set(dungeon[*row as usize][*col as usize]) {
+			i += 2;
 		}
-		i += 1;
-		i;
 	}
 	return 0 as *mut object;
+}
+
+unsafe fn flop_weapon(weapon: &mut obj, row: i64, col: i64) {
+	let mut i = 0;
+	let mut found = false;
+	let mut row = row;
+	let mut col = col;
+	while i < 9 && SpotFlag::are_others_set(&vec![Floor, Tunnel, Door, Monster], dungeon[row as usize][col as usize]) {
+		let (new_row, new_col) = rand_around(i, row, col);
+		i += 1;
+		row = new_row;
+		col = new_col;
+		if row > (DROWS - 2) as i64 || row < MIN_ROW || col > (DCOLS - 1) as i64 || col < 0
+			|| SpotFlag::is_empty(dungeon[row as usize][col as usize])
+			|| SpotFlag::are_others_set(&vec![Floor, Tunnel, Door, Monster], dungeon[row as usize][col as usize]) {
+			continue;
+		}
+		found = true;
+		break;
+	}
+
+	if found || i == 0 {
+		let new_weapon = alloc_object();
+		*new_weapon = weapon.clone();
+		(*new_weapon).in_use_flags = NOT_USED;
+		(*new_weapon).quantity = 1;
+		(*new_weapon).ichar = 'L';
+		place_at(new_weapon, row, col);
+		if rogue_can_see(row, col) && (row != rogue.row || col != rogue.col) {
+			let mon = Monster.is_set(dungeon[row as usize][col as usize]);
+			Monster.clear(&mut dungeon[row as usize][col as usize]);
+			let dch = get_dungeon_char(row, col);
+			if mon {
+				let mch = mvinch(row as i32, col as i32) as u8 as char;
+				let monster = object_at(&level_monsters, row, col);
+				if !monster.is_null() {
+					(*monster).set_trail_char(dch);
+				}
+				if (mch < 'A') || (mch > 'Z') {
+					mvaddch(row as i32, col as i32, dch);
+				}
+			} else {
+				mvaddch(row as i32, col as i32, dch);
+			}
+			Monster.set(&mut dungeon[row as usize][col as usize]);
+		}
+	} else {
+		let t = weapon.quantity;
+		weapon.quantity = 1;
+		let msg = format!("the {}vanishes as it hits the ground", name_of(weapon));
+		weapon.quantity = t;
+		message(&msg, 0);
+	}
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -247,7 +255,7 @@ impl Move {
 
 	pub fn apply(&self, row: i64, col: i64) -> (i64, i64) {
 		let (r_delta, c_delta) = self.delta();
-		(row + r_delta, col + c_delta)
+		(row + r_delta as i64, col + c_delta as i64)
 	}
 }
 
@@ -257,8 +265,8 @@ pub unsafe fn rand_around(i: u8, r: i64, c: i64) -> (i64, i64) {
 	static mut col: usize = 0;
 
 	if i == 0 {
-		row = *r;
-		col = *c;
+		row = r as usize;
+		col = c as usize;
 		let o = get_rand(1, 8);
 		for _j in 0..5 {
 			let x = get_rand(0, 8) as usize;

@@ -4,7 +4,7 @@ extern "C" {
 	pub type ldat;
 }
 
-use libc::{c_char, c_short};
+use libc::{c_char};
 use crate::monster;
 use crate::prelude::*;
 
@@ -96,7 +96,7 @@ pub unsafe extern "C" fn rogue_hit(mut monster: *mut object, force_hit: bool) {
 				hit_message = "you miss  ".to_string();
 			}
 		} else {
-			let damage = get_weapon_damage(&mut *rogue.weapon);
+			let damage = get_weapon_damage(&*rogue.weapon);
 			let damage = if wizard { damage * 3 } else { damage };
 			if mon_damage(&mut *monster, damage as usize) {
 				if fight_monster.is_null() {
@@ -143,8 +143,7 @@ pub fn lget_number(s: &[u8]) -> u64 {
 	return total;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn to_hit(mut obj: *mut object) -> usize {
+pub unsafe fn to_hit(obj: *const object) -> usize {
 	if obj.is_null() {
 		return 1;
 	}
@@ -214,7 +213,7 @@ pub unsafe extern "C" fn fight(to_the_death: bool) {
 	let mut ch: char = 0 as char;
 	loop {
 		ch = rgetchar() as u8 as char;
-		if !(is_direction(ch as i32) == 0) {
+		if is_direction(ch) {
 			break;
 		}
 		sound_bell();
@@ -313,18 +312,18 @@ pub fn get_dir_rc(dir: char, row: &mut i64, col: &mut i64, allow_off_screen: boo
 	}
 }
 
-pub unsafe fn get_hit_chance(weapon: &mut object) -> c_short {
+pub unsafe fn get_hit_chance(weapon: &object) -> usize {
 	let mut hit_chance = 40isize;
 	hit_chance += 3 * to_hit(weapon) as isize;
 	hit_chance += ((2 * rogue.exp) + (2 * ring_exp)) - r_rings;
-	hit_chance as c_short
+	hit_chance as usize
 }
 
-pub unsafe fn get_weapon_damage(weapon: &mut object) -> c_short {
+pub unsafe fn get_weapon_damage(weapon: &object) -> isize {
 	let mut damage = get_w_damage(weapon).expect("damage");
 	damage += damage_for_strength() as isize;
 	damage += (((rogue.exp + ring_exp) - r_rings) + 1) / 2;
-	damage as c_short
+	damage
 }
 
 mod safe;

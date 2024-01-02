@@ -15,7 +15,7 @@ use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armo
 use crate::prelude::SpotFlag::{Object, Stairs, Trap};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD};
 
-pub static curse_message: &'static str = "you can't, it appears to be cursed";
+pub static CURSE_MESSAGE: &'static str = "you can't, it appears to be cursed";
 pub const MAX_PACK_COUNT: usize = 24;
 
 #[no_mangle]
@@ -113,13 +113,13 @@ pub unsafe fn drop_0() {
 	}
 	if (*obj).in_use_flags & BEING_WIELDED != 0 {
 		if (*obj).is_cursed != 0 {
-			message(curse_message, 0);
+			message(CURSE_MESSAGE, 0);
 			return;
 		}
 		unwield(rogue.weapon);
 	} else if (*obj).in_use_flags & BEING_WORN != 0 {
 		if (*obj).is_cursed != 0 {
-			message(curse_message, 0);
+			message(CURSE_MESSAGE, 0);
 			return;
 		}
 		mv_aquatars();
@@ -127,7 +127,7 @@ pub unsafe fn drop_0() {
 		print_stats(STAT_ARMOR);
 	} else if (*obj).in_use_flags & ON_EITHER_HAND != 0 {
 		if (*obj).is_cursed != 0 {
-			message(curse_message, 0);
+			message(CURSE_MESSAGE, 0);
 			return;
 		}
 		un_put_on(obj);
@@ -256,7 +256,7 @@ pub unsafe fn pack_letter(prompt: &str, filter: PackFilter) -> char {
 pub unsafe fn take_off() {
 	if !rogue.armor.is_null() {
 		if (*rogue.armor).is_cursed != 0 {
-			message(curse_message, 0);
+			message(CURSE_MESSAGE, 0);
 		} else {
 			mv_aquatars();
 			let obj = rogue.armor;
@@ -311,7 +311,7 @@ pub unsafe fn unwear(obj: *mut object) {
 
 pub unsafe fn wield() {
 	if !rogue.weapon.is_null() && (*rogue.weapon).is_cursed != 0 {
-		message(curse_message, 0);
+		message(CURSE_MESSAGE, 0);
 		return;
 	}
 	let ch = pack_letter("wield what?", Weapons);

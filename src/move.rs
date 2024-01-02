@@ -262,34 +262,38 @@ pub unsafe fn can_move(row1: i64, col1: i64, row2: i64, col2: i64) -> bool {
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn move_onto() -> libc::c_int {
-	let mut ch: libc::c_short = 0;
-	let mut first_miss: libc::c_char = 1 as libc::c_int as libc::c_char;
-	loop {
-		ch = rgetchar() as libc::c_short;
-		if !(is_direction(ch as libc::c_int) == 0) {
-			break;
-		}
-		sound_bell();
-		if first_miss != 0 {
-			message("direction? ", 0);
-			first_miss = 0 as libc::c_int as libc::c_char;
-		}
-	}
+pub unsafe fn move_onto() {
+	let ch = get_dir_or_cancel();
 	check_message();
-	let ch = ch as u8 as char;
-	if ch != '\u{1b}' {
+	if ch != CANCEL {
 		one_move_rogue(ch, false);
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn is_direction(mut c: i32) -> libc::c_char {
-	return (c == 'h' as i32 || c == 'j' as i32 || c == 'k' as i32 || c == 'l' as i32
-		|| c == 'b' as i32 || c == 'y' as i32 || c == 'u' as i32 || c == 'n' as i32
-		|| c == '\u{1b}' as i32) as libc::c_int as libc::c_char;
+pub unsafe fn get_dir_or_cancel() -> char {
+	let dir = {
+		let mut dir = char::default();
+		let mut first_miss: bool = true;
+		loop {
+			dir = rgetchar();
+			if is_direction(dir) {
+				break;
+			}
+			sound_bell();
+			if first_miss {
+				message("direction? ", 0);
+				first_miss = false;
+			}
+		}
+		dir
+	};
+	dir
+}
+
+pub unsafe fn is_direction(c: char) -> bool {
+	c == 'h' || c == 'j' || c == 'k' || c == 'l'
+		|| c == 'b' || c == 'y' || c == 'u' || c == 'n'
+		|| c == CANCEL
 }
 
 #[no_mangle]
