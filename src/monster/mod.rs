@@ -40,9 +40,7 @@ pub struct fight {
 pub type fighter = fight;
 
 pub static mut level_monsters: object = obj::default();
-#[no_mangle]
-pub static mut mon_disappeared: libc::c_char = 0;
-
+pub static mut mon_disappeared: bool = false;
 pub static mut m_names: [&'static str; 26] = [
 	"aquator",
 	"bat",
@@ -946,9 +944,9 @@ pub unsafe extern "C" fn mv_mons() {
 		let mut done_with_monster = false;
 		let next_monster = (*monster).next_object;
 		if (*monster).m_flags.hasted {
-			mon_disappeared = 0;
+			mon_disappeared = false;
 			mv_monster(&mut *monster, rogue.row, rogue.col);
-			if mon_disappeared != 0 {
+			if mon_disappeared {
 				done_with_monster = true;
 			}
 		} else if (*monster).m_flags.slowed {
@@ -1009,7 +1007,7 @@ pub unsafe extern "C" fn party_monsters(rn: i64, n: i64) {
 
 #[no_mangle]
 pub unsafe extern "C" fn gmc_row_col(row: i64, col: i64) -> chtype {
-	let monster = objects::object_at(&mut level_monsters, row, col);
+	let monster = objects::object_at(&level_monsters, row, col);
 	if !monster.is_null() {
 		let invisible = (*monster).m_flags.invisible;
 		let bypass_invisible = detect_monster || see_invisible || r_see_invisible;
@@ -1230,7 +1228,7 @@ pub unsafe fn mon_can_go(monster: &obj, row: i64, col: i64) -> bool {
 		if (monster.col > rogue.col) && (col > monster.col) { return false; }
 	}
 	if Object.is_set(dungeon[row as usize][col as usize]) {
-		let obj = objects::object_at(&mut level_objects, row, col);
+		let obj = objects::object_at(&level_objects, row, col);
 		if (*obj).what_is == Scroll && (*obj).which_kind == scroll_kind::SCARE_MONSTER {
 			return false;
 		}
@@ -1271,14 +1269,14 @@ pub unsafe extern "C" fn wake_room(rn: i64, entering: bool, row: i64, col: i64) 
 	}
 }
 
-pub unsafe extern "C" fn mon_name(monster: *mut object) -> String {
-	if player_is_blind() || ((*monster).m_flags.invisible && !bypass_invisibility()) {
+pub unsafe fn mon_name(monster: &object) -> &'static str {
+	if player_is_blind() || (monster.m_flags.invisible && !bypass_invisibility()) {
 		"something"
 	} else if player_hallucinating() {
 		m_names[get_rand(0, m_names.len() - 1)]
 	} else {
-		mon_real_name(&*monster)
-	}.to_string()
+		mon_real_name(monster)
+	}
 }
 
 pub unsafe fn mon_real_name(monster: &obj) -> &'static str {

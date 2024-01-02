@@ -1,176 +1,267 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-use libc::sprintf;
-use ncurses::{addch, refresh, wattrset};
+use ncurses::{chtype, mvaddch, refresh, standend, standout};
 use crate::prelude::*;
+use crate::prelude::armor_kind::LEATHER;
+use crate::prelude::ending::Ending;
+use crate::prelude::item_usage::BEING_USED;
+use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
+use crate::prelude::SpotFlag::{Door, Floor, Monster, Object, Stairs, Trap, Tunnel};
+use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD, STAT_HP, STAT_STRENGTH};
 
 pub static mut less_hp: isize = 0;
-#[no_mangle]
-pub static mut flame_name: *mut libc::c_char = b"flame\0" as *const u8
-	as *const libc::c_char as *mut libc::c_char;
-
+pub static FLAME_NAME: &'static str = "flame";
 pub static mut being_held: bool = false;
 
-#[no_mangle]
-pub unsafe extern "C" fn special_hit(mut monster: *mut object) -> i64 {
-	if (*monster).m_flags & 0o1000 as libc::c_long as libc::c_ulong != 0
-		&& rand_percent(66) != 0
-	{
+pub unsafe fn special_hit(monster: &mut object) {
+	if monster.m_flags.confused && rand_percent(66) {
 		return;
 	}
-	if (*monster).m_flags & 0o2000 as libc::c_long as libc::c_ulong != 0 {
-		rust(monster);
+	if monster.m_flags.rusts {
+		rust(Some(monster));
 	}
-	if (*monster).m_flags & 0o4000 as libc::c_long as libc::c_ulong != 0 && levitate == 0
-	{
-		being_held = 1 as libc::c_char;
+	if monster.m_flags.holds && levitate == 0 {
+		being_held = true;
 	}
-	if (*monster).m_flags & 0o10000 as libc::c_long as libc::c_ulong != 0 {
+	if monster.m_flags.freezes {
 		freeze(monster);
 	}
-	if (*monster).m_flags & 0o100000 as libc::c_long as libc::c_ulong != 0 {
+	if monster.m_flags.stings {
 		sting(monster);
 	}
-	if (*monster).m_flags & 0o200000 as libc::c_long as libc::c_ulong != 0 {
+	if monster.m_flags.drains_life {
 		drain_life();
 	}
-	if (*monster).m_flags & 0o400000 as libc::c_long as libc::c_ulong != 0 {
+	if monster.m_flags.drops_level {
 		drop_level();
 	}
-	if (*monster).m_flags & 0o20000 as libc::c_long as libc::c_ulong != 0 {
+	if monster.m_flags.steals_gold {
 		steal_gold(monster);
-	} else if (*monster).m_flags & 0o40000 as libc::c_long as libc::c_ulong != 0 {
+	} else if monster.m_flags.steals_item {
 		steal_item(monster);
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn cough_up(mut monster: *mut object) -> i64 {
-	let mut obj: *mut object = 0 as *mut object;
-	let mut row: libc::c_short = 0;
-	let mut col: libc::c_short = 0;
-	let mut i: libc::c_short = 0;
-	let mut n: libc::c_short = 0;
-	if (cur_level as i64) < max_level as i64 {
+pub unsafe fn rust(monster: Option<&mut obj>) {
+	if rogue.armor.is_null() || (get_armor_class(&*rogue.armor) <= 1) || ((*rogue.armor).which_kind == LEATHER) {
 		return;
 	}
-	if (*monster).m_flags & 0o20000 as libc::c_long as libc::c_ulong != 0 {
-		obj = alloc_object();
-		(*obj).what_is = 0o20 as i64 as libc::c_ushort;
-		(*obj)
-			.quantity = get_rand(
-			cur_level as i64 * 15 as i64,
-			cur_level as i64 * 30 as i64,
-		) as libc::c_short;
+	if ((*rogue.armor).is_protected != 0) || maintain_armor {
+		if let Some(monster) = monster {
+			if !monster.m_flags.rust_vanished {
+				message("the rust vanishes instantly", 0);
+				monster.m_flags.rust_vanished = true;
+			}
+		}
 	} else {
-		if !rand_percent((*monster).which_kind as usize) {
-			return;
-		}
-		obj = gr_object();
+		(*rogue.armor).d_enchant -= 1;
+		message("your armor weakens", 0);
+		print_stats(STAT_ARMOR);
 	}
-	row = (*monster).row;
-	col = (*monster).col;
-	n = 0;
-	while n as i64 <= 5 as i64 {
-		i = -(n as i64) as libc::c_short;
-		while i as i64 <= n as i64 {
-			if try_to_cough(
-				row as i64 + n as i64,
-				col as i64 + i as i64,
-				obj,
-			) != 0
-			{
-				return;
-			}
-			if try_to_cough(
-				row as i64 - n as i64,
-				col as i64 + i as i64,
-				obj,
-			) != 0
-			{
-				return;
-			}
-			i += 1;
-			i;
-		}
-		i = -(n as i64) as libc::c_short;
-		while i as i64 <= n as i64 {
-			if try_to_cough(
-				row as i64 + i as i64,
-				col as i64 - n as i64,
-				obj,
-			) != 0
-			{
-				return;
-			}
-			if try_to_cough(
-				row as i64 + i as i64,
-				col as i64 + n as i64,
-				obj,
-			) != 0
-			{
-				return;
-			}
-			i += 1;
-			i;
-		}
-		n += 1;
-		n;
-	}
-	free_object(obj);
-	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn seek_gold(mut monster: *mut object) -> bool {
-	let mut i: libc::c_short = 0;
-	let mut j: libc::c_short = 0;
-	let mut rn: libc::c_short = 0;
-	let mut s: libc::c_short = 0;
-	rn = get_room_number((*monster).row as i64, (*monster).col as i64)
-		as libc::c_short;
-	if (rn as i64) < 0 as i64 {
+unsafe fn freeze(monster: &mut obj) {
+	if rand_percent(12) {
+		return;
+	}
+	let mut freeze_percent: isize = 99;
+	freeze_percent -= rogue.str_current + (rogue.str_current / 2);
+	freeze_percent -= (rogue.exp + ring_exp) * 4;
+	freeze_percent -= get_armor_class(rogue.armor) * 5;
+	freeze_percent -= rogue.hp_max / 3;
+	if freeze_percent > 10 {
+		monster.m_flags.freezing_rogue = true;
+		message("you are frozen", 1);
+
+		let n = get_rand(4, 8);
+		for _ in 0..n {
+			mv_mons();
+		}
+		if rand_percent(freeze_percent as usize) {
+			for _ in 0..50 {
+				mv_mons();
+			}
+			killed_by(Ending::Hypothermia);
+		}
+		message(you_can_move_again, 1);
+		monster.m_flags.freezing_rogue = false;
+	}
+}
+
+unsafe fn steal_gold(monster: &mut obj) {
+	if rogue.gold <= 0 || rand_percent(10) {
+		return;
+	}
+
+	let amount = get_rand(cur_level * 10, cur_level * 30).min(rogue.gold);
+	rogue.gold -= amount;
+	message("your purse feels lighter", 0);
+	print_stats(STAT_GOLD);
+	disappear(monster);
+}
+
+unsafe fn steal_item(monster: &mut obj) {
+	if rand_percent(15) {
+		return;
+	}
+	let mut obj = rogue.pack.next_object;
+	if obj.is_null() {
+		disappear(monster);
+		return;
+	}
+	let mut has_something = false;
+	while !obj.is_null() {
+		if ((*obj).in_use_flags & BEING_USED) == 0 {
+			has_something = true;
+			break;
+		}
+		obj = (*obj).next_object;
+	}
+	if !has_something {
+		disappear(monster);
+		return;
+	}
+
+	obj = rogue.pack.next_object;
+	{
+		let n = get_rand(0, MAX_PACK_COUNT);
+		for _ in 0..=n {
+			obj = (*obj).next_object;
+			while obj.is_null() || ((*obj).in_use_flags & BEING_USED) != 0 {
+				if obj.is_null() {
+					obj = rogue.pack.next_object;
+				} else {
+					obj = (*obj).next_object;
+				}
+			}
+		}
+	}
+
+	let msg = {
+		let obj_quantity = (*obj).quantity;
+		if (*obj).what_is != Weapon {
+			(*obj).quantity = 1;
+		}
+		let msg = format!("she stole {}", get_desc(&*obj));
+		(*obj).quantity = obj_quantity;
+		msg
+	};
+	message(&msg, 0);
+
+	vanish(&mut *obj, false, &mut rogue.pack);
+	disappear(monster);
+}
+
+unsafe fn disappear(monster: &mut obj) {
+	let row = monster.row;
+	let col = monster.col;
+
+	Monster.clear(&mut dungeon[row as usize][col as usize]);
+	if rogue_can_see(row, col) {
+		mvaddch(row as i32, col as i32, get_dungeon_char(row, col));
+	}
+	take_from_pack(monster, &mut level_monsters);
+	free_object(monster);
+	mon_disappeared = true;
+}
+
+
+pub unsafe fn cough_up(monster: &mut obj) {
+	if cur_level < max_level {
+		return;
+	}
+	let obj = if (*monster).m_flags.steals_gold {
+		let obj = alloc_object();
+		(*obj).what_is = Gold;
+		(*obj).quantity = get_rand((cur_level * 15) as i16, (cur_level * 30) as i16);
+		obj
+	} else {
+		if !rand_percent((*monster).drop_percent()) {
+			return;
+		}
+		gr_object()
+	};
+	let row = (*monster).row;
+	let col = (*monster).col;
+	for n in 0..=5 {
+		for i in -n..=n {
+			let cough_col = col + i;
+			if try_to_cough(row + n, cough_col, &mut *obj) {
+				return;
+			}
+			if try_to_cough(row - n, cough_col, &mut *obj) {
+				return;
+			}
+		}
+		for i in -n..=n {
+			let cough_row = row + i;
+			if try_to_cough(cough_row, col - n, &mut *obj) {
+				return;
+			}
+			if try_to_cough(cough_row, col + n, &mut *obj) {
+				return;
+			}
+		}
+	}
+	free_object(obj);
+}
+
+unsafe fn try_to_cough(row: i64, col: i64, obj: &mut obj) -> bool {
+	if row < MIN_ROW || row > (DROWS - 2) as i64 || col < 0 || col > (DCOLS - 1) as i64 {
 		return false;
 	}
-	i = ((*rooms.as_mut_ptr().offset(rn as isize)).top_row as i64
-		+ 1) as libc::c_short;
-	while (i as i64)
-		< (*rooms.as_mut_ptr().offset(rn as isize)).bottom_row as i64
-	{
-		j = ((*rooms.as_mut_ptr().offset(rn as isize)).left_col as i64
-			+ 1) as libc::c_short;
-		while (j as i64)
-			< (*rooms.as_mut_ptr().offset(rn as isize)).right_col as i64
-		{
-			if gold_at(i as i64, j as i64) != 0
-				&& dungeon[i as usize][j as usize] as i64
-				& 0o2 as i64 as libc::c_ushort as i64 == 0
-			{
-				(*monster).m_flags |= 0o400 as libc::c_long as libc::c_ulong;
-				s = mon_can_go(monster, i as i64, j as i64)
-					as libc::c_short;
-				(*monster).m_flags &= !(0o400 as libc::c_long) as libc::c_ulong;
-				if s != 0 {
-					move_mon_to(monster, i as i64, j as i64);
-					(*monster).m_flags |= 0o10 as libc::c_long as libc::c_ulong;
-					(*monster).m_flags
-						&= !(0o20 as libc::c_long | 0o1000000 as libc::c_long)
-						as libc::c_ulong;
+	let dungeon_cell = dungeon[row as usize][col as usize];
+	if !SpotFlag::is_any_set(&vec![Object, Stairs, Trap], dungeon_cell)
+		&& SpotFlag::is_any_set(&vec![Tunnel, Floor, Door], dungeon_cell) {
+		place_at(obj, row, col);
+		let no_rogue = row != rogue.row || col != rogue.col;
+		let no_monster = !Monster.is_set(dungeon_cell);
+		if no_rogue && no_monster {
+			mvaddch(row as i32, col as i32, get_dungeon_char(row, col));
+		}
+		return true;
+	}
+	return false;
+}
+
+pub unsafe fn seek_gold(monster: &mut obj) -> bool {
+	let rn = get_room_number(monster.row, monster.col);
+	if rn < 0 {
+		return false;
+	}
+
+	let rn = rn as usize;
+	for i in (rooms[rn].top_row + 1)..rooms[rn].bottom_row {
+		for j in (rooms[rn].left_col + 1)..rooms[rn].right_col {
+			if gold_at(i, j) && !Monster.is_set(dungeon[i as usize][j as usize]) {
+				monster.m_flags.can_flit = true;
+				let can_go_if_while_can_flit = mon_can_go(monster, i, j);
+				monster.m_flags.can_flit = false;
+				if can_go_if_while_can_flit {
+					move_mon_to(monster, i, j);
+					monster.m_flags.asleep = true;
+					monster.m_flags.wakens = false;
+					monster.m_flags.seeks_gold = false;
 					return true;
 				}
-				(*monster).m_flags &= !(0o1000000 as libc::c_long) as libc::c_ulong;
-				(*monster).m_flags |= 0o400 as libc::c_long as libc::c_ulong;
-				mv_monster(monster, i as i64, j as i64);
-				(*monster).m_flags &= !(0o400 as libc::c_long) as libc::c_ulong;
-				(*monster).m_flags |= 0o1000000 as libc::c_long as libc::c_ulong;
+				monster.m_flags.seeks_gold = false;
+				monster.m_flags.can_flit = true;
+				mv_monster(monster, i, j);
+				monster.m_flags.can_flit = false;
+				monster.m_flags.seeks_gold = true;
 				return true;
 			}
-			j += 1;
-			j;
 		}
-		i += 1;
-		i;
+	}
+	return false;
+}
+
+unsafe fn gold_at(row: i64, col: i64) -> bool {
+	if Object.is_set(dungeon[row as usize][col as usize]) {
+		let obj = object_at(&mut level_objects, row, col);
+		if !obj.is_null() && (*obj).what_is == Gold {
+			return true;
+		}
 	}
 	return false;
 }
@@ -179,21 +270,11 @@ pub fn check_gold_seeker(monster: &mut object) {
 	monster.m_flags.seeks_gold = false;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn check_imitator(mut monster: *mut object) -> bool {
-	if (*monster).m_flags & 0o20000000 as libc::c_long as libc::c_ulong != 0 {
+pub unsafe fn check_imitator(monster: &mut object) -> bool {
+	if monster.m_flags.imitates {
 		wake_up(monster);
 		if blind == 0 {
-			if ncurses::wmove(
-				ncurses::stdscr(),
-				(*monster).row as i64,
-				(*monster).col as i64,
-			) == -(1)
-			{
-				-(1);
-			} else {
-				addch(get_dungeon_char((*monster).row as i64, (*monster).col as i64) as ncurses::chtype);
-			};
+			mvaddch(monster.row as i32, monster.col as i32, get_dungeon_char((*monster).row, (*monster).col));
 			check_message();
 			let msg = format!("wait, that's a {}!", mon_name(monster));
 			message(&msg, 1);
@@ -203,142 +284,158 @@ pub unsafe extern "C" fn check_imitator(mut monster: *mut object) -> bool {
 	return false;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn imitating(
-	mut row: libc::c_short,
-	mut col: libc::c_short,
-) -> i64 {
-	if dungeon[row as usize][col as usize] as i64
-		& 0o2 as i64 as libc::c_ushort as i64 != 0
-	{
-		let mut monster: *mut object = 0 as *mut object;
-		monster = object_at(&mut level_monsters, row, col);
+pub unsafe fn imitating(row: i64, col: i64) -> bool {
+	if Monster.is_set(dungeon[row as usize][col as usize]) {
+		let monster = object_at(&level_monsters, row, col);
 		if !monster.is_null() {
-			if (*monster).m_flags & 0o20000000 as libc::c_long as libc::c_ulong != 0 {
-				return 1;
+			if (*monster).m_flags.imitates {
+				return true;
 			}
 		}
 	}
-	return 0 as i64;
+	return false;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn m_confuse(mut monster: *mut object) -> bool {
-	let mut msg: [libc::c_char; 80] = [0; 80];
-	if rogue_can_see((*monster).row as i64, (*monster).col as i64) == 0 {
+unsafe fn sting(monster: &obj) {
+	if rogue.str_current <= 3 || sustain_strength {
+		return;
+	}
+
+	let mut sting_chance: isize = 35;
+	sting_chance += 6 * (6 - get_armor_class(rogue.armor));
+
+	if (rogue.exp + ring_exp) > 8 {
+		sting_chance -= 6 * ((rogue.exp + ring_exp) - 8);
+	}
+	if rand_percent(sting_chance as usize) {
+		message(&format!("the {}'s bite has weakened you", mon_name(monster)), 0);
+		rogue.str_current -= 1;
+		print_stats(STAT_STRENGTH);
+	}
+}
+
+unsafe fn drop_level() {
+	if rand_percent(80) || rogue.exp <= 5 {
+		return;
+	}
+
+	rogue.exp_points = level_points[rogue.exp as usize - 2] - get_rand(9, 29);
+	rogue.exp -= 2;
+
+	let hp = hp_raise();
+	rogue.hp_current -= hp;
+	if rogue.hp_current <= 0 {
+		rogue.hp_current = 1;
+	}
+	rogue.hp_max -= hp;
+	if rogue.hp_max <= 0 {
+		rogue.hp_max = 1;
+	}
+	add_exp(1, false);
+}
+
+unsafe fn drain_life() {
+	if rand_percent(60) || rogue.hp_max <= 30 || rogue.hp_current < 10 {
+		return;
+	}
+
+	let n = get_rand(1, 3);             /* 1 Hp, 2 Str, 3 both */
+	if n != 2 || !sustain_strength {
+		message("you feel weaker", 0);
+	}
+	if n != 2 {
+		rogue.hp_max -= 1;
+		rogue.hp_current -= 1;
+		less_hp += 1;
+	}
+	if n != 1 {
+		if rogue.str_current > 3 && !sustain_strength {
+			rogue.str_current -= 1;
+			if coin_toss() {
+				rogue.str_max -= 1;
+			}
+		}
+	}
+	print_stats(STAT_STRENGTH | STAT_HP);
+}
+
+pub unsafe fn m_confuse(monster: &mut object) -> bool {
+	if !rogue_can_see((*monster).row, (*monster).col) {
 		return false;
 	}
-	if rand_percent(45) != 0 {
-		(*monster).m_flags &= !(0o10000000 as libc::c_long) as libc::c_ulong;
+	if rand_percent(45) {
+		/* will not confuse the rogue */
+		monster.m_flags.confuses = false;
 		return false;
 	}
-	if rand_percent(55) != 0 {
-		(*monster).m_flags &= !(0o10000000 as libc::c_long) as libc::c_ulong;
-		sprintf(
-			msg.as_mut_ptr(),
-			b"the gaze of the %s has confused you\0" as *const u8 as *const libc::c_char,
-			mon_name(monster),
-		);
-		message(msg.as_mut_ptr(), 1);
+	if rand_percent(55) {
+		monster.m_flags.confuses = false;
+		let msg = format!("the gaze of the {} has confused you", mon_name(monster));
+		message(&msg, 1);
 		confuse();
 		return true;
 	}
 	return false;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn flame_broil(mut monster: *mut object) -> bool {
-	let mut row: libc::c_short = 0;
-	let mut col: libc::c_short = 0;
-	if mon_sees(monster, rogue.row as i64, rogue.col as i64) == 0 || coin_toss() {
+pub unsafe fn flame_broil(monster: &mut object) -> bool {
+	if !mon_sees(monster, rogue.row, rogue.col) || coin_toss() {
 		return false;
 	}
-	row = (rogue.row as i64 - (*monster).row as i64) as libc::c_short;
-	col = (rogue.col as i64 - (*monster).col as i64) as libc::c_short;
-	if (row as i64) < 0 as i64 {
-		row = -(row as i64) as libc::c_short;
-	}
-	if (col as i64) < 0 as i64 {
-		col = -(col as i64) as libc::c_short;
-	}
-	if row as i64 != 0 as i64 && col as i64 != 0 as i64
-		&& row as i64 != col as i64
-		|| (row as i64 > 7 as i64
-		|| col as i64 > 7 as i64)
 	{
-		return false;
+		let mut delta_row = rogue.row - monster.row;
+		let mut delta_col = rogue.col - monster.col;
+		if delta_row < 0 {
+			delta_row = -delta_row;
+		}
+		if delta_col < 0 {
+			delta_col = -delta_col;
+		}
+		if delta_row != 0 && delta_col != 0 && delta_row != delta_col || (delta_row > 7 || delta_col > 7) {
+			return false;
+		}
 	}
-	if blind == 0
-		&& rogue_is_around((*monster).row as i64, (*monster).col as i64)
-		== 0
-	{
-		row = (*monster).row;
-		col = (*monster).col;
-		get_closer(
-			&mut row,
-			&mut col,
-			rogue.row as i64,
-			rogue.col as i64,
-		);
-		wattrset(
-			ncurses::stdscr(),
-			((1 as libc::c_uint) << 8 as i64 + 8 as i64) as i64,
-		);
+	if blind == 0 && !rogue_is_around(monster.row, monster.col) {
+		let mut row = monster.row;
+		let mut col = monster.col;
+		get_closer(&mut row, &mut col, rogue.row, rogue.col);
+		standout();
 		loop {
-			if ncurses::wmove(ncurses::stdscr(), row as i64, col as i64)
-				== -(1)
-			{
-				-(1);
-			} else {
-				addch('~' as i32 as ncurses::chtype);
-			};
+			mvaddch(row as i32, col as i32, chtype::from('~'));
 			refresh();
-			get_closer(
-				&mut row,
-				&mut col,
-				rogue.row as i64,
-				rogue.col as i64,
-			);
-			if !(row as i64 != rogue.row as i64
-				|| col as i64 != rogue.col as i64)
-			{
+			get_closer(&mut row, &mut col, rogue.row, rogue.col);
+			let stay_looping = row != rogue.row || col != rogue.col;
+			if !stay_looping {
 				break;
 			}
 		}
-		wattrset(
-			ncurses::stdscr(),
-			(1 as libc::c_uint).wrapping_sub(1 as libc::c_uint) as i64,
-		);
-		row = (*monster).row;
-		col = (*monster).col;
-		get_closer(
-			&mut row,
-			&mut col,
-			rogue.row as i64,
-			rogue.col as i64,
-		);
+		standend();
+		row = monster.row;
+		col = monster.col;
+		get_closer(&mut row, &mut col, rogue.row, rogue.col);
 		loop {
-			if ncurses::wmove(ncurses::stdscr(), row as i64, col as i64)
-				== -(1)
-			{
-				-(1);
-			} else {
-				addch(get_dungeon_char(row as usize, col as usize) as ncurses::chtype);
-			};
+			mvaddch(row as i32, col as i32, get_dungeon_char(row, col));
 			refresh();
-			get_closer(
-				&mut row,
-				&mut col,
-				rogue.row as i64,
-				rogue.col as i64,
-			);
-			if !(row as i64 != rogue.row as i64
-				|| col as i64 != rogue.col as i64)
-			{
+			get_closer(&mut row, &mut col, rogue.row, rogue.col);
+			let stay_looping = row != rogue.row || col != rogue.col;
+			if !stay_looping {
 				break;
 			}
 		}
 	}
-	mon_hit(monster, flame_name, true);
+	mon_hit(monster, Some(FLAME_NAME), true);
 	return true;
+}
+
+fn get_closer(row: &mut i64, col: &mut i64, trow: i64, tcol: i64) {
+	if *row < trow {
+		*row += 1;
+	} else if *row > trow {
+		*row -= 1;
+	}
+	if *col < tcol {
+		*col += 1;
+	} else if *col > tcol {
+		*col -= 1;
+	}
 }

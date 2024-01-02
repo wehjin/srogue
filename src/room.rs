@@ -91,7 +91,7 @@ pub unsafe fn light_up_room(rn: i64) {
 		for i in rooms[rn as usize].top_row..=rooms[rn as usize].bottom_row {
 			for j in rooms[rn as usize].left_col..=rooms[rn as usize].right_col {
 				if Monster.is_set(dungeon[i as usize][j as usize]) {
-					let monster = object_at(&mut level_monsters, i, j);
+					let monster = object_at(&level_monsters, i, j);
 					if !monster.is_null() {
 						Monster.clear(&mut dungeon[(*monster).row as usize][(*monster).col as usize]);
 						(*monster).set_trail_char(get_dungeon_char((*monster).row, (*monster).col));
@@ -147,7 +147,7 @@ pub unsafe extern "C" fn darken_room(rn: i64) -> i64 {
 				&& dungeon[i as usize][j as usize] as i64
 				& 0o2 as libc::c_ushort as i64 != 0)
 			{
-				if imitating(i, j) == 0 {
+				if !imitating(i as i64, j as i64) {
 					if ncurses::wmove(ncurses::stdscr(), i as i32, j as i32)
 						== -1
 					{
@@ -183,7 +183,7 @@ pub unsafe fn get_dungeon_char(row: i64, col: i64) -> chtype {
 		return gmc_row_col(row, col);
 	}
 	if Object.is_set(mask) {
-		let obj = object_at(&mut level_objects, row, col);
+		let obj = object_at(&level_objects, row, col);
 		return get_mask_char((*obj).what_is) as chtype;
 	}
 	if SpotFlag::is_any_set(&vec![Tunnel, Stairs, HorWall, VertWall, Floor, Door], mask) {

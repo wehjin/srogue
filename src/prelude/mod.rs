@@ -48,7 +48,7 @@ pub const HIDE_PERCENT: usize = 12;
 pub const AMULET_LEVEL: isize = 26;
 
 
-pub const MAX_EXP_LEVEL: isize = 21;
+pub const MAX_EXP_LEVEL: usize = 21;
 pub const MAX_EXP: isize = 10000000;
 pub const MAX_GOLD: isize = 900000;
 pub const MAX_ARMOR: isize = 99;

@@ -102,7 +102,7 @@ pub unsafe extern "C" fn get_zapped_monster(
 		if dungeon[*row as usize][*col as usize] as i64
 			& 0o2 as i64 as libc::c_ushort as i64 != 0
 		{
-			if imitating(*row as i64, *col as i64) == 0 {
+			if !imitating(*row as i64, *col as i64) {
 				return object_at(
 					&mut level_monsters,
 					*row as i64,

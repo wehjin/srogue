@@ -60,7 +60,7 @@ pub unsafe extern "C" fn take_from_pack(
 }
 
 pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short) -> *mut object {
-	let obj = object_at(&mut level_objects, row, col);
+	let obj = object_at(&level_objects, row, col);
 	*status = 1;
 	if (*obj).what_is == Scroll
 		&& (*obj).which_kind == SCARE_MONSTER

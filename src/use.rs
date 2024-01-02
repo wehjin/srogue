@@ -70,7 +70,7 @@ pub unsafe extern "C" fn quaff() {
 			potion_heal(1);
 		}
 		4 => {
-			if sustain_strength == 0 {
+			if !sustain_strength {
 				rogue
 					.str_current = (rogue.str_current as i64
 					- get_rand(1, 3 as i64)) as libc::c_short;

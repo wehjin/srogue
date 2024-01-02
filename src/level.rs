@@ -21,8 +21,7 @@ pub static mut cur_room: i64 = 0;
 pub static mut new_level_message: Option<String> = None;
 pub static mut party_room: i64 = NO_ROOM;
 pub static mut r_de: i64 = 0;
-#[no_mangle]
-pub static mut level_points: [isize; 21] = [
+pub static mut level_points: [isize; MAX_EXP_LEVEL] = [
 	10,
 	20,
 	40,
@@ -772,11 +771,11 @@ pub unsafe fn add_exp(e: isize, promotion: bool) {
 
 pub unsafe fn get_exp_level(e: isize) -> isize {
 	for i in 0..(MAX_EXP_LEVEL - 1) {
-		if level_points[i as usize] > e {
-			return i + 1;
+		if level_points[i] > e {
+			return (i + 1) as isize;
 		}
 	}
-	return MAX_EXP_LEVEL;
+	return MAX_EXP_LEVEL as isize;
 }
 
 pub unsafe fn hp_raise() -> isize {

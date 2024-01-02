@@ -218,10 +218,10 @@ impl obj {
 		self.ichar as chtype
 	}
 	pub fn stationary_damage(&self) -> isize { self.stationary_damage }
-
 	pub fn set_stationary_damage(&mut self, value: isize) {
 		self.stationary_damage = value;
 	}
+	pub fn drop_percent(&self) -> usize { self.which_kind as usize }
 	pub fn first_level(&self) -> isize {
 		self.is_protected as isize
 	}
@@ -964,8 +964,8 @@ pub unsafe extern "C" fn place_at(
 	panic!("Reached end of non-void function without returning");
 }
 
-pub unsafe fn object_at(pack: *mut object, row: i64, col: i64) -> *mut object {
-	let mut obj: *mut object = (*pack).next_object;
+pub unsafe fn object_at(pack: &object, row: i64, col: i64) -> *mut object {
+	let mut obj = pack.next_object;
 	while !obj.is_null() && ((*obj).row != row || (*obj).col != col) {
 		obj = (*obj).next_object;
 	}
@@ -1250,8 +1250,8 @@ pub unsafe extern "C" fn put_stairs() -> libc::c_int {
 	panic!("Reached end of non-void function without returning");
 }
 
-pub fn get_armor_class(obj: &obj) -> isize {
-	obj.class + obj.d_enchant
+pub unsafe fn get_armor_class(obj: *const object) -> isize {
+	(*obj).class + (*obj).d_enchant
 }
 
 pub unsafe fn alloc_object() -> *mut object {
@@ -1296,7 +1296,7 @@ pub unsafe fn show_objects() {
 		let col = (*obj).col;
 		let rc = get_mask_char((*obj).what_is) as chtype;
 		if Monster.is_set(dungeon[row as usize][col as usize]) {
-			let monster = object_at(&mut level_monsters, row, col);
+			let monster = object_at(&level_monsters, row, col);
 			if !monster.is_null() {
 				(*monster).set_trail_char(rc);
 			}

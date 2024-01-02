@@ -35,7 +35,7 @@ pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool) {
 		hit_chance -= (rogue.exp + ring_exp - r_rings) as usize;
 	}
 
-	let base_monster_name = mon_name(monster);
+	let base_monster_name = mon_name(&*monster);
 	let monster_name = if let Some(name) = other { name } else { &base_monster_name };
 	if !rand_percent(hit_chance) {
 		if fight_monster.is_null() {
@@ -79,14 +79,14 @@ pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool) {
 		rogue_damage(damage, &mut *monster);
 	}
 	if (*monster).m_flags.special_hit() {
-		special_hit(monster);
+		special_hit(&mut *monster);
 	}
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn rogue_hit(mut monster: *mut object, force_hit: bool) {
 	if !monster.is_null() {
-		if check_imitator(monster) {
+		if check_imitator(&mut *monster) {
 			return;
 		}
 		let hit_chance = if force_hit { 100 } else { get_hit_chance(&mut *rogue.weapon) };
@@ -239,7 +239,7 @@ pub unsafe extern "C" fn fight(to_the_death: bool) {
 			return;
 		}
 	}
-	fight_monster = object_at(&mut level_monsters, row, col);
+	fight_monster = object_at(&level_monsters, row, col);
 	if fight_monster.is_null() {
 		return;
 	}
@@ -255,7 +255,7 @@ pub unsafe extern "C" fn fight(to_the_death: bool) {
 			|| !Monster.is_set(dungeon[row as usize][col as usize]) {
 			fight_monster = 0 as *mut object;
 		} else {
-			monster = object_at(&mut level_monsters, row, col);
+			monster = object_at(&level_monsters, row, col);
 			if monster != fight_monster {
 				fight_monster = 0 as *mut object;
 			}

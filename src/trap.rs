@@ -122,8 +122,7 @@ pub unsafe extern "C" fn trap_player(mut row: i64, mut col: i64) -> i64 {
 			if rogue.hp_current as i64 <= 0 as i64 {
 				rogue.hp_current = 0;
 			}
-			if sustain_strength == 0 && rand_percent(40) != 0
-				&& rogue.str_current as i64 >= 3 as i64
+			if !sustain_strength && rand_percent(40) != 0 && rogue.str_current as i64 >= 3 as i64
 			{
 				rogue.str_current -= 1;
 				rogue.str_current;
@@ -147,7 +146,7 @@ pub unsafe extern "C" fn trap_player(mut row: i64, mut col: i64) -> i64 {
 					as usize],
 				1 as libc::c_int,
 			);
-			rust(0 as *mut object);
+			rust(None);
 		}
 		_ => {}
 	}

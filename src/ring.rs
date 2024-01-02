@@ -22,10 +22,8 @@ pub static mut ring_exp: isize = 0;
 pub static mut auto_search: libc::c_short = 0;
 pub static mut r_teleport: bool = false;
 pub static mut r_see_invisible: bool = false;
-#[no_mangle]
-pub static mut sustain_strength: libc::c_char = 0;
-#[no_mangle]
-pub static mut maintain_armor: libc::c_char = 0;
+pub static mut sustain_strength: bool = false;
+pub static mut maintain_armor: bool = false;
 
 pub unsafe fn put_on_ring() {
 	if r_rings == 2 {
@@ -210,12 +208,12 @@ pub unsafe fn ring_stats(print: bool) {
 	r_rings = 0;
 	e_rings = 0;
 	r_teleport = false;
-	sustain_strength = 0;
+	sustain_strength = false;
 	add_strength = 0;
 	regeneration = 0;
 	ring_exp = 0;
 	r_see_invisible = false;
-	maintain_armor = 0;
+	maintain_armor = false;
 	auto_search = 0;
 
 	for ring_hand in RingHand::ALL {
@@ -235,11 +233,11 @@ pub unsafe fn ring_stats(print: bool) {
 			RingKind::Regeneration => { regeneration += 1; }
 			RingKind::SlowDigest => { e_rings -= 2; }
 			RingKind::AddStrength => { add_strength += ring.class; }
-			RingKind::SustainStrength => { sustain_strength = 1; }
+			RingKind::SustainStrength => { sustain_strength = true; }
 			RingKind::Dexterity => { ring_exp += ring.class; }
 			RingKind::Adornment => {}
 			RingKind::RSeeInvisible => { r_see_invisible = true; }
-			RingKind::MaintainArmor => { maintain_armor = 1; }
+			RingKind::MaintainArmor => { maintain_armor = true; }
 			RingKind::Searching => { auto_search += 2; }
 		}
 	}

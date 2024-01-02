@@ -48,7 +48,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool) -> MoveResult {
 		}
 	}
 	if Monster.is_set(dungeon[row as usize][col as usize]) {
-		rogue_hit(object_at(&mut level_monsters, row, col), false);
+		rogue_hit(object_at(&level_monsters, row, col), false);
 		reg_move();
 		return MoveFailed;
 	}
@@ -110,7 +110,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool) -> MoveResult {
 }
 
 unsafe fn move_on(row: i64, col: i64) -> MoveResult {
-	let obj = object_at(&mut level_objects, row, col);
+	let obj = object_at(&level_objects, row, col);
 	let desc = format!("moved onto {}", get_desc(&*obj));
 	return not_in_pack(&desc);
 }
