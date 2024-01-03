@@ -276,24 +276,7 @@ pub mod armor_kind {
 	pub const ARMORS: usize = 7;
 }
 
-pub mod potion_kind {
-	pub const INCREASE_STRENGTH: u16 = 0;
-	pub const RESTORE_STRENGTH: u16 = 1;
-	pub const HEALING: u16 = 2;
-	pub const EXTRA_HEALING: u16 = 3;
-	pub const POISON: u16 = 4;
-	pub const RAISE_LEVEL: u16 = 5;
-	pub const BLINDNESS: u16 = 6;
-	pub const HALLUCINATION: u16 = 7;
-	pub const DETECT_MONSTER: u16 = 8;
-	pub const DETECT_OBJECTS: u16 = 9;
-	pub const CONFUSION: u16 = 10;
-	pub const LEVITATION: u16 = 11;
-	pub const HASTE_SELF: u16 = 12;
-	pub const SEE_INVISIBLE: u16 = 13;
-	pub const POTIONS: usize = 14;
-}
-
+pub mod potion_kind;
 pub mod ring_kind;
 
 pub mod stat_const {

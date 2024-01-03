@@ -7,26 +7,23 @@ use crate::objects::IdStatus::{Called, Identified};
 use crate::objects::place_at;
 
 use crate::prelude::*;
+use crate::prelude::food_kind::FRUIT;
 use crate::prelude::IdStatus::Unidentified;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_EITHER_HAND};
 use crate::prelude::object_what::{PackFilter};
-use crate::prelude::object_what::ObjectWhat::{Armor, Gold, Potion, Ring, Scroll, Wand, Weapon};
+use crate::prelude::object_what::ObjectWhat::{Armor, Food, Gold, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
 use crate::prelude::SpotFlag::{Object, Stairs, Trap};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD};
+use crate::prelude::weapon_kind::{ARROW, DAGGER, DART, SHURIKEN};
 
 pub static CURSE_MESSAGE: &'static str = "you can't, it appears to be cursed";
 pub const MAX_PACK_COUNT: usize = 24;
 
-#[no_mangle]
-pub unsafe extern "C" fn add_to_pack(
-	mut obj: *mut object,
-	mut pack: *mut object,
-	mut condense: i64,
-) -> *mut object {
+pub unsafe fn add_to_pack(obj: *mut object, pack: *mut object, condense: i64) -> *mut object {
 	let mut op: *mut object = 0 as *mut object;
 	if condense != 0 {
-		op = check_duplicate(obj, pack);
+		op = check_duplicate(&*obj, &mut *pack);
 		if !op.is_null() {
 			free_object(obj);
 			return op;
@@ -138,7 +135,7 @@ pub unsafe fn drop_0() {
 	if (*obj).quantity > 1 && (*obj).what_is != Weapon {
 		(*obj).quantity -= 1;
 		let new = alloc_object();
-		*new = *obj;
+		*new = (*obj).clone();
 		(*new).quantity = 1;
 		obj = new;
 	} else {
@@ -150,44 +147,26 @@ pub unsafe fn drop_0() {
 	reg_move();
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn check_duplicate(
-	mut obj: *mut object,
-	mut pack: *mut object,
-) -> *mut object {
-	let mut op: *mut object = 0 as *mut object;
-	if (*obj).what_is as i64
-		& (0o2 as i64 as libc::c_ushort as i64
-		| 0o40 as i64 as libc::c_ushort as i64
-		| 0o4 as i64 as libc::c_ushort as i64
-		| 0o10 as i64 as libc::c_ushort as i64) == 0
-	{
+pub unsafe fn check_duplicate(obj: &object, pack: &mut object) -> *mut object {
+	match obj.what_is {
+		Weapon | Food | Scroll | Potion => {}
+		_ => {
+			return 0 as *mut object;
+		}
+	}
+	if (*obj).what_is == Food && (*obj).which_kind == FRUIT {
 		return 0 as *mut object;
 	}
-	if (*obj).what_is as i64
-		== 0o40 as i64 as libc::c_ushort as i64
-		&& (*obj).which_kind as i64 == 1
-	{
-		return 0 as *mut object;
-	}
-	op = (*pack).next_object;
+	let mut op = (*pack).next_object;
 	while !op.is_null() {
-		if (*op).what_is as i64 == (*obj).what_is as i64
-			&& (*op).which_kind as i64 == (*obj).which_kind as i64
-		{
-			if (*obj).what_is as i64
-				!= 0o2 as i64 as libc::c_ushort as i64
-				|| (*obj).what_is as i64
-				== 0o2 as i64 as libc::c_ushort as i64
-				&& ((*obj).which_kind as i64 == 2 as i64
-				|| (*obj).which_kind as i64 == 3 as i64
-				|| (*obj).which_kind as i64 == 1
-				|| (*obj).which_kind as i64 == 4 as i64)
-				&& (*obj).quiver as i64 == (*op).quiver as i64
-			{
-				(*op)
-					.quantity = ((*op).quantity as i64
-					+ (*obj).quantity as i64) as libc::c_short;
+		if (*op).what_is == (*obj).what_is && (*op).which_kind == (*obj).which_kind {
+			if (*obj).what_is != Weapon ||
+				(
+					(*obj).what_is == Weapon
+						&& ((*obj).which_kind == ARROW || (*obj).which_kind == DAGGER || (*obj).which_kind == DART || (*obj).which_kind == SHURIKEN)
+						&& (*obj).quiver == (*op).quiver
+				) {
+				(*op).quantity += (*obj).quantity;
 				return op;
 			}
 		}
@@ -361,9 +340,12 @@ pub unsafe fn call_it() {
 		message("no such item.", 0);
 		return;
 	}
-	if (*obj).what_is != Scroll && (*obj).what_is != Potion && (*obj).what_is != Wand && (*obj).what_is == Ring {
-		message("surely you already know what that's called", 0);
-		return;
+	match (*obj).what_is {
+		Scroll | Potion | Wand | Ring => {}
+		_ => {
+			message("surely you already know what that's called", 0);
+			return;
+		}
 	}
 	let id_table = get_id_table(&*obj);
 	let new_name = get_input_line("call it:", None, Some(&id_table[(*obj).which_kind as usize].title), true, true);
@@ -382,7 +364,7 @@ pub unsafe fn pack_count(new_obj: *const obj) -> usize {
 		} else if new_obj.is_null() {
 			count += 1;
 		} else if ((*new_obj).what_is != Weapon)
-			|| (((*obj).which_kind != weapon_kind::ARROW) && ((*obj).which_kind != weapon_kind::DAGGER) && ((*obj).which_kind != weapon_kind::DART) && ((*obj).which_kind != weapon_kind::SHURIKEN))
+			|| (((*obj).which_kind != ARROW) && ((*obj).which_kind != DAGGER) && ((*obj).which_kind != DART) && ((*obj).which_kind != SHURIKEN))
 			|| ((*new_obj).which_kind != (*obj).which_kind)
 			|| ((*obj).quiver != (*new_obj).quiver) {
 			count += 1;

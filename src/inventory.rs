@@ -5,17 +5,6 @@ use crate::message;
 use crate::pack::wait_for_ack;
 use crate::random::get_rand;
 
-extern "C" {
-	pub type ldat;
-
-	fn strcat(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
-	fn strncmp(
-		_: *const libc::c_char,
-		_: *const libc::c_char,
-		_: libc::c_ulong,
-	) -> i64;
-}
-
 use crate::prelude::*;
 use crate::prelude::food_kind::RATION;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_LEFT_HAND, ON_RIGHT_HAND};

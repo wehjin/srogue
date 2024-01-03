@@ -13,7 +13,8 @@ use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::item_usage::{being_wielded, being_worn, on_either_hand, on_left_hand};
 use crate::prelude::object_what::{ObjectWhat};
 use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
-use crate::prelude::potion_kind::{BLINDNESS, CONFUSION, DETECT_MONSTER, DETECT_OBJECTS, EXTRA_HEALING, HALLUCINATION, HASTE_SELF, HEALING, INCREASE_STRENGTH, LEVITATION, POISON, POTIONS, RAISE_LEVEL, RESTORE_STRENGTH, SEE_INVISIBLE};
+use crate::prelude::potion_kind::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
+use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::prelude::ring_kind::RINGS;
 use crate::prelude::scroll_kind::{AGGRAVATE_MONSTER, CREATE_MONSTER, ENCH_ARMOR, ENCH_WEAPON, HOLD_MONSTER, IDENTIFY, MAGIC_MAPPING, PROTECT_ARMOR, REMOVE_CURSE, SCARE_MONSTER, SCROLLS, SLEEP, TELEPORT};
 use crate::prelude::SpotFlag::{Floor, Monster, Tunnel};
@@ -999,15 +1000,12 @@ pub unsafe fn get_letter_object(ch: char) -> *mut object {
 	return obj;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn free_stuff(mut objlist: *mut object) -> i64 {
-	let mut obj: *mut object = 0 as *mut object;
-	while !(*objlist).next_object.is_null() {
-		obj = (*objlist).next_object;
-		(*objlist).next_object = (*(*objlist).next_object).next_object;
+pub unsafe fn free_stuff(mut obj_list: *mut object) {
+	while !(*obj_list).next_object.is_null() {
+		let obj = (*obj_list).next_object;
+		(*obj_list).next_object = (*(*obj_list).next_object).next_object;
 		free_object(obj);
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
 pub unsafe fn name_of(obj: &object) -> String {
@@ -1031,8 +1029,7 @@ pub unsafe fn name_of(obj: &object) -> String {
 }
 
 pub unsafe fn gr_object() -> *mut object {
-	let mut obj: *mut object = 0 as *mut object;
-	obj = alloc_object();
+	let mut obj = alloc_object();
 	if foods < (cur_level / 2) as i16 {
 		(*obj).what_is = Food;
 		foods += 1;
@@ -1119,38 +1116,42 @@ pub fn gr_scroll(obj: &mut obj) {
 }
 
 pub fn gr_potion(obj: &mut obj) {
-	let percent = get_rand(1, 118);
 	(*obj).what_is = Potion;
+	(*obj).which_kind = gr_potion_kind().to_index() as u16;
+}
 
-	if percent <= 5 {
-		(*obj).which_kind = RAISE_LEVEL;
+fn gr_potion_kind() -> PotionKind {
+	let percent = get_rand(1, 118);
+	let kind = if percent <= 5 {
+		RaiseLevel
 	} else if percent <= 15 {
-		(*obj).which_kind = DETECT_OBJECTS;
+		DetectObjects
 	} else if percent <= 25 {
-		(*obj).which_kind = DETECT_MONSTER;
+		DetectMonster
 	} else if percent <= 35 {
-		(*obj).which_kind = INCREASE_STRENGTH;
+		IncreaseStrength
 	} else if percent <= 45 {
-		(*obj).which_kind = RESTORE_STRENGTH;
+		RestoreStrength
 	} else if percent <= 55 {
-		(*obj).which_kind = HEALING;
+		Healing
 	} else if percent <= 65 {
-		(*obj).which_kind = EXTRA_HEALING;
+		ExtraHealing
 	} else if percent <= 75 {
-		(*obj).which_kind = BLINDNESS;
+		Blindness
 	} else if percent <= 85 {
-		(*obj).which_kind = HALLUCINATION;
+		Hallucination
 	} else if percent <= 95 {
-		(*obj).which_kind = CONFUSION;
+		Confusion
 	} else if percent <= 105 {
-		(*obj).which_kind = POISON;
+		Poison
 	} else if percent <= 110 {
-		(*obj).which_kind = LEVITATION;
+		Levitation
 	} else if percent <= 114 {
-		(*obj).which_kind = HASTE_SELF;
+		Hallucination
 	} else {
-		(*obj).which_kind = SEE_INVISIBLE;
-	}
+		SeeInvisible
+	};
+	kind
 }
 
 pub fn gr_weapon(obj: &mut obj, assign_wk: bool) {
@@ -1410,35 +1411,44 @@ pub unsafe fn new_object_for_wizard() {
 		_ => None
 	};
 	if let Some(max_kind) = max_kind {
-		let good_kind = {
-			let mut good_kind = 0;
-			loop {
-				let input_line = get_input_line("which kind?", None, None, false, true).trim();
-				if input_line.is_empty() {
-					free_object(obj);
-					return;
-				}
-				match input_line.parse::<usize>() {
-					Err(_) => {
-						sound_bell();
-					}
-					Ok(kind) => {
-						if kind >= 0 && kind <= max_kind {
-							good_kind = kind;
-							break;
-						}
-					}
-				}
+		if let Some(kind) = get_kind(max_kind) {
+			(*obj).which_kind = kind as u16;
+			if (*obj).what_is == Ring {
+				gr_ring(&mut *obj, false);
 			}
-			good_kind
-		};
-		(*obj).which_kind = good_kind as u16;
-		if (*obj).what_is == Ring {
-			gr_ring(&mut *obj, false);
+		} else {
+			free_object(obj);
+			return;
 		}
 	}
 	message(&get_desc(&*obj), 0);
 	add_to_pack(obj, &mut rogue.pack, 1);
+}
+
+unsafe fn get_kind(max_kind: usize) -> Option<usize> {
+	let good_kind = {
+		let mut good_kind = None;
+		loop {
+			let input_line = get_input_line("which kind?", None, None, false, true).trim();
+			if input_line.is_empty() {
+				good_kind = None;
+				break;
+			}
+			match input_line.parse::<usize>() {
+				Err(_) => {
+					sound_bell();
+				}
+				Ok(kind) => {
+					if kind >= 0 && kind <= max_kind {
+						good_kind = Some(kind);
+						break;
+					}
+				}
+			}
+		}
+		good_kind
+	};
+	good_kind
 }
 
 pub unsafe fn next_party() -> isize {

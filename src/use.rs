@@ -2,10 +2,14 @@
 
 
 use ncurses::{addch, chtype, mvaddch};
+use crate::objects::IdStatus::{Called, Identified};
 use crate::prelude::*;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_EITHER_HAND};
+use crate::prelude::object_what::ObjectWhat::Potion;
 use crate::prelude::object_what::PackFilter::{Foods, Potions, Scrolls};
+use crate::prelude::potion_kind::PotionKind;
 use crate::prelude::scroll_kind::SLEEP;
+use crate::prelude::stat_const::{STAT_HP, STAT_STRENGTH};
 use crate::settings::fruit;
 
 pub static mut halluc: usize = 0;
@@ -15,67 +19,50 @@ pub static mut levitate: usize = 0;
 pub static mut haste_self: usize = 0;
 pub static mut see_invisible: bool = false;
 pub static mut extra_hp: isize = 0;
-#[no_mangle]
-pub static mut strange_feeling: *mut libc::c_char = b"you have a strange feeling for a moment, then it passes\0"
-	as *const u8 as *const libc::c_char as *mut libc::c_char;
+pub static strange_feeling: &'static str = "you have a strange feeling for a moment, then it passes";
 
-#[no_mangle]
-pub unsafe extern "C" fn quaff() {
-	let mut ch: libc::c_short = 0;
-	let mut buf: [libc::c_char; 80] = [0; 80];
-	let mut obj: *mut object = 0 as *mut object;
-	ch = pack_letter("quaff what?", Potions) as libc::c_short;
-	if ch as i64 == '\u{1b}' as i32 {
+pub unsafe fn quaff() {
+	let ch = pack_letter("quaff what?", Potions);
+	if ch == CANCEL {
 		return;
 	}
-	obj = get_letter_object(ch as i64);
+
+	let obj = get_letter_object(ch);
 	if obj.is_null() {
 		message("no such item.", 0);
 		return;
 	}
-	if (*obj).what_is as i64 != 0o10 as i64 as libc::c_ushort as i64
-	{
+	if (*obj).what_is != Potion {
 		message("you can't drink that", 0);
 		return;
 	}
-	match (*obj).which_kind as i64 {
-		0 => {
+
+	let potion_kind = PotionKind::from_index((*obj).which_kind as usize);
+	match potion_kind {
+		PotionKind::IncreaseStrength => {
 			message("you feel stronger now, what bulging muscles!", 0);
 			rogue.str_current += 1;
-			rogue.str_current;
-			if rogue.str_current as i64 > rogue.str_max as i64 {
+			if rogue.str_current > rogue.str_max {
 				rogue.str_max = rogue.str_current;
 			}
 		}
-		1 => {
+		PotionKind::RestoreStrength => {
 			rogue.str_current = rogue.str_max;
-			message(
-				b"this tastes great, you feel warm all over\0" as *const u8
-					as *const libc::c_char,
-				0 as i64,
-			);
+			message("this tastes great, you feel warm all over", 0);
 		}
-		2 => {
-			message(
-				b"you begin to feel better\0" as *const u8 as *const libc::c_char,
-				0 as i64,
-			);
-			potion_heal(0 as i64);
+		PotionKind::Healing => {
+			message("you begin to feel better", 0);
+			potion_heal(false);
 		}
-		3 => {
-			message(
-				b"you begin to feel much better\0" as *const u8 as *const libc::c_char,
-				0 as i64,
-			);
-			potion_heal(1);
+		PotionKind::ExtraHealing => {
+			message("you begin to feel much better", 0);
+			potion_heal(true);
 		}
-		4 => {
+		PotionKind::Poison => {
 			if !sustain_strength {
-				rogue
-					.str_current = (rogue.str_current as i64
-					- get_rand(1, 3 as i64)) as libc::c_short;
-				if (rogue.str_current as i64) < 1 {
-					rogue.str_current = 1 as libc::c_short;
+				rogue.str_current -= get_rand(1, 3);
+				if rogue.str_current < 1 {
+					rogue.str_current = 1;
 				}
 			}
 			message("you feel very sick now", 0);
@@ -83,82 +70,63 @@ pub unsafe extern "C" fn quaff() {
 				unhallucinate();
 			}
 		}
-		5 => {
-			rogue
-				.exp_points = *level_points
-				.as_mut_ptr()
-				.offset((rogue.exp as i64 - 1) as isize);
-			add_exp(1, 1);
+		PotionKind::RaiseLevel => {
+			rogue.exp_points = level_points[(rogue.exp - 1) as usize];
+			add_exp(1, true);
 		}
-		6 => {
+		PotionKind::Blindness => {
 			go_blind();
 		}
-		7 => {
+		PotionKind::Hallucination => {
 			message("oh wow, everything seems so cosmic", 0);
-			halluc = halluc + get_rand(500, 800);
+			halluc += get_rand(500, 800);
 		}
-		8 => {
+		PotionKind::DetectMonster => {
 			show_monsters();
-			if (level_monsters.next_object).is_null() {
-				message(strange_feeling, 0 as i64);
+			if level_monsters.next_object.is_null() {
+				message(strange_feeling, 0);
 			}
 		}
-		9 => {
-			if !(level_objects.next_object).is_null() {
+		PotionKind::DetectObjects => {
+			if !level_objects.next_object.is_null() {
 				if blind == 0 {
 					show_objects();
 				}
 			} else {
-				message(strange_feeling, 0 as i64);
+				message(strange_feeling, 0);
 			}
 		}
-		10 => {
+		PotionKind::Confusion => {
 			message(if halluc != 0 { "what a trippy feeling" } else { "you feel confused" }, 0);
 			confuse();
 		}
-		11 => {
-			message(
-				b"you start to float in the air\0" as *const u8 as *const libc::c_char,
-				0 as i64,
-			);
-			levitate = (levitate as i64
-				+ get_rand(15 as i64, 30 as i64)) as libc::c_short;
+		PotionKind::Levitation => {
+			message("you start to float in the air", 0);
+			levitate += get_rand(15, 30);
 			bear_trap = 0;
-			being_held = bear_trap as libc::c_char;
+			being_held = false;
 		}
-		12 => {
-			message(
-				b"you feel yourself moving much faster\0" as *const u8
-					as *const libc::c_char,
-				0 as i64,
-			);
-			haste_self = (haste_self as i64
-				+ get_rand(11, 21)) as libc::c_short;
-			if haste_self as i64 % 2 as i64 == 0 {
+		PotionKind::HasteSelf => {
+			message("you feel yourself moving much faster", 0);
+			haste_self += get_rand(11, 21);
+			if haste_self % 2 == 0 {
 				haste_self += 1;
-				haste_self;
 			}
 		}
-		13 => {
-			let buf = format!("hmm, this potion tastes like {}juice", fruit());
-			message(&buf, 0 as i64);
+		PotionKind::SeeInvisible => {
+			message(&format!("hmm, this potion tastes like {}juice", fruit()), 0);
 			if blind != 0 {
 				unblind();
 			}
-			see_invisible = 1 as libc::c_char;
+			see_invisible = true;
 			relight();
 		}
-		_ => {}
 	}
-	print_stats(0o10 as i64 | 0o4 as i64);
-	if (*id_potions.as_mut_ptr().offset((*obj).which_kind as isize)).id_status
-		as i64 != 0o2 as i64 as libc::c_ushort as i64
-	{
-		(*id_potions.as_mut_ptr().offset((*obj).which_kind as isize))
-			.id_status = 0o1 as libc::c_ushort;
+	print_stats(STAT_STRENGTH | STAT_HP);
+	if id_potions[(*obj).which_kind as usize].id_status != Called {
+		id_potions[(*obj).which_kind as usize].id_status = Identified;
 	}
-	vanish(&mut obj, true, &mut rogue.pack);
-	panic!("Reached end of non-void function without returning");
+	vanish(&mut *obj, true, &mut rogue.pack);
 }
 
 #[no_mangle]
@@ -318,6 +286,45 @@ pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj) {
 	}
 }
 
+unsafe fn potion_heal(extra: bool) {
+	rogue.hp_current += rogue.exp;
+
+	let ratio = rogue.hp_current as f32 / rogue.hp_max;
+	if ratio >= 1.00 {
+		rogue.hp_max += if extra { 2 } else { 1 };
+		extra_hp += if extra { 2 } else { 1 };
+		rogue.hp_current = rogue.hp_max;
+	} else if ratio >= 0.90 {
+		rogue.hp_max += if extra { 1 } else { 0 };
+		extra_hp += if extra { 1 } else { 0 };
+		rogue.hp_current = rogue.hp_max;
+	} else {
+		if ratio < 0.33 {
+			ratio = 0.33;
+		}
+		if extra {
+			ratio += ratio;
+		}
+		let add = ratio * (rogue.hp_max - rogue.hp_current);
+		rogue.hp_current += add;
+		if rogue.hp_current > rogue.hp_max {
+			rogue.hp_current = rogue.hp_max;
+		}
+	}
+	if blind != 0 {
+		unblind();
+	}
+	if confused != 0 && extra {
+		unconfuse();
+	} else if confused != 0 {
+		confused = (confused / 2) + 1;
+	}
+	if halluc != 0 && extra {
+		unhallucinate();
+	} else if halluc {
+		halluc = (halluc / 2) + 1;
+	}
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn eat() {
@@ -466,6 +473,28 @@ pub unsafe fn take_a_nap() {
 	message(YOU_CAN_MOVE_AGAIN, 0);
 }
 
+unsafe fn go_blind() {
+	if blind == 0 {
+		message("a cloak of darkness falls around you", 0);
+	}
+	blind += get_rand(500, 800);
+
+	if detect_monster {
+		let mut monster = level_monsters.next_monster();
+		while !monster.is_null() {
+			mvaddch((*monster).row as i32, (*monster).col as i32, (*monster).trail_char());
+			monster = (*monster).next_monster();
+		}
+	}
+	if cur_room >= 0 {
+		for i in (rooms[cur_room].top_row as usize + 1)..rooms[cur_room].bottom_row as usize {
+			for j in (rooms[cur_room].left_col as usize + 1)..rooms[cur_room].right_col as usize {
+				mvaddch(i as i32, j as i32, chtype::from(' '));
+			}
+		}
+	}
+	mvaddch(rogue.row as i32, rogue.col as i32, chtype::from(rogue.fchar));
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn get_ench_color() -> *mut libc::c_char {
