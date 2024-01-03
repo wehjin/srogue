@@ -1,7 +1,6 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
 use libc::{c_short};
-use scroll_kind::SCARE_MONSTER;
 use crate::{get_input_line, message, mv_aquatars, print_stats};
 use crate::objects::IdStatus::{Called, Identified};
 use crate::objects::place_at;
@@ -13,6 +12,7 @@ use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_EITHER_HAND};
 use crate::prelude::object_what::{PackFilter};
 use crate::prelude::object_what::ObjectWhat::{Armor, Food, Gold, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
+use crate::prelude::scroll_kind::ScrollKind::ScareMonster;
 use crate::prelude::SpotFlag::{Object, Stairs, Trap};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD};
 use crate::prelude::weapon_kind::{ARROW, DAGGER, DART, SHURIKEN};
@@ -60,14 +60,14 @@ pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short) -> *mut obje
 	let obj = object_at(&level_objects, row, col);
 	*status = 1;
 	if (*obj).what_is == Scroll
-		&& (*obj).which_kind == SCARE_MONSTER
+		&& ScareMonster.is_kind((*obj).which_kind)
 		&& (*obj).picked_up != 0 {
 		message("the scroll turns to dust as you pick it up", 0);
 		dungeon[row as usize][col as usize] = dungeon[row as usize][col as usize] & !Object.code();
 		vanish(&mut *obj, false, &mut level_objects);
 		*status = 0;
-		if id_scrolls[SCARE_MONSTER as usize].id_status == Unidentified {
-			id_scrolls[SCARE_MONSTER as usize].id_status = Identified
+		if id_scrolls[ScareMonster.to_index()].id_status == Unidentified {
+			id_scrolls[ScareMonster.to_index()].id_status = Identified
 		}
 		return 0 as *mut object;
 	}

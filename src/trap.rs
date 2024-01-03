@@ -287,6 +287,6 @@ pub unsafe fn not_blind() -> bool {
 	not_blind
 }
 
-fn is_off_screen(row: i64, col: i64) -> bool {
+pub fn is_off_screen(row: i64, col: i64) -> bool {
 	row < MIN_ROW || row >= (DROWS - 1) as i64 || col < 0 || col >= DCOLS as i64
 }

@@ -22,16 +22,16 @@ pub enum PotionKind {
 pub const POTIONS: usize = 14;
 
 impl PotionKind {
-	pub const ALL_KINDS: [PotionKind; POTIONS] = [
+	pub const ALL_POTIONS: [PotionKind; POTIONS] = [
 		IncreaseStrength, RestoreStrength, Healing, ExtraHealing, Poison, RaiseLevel, Blindness,
 		Hallucination, DetectMonster, DetectObjects, Confusion, Levitation, HasteSelf, SeeInvisible
 	];
 
 	pub fn from_index(index: usize) -> Self {
-		Self::ALL_KINDS[index]
+		Self::ALL_POTIONS[index]
 	}
 
 	pub fn to_index(&self) -> usize {
-		Self::ALL_KINDS.iter().position(|x| x == self).expect("find potion-kind in ALL")
+		Self::ALL_POTIONS.iter().position(|x| x == self).expect("find potion-kind in ALL")
 	}
 }

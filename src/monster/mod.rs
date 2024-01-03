@@ -11,10 +11,12 @@ pub mod flags;
 use crate::prelude::*;
 pub use flags::MonsterFlags;
 use SpotFlag::{Door, Monster};
-use crate::{objects, odds, pack};
+use crate::{odds};
 use crate::prelude::flags::MONSTERS;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::Scroll;
+use crate::prelude::scroll_kind::ScrollKind;
+use crate::prelude::scroll_kind::ScrollKind::ScareMonster;
 use crate::prelude::SpotFlag::{Floor, Object, Stairs, Tunnel};
 
 #[derive(Clone)]
@@ -905,11 +907,7 @@ pub unsafe extern "C" fn put_mons() {
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn gr_monster(
-	mut monster: *mut object,
-	mut mn: c_int,
-) -> *mut object {
+pub unsafe extern "C" fn gr_monster(mut monster: *mut object, mut mn: c_int) -> *mut object {
 	if monster.is_null() {
 		monster = alloc_object();
 		loop {
@@ -923,7 +921,7 @@ pub unsafe extern "C" fn gr_monster(
 			}
 		}
 	}
-	*monster = mon_tab[mn as usize];
+	*monster = mon_tab[mn as usize].clone();
 	if (*monster).m_flags.imitates {
 		(*monster).disguise = gr_obj_char() as libc::c_ushort;
 	}
@@ -1007,7 +1005,7 @@ pub unsafe extern "C" fn party_monsters(rn: i64, n: i64) {
 
 #[no_mangle]
 pub unsafe extern "C" fn gmc_row_col(row: i64, col: i64) -> chtype {
-	let monster = objects::object_at(&level_monsters, row, col);
+	let monster = object_at(&level_monsters, row, col);
 	if !monster.is_null() {
 		let invisible = (*monster).m_flags.invisible;
 		let bypass_invisible = detect_monster || see_invisible || r_see_invisible;
@@ -1228,8 +1226,8 @@ pub unsafe fn mon_can_go(monster: &obj, row: i64, col: i64) -> bool {
 		if (monster.col > rogue.col) && (col > monster.col) { return false; }
 	}
 	if Object.is_set(dungeon[row as usize][col as usize]) {
-		let obj = objects::object_at(&level_objects, row, col);
-		if (*obj).what_is == Scroll && (*obj).which_kind == scroll_kind::SCARE_MONSTER {
+		let obj = object_at(&level_objects, row, col);
+		if (*obj).what_is == Scroll && ScrollKind::from_index((*obj).which_kind as usize) == ScareMonster {
 			return false;
 		}
 	}
@@ -1389,7 +1387,7 @@ pub unsafe fn put_m_at(row: i64, col: i64, monster: &mut object) {
 	monster.col = col;
 	Monster.set(&mut dungeon[row as usize][col as usize]);
 	monster.set_trail_char(ncurses::mvinch(row as i32, col as i32));
-	pack::add_to_pack(monster, &mut level_monsters, 0);
+	add_to_pack(monster, &mut level_monsters, 0);
 	aim_monster(monster);
 }
 

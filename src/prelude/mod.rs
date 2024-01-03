@@ -230,21 +230,7 @@ pub mod object_what {
 	const ALL_OBJECTS: u16 = 0o777;
 }
 
-pub mod scroll_kind {
-	pub const PROTECT_ARMOR: u16 = 0;
-	pub const HOLD_MONSTER: u16 = 1;
-	pub const ENCH_WEAPON: u16 = 2;
-	pub const ENCH_ARMOR: u16 = 3;
-	pub const IDENTIFY: u16 = 4;
-	pub const TELEPORT: u16 = 5;
-	pub const SLEEP: u16 = 6;
-	pub const SCARE_MONSTER: u16 = 7;
-	pub const REMOVE_CURSE: u16 = 8;
-	pub const CREATE_MONSTER: u16 = 9;
-	pub const AGGRAVATE_MONSTER: u16 = 10;
-	pub const MAGIC_MAPPING: u16 = 11;
-	pub const SCROLLS: usize = 12;
-}
+pub mod scroll_kind;
 
 pub mod wand_kind;
 

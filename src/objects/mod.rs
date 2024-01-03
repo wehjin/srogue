@@ -16,7 +16,8 @@ use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
 use crate::prelude::potion_kind::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
 use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::prelude::ring_kind::RINGS;
-use crate::prelude::scroll_kind::{AGGRAVATE_MONSTER, CREATE_MONSTER, ENCH_ARMOR, ENCH_WEAPON, HOLD_MONSTER, IDENTIFY, MAGIC_MAPPING, PROTECT_ARMOR, REMOVE_CURSE, SCARE_MONSTER, SCROLLS, SLEEP, TELEPORT};
+use crate::prelude::scroll_kind::ScrollKind::{AggravateMonster, CreateMonster, EnchArmor, EnchWeapon, HoldMonster, Identify, MagicMapping, ProtectArmor, RemoveCurse, ScareMonster, Sleep, Teleport};
+use crate::prelude::scroll_kind::SCROLLS;
 use crate::prelude::SpotFlag::{Floor, Monster, Tunnel};
 use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, WANDS};
 use crate::prelude::weapon_kind::{ARROW, BOW, DAGGER, DART, SHURIKEN, WEAPONS};
@@ -1088,31 +1089,32 @@ pub fn gr_scroll(obj: &mut obj) {
 	let percent = get_rand(0, 85);
 	(*obj).what_is = Scroll;
 
-	if percent <= 5 {
-		(*obj).which_kind = PROTECT_ARMOR;
+	let kind = if percent <= 5 {
+		ProtectArmor
 	} else if percent <= 11 {
-		(*obj).which_kind = HOLD_MONSTER;
+		HoldMonster
 	} else if percent <= 20 {
-		(*obj).which_kind = CREATE_MONSTER;
+		CreateMonster
 	} else if percent <= 35 {
-		(*obj).which_kind = IDENTIFY;
+		Identify
 	} else if percent <= 43 {
-		(*obj).which_kind = TELEPORT;
+		Teleport
 	} else if percent <= 50 {
-		(*obj).which_kind = SLEEP;
+		Sleep
 	} else if percent <= 55 {
-		(*obj).which_kind = SCARE_MONSTER;
+		ScareMonster
 	} else if percent <= 64 {
-		(*obj).which_kind = REMOVE_CURSE;
+		RemoveCurse
 	} else if percent <= 69 {
-		(*obj).which_kind = ENCH_ARMOR;
+		EnchArmor
 	} else if percent <= 74 {
-		(*obj).which_kind = ENCH_WEAPON;
+		EnchWeapon
 	} else if percent <= 80 {
-		(*obj).which_kind = AGGRAVATE_MONSTER;
+		AggravateMonster
 	} else {
-		(*obj).which_kind = MAGIC_MAPPING;
-	}
+		MagicMapping
+	};
+	(*obj).which_kind = kind.to_index() as u16;
 }
 
 pub fn gr_potion(obj: &mut obj) {

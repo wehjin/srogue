@@ -1,15 +1,16 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-
-use ncurses::{addch, chtype, mvaddch};
+use ncurses::{addch, chtype, mvaddch, mvinch};
 use crate::objects::IdStatus::{Called, Identified};
 use crate::prelude::*;
+use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_EITHER_HAND};
-use crate::prelude::object_what::ObjectWhat::Potion;
-use crate::prelude::object_what::PackFilter::{Foods, Potions, Scrolls};
-use crate::prelude::potion_kind::PotionKind;
-use crate::prelude::scroll_kind::SLEEP;
-use crate::prelude::stat_const::{STAT_HP, STAT_STRENGTH};
+use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll, Wand, Weapon};
+use crate::prelude::object_what::PackFilter::{AllObjects, Foods, Potions, Scrolls};
+use crate::prelude::potion_kind::{PotionKind, POTIONS};
+use crate::prelude::scroll_kind::{ScrollKind};
+use crate::prelude::SpotFlag::Monster;
+use crate::prelude::stat_const::{STAT_ARMOR, STAT_HP, STAT_HUNGER, STAT_STRENGTH};
 use crate::settings::fruit;
 
 pub static mut halluc: usize = 0;
@@ -123,145 +124,116 @@ pub unsafe fn quaff() {
 		}
 	}
 	print_stats(STAT_STRENGTH | STAT_HP);
-	if id_potions[(*obj).which_kind as usize].id_status != Called {
-		id_potions[(*obj).which_kind as usize].id_status = Identified;
+	if id_potions[potion_kind.to_index()].id_status != Called {
+		id_potions[potion_kind.to_index()].id_status = Identified;
 	}
 	vanish(&mut *obj, true, &mut rogue.pack);
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn read_scroll() -> i64 {
-	let mut ch: libc::c_short = 0;
-	let mut obj: *mut object = 0 as *mut object;
-	let mut msg: [libc::c_char; 80] = [0; 80];
+pub unsafe fn read_scroll() {
 	if blind != 0 {
-		message(
-			b"You can't see to read the scroll.\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+		message("You can't see to read the scroll.", 0);
 		return;
 	}
-	ch = pack_letter("read what?", Scrolls) as libc::c_short;
-	if ch as i64 == '\u{1b}' as i32 {
+
+	let ch = pack_letter("read what?", Scrolls);
+	if ch == CANCEL {
 		return;
 	}
-	obj = get_letter_object(ch as i64);
+
+	let obj = get_letter_object(ch);
 	if obj.is_null() {
-		message(
-			b"no such item.\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+		message("no such item.", 0);
 		return;
 	}
-	if (*obj).what_is as i64
-		!= 0o4 as i64 as libc::c_ushort as i64
-	{
-		message(
-			b"you can't read that\0" as *const u8 as *const libc::c_char,
-			0 as i64,
-		);
+	if (*obj).what_is != Scroll {
+		message("you can't read that", 0);
 		return;
 	}
-	match (*obj).which_kind as i64 {
-		7 => {
-			message(
-				b"you hear a maniacal laughter in the distance\0" as *const u8
-					as *const libc::c_char,
-				0 as i64,
-			);
+
+	let scroll_kind = ScrollKind::from_index((*obj).which_kind as usize);
+	match scroll_kind {
+		ScrollKind::ScareMonster => {
+			message("you hear a maniacal laughter in the distance", 0);
 		}
-		1 => {
+		ScrollKind::HoldMonster => {
 			hold_monster();
 		}
-		2 => {
-			if !(rogue.weapon).is_null() {
-				if (*rogue.weapon).what_is as i64
-					== 0o2 as i64 as libc::c_ushort as i64
-				{
-					let msg = format!(
+		ScrollKind::EnchWeapon => {
+			if !rogue.weapon.is_null() {
+				if (*rogue.weapon).what_is == Weapon {
+					message(&format!(
 						"your {}glow{} {}for a moment",
-						name_of(&rogue.weapon),
-						if (*rogue.weapon).quantity as i64 <= 1 { "s" } else { "" },
-						get_ench_color(),
-					);
-					message(&msg, 0 as i64);
+						name_of(&*rogue.weapon),
+						if (*rogue.weapon).quantity <= 1 { "s" } else { "" },
+						get_ench_color()
+					), 0);
 					if coin_toss() {
 						(*rogue.weapon).hit_enchant += 1;
-						(*rogue.weapon).hit_enchant;
 					} else {
 						(*rogue.weapon).d_enchant += 1;
-						(*rogue.weapon).d_enchant;
 					}
 				}
 				(*rogue.weapon).is_cursed = 0;
 			} else {
-				message("your hands tingle", 0 as i64);
+				message("your hands tingle", 0);
 			}
 		}
-		3 => {
-			if !(rogue.armor).is_null() {
-				let msg = format!("your armor glows {}for a moment", get_ench_color(), );
-				message(&msg, 0 as i64);
+		ScrollKind::EnchArmor => {
+			if !rogue.armor.is_null() {
+				message(&format!("your armor glows {}for a moment", get_ench_color(), ), 0);
 				(*rogue.armor).d_enchant += 1;
-				(*rogue.armor).d_enchant;
 				(*rogue.armor).is_cursed = 0;
-				print_stats(0o20 as i64);
+				print_stats(STAT_ARMOR);
 			} else {
-				message("your skin crawls", 0 as i64);
+				message("your skin crawls", 0);
 			}
 		}
-		4 => {
-			message("this is a scroll of identify", 0 as i64);
-			(*obj).identified = 1 as libc::c_short;
-			(*id_scrolls.as_mut_ptr().offset((*obj).which_kind as isize))
-				.id_status = 0o1 as libc::c_ushort;
+		ScrollKind::Identify => {
+			message("this is a scroll of identify", 0);
+			(*obj).identified = true;
+			id_scrolls[(*obj).which_kind as usize].id_status = Identified;
 			idntfy();
 		}
-		5 => {
+		ScrollKind::Teleport => {
 			tele();
 		}
-		6 => {
-			message("you fall asleep", 0 as i64);
+		ScrollKind::Sleep => {
+			message("you fall asleep", 0);
 			take_a_nap();
 		}
-		0 => {
-			if !(rogue.armor).is_null() {
-				message("your armor is covered by a shimmering gold shield", 0 as i64);
-				(*rogue.armor).is_protected = 1 as libc::c_short;
+		ScrollKind::ProtectArmor => {
+			if !rogue.armor.is_null() {
+				message("your armor is covered by a shimmering gold shield", 0);
+				(*rogue.armor).is_protected = 1;
 				(*rogue.armor).is_cursed = 0;
 			} else {
-				message("your acne seems to have disappeared", 0 as libc::c_int);
+				message("your acne seems to have disappeared", 0);
 			}
 		}
-		8 => {
-			let msg = if !player_hallucinating() {
+		ScrollKind::RemoveCurse => {
+			message(if !player_hallucinating() {
 				"you feel as though someone is watching over you"
 			} else {
 				"you feel in touch with the universal oneness"
-			};
-			message(msg, 0 as libc::c_int);
+			}, 0);
 			uncurse_all();
 		}
-		9 => {
+		ScrollKind::CreateMonster => {
 			create_monster();
 		}
-		10 => {
+		ScrollKind::AggravateMonster => {
 			aggravate();
 		}
-		11 => {
-			message("this scroll seems to have a map on it", 0 as libc::c_int);
+		ScrollKind::MagicMapping => {
+			message("this scroll seems to have a map on it", 0);
 			draw_magic_map();
 		}
-		_ => {}
 	}
-	if (*id_scrolls.as_mut_ptr().offset((*obj).which_kind as isize)).id_status
-		as libc::c_int != 0o2 as libc::c_int as libc::c_ushort as libc::c_int
-	{
-		(*id_scrolls.as_mut_ptr().offset((*obj).which_kind as isize))
-			.id_status = 0o1 as libc::c_int as libc::c_ushort;
+	if id_scrolls[scroll_kind.to_index()].id_status != Called {
+		id_scrolls[scroll_kind.to_index()].id_status = Identified;
 	}
-	vanish(&mut *obj, (*obj).which_kind != SLEEP, &mut rogue.pack);
-	panic!("Reached end of non-void function without returning");
+	vanish(&mut *obj, scroll_kind != ScrollKind::Sleep, &mut rogue.pack);
 }
 
 pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj) {
@@ -271,11 +243,11 @@ pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj) {
 	if (*obj).quantity > 1 {
 		(*obj).quantity -= 1;
 	} else {
-		if (*obj).in_use_flags & BEING_WIELDED {
+		if ((*obj).in_use_flags & BEING_WIELDED) != 0 {
 			unwield(obj);
-		} else if (*obj).in_use_flags & BEING_WORN {
+		} else if ((*obj).in_use_flags & BEING_WORN) != 0 {
 			unwear(obj);
-		} else if (*obj).in_use_flags & ON_EITHER_HAND {
+		} else if ((*obj).in_use_flags & ON_EITHER_HAND) != 0 {
 			un_put_on(obj);
 		}
 		take_from_pack(obj, pack);
@@ -289,7 +261,7 @@ pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj) {
 unsafe fn potion_heal(extra: bool) {
 	rogue.hp_current += rogue.exp;
 
-	let ratio = rogue.hp_current as f32 / rogue.hp_max;
+	let mut ratio = rogue.hp_current as f32 / rogue.hp_max as f32;
 	if ratio >= 1.00 {
 		rogue.hp_max += if extra { 2 } else { 1 };
 		extra_hp += if extra { 2 } else { 1 };
@@ -305,8 +277,8 @@ unsafe fn potion_heal(extra: bool) {
 		if extra {
 			ratio += ratio;
 		}
-		let add = ratio * (rogue.hp_max - rogue.hp_current);
-		rogue.hp_current += add;
+		let add = ratio * (rogue.hp_max - rogue.hp_current) as f32;
+		rogue.hp_current += add as isize;
 		if rogue.hp_current > rogue.hp_max {
 			rogue.hp_current = rogue.hp_max;
 		}
@@ -321,59 +293,99 @@ unsafe fn potion_heal(extra: bool) {
 	}
 	if halluc != 0 && extra {
 		unhallucinate();
-	} else if halluc {
+	} else if halluc != 0 {
 		halluc = (halluc / 2) + 1;
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn eat() {
-	let mut ch: libc::c_short = 0;
-	let mut moves: libc::c_short = 0;
-	let mut obj: *mut object = 0 as *mut object;
-	let mut buf: [libc::c_char; 70] = [0; 70];
-	ch = pack_letter("eat what?", Foods) as libc::c_short;
-	if ch as libc::c_int == '\u{1b}' as i32 {
-		return;
-	}
-	obj = get_letter_object(ch as libc::c_int);
-	if obj.is_null() {
-		message("no such item.", 0 as libc::c_int);
-		return;
-	}
-	if (*obj).what_is as libc::c_int
-		!= 0o40 as libc::c_int as libc::c_ushort as libc::c_int
-	{
-		message("you can't eat that", 0 as libc::c_int);
-		return;
-	}
-	if (*obj).which_kind as libc::c_int == 1 as libc::c_int
-		|| rand_percent(60) != 0
-	{
-		moves = get_rand(900 as libc::c_int, 1100 as libc::c_int) as libc::c_short;
-		if (*obj).which_kind as libc::c_int == 0 as libc::c_int {
-			message("yum, that tasted good", 0 as libc::c_int);
-		} else {
-			let buf = format!("my, that was a yummy {}", &fruit());
-			message(&buf, 0 as libc::c_int);
+unsafe fn idntfy() {
+	loop {
+		let ch = pack_letter("what would you like to identify?", AllObjects);
+		if ch == CANCEL {
+			return;
 		}
-	} else {
-		moves = get_rand(700 as libc::c_int, 900 as libc::c_int) as libc::c_short;
-		message("yuk, that food tasted awful", 0 as libc::c_int);
-		add_exp(2 as libc::c_int, true);
+
+		let obj = get_letter_object(ch);
+		if obj.is_null() {
+			message("no such item, try again", 0);
+			message("", 0);
+			check_message();
+			continue;
+		}
+
+		(*obj).identified = true;
+		match (*obj).what_is {
+			Scroll | Potion | Weapon | Armor | Wand | Ring => {
+				let id_table = get_id_table(&*obj);
+				id_table[(*obj).which_kind as usize].id_status = Identified;
+			}
+			_ => {}
+		}
+		message(&get_desc(&*obj), 0);
 	}
-	rogue
-		.moves_left = (rogue.moves_left as libc::c_int / 3 as libc::c_int)
-		as libc::c_short;
-	rogue
-		.moves_left = (rogue.moves_left as libc::c_int + moves as libc::c_int)
-		as libc::c_short;
-	*hunger_str
-		.as_mut_ptr()
-		.offset(0 as libc::c_int as isize) = 0 as libc::c_int as libc::c_char;
-	print_stats(0o100 as libc::c_int);
+}
+
+
+pub unsafe fn eat() {
+	let ch = pack_letter("eat what?", Foods);
+	if ch == CANCEL {
+		return;
+	}
+
+	let obj = get_letter_object(ch);
+	if obj.is_null() {
+		message("no such item.", 0);
+		return;
+	}
+	if (*obj).what_is != Food {
+		message("you can't eat that", 0);
+		return;
+	}
+
+	let moves = if (*obj).which_kind == FRUIT || rand_percent(60) {
+		if (*obj).which_kind == RATION {
+			message("yum, that tasted good", 0);
+		} else {
+			message(&format!("my, that was a yummy {}", &fruit()), 0);
+		}
+		get_rand(900, 1100)
+	} else {
+		message("yuk, that food tasted awful", 0);
+		add_exp(2, true);
+		get_rand(700, 900)
+	};
+	rogue.moves_left /= 3;
+	rogue.moves_left += moves;
+	hunger_str.clear();
+	print_stats(STAT_HUNGER);
+
 	vanish(&mut *obj, true, &mut rogue.pack);
-	panic!("Reached end of non-void function without returning");
+}
+
+unsafe fn hold_monster() {
+	let mut mcount = 0;
+	for i in -2..=2 {
+		for j in -2..=2 {
+			let row = rogue.row + i;
+			let col = rogue.col + j;
+			if is_off_screen(row, col) {
+				continue;
+			}
+			if Monster.is_set(dungeon[row as usize][col as usize]) {
+				let monster = object_at(&level_monsters, row, col);
+				(*monster).m_flags.asleep = true;
+				(*monster).m_flags.wakens = false;
+				mcount += 1;
+			}
+		}
+	}
+	if mcount == 0 {
+		message("you feel a strange sense of loss", 0);
+	} else if mcount == 1 {
+		message("the monster freezes", 0);
+	} else {
+		message("the monsters around you freeze", 0);
+	}
 }
 
 pub unsafe fn tele() {
@@ -388,49 +400,37 @@ pub unsafe fn tele() {
 }
 
 pub unsafe fn hallucinate() {
-	let mut obj: *mut object = 0 as *mut object;
-	let mut monster: *mut object = 0 as *mut object;
-	let mut ch: libc::c_short = 0;
 	if blind != 0 {
 		return;
 	}
-	obj = level_objects.next_object;
+	let mut obj = level_objects.next_object;
 	while !obj.is_null() {
-		ch = (if ncurses::wmove(ncurses::stdscr(), (*obj).row as libc::c_int, (*obj).col as libc::c_int)
-			== -(1 as libc::c_int)
-		{
-			-(1 as libc::c_int) as ncurses::chtype
-		} else {
-			ncurses::winch(ncurses::stdscr())
-		}) as libc::c_short;
-		if ((ch as libc::c_int) < 'A' as i32 || ch as libc::c_int > 'Z' as i32)
-			&& ((*obj).row as libc::c_int != rogue.row as libc::c_int
-			|| (*obj).col as libc::c_int != rogue.col as libc::c_int)
-		{
-			if ch as libc::c_int != ' ' as i32 && ch as libc::c_int != '.' as i32
-				&& ch as libc::c_int != '#' as i32 && ch as libc::c_int != '+' as i32
-			{
-				addch(gr_obj_char() as ncurses::chtype);
+		let ch = mvinch((*obj).row as i32, (*obj).col as i32);
+		if !is_monster_char(ch) && no_rogue((*obj).row, (*obj).col) {
+			let should_overdraw = match ch as u8 as char {
+				' ' | '.' | '#' | '+' => false,
+				_ => true
+			};
+			if should_overdraw {
+				addch(gr_obj_char() as chtype);
 			}
 		}
 		obj = (*obj).next_object;
 	}
-	monster = level_monsters.next_object;
+	let mut monster = level_monsters.next_object;
 	while !monster.is_null() {
-		ch = (if ncurses::wmove(
-			ncurses::stdscr(),
-			(*monster).row as libc::c_int,
-			(*monster).col as libc::c_int,
-		) == -(1 as libc::c_int)
-		{
-			-(1 as libc::c_int) as ncurses::chtype
-		} else {
-			ncurses::winch(ncurses::stdscr())
-		}) as libc::c_short;
-		if ch as libc::c_int >= 'A' as i32 && ch as libc::c_int <= 'Z' as i32 {
-			addch(get_rand('A' as i32, 'Z' as i32) as ncurses::chtype);
+		let ch = mvinch((*monster).row as i32, (*monster).col as i32);
+		if is_monster_char(ch) {
+			addch(get_rand(chtype::from('A'), chtype::from('Z')));
 		}
 		monster = (*monster).next_object;
+	}
+}
+
+pub fn is_monster_char(ch: chtype) -> bool {
+	match ch as u8 as char {
+		'A'..='Z' => true,
+		_ => false,
 	}
 }
 
@@ -445,7 +445,7 @@ pub unsafe fn unblind()
 	blind = 0;
 	message("the veil of darkness lifts", 1);
 	relight();
-	if halluc {
+	if halluc != 0 {
 		hallucinate();
 	}
 	if detect_monster {
@@ -487,8 +487,8 @@ unsafe fn go_blind() {
 		}
 	}
 	if cur_room >= 0 {
-		for i in (rooms[cur_room].top_row as usize + 1)..rooms[cur_room].bottom_row as usize {
-			for j in (rooms[cur_room].left_col as usize + 1)..rooms[cur_room].right_col as usize {
+		for i in (rooms[cur_room as usize].top_row as usize + 1)..rooms[cur_room as usize].bottom_row as usize {
+			for j in (rooms[cur_room as usize].left_col as usize + 1)..rooms[cur_room as usize].right_col as usize {
 				mvaddch(i as i32, j as i32, chtype::from(' '));
 			}
 		}
@@ -496,18 +496,11 @@ unsafe fn go_blind() {
 	mvaddch(rogue.row as i32, rogue.col as i32, chtype::from(rogue.fchar));
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn get_ench_color() -> *mut libc::c_char {
+pub unsafe fn get_ench_color() -> &'static str {
 	if halluc != 0 {
-		return ((*id_potions
-			.as_mut_ptr()
-			.offset(
-				get_rand(0, 14 - 1) as isize,
-			))
-			.title)
-			.as_mut_ptr();
+		return &id_potions[get_rand(0, POTIONS - 1)].title;
 	}
-	return b"blue \0" as *const u8 as *const libc::c_char as *mut libc::c_char;
+	return "blue ";
 }
 
 pub unsafe fn confuse() {
@@ -518,4 +511,12 @@ pub unsafe fn unconfuse() {
 	confused = 0;
 	let msg = format!("you feel less {} now", if halluc > 0 { "trippy" } else { "confused" });
 	message(&msg, 1);
+}
+
+unsafe fn uncurse_all() {
+	let mut obj = rogue.pack.next_object;
+	while !obj.is_null() {
+		(*obj).is_cursed = 0;
+		obj = (*obj).next_object;
+	}
 }
