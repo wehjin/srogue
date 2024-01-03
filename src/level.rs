@@ -3,6 +3,7 @@
 use std::mem;
 use std::os::raw::c_int;
 use libc::{c_short, c_ushort};
+use ncurses::clear;
 use SpotFlag::Door;
 use crate::message::{message, print_stats};
 use crate::monster::wake_room;
@@ -14,6 +15,8 @@ use crate::score::win;
 use crate::prelude::*;
 use crate::prelude::SpotFlag::{Floor, HorWall, Object, Stairs, Tunnel, VertWall};
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
+use crate::prelude::trap_kind::TrapKind::NoTrap;
+use crate::room::RoomType::Nothing;
 
 pub static mut cur_level: isize = 0;
 pub static mut max_level: isize = 1;
@@ -278,44 +281,29 @@ pub unsafe fn connect_rooms(room1: i64, room2: i64) -> bool {
 	return true;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn clear_level() -> i64 {
-	let mut i: c_short = 0;
-	let mut j: c_short = 0;
-	i = 0 as i64 as c_short;
-	while (i as i64) < 9 as i64 {
-		(*rooms.as_mut_ptr().offset(i as isize)).room_type = RoomType::Nothing;
-		j = 0 as i64 as c_short;
-		while (j as i64) < 4 as i64 {
-			(*rooms.as_mut_ptr().offset(i as isize)).doors[j as usize].oth_room = None;
-			j += 1;
+pub unsafe fn clear_level() {
+	for i in 0..MAXROOMS as usize {
+		rooms[i].room_type = Nothing;
+		for j in 0..4 {
+			rooms[i].doors[j].oth_room = None;
 		}
-		i += 1;
 	}
-	i = 0 as i64 as c_short;
-	while (i as i64) < 10 as i64 {
-		(*traps.as_mut_ptr().offset(i as isize))
-			.trap_type = -(1) as c_short;
-		i += 1;
+	for i in 0..MAX_TRAPS {
+		traps[i].trap_type = NoTrap;
 	}
-	i = 0 as i64 as c_short;
-	while (i as i64) < 24 as i64 {
-		j = 0 as i64 as c_short;
-		while (j as i64) < 80 as i64 {
-			dungeon[i as usize][j as usize] = 0 as i64 as c_ushort;
-			j += 1;
+	for i in 0..DROWS {
+		for j in 0..DCOLS {
+			SpotFlag::set_nothing(&mut dungeon[i][j]);
 		}
-		i += 1;
 	}
 	see_invisible = false;
-	detect_monster = see_invisible;
+	detect_monster = false;
 	bear_trap = 0;
-	being_held = bear_trap > 0;
+	being_held = false;
 	party_room = NO_ROOM;
 	rogue.col = -1;
-	rogue.row = rogue.col;
-	ncurses::wclear(ncurses::stdscr());
-	panic!("Reached end of non-void function without returning");
+	rogue.row = -1;
+	clear();
 }
 
 pub unsafe fn put_door(room: &mut room, door_dir: DoorDirection) -> DungeonSpot {

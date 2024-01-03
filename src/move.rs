@@ -12,7 +12,7 @@ use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
 use crate::settings::jump;
 
 pub static mut m_moves: i16 = 0;
-pub static you_can_move_again: &'static str = "you can move again";
+pub static YOU_CAN_MOVE_AGAIN: &'static str = "you can move again";
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum MoveResult {
@@ -100,7 +100,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool) -> MoveResult {
 		}
 	} else if SpotFlag::is_any_set(&vec![Door, Stairs, Trap], dungeon[row as usize][col as usize]) {
 		if levitate == 0 && Trap.is_set(dungeon[row as usize][col as usize]) {
-			trap_player(row, col);
+			trap_player(row as usize, col as usize);
 		}
 		reg_move();
 		StoppedOnSomething
@@ -335,7 +335,7 @@ pub unsafe extern "C" fn check_hunger(mut messages_only: libc::c_char) -> libc::
 				}
 				i += 1;
 			}
-			message(you_can_move_again, 1);
+			message(YOU_CAN_MOVE_AGAIN, 1);
 		}
 	}
 	if messages_only != 0 {
@@ -420,7 +420,7 @@ pub unsafe extern "C" fn reg_move() -> libc::c_char {
 			if dungeon[rogue.row as usize][rogue.col as usize] as libc::c_int
 				& 0o400 as libc::c_int as libc::c_ushort as libc::c_int != 0
 			{
-				trap_player(rogue.row, rogue.col);
+				trap_player(rogue.row as usize, rogue.col as usize);
 			}
 		}
 	}
@@ -432,7 +432,7 @@ pub unsafe extern "C" fn reg_move() -> libc::c_char {
 	}
 	heal();
 	if auto_search > 0 {
-		search(auto_search, auto_search > 0);
+		search(auto_search as usize, auto_search > 0);
 	}
 	return fainted;
 }

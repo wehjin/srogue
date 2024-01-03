@@ -92,8 +92,11 @@ impl SpotFlag {
 		return false;
 	}
 
-	pub fn is_empty(value: u16) -> bool {
+	pub fn is_nothing(value: u16) -> bool {
 		value == 0
+	}
+	pub fn set_nothing(value: &mut u16) {
+		*value = 0;
 	}
 	pub fn are_others_set(flags: &Vec<SpotFlag>, value: u16) -> bool {
 		let all = vec![Object, Monster, Stairs, HorWall, VertWall, Door, Floor, Tunnel, Trap, Hidden];

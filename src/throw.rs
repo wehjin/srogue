@@ -103,7 +103,7 @@ pub unsafe fn get_thrown_at_monster(obj: *mut object, dir: char, row: &mut i64, 
 	let ch = get_mask_char((*obj).what_is);
 	for mut i in 0..24 {
 		get_dir_rc(dir, row, col, false);
-		if SpotFlag::is_empty(dungeon[*row as usize][*col as usize])
+		if SpotFlag::is_nothing(dungeon[*row as usize][*col as usize])
 			|| (SpotFlag::is_any_set(&vec![HorWall, VertWall, Hidden], dungeon[*row as usize][*col as usize]) && !Trap.is_set(dungeon[*row as usize][*col as usize])) {
 			*row = orow;
 			*col = ocol;
@@ -143,7 +143,7 @@ unsafe fn flop_weapon(weapon: &mut obj, row: i64, col: i64) {
 		row = new_row;
 		col = new_col;
 		if row > (DROWS - 2) as i64 || row < MIN_ROW || col > (DCOLS - 1) as i64 || col < 0
-			|| SpotFlag::is_empty(dungeon[row as usize][col as usize])
+			|| SpotFlag::is_nothing(dungeon[row as usize][col as usize])
 			|| SpotFlag::are_others_set(&vec![Floor, Tunnel, Door, Monster], dungeon[row as usize][col as usize]) {
 			continue;
 		}

@@ -83,7 +83,7 @@ unsafe fn freeze(monster: &mut obj) {
 			}
 			killed_by(Ending::Hypothermia);
 		}
-		message(you_can_move_again, 1);
+		message(YOU_CAN_MOVE_AGAIN, 1);
 		monster.m_flags.freezing_rogue = false;
 	}
 }

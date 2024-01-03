@@ -1,6 +1,6 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-use libc::{c_int, c_short};
+use libc::{c_int};
 use ncurses::{mv, refresh};
 use crate::prelude::*;
 use crate::prelude::object_what::PackFilter::AllObjects;
@@ -22,8 +22,8 @@ pub unsafe fn play_level() {
 				message(&hit_message, 1);
 				hit_message.clear();
 			}
-			if trap_door != 0 {
-				trap_door = 0;
+			if trap_door {
+				trap_door = false;
 				return;
 			}
 			mv(rogue.row as i32, rogue.col as i32);
@@ -42,7 +42,7 @@ pub unsafe fn play_level() {
 				rest(if count > 0 { count } else { 1 } as c_int);
 			}
 			's' => {
-				search(if count > 0 { count } else { 1 } as c_short, false);
+				search(if count > 0 { count } else { 1 } as usize, false);
 			}
 			'i' => {
 				inventory(&mut rogue.pack, AllObjects);

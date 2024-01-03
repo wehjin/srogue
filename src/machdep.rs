@@ -1,6 +1,6 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-use std::{fs, process};
+use std::{fs, process, thread};
 use std::error::Error;
 use std::ffi::CString;
 use std::time::{Duration};
@@ -20,7 +20,6 @@ extern "C" {
 	fn byebye() -> i64;
 	fn getpid() -> pid_t;
 	fn getuid() -> uid_t;
-	fn sleep(_: libc::c_uint) -> libc::c_uint;
 	fn unlink(_: *const libc::c_char) -> i64;
 	fn getpwuid(_: uid_t) -> *mut passwd;
 	fn malloc(_: libc::c_ulong) -> *mut libc::c_void;
@@ -284,10 +283,8 @@ pub fn get_login_name() -> Option<String> {
 }
 
 
-#[no_mangle]
-pub unsafe extern "C" fn md_sleep(mut nsecs: i64) -> i64 {
-	sleep(nsecs as libc::c_uint);
-	panic!("Reached end of non-void function without returning");
+pub fn md_sleep(nsecs: i64) {
+	thread::sleep(Duration::from_nanos(nsecs as u64));
 }
 
 #[no_mangle]

@@ -455,6 +455,17 @@ pub unsafe fn relight() {
 	mvaddch(rogue.row as i32, rogue.col as i32, chtype::from(rogue.fchar));
 }
 
+pub unsafe fn take_a_nap() {
+	let mut i = get_rand(2, 5);
+	md_sleep(1);
+	while i > 0 {
+		i -= 1;
+		mv_mons();
+	}
+	md_sleep(1);
+	message(YOU_CAN_MOVE_AGAIN, 0);
+}
+
 
 #[no_mangle]
 pub unsafe extern "C" fn get_ench_color() -> *mut libc::c_char {
