@@ -18,7 +18,7 @@ use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::prelude::ring_kind::RINGS;
 use crate::prelude::scroll_kind::ScrollKind::{AggravateMonster, CreateMonster, EnchArmor, EnchWeapon, HoldMonster, Identify, MagicMapping, ProtectArmor, RemoveCurse, ScareMonster, Sleep, Teleport};
 use crate::prelude::scroll_kind::SCROLLS;
-use crate::prelude::SpotFlag::{Floor, Monster, Object, Tunnel};
+use crate::prelude::SpotFlag::{Floor, Monster, Object, Stairs, Tunnel};
 use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, WANDS};
 use crate::prelude::weapon_kind::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
 use crate::settings::fruit;
@@ -1147,16 +1147,11 @@ pub fn get_food(obj: &mut obj, force_ration: bool) {
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn put_stairs() -> libc::c_int {
+pub unsafe fn put_stairs() {
 	let mut row = 0;
 	let mut col = 0;
 	gr_row_col(&mut row, &mut col, vec![Floor, Tunnel]);
-	dungeon[row
-		as usize][col
-		as usize] = (dungeon[row as usize][col as usize] as libc::c_int
-		| 0o4 as libc::c_int as libc::c_ushort as libc::c_int) as libc::c_ushort;
-	panic!("Reached end of non-void function without returning");
+	Stairs.set(&mut dungeon[row as usize][col as usize]);
 }
 
 pub unsafe fn get_armor_class(obj: *const object) -> isize {
