@@ -18,7 +18,7 @@ use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::prelude::ring_kind::RINGS;
 use crate::prelude::scroll_kind::ScrollKind::{AggravateMonster, CreateMonster, EnchArmor, EnchWeapon, HoldMonster, Identify, MagicMapping, ProtectArmor, RemoveCurse, ScareMonster, Sleep, Teleport};
 use crate::prelude::scroll_kind::SCROLLS;
-use crate::prelude::SpotFlag::{Floor, Monster, Tunnel};
+use crate::prelude::SpotFlag::{Floor, Monster, Object, Tunnel};
 use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, WANDS};
 use crate::prelude::weapon_kind::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
 use crate::settings::fruit;
@@ -897,20 +897,11 @@ pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool) {
 }
 
 
-#[no_mangle]
-pub unsafe extern "C" fn place_at(
-	mut obj: *mut object,
-	mut row: i64,
-	mut col: i64,
-) -> i64 {
-	(*obj).row = row;
-	(*obj).col = col;
-	dungeon[row
-		as usize][col
-		as usize] = (dungeon[row as usize][col as usize] as i64
-		| 0o1 as libc::c_ushort as i64) as libc::c_ushort;
+pub unsafe fn place_at(obj: &mut object, row: i64, col: i64) {
+	obj.row = row;
+	obj.col = col;
+	Object.set(&mut dungeon[row as usize][col as usize]);
 	add_to_pack(obj, &mut level_objects, 0);
-	panic!("Reached end of non-void function without returning");
 }
 
 pub unsafe fn object_at(pack: &object, row: i64, col: i64) -> *mut object {

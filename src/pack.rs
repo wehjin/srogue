@@ -142,7 +142,7 @@ pub unsafe fn drop_0() {
 		(*obj).ichar = 'L';
 		take_from_pack(obj, &mut rogue.pack);
 	}
-	place_at(obj, rogue.row, rogue.col);
+	place_at(&mut *obj, rogue.row, rogue.col);
 	message(&format!("dropped {}", get_desc(&*obj)), 0);
 	reg_move();
 }

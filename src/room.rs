@@ -277,7 +277,7 @@ pub unsafe extern "C" fn party_objects(mut rn: i64) -> i64 {
 		}
 		if found != 0 {
 			obj = gr_object();
-			place_at(obj, row as i64, col as i64);
+			place_at(&mut *obj, row as i64, col as i64);
 			nf += 1;
 		}
 		i += 1;

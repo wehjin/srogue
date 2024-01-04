@@ -157,7 +157,7 @@ unsafe fn flop_weapon(weapon: &mut obj, row: i64, col: i64) {
 		(*new_weapon).in_use_flags = NOT_USED;
 		(*new_weapon).quantity = 1;
 		(*new_weapon).ichar = 'L';
-		place_at(new_weapon, row, col);
+		place_at(&mut *new_weapon, row, col);
 		if rogue_can_see(row, col) && (row != rogue.row || col != rogue.col) {
 			let mon = Monster.is_set(dungeon[row as usize][col as usize]);
 			Monster.clear(&mut dungeon[row as usize][col as usize]);
