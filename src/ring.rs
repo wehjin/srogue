@@ -227,7 +227,7 @@ pub unsafe fn ring_stats(print: bool) {
 		let ring = &*ring;
 		r_rings += 1;
 		e_rings += 1;
-		match RingKind::from_code((*ring).which_kind) {
+		match RingKind::from_index((*ring).which_kind as usize) {
 			RingKind::Stealth => { stealthy += 1; }
 			RingKind::RTeleport => { r_teleport = true; }
 			RingKind::Regeneration => { regeneration += 1; }

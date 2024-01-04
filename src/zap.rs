@@ -72,8 +72,7 @@ pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64) -> *mu
 pub unsafe fn zap_monster(monster: &mut obj, which_kind: u16) {
 	let row = monster.row;
 	let col = monster.col;
-	let kind = WandKind::from_code(which_kind);
-	match kind {
+	match WandKind::from_index(which_kind as usize) {
 		WandKind::SlowMonster => {
 			if monster.m_flags.hasted {
 				monster.m_flags.hasted = false;

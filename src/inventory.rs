@@ -11,10 +11,10 @@ use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_LEFT_HAND, ON_RIG
 use crate::prelude::object_what::{PackFilter};
 use crate::prelude::object_what::ObjectWhat::{Amulet, Armor, Food, Gold, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::AllObjects;
-use crate::prelude::potion_kind::POTIONS;
-use crate::prelude::ring_kind::{ADD_STRENGTH, DEXTERITY, RINGS};
-use crate::prelude::scroll_kind::SCROLLS;
-use crate::prelude::wand_kind::WANDS;
+use crate::prelude::potion_kind::{PotionKind, POTIONS};
+use crate::prelude::ring_kind::{ADD_STRENGTH, DEXTERITY, RingKind, RINGS};
+use crate::prelude::scroll_kind::{ScrollKind, SCROLLS};
+use crate::prelude::wand_kind::{WandKind, WANDS};
 
 pub static mut is_wood: [bool; WANDS] = [false; WANDS];
 pub static wand_materials: [&'static str; WAND_MATERIALS] = [
@@ -205,8 +205,14 @@ unsafe fn get_id_status(obj: &object) -> IdStatus {
 	get_id_table(obj)[obj.which_kind as usize].id_status
 }
 
-unsafe fn get_id_real(obj: &object) -> &String {
-	&get_id_table(obj)[obj.which_kind as usize].real
+fn get_id_real(obj: &object) -> &'static str {
+	match obj.what_is {
+		Scroll => ScrollKind::from_index(obj.which_kind as usize).real_name(),
+		Potion => PotionKind::from_index(obj.which_kind as usize).real_name(),
+		Wand => WandKind::from_index(obj.which_kind as usize).real_name(),
+		Ring => RingKind::from_index(obj.which_kind as usize).real_name(),
+		_ => "",
+	}
 }
 
 unsafe fn get_identified(obj: &object) -> String {

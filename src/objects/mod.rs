@@ -27,7 +27,6 @@ use crate::settings::fruit;
 pub struct id {
 	pub value: i16,
 	pub title: String,
-	pub real: String,
 	pub id_status: IdStatus,
 }
 
@@ -319,7 +318,6 @@ pub static mut id_potions: [id; POTIONS] = {
 			let mut init = id {
 				value: 100,
 				title: "blue ".to_string(),
-				real: "of increase strength ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -328,7 +326,6 @@ pub static mut id_potions: [id; POTIONS] = {
 			let mut init = id {
 				value: 250,
 				title: "red ".to_string(),
-				real: "of restore strength ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -337,7 +334,6 @@ pub static mut id_potions: [id; POTIONS] = {
 			let mut init = id {
 				value: 100,
 				title: "green ".to_string(),
-				real: "of healing ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -346,7 +342,6 @@ pub static mut id_potions: [id; POTIONS] = {
 			let mut init = id {
 				value: 200,
 				title: "grey ".to_string(),
-				real: "of extra healing ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -355,7 +350,6 @@ pub static mut id_potions: [id; POTIONS] = {
 			let mut init = id {
 				value: 10,
 				title: "brown ".to_string(),
-				real: "of poison ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -364,7 +358,6 @@ pub static mut id_potions: [id; POTIONS] = {
 			let mut init = id {
 				value: 300,
 				title: "clear ".to_string(),
-				real: "of raise level ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -373,7 +366,6 @@ pub static mut id_potions: [id; POTIONS] = {
 			let mut init = id {
 				value: 10,
 				title: "pink ".to_string(),
-				real: "of blindness ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -382,7 +374,6 @@ pub static mut id_potions: [id; POTIONS] = {
 			let mut init = id {
 				value: 25,
 				title: "white ".to_string(),
-				real: "of hallucination ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -391,7 +382,6 @@ pub static mut id_potions: [id; POTIONS] = {
 			let mut init = id {
 				value: 100,
 				title: "purple ".to_string(),
-				real: "of detect monster ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -400,7 +390,6 @@ pub static mut id_potions: [id; POTIONS] = {
 			let mut init = id {
 				value: 100,
 				title: "black ".to_string(),
-				real: "of detect things ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -409,7 +398,6 @@ pub static mut id_potions: [id; POTIONS] = {
 			let mut init = id {
 				value: 10,
 				title: "yellow ".to_string(),
-				real: "of confusion ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -418,7 +406,6 @@ pub static mut id_potions: [id; POTIONS] = {
 			let mut init = id {
 				value: 80,
 				title: "plaid ".to_string(),
-				real: "of levitation ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -427,7 +414,6 @@ pub static mut id_potions: [id; POTIONS] = {
 			let mut init = id {
 				value: 150,
 				title: "burgundy ".to_string(),
-				real: "of haste self ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -436,7 +422,6 @@ pub static mut id_potions: [id; POTIONS] = {
 			let mut init = id {
 				value: 145,
 				title: "beige ".to_string(),
-				real: "of see invisible ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -449,7 +434,6 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			let mut init = id {
 				value: 505,
 				title: "                                   ".to_string(),
-				real: "of protect armor ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -458,7 +442,6 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			let mut init = id {
 				value: 200,
 				title: "                                   ".to_string(),
-				real: "of hold monster ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -467,7 +450,6 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			let mut init = id {
 				value: 235,
 				title: "                                   ".to_string(),
-				real: "of enchant weapon ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -476,7 +458,6 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			let mut init = id {
 				value: 235,
 				title: "                                   ".to_string(),
-				real: "of enchant armor ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -485,7 +466,6 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			let mut init = id {
 				value: 175,
 				title: "                                   ".to_string(),
-				real: "of identify ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -494,7 +474,6 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			let mut init = id {
 				value: 190,
 				title: "                                   ".to_string(),
-				real: "of teleportation ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -503,7 +482,6 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			let mut init = id {
 				value: 25,
 				title: "                                   ".to_string(),
-				real: "of sleep ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -512,7 +490,6 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			let mut init = id {
 				value: 610,
 				title: "                                   ".to_string(),
-				real: "of scare monster ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -521,7 +498,6 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			let mut init = id {
 				value: 210,
 				title: "                                   ".to_string(),
-				real: "of remove curse ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -530,7 +506,6 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			let mut init = id {
 				value: 100,
 				title: "                                   ".to_string(),
-				real: "of create monster ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -539,7 +514,6 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			let mut init = id {
 				value: 25,
 				title: "                                   ".to_string(),
-				real: "of aggravate monster ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -548,7 +522,6 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			let mut init = id {
 				value: 180,
 				title: "                                   ".to_string(),
-				real: "of magic mapping ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -561,7 +534,6 @@ pub static mut id_weapons: [id; WEAPONS] = {
 			let mut init = id {
 				value: 150,
 				title: "short bow ".to_string(),
-				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -570,7 +542,6 @@ pub static mut id_weapons: [id; WEAPONS] = {
 			let mut init = id {
 				value: 8,
 				title: "darts ".to_string(),
-				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -579,7 +550,6 @@ pub static mut id_weapons: [id; WEAPONS] = {
 			let mut init = id {
 				value: 15,
 				title: "arrows ".to_string(),
-				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -588,7 +558,6 @@ pub static mut id_weapons: [id; WEAPONS] = {
 			let mut init = id {
 				value: 27,
 				title: "daggers ".to_string(),
-				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -597,7 +566,6 @@ pub static mut id_weapons: [id; WEAPONS] = {
 			let mut init = id {
 				value: 35,
 				title: "shurikens ".to_string(),
-				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -606,7 +574,6 @@ pub static mut id_weapons: [id; WEAPONS] = {
 			let mut init = id {
 				value: 360,
 				title: "mace ".to_string(),
-				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -615,7 +582,6 @@ pub static mut id_weapons: [id; WEAPONS] = {
 			let mut init = id {
 				value: 470,
 				title: "long sword ".to_string(),
-				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -624,7 +590,6 @@ pub static mut id_weapons: [id; WEAPONS] = {
 			let mut init = id {
 				value: 580,
 				title: "two-handed sword ".to_string(),
-				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -637,7 +602,6 @@ pub static mut id_armors: [id; ARMORS] = {
 			let mut init = id {
 				value: 300,
 				title: "leather armor ".to_string(),
-				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -646,7 +610,6 @@ pub static mut id_armors: [id; ARMORS] = {
 			let mut init = id {
 				value: 300,
 				title: "ring mail ".to_string(),
-				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -655,7 +618,6 @@ pub static mut id_armors: [id; ARMORS] = {
 			let mut init = id {
 				value: 400,
 				title: "scale mail ".to_string(),
-				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -664,7 +626,6 @@ pub static mut id_armors: [id; ARMORS] = {
 			let mut init = id {
 				value: 500,
 				title: "chain mail ".to_string(),
-				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -673,7 +634,6 @@ pub static mut id_armors: [id; ARMORS] = {
 			let mut init = id {
 				value: 600,
 				title: "banded mail ".to_string(),
-				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -682,7 +642,6 @@ pub static mut id_armors: [id; ARMORS] = {
 			let mut init = id {
 				value: 600,
 				title: "splint mail ".to_string(),
-				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -691,7 +650,6 @@ pub static mut id_armors: [id; ARMORS] = {
 			let mut init = id {
 				value: 700,
 				title: "plate mail ".to_string(),
-				real: "".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -704,7 +662,6 @@ pub static mut id_wands: [id; WANDS] = {
 			let mut init = id {
 				value: 25,
 				title: "                                 ".to_string(),
-				real: "of teleport away ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -713,7 +670,6 @@ pub static mut id_wands: [id; WANDS] = {
 			let mut init = id {
 				value: 50,
 				title: "                                 ".to_string(),
-				real: "of slow monster ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -722,7 +678,6 @@ pub static mut id_wands: [id; WANDS] = {
 			let mut init = id {
 				value: 45,
 				title: "                                 ".to_string(),
-				real: "of confuse monster ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -731,7 +686,6 @@ pub static mut id_wands: [id; WANDS] = {
 			let mut init = id {
 				value: 8,
 				title: "                                 ".to_string(),
-				real: "of invisibility ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -740,7 +694,6 @@ pub static mut id_wands: [id; WANDS] = {
 			let mut init = id {
 				value: 55,
 				title: "                                 ".to_string(),
-				real: "of polymorph ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -749,7 +702,6 @@ pub static mut id_wands: [id; WANDS] = {
 			let mut init = id {
 				value: 2,
 				title: "                                 ".to_string(),
-				real: "of haste monster ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -758,7 +710,6 @@ pub static mut id_wands: [id; WANDS] = {
 			let mut init = id {
 				value: 25,
 				title: "                                 ".to_string(),
-				real: "of sleep ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -767,7 +718,6 @@ pub static mut id_wands: [id; WANDS] = {
 			let mut init = id {
 				value: 20,
 				title: "                                 ".to_string(),
-				real: "of magic missile ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -776,7 +726,6 @@ pub static mut id_wands: [id; WANDS] = {
 			let mut init = id {
 				value: 20,
 				title: "                                 ".to_string(),
-				real: "of cancellation ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -785,7 +734,6 @@ pub static mut id_wands: [id; WANDS] = {
 			let mut init = id {
 				value: 0,
 				title: "                                 ".to_string(),
-				real: "of do nothing ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -798,7 +746,6 @@ pub static mut id_rings: [id; RINGS] = {
 			let mut init = id {
 				value: 250,
 				title: "                                 ".to_string(),
-				real: "of stealth ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -807,7 +754,6 @@ pub static mut id_rings: [id; RINGS] = {
 			let mut init = id {
 				value: 100,
 				title: "                                 ".to_string(),
-				real: "of teleportation ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -816,7 +762,6 @@ pub static mut id_rings: [id; RINGS] = {
 			let mut init = id {
 				value: 255,
 				title: "                                 ".to_string(),
-				real: "of regeneration ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -825,7 +770,6 @@ pub static mut id_rings: [id; RINGS] = {
 			let mut init = id {
 				value: 295,
 				title: "                                 ".to_string(),
-				real: "of slow digestion ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -834,7 +778,6 @@ pub static mut id_rings: [id; RINGS] = {
 			let mut init = id {
 				value: 200,
 				title: "                                 ".to_string(),
-				real: "of add strength ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -843,8 +786,6 @@ pub static mut id_rings: [id; RINGS] = {
 			let mut init = id {
 				value: 250,
 				title: "                                 ".to_string(),
-				real: "of sustain strength ".to_string(),
-
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -853,7 +794,6 @@ pub static mut id_rings: [id; RINGS] = {
 			let mut init = id {
 				value: 250,
 				title: "                                 ".to_string(),
-				real: "of dexterity ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -862,7 +802,6 @@ pub static mut id_rings: [id; RINGS] = {
 			let mut init = id {
 				value: 25,
 				title: "                                 ".to_string(),
-				real: "of adornment ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -871,7 +810,6 @@ pub static mut id_rings: [id; RINGS] = {
 			let mut init = id {
 				value: 300,
 				title: "                                 ".to_string(),
-				real: "of see invisible ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -880,7 +818,6 @@ pub static mut id_rings: [id; RINGS] = {
 			let mut init = id {
 				value: 290,
 				title: "                                 ".to_string(),
-				real: "of maintain armor ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -889,7 +826,6 @@ pub static mut id_rings: [id; RINGS] = {
 			let mut init = id {
 				value: 270,
 				title: "                                 ".to_string(),
-				real: "of searching ".to_string(),
 				id_status: IdStatus::Unidentified,
 			};
 			init
@@ -1004,22 +940,22 @@ pub unsafe fn free_stuff(mut obj_list: *mut object) {
 
 pub unsafe fn name_of(obj: &object) -> String {
 	match obj.what_is {
-		Armor => "armor ",
+		Armor => "armor ".to_string(),
 		Weapon => match obj.which_kind {
 			DART => if obj.quantity > 1 { "darts " } else { "dart " },
 			ARROW => if obj.quantity > 1 { "arrows " } else { "arrow " },
 			DAGGER => if obj.quantity > 1 { "daggers " } else { "dagger " },
 			SHURIKEN => if obj.quantity > 1 { "shurikens " } else { "shuriken " },
 			_ => &id_weapons[obj.which_kind as usize].title
-		},
-		Scroll => if obj.quantity > 1 { "scrolls " } else { "scroll " }
-		Potion => if obj.quantity > 1 { "potions " } else { "potion " }
-		Food => if obj.which_kind == RATION { "food " } else { &fruit() }
-		Wand => if is_wood[obj.which_kind as usize] { "staff " } else { "wand " },
-		Ring => "ring ",
-		Amulet => "amulet ",
-		_ => "unknown ",
-	}.to_string()
+		}.to_string(),
+		Scroll => if obj.quantity > 1 { "scrolls " } else { "scroll " }.to_string(),
+		Potion => if obj.quantity > 1 { "potions " } else { "potion " }.to_string(),
+		Food => if obj.which_kind == RATION { "food ".to_string() } else { fruit() }
+		Wand => if is_wood[obj.which_kind as usize] { "staff " } else { "wand " }.to_string(),
+		Ring => "ring ".to_string(),
+		Amulet => "amulet ".to_string(),
+		_ => "unknown ".to_string(),
+	}
 }
 
 pub unsafe fn gr_object() -> *mut object {
@@ -1401,12 +1337,13 @@ unsafe fn get_kind(max_kind: usize) -> Option<usize> {
 	let good_kind = {
 		let mut good_kind = None;
 		loop {
-			let input_line = get_input_line::<String>("which kind?", None, None, false, true).trim();
-			if input_line.is_empty() {
+			let line = get_input_line::<String>("which kind?", None, None, false, true);
+			let trimmed_line = line.trim();
+			if trimmed_line.is_empty() {
 				good_kind = None;
 				break;
 			}
-			match input_line.parse::<usize>() {
+			match trimmed_line.parse::<usize>() {
 				Err(_) => {
 					sound_bell();
 				}
