@@ -1362,10 +1362,20 @@ pub unsafe fn put_m_at(row: i64, col: i64, monster: &mut object) {
 }
 
 pub unsafe fn rogue_can_see(row: i64, col: i64) -> bool {
-	let in_current_room = get_room_number(row, col) == cur_room;
-	let not_in_maze = rooms[cur_room as usize].room_type != RoomType::Maze;
-	let is_very_close = rogue_is_around(row, col);
-	blind == 0 && ((in_current_room && not_in_maze) || is_very_close)
+	blind == 0
+		&& ((in_current_room(row, col) && not_in_maze()) || is_very_close(row, col))
+}
+
+unsafe fn is_very_close(row: i64, col: i64) -> bool {
+	rogue_is_around(row, col)
+}
+
+unsafe fn not_in_maze() -> bool {
+	rooms[cur_room as usize].room_type != RoomType::Maze
+}
+
+unsafe fn in_current_room(row: i64, col: i64) -> bool {
+	get_room_number(row, col) == cur_room
 }
 
 pub unsafe fn move_confused(monster: &mut object) -> bool {
