@@ -8,12 +8,13 @@ static INSTRUCTIONS_FILE: &'static str = "/usr/games/rogue.instr";
 
 #[no_mangle]
 pub unsafe extern "C" fn Instructions() {
-	let file = File::open(INSTRUCTIONS_FILE);
-	if file.is_err() {
-		message("Help file not on line.", 0);
-		return;
-	}
-
+	let mut file = match File::open(INSTRUCTIONS_FILE) {
+		Ok(file) => file,
+		Err(_) => {
+			message("Help file not on line.", 0);
+			return;
+		}
+	};
 	let mut rows = Vec::new();
 	for row in 0..DROWS {
 		// Read the rows in out of the window.
@@ -37,7 +38,7 @@ pub unsafe extern "C" fn Instructions() {
 	refresh();
 	for row in 0..DROWS {
 		let mut buf = [0u8; 256];
-		if file.unwrap().read_exact(&mut buf).is_err() {
+		if file.read_exact(&mut buf).is_err() {
 			break;
 		}
 		let first_line = if let Some(index) = buf.iter().position(|x| *x == '\n' as u8) {

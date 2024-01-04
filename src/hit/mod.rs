@@ -330,7 +330,6 @@ pub unsafe fn get_weapon_damage(weapon: &object) -> isize {
 mod safe;
 
 pub use safe::*;
-use crate::monster::flags::MONSTERS;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::SpotFlag::Monster;

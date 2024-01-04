@@ -157,7 +157,7 @@ pub unsafe extern "C" fn md_slurp() -> i64 {
 	panic!("Reached end of non-void function without returning");
 }
 
-pub fn md_control_keybord(mut mode: libc::c_short) {
+pub fn md_control_keybord(_mode: libc::c_short) {
 	// Stubbing this out allows tty driver so steal some commands like ^Y.
 	// See machdep.c for more details
 }

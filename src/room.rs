@@ -79,7 +79,7 @@ pub static mut rooms: [room; MAXROOMS as usize] = [rm {
 	right_col: 0,
 	left_col: 0,
 	top_row: 0,
-	doors: [dr::default(); 4],
+	doors: [dr { oth_room: None, oth_row: None, oth_col: None, door_row: 0, door_col: 0 }; 4],
 	room_type: RoomType::Nothing,
 }; MAXROOMS as usize];
 #[no_mangle]

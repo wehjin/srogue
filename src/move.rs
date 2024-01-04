@@ -182,8 +182,7 @@ pub unsafe extern "C" fn is_passable(
 			false
 		};
 	}
-	const flags: Vec<SpotFlag> = vec![SpotFlag::Floor, Tunnel, Door, Stairs, Trap];
-	return SpotFlag::is_any_set(&flags, dungeon[row as usize][col as usize]);
+	return SpotFlag::is_any_set(&vec![SpotFlag::Floor, Tunnel, Door, Stairs, Trap], dungeon[row as usize][col as usize]);
 }
 
 pub unsafe fn next_to_something(drow: i64, dcol: i64) -> bool {

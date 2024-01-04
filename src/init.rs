@@ -73,7 +73,7 @@ pub unsafe fn init() -> bool {
 	}
 	game.set_seed(md_get_seed());
 	if let Some(rest_file) = rest_file() {
-		restore(rest_file);
+		restore(&rest_file);
 		return true;
 	}
 	mix_colors();

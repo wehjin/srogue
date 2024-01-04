@@ -189,7 +189,7 @@ pub unsafe fn add_traps() {
 
 pub unsafe fn id_trap() {
 	message("direction? ", 0);
-	let dir: char;
+	let mut dir: char;
 	loop {
 		dir = rgetchar();
 		if is_direction(dir) {

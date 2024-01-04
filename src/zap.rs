@@ -174,7 +174,7 @@ pub unsafe fn wizardize() {
 		wizard = false;
 		message("not wizard anymore", 0);
 	} else {
-		let line = get_input_line("wizard's password:", None, None, false, false);
+		let line = get_input_line::<String>("wizard's password:", None, None, false, false);
 		if !line.is_empty() {
 			xxx(true);
 			if line == "\u{A7}DV\u{BA}M\u{A3}\u{17}" {

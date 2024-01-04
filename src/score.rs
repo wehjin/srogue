@@ -52,7 +52,7 @@ pub unsafe fn killed_by(ending: Ending) {
 		} else {
 			login_name()
 		};
-		center(21, skull_name);
+		center(21, &skull_name);
 		center(22, &how_ended);
 	} else {
 		message(&how_ended, 0);
@@ -66,14 +66,14 @@ unsafe fn ending_string(ending: &Ending) -> String {
 		&Ending::Monster(monster) => {
 			let name = mon_real_name(&monster);
 			let article = if is_vowel(name.chars().nth(0).unwrap()) { "an" } else { "a" };
-			&format!("Killed by {} {}", article, name)
+			format!("Killed by {} {}", article, name)
 		}
-		&Ending::Hypothermia => "died of hypothermia",
-		&Ending::Starvation => "died of starvation",
-		&Ending::PoisonDart => "killed by a dart",
-		&Ending::Quit => "quit",
-		&Ending::Win => "a total winner"
-	}.to_string()
+		&Ending::Hypothermia => "died of hypothermia".to_string(),
+		&Ending::Starvation => "died of starvation".to_string(),
+		&Ending::PoisonDart => "killed by a dart".to_string(),
+		&Ending::Quit => "quit".to_string(),
+		&Ending::Win => "a total winner".to_string()
+	}
 }
 
 pub unsafe fn win() {
@@ -171,7 +171,7 @@ pub unsafe fn put_scores(ending: Option<Ending>) {
 	for i in 0..max_search {
 		if !score_only {
 			let name_in_score = &scores[i][START_OF_NAME..];
-			if name_cmp(name_in_score, login_name()) == Ordering::Equal {
+			if name_cmp(name_in_score, &login_name()) == Ordering::Equal {
 				if let Some(gold_in_score) = gold_in_score(&scores[i]) {
 					if rogue.gold < gold_in_score {
 						score_only = true;
@@ -388,7 +388,7 @@ pub fn xxxx<const N: usize>(buf: &mut [u8; N], n: usize) {
 pub fn xxx(reset: bool) -> isize {
 	static FS: RwLock<(isize, isize)> = RwLock::new((0, 0));
 	if reset {
-		let write = FS.write().unwrap();
+		let mut write = FS.write().unwrap();
 		*write = (37, 7);
 		0
 	} else {
@@ -398,7 +398,7 @@ pub fn xxx(reset: bool) -> isize {
 		};
 		let r = (f * s + 9337) % 8887;
 		{
-			let write = FS.write().unwrap();
+			let mut write = FS.write().unwrap();
 			*write = (s, r);
 		}
 		r

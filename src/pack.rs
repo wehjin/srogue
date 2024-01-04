@@ -348,7 +348,7 @@ pub unsafe fn call_it() {
 		}
 	}
 	let id_table = get_id_table(&*obj);
-	let new_name = get_input_line("call it:", None, Some(&id_table[(*obj).which_kind as usize].title), true, true);
+	let new_name = get_input_line::<String>("call it:", None, Some(&id_table[(*obj).which_kind as usize].title), true, true);
 	if !new_name.is_empty() {
 		id_table[(*obj).which_kind as usize].id_status = Called;
 		id_table[(*obj).which_kind as usize].title = new_name;

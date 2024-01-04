@@ -6,7 +6,6 @@ use libc::{c_short};
 use ncurses::{chtype, mvaddch, mvinch};
 use serde::{Deserialize, Serialize};
 use ObjectWhat::{Armor, Potion, Scroll, Weapon};
-use weapon_kind::{LONG_SWORD, MACE, TWO_HANDED_SWORD};
 use crate::odds::GOLD_PERCENT;
 use crate::prelude::*;
 use crate::prelude::armor_kind::{ARMORS, PLATE, SPLINT};
@@ -21,7 +20,7 @@ use crate::prelude::scroll_kind::ScrollKind::{AggravateMonster, CreateMonster, E
 use crate::prelude::scroll_kind::SCROLLS;
 use crate::prelude::SpotFlag::{Floor, Monster, Tunnel};
 use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, WANDS};
-use crate::prelude::weapon_kind::{ARROW, BOW, DAGGER, DART, SHURIKEN, WEAPONS};
+use crate::prelude::weapon_kind::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
 use crate::settings::fruit;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -176,9 +175,9 @@ pub struct obj {
 
 pub const fn empty_obj() -> obj {
 	obj {
-		m_flags: MonsterFlags::default(),
+		m_flags: MonsterFlags::empty(),
 		quantity: 0,
-		ichar: char::default(),
+		ichar: '\x00',
 		kill_exp: 0,
 		is_protected: 0,
 		is_cursed: 0,
@@ -1402,7 +1401,7 @@ unsafe fn get_kind(max_kind: usize) -> Option<usize> {
 	let good_kind = {
 		let mut good_kind = None;
 		loop {
-			let input_line = get_input_line("which kind?", None, None, false, true).trim();
+			let input_line = get_input_line::<String>("which kind?", None, None, false, true).trim();
 			if input_line.is_empty() {
 				good_kind = None;
 				break;

@@ -1,45 +1,81 @@
 use std::env;
 use std::sync::RwLock;
 
-pub static SETTINGS: RwLock<Settings> = RwLock::new(Settings::load());
-
-fn get() -> &'static Settings {
-	&*SETTINGS.read().unwrap()
-}
+pub static SETTINGS: RwLock<Settings> = RwLock::new(Settings {
+	score_only: false,
+	rest_file: None,
+	fruit: String::new(),
+	save_file: None,
+	jump: false,
+	nick_name: None,
+	ask_quit: false,
+	show_skull: false,
+	login_name: String::new(),
+});
 
 fn set(settings: Settings) {
 	*SETTINGS.write().unwrap() = settings;
 }
 
 pub fn set_login_name(login_name: &str) {
-	let mut settings = get().clone();
+	let mut settings = (&*SETTINGS.read().unwrap()).clone();
 	settings.login_name = login_name.to_string();
 	set(settings);
 }
 
-pub fn login_name() -> &'static str { &get().login_name }
+pub fn login_name() -> String {
+	let s = &*SETTINGS.read().unwrap();
+	s.login_name.to_string()
+}
 
-pub fn score_only() -> bool { get().score_only }
+pub fn score_only() -> bool { (&*SETTINGS.read().unwrap()).score_only }
 
 pub fn set_score_only(score_only: bool) {
-	let mut settings = get().clone();
+	let mut settings = (&*SETTINGS.read().unwrap()).clone();
 	settings.score_only = score_only;
 	set(settings);
 }
 
-pub fn rest_file() -> &'static Option<String> { &get().rest_file }
-
-pub fn nick_name() -> &'static Option<String> { &get().nick_name }
-
-pub fn save_file() -> &'static Option<String> {
-	&get().save_file
+pub fn rest_file() -> Option<String> {
+	let s = &*SETTINGS.read().unwrap();
+	s.rest_file.clone()
 }
 
-pub fn fruit() -> &'static str { &get().fruit }
+pub fn nick_name() -> Option<String> {
+	let s = &*SETTINGS.read().unwrap();
+	s.nick_name.clone()
+}
 
-pub fn jump() -> bool { get().jump }
+pub fn save_file() -> Option<String> {
+	let s = &*SETTINGS.read().unwrap();
+	s.save_file.clone()
+}
 
-pub fn show_skull() -> bool { get().show_skull }
+pub fn fruit() -> String {
+	let s = &*SETTINGS.read().unwrap();
+	s.fruit.to_string()
+}
+
+pub fn jump() -> bool { (&*SETTINGS.read().unwrap()).jump }
+
+pub fn show_skull() -> bool { (&*SETTINGS.read().unwrap()).show_skull }
+
+pub fn load() {
+	let mut settings = Settings {
+		score_only: false,
+		rest_file: None,
+		fruit: "slime-mold ".to_string(),
+		save_file: None,
+		jump: true,
+		nick_name: None,
+		ask_quit: true,
+		show_skull: true,
+		login_name: "PLACEHOLDER".to_string(),
+	};
+	settings.do_args();
+	settings.do_opts();
+	set(settings);
+}
 
 #[derive(Clone)]
 pub struct Settings {
@@ -55,23 +91,6 @@ pub struct Settings {
 }
 
 impl Settings {
-	pub fn load() -> Self {
-		let mut settings = Settings {
-			score_only: false,
-			rest_file: None,
-			fruit: "slime-mold ".to_string(),
-			save_file: None,
-			jump: true,
-			nick_name: None,
-			ask_quit: true,
-			show_skull: true,
-			login_name: "PLACEHOLDER".to_string(),
-		};
-		settings.do_args();
-		settings.do_opts();
-		settings
-	}
-
 	fn do_args(&mut self) {
 		let args = env::args().collect::<Vec<_>>();
 		for s in &args[1..] {
@@ -87,7 +106,7 @@ impl Settings {
 
 	fn do_opts(&mut self) {
 		const DIVIDER: char = ',';
-		if let Ok(opts) = std::env::var("ROGUEOPTS") {
+		if let Ok(opts) = env::var("ROGUEOPTS") {
 			const FRUIT_EQ: &'static str = "fruit=";
 			const FILE_EQ: &'static str = "file=";
 			const NAME: &'static str = "name=";

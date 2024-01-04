@@ -9,15 +9,8 @@ use crate::prelude::*;
 use crate::save::data::SaveData;
 use crate::settings::{login_name, save_file};
 
-#[no_mangle]
-pub unsafe extern "C" fn save_game() {
-	let file_name = get_input_line(
-		"file name?",
-		save_file().map(|f| &f as &str),
-		Some("game not saved"),
-		false,
-		true,
-	);
+pub unsafe fn save_game() {
+	let file_name = get_input_line("file name?", save_file().clone(), Some("game not saved"), false, true);
 	if file_name.is_empty() {
 		return;
 	}

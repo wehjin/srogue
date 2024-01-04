@@ -56,13 +56,13 @@ pub unsafe fn check_message() {
 pub const CANCEL: char = '\u{1b}';
 pub const LIST: char = '*';
 
-#[no_mangle]
-pub unsafe extern "C" fn get_input_line(prompt: &str, insert: Option<&str>, if_cancelled: Option<&str>, add_blank: bool, do_echo: bool) -> String {
+pub unsafe fn get_input_line<T: AsRef<str>>(prompt: &str, insert: Option<T>, if_cancelled: Option<&str>, add_blank: bool, do_echo: bool) -> String {
 	message(prompt, 0);
 
 	let mut line: Vec<char> = Vec::new();
 	let n = prompt.len();
 	if let Some(insert) = insert {
+		let insert = insert.as_ref();
 		mvaddstr(0, (n + 1) as i32, insert);
 		line.extend(insert.chars());
 		ncurses::mv(0, (n + line.len() + 1) as i32);
