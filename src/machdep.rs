@@ -3,7 +3,6 @@
 use std::{fs, process, thread};
 use std::error::Error;
 use std::ffi::{c_void, CString};
-use std::io::{Read, stdin};
 use std::time::{Duration};
 use chrono::{Datelike, DateTime, Timelike, TimeZone, Utc};
 use libc::{c_int, SIG_IGN, sighandler_t, SIGHUP, SIGINT, signal, SIGQUIT, SIGTSTP, stat};
@@ -67,10 +66,7 @@ pub struct termios {
  * input without waiting for the user to read the message.  Not such a
  * big deal.
  */
-pub unsafe fn md_slurp() {
-	let mut buf = Vec::new();
-	stdin().read_to_end(&mut buf).expect("read_to_end");
-}
+pub unsafe fn md_slurp() {}
 
 pub fn md_control_keybord(_mode: libc::c_short) {
 	// Stubbing this out allows tty driver so steal some commands like ^Y.
