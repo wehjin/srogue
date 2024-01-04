@@ -186,7 +186,7 @@ pub unsafe fn mix_colors() {
 pub unsafe fn make_scroll_titles() {
 	for i in 0..SCROLLS {
 		let syllables = (0..get_rand(2, 5)).map(|_| random_syllable().to_string()).collect::<Vec<_>>();
-		let title = format!("'{}' ", syllables.join(""));
+		let title = format!("'{}' ", syllables.join("")).trim().to_string();
 		id_scrolls[i].title = Some(title);
 	}
 }
