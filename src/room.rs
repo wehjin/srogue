@@ -123,58 +123,22 @@ pub unsafe fn light_passage(row: i64, col: i64) {
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn darken_room(rn: i64) -> i64 {
-	let mut i: libc::c_short = 0;
-	let mut j: libc::c_short = 0;
-	i = (rooms[rn as usize].top_row + 1) as libc::c_short;
-	while (i as i64) < rooms[rn as usize].bottom_row {
-		j = (rooms[rn as usize].left_col + 1)
-			as libc::c_short;
-		while (j as i64) < rooms[rn as usize].right_col {
+pub unsafe fn darken_room(rn: i64) {
+	for i in (rooms[rn as usize].top_row as usize + 1)..rooms[rn as usize].bottom_row as usize {
+		for j in (rooms[rn as usize].left_col as usize + 1)..rooms[rn as usize].right_col as usize {
 			if blind != 0 {
-				if ncurses::wmove(ncurses::stdscr(), i as i32, j as i32)
-					== -1
-				{
-					-1;
-				} else {
-					addch(' ' as i32 as chtype);
-				};
-			} else if dungeon[i as usize][j as usize] as i64
-				& (0o1 as libc::c_ushort as i64
-				| 0o4 as libc::c_ushort as i64) == 0
-				&& !(detect_monster as i64 != 0
-				&& dungeon[i as usize][j as usize] as i64
-				& 0o2 as libc::c_ushort as i64 != 0)
-			{
+				mvaddch(i as i32, j as i32, chtype::from(' '));
+			} else if !SpotFlag::is_any_set(&vec![Object, Stairs], dungeon[i][j])
+				&& !(detect_monster && Monster.is_set(dungeon[i][j])) {
 				if !imitating(i as i64, j as i64) {
-					if ncurses::wmove(ncurses::stdscr(), i as i32, j as i32)
-						== -1
-					{
-						-1;
-					} else {
-						addch(' ' as i32 as chtype);
-					};
+					mvaddch(i as i32, j as i32, chtype::from(' '));
 				}
-				if dungeon[i as usize][j as usize] as i64
-					& 0o400 as libc::c_ushort as i64 != 0
-					&& dungeon[i as usize][j as usize] as i64
-					& 0o1000 as libc::c_ushort as i64 == 0
-				{
-					if ncurses::wmove(ncurses::stdscr(), i as i32, j as i32)
-						== -1
-					{
-						-1;
-					} else {
-						addch('^' as i32 as chtype);
-					};
+				if Trap.is_set(dungeon[i][j]) && !Hidden.is_set(dungeon[i][j]) {
+					mvaddch(i as i32, j as i32, chtype::from('^'));
 				}
 			}
-			j += 1;
 		}
-		i += 1;
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
 pub unsafe fn get_dungeon_char(row: i64, col: i64) -> chtype {
