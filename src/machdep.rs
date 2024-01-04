@@ -3,6 +3,7 @@
 use std::{fs, process, thread};
 use std::error::Error;
 use std::ffi::{c_void, CString};
+use std::io::{Read, stdin};
 use std::time::{Duration};
 use chrono::{Datelike, DateTime, Timelike, TimeZone, Utc};
 use libc::{c_int, SIG_IGN, sighandler_t, SIGHUP, SIGINT, signal, SIGQUIT, SIGTSTP, stat};
@@ -79,9 +80,20 @@ pub struct termios {
 	pub c_ospeed: speed_t,
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn md_slurp() -> i64 {
-	panic!("Reached end of non-void function without returning");
+/* md_slurp:
+ *
+ * This routine throws away all keyboard input that has not
+ * yet been read.  It is used to get rid of input that the user may have
+ * typed-ahead.
+ *
+ * This function is not necessary, so it may be stubbed.  The might cause
+ * message-line output to flash by because the game has continued to read
+ * input without waiting for the user to read the message.  Not such a
+ * big deal.
+ */
+pub unsafe fn md_slurp() {
+	let mut buf = Vec::new();
+	stdin().read_to_end(&mut buf).expect("read_to_end");
 }
 
 pub fn md_control_keybord(_mode: libc::c_short) {
