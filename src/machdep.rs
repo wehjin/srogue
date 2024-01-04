@@ -10,30 +10,6 @@ use libc::{c_int, SIG_IGN, sighandler_t, SIGHUP, SIGINT, signal, SIGQUIT, SIGTST
 use serde::{Deserialize, Serialize};
 use crate::init::{byebye, error_save, onintr};
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct tm {
-	pub tm_sec: i64,
-	pub tm_min: i64,
-	pub tm_hour: i64,
-	pub tm_mday: i64,
-	pub tm_mon: i64,
-	pub tm_year: i64,
-	pub tm_wday: i64,
-	pub tm_yday: i64,
-	pub tm_isdst: i64,
-	pub tm_gmtoff: libc::c_long,
-	pub tm_zone: *mut libc::c_char,
-}
-
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct timezone {
-	pub tz_minuteswest: i64,
-	pub tz_dsttime: i64,
-}
-
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct RogueTime {
 	pub year: i32,
