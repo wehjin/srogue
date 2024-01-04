@@ -238,44 +238,8 @@ pub mod food_kind {
 	pub const RATION: u16 = 0;
 	pub const FRUIT: u16 = 1;
 }
-
-pub mod weapon_kind {
-	pub fn damage(kind: u16) -> &'static str {
-		let damage = match kind {
-			BOW | DART => "1d1",
-			ARROW => "1d2",
-			DAGGER => "1d3",
-			SHURIKEN => "1d4",
-			MACE => "2d3",
-			LONG_SWORD => "3d4",
-			TWO_HANDED_SWORD => "4d5",
-			_ => unreachable!("invalid weapon kind")
-		};
-		damage
-	}
-
-	pub const BOW: u16 = 0;
-	pub const DART: u16 = 1;
-	pub const ARROW: u16 = 2;
-	pub const DAGGER: u16 = 3;
-	pub const SHURIKEN: u16 = 4;
-	pub const MACE: u16 = 5;
-	pub const LONG_SWORD: u16 = 6;
-	pub const TWO_HANDED_SWORD: u16 = 7;
-	pub const WEAPONS: usize = 8;
-}
-
-pub mod armor_kind {
-	pub const LEATHER: u16 = 0;
-	pub const RINGMAIL: u16 = 1;
-	pub const SCALE: u16 = 2;
-	pub const CHAIN: u16 = 3;
-	pub const BANDED: u16 = 4;
-	pub const SPLINT: u16 = 5;
-	pub const PLATE: u16 = 6;
-	pub const ARMORS: usize = 7;
-}
-
+pub mod weapon_kind;
+pub mod armor_kind;
 pub mod potion_kind;
 pub mod ring_kind;
 
