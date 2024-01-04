@@ -1,9 +1,5 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-extern "C" {
-	pub type ldat;
-}
-
 use libc::{c_char};
 use crate::monster;
 use crate::prelude::*;
@@ -55,7 +51,7 @@ pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool) {
 		(*monster).set_stationary_damage(stationary_damage + 1);
 		stationary_damage
 	} else {
-		let mut damage = get_damage(&(*monster).damage, DamageEffect::Roll);
+		let mut damage = get_damage(m_damage(&*monster), DamageEffect::Roll);
 		if other.is_some() && flame {
 			damage -= get_armor_class(&*rogue.armor);
 			if damage < 0 {
@@ -147,7 +143,12 @@ pub unsafe fn to_hit(obj: *const object) -> usize {
 	if obj.is_null() {
 		return 1;
 	}
-	let hits = DamageStat::parse_first(&(*obj).damage).hits;
+	let damage = if (*obj).what_is == Weapon {
+		weapon_kind::damage((*obj).which_kind)
+	} else {
+		unimplemented!("not a weapon!")
+	};
+	let hits = DamageStat::parse_first(damage).hits;
 	return hits + (*obj).hit_enchant as usize;
 }
 
@@ -243,7 +244,7 @@ pub unsafe extern "C" fn fight(to_the_death: bool) {
 		return;
 	}
 	let possible_damage = if !(*fight_monster).m_flags.stationary {
-		get_damage(&(*fight_monster).damage, DamageEffect::None) * 2 / 3
+		get_damage(m_damage(&*fight_monster), DamageEffect::None) * 2 / 3
 	} else {
 		(*fight_monster).stationary_damage() - 1
 	};
@@ -329,6 +330,8 @@ pub unsafe fn get_weapon_damage(weapon: &object) -> isize {
 mod safe;
 
 pub use safe::*;
+use crate::monster::flags::MONSTERS;
 use crate::prelude::ending::Ending;
+use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::SpotFlag::Monster;
 use crate::prelude::stat_const::STAT_HP;

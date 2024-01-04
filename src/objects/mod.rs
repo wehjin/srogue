@@ -1,5 +1,6 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
+use std::clone::Clone;
 use std::string::ToString;
 use libc::{c_short};
 use ncurses::{chtype, mvaddch, mvinch};
@@ -41,7 +42,6 @@ pub enum IdStatus {
 #[derive(Serialize, Deserialize)]
 pub struct SaveObj {
 	pub m_flags: MonsterFlags,
-	pub damage: String,
 	pub quantity: i16,
 	pub ichar: char,
 	pub kill_exp: isize,
@@ -79,7 +79,6 @@ impl SaveObj {
 		let heap_obj = alloc_object();
 		*heap_obj = obj {
 			m_flags: self.m_flags,
-			damage: self.damage.clone(),
 			quantity: self.quantity,
 			ichar: self.ichar,
 			kill_exp: self.kill_exp,
@@ -119,7 +118,6 @@ impl SaveObj {
 	pub fn from_obj(obj: &obj) -> Self {
 		Self {
 			m_flags: obj.m_flags,
-			damage: obj.damage.to_string(),
 			quantity: obj.quantity,
 			ichar: obj.ichar,
 			kill_exp: obj.kill_exp,
@@ -150,7 +148,6 @@ impl SaveObj {
 #[derive(Clone)]
 pub struct obj {
 	pub m_flags: MonsterFlags,
-	pub damage: String,
 	pub quantity: i16,
 	pub ichar: char,
 	pub kill_exp: isize,
@@ -177,36 +174,33 @@ pub struct obj {
 	pub next_object: *mut obj,
 }
 
-impl Default for obj {
-	fn default() -> Self {
-		obj {
-			m_flags: MonsterFlags::default(),
-			damage: "".to_string(),
-			quantity: 0,
-			ichar: char::default(),
-			kill_exp: 0,
-			is_protected: 0,
-			is_cursed: 0,
-			class: 0,
-			identified: false,
-			stationary_damage: 0,
-			which_kind: 0,
-			o_row: 0,
-			o_col: 0,
-			o: 0,
-			row: 0,
-			col: 0,
-			d_enchant: 0,
-			quiver: 0,
-			trow: 0,
-			tcol: 0,
-			hit_enchant: 0,
-			what_is: ObjectWhat::None,
-			disguise: 0,
-			picked_up: 0,
-			in_use_flags: 0,
-			next_object: 0 as *mut obj,
-		}
+pub const fn empty_obj() -> obj {
+	obj {
+		m_flags: MonsterFlags::default(),
+		quantity: 0,
+		ichar: char::default(),
+		kill_exp: 0,
+		is_protected: 0,
+		is_cursed: 0,
+		class: 0,
+		identified: false,
+		stationary_damage: 0,
+		which_kind: 0,
+		o_row: 0,
+		o_col: 0,
+		o: 0,
+		row: 0,
+		col: 0,
+		d_enchant: 0,
+		quiver: 0,
+		trow: 0,
+		tcol: 0,
+		hit_enchant: 0,
+		what_is: ObjectWhat::None,
+		disguise: 0,
+		picked_up: 0,
+		in_use_flags: 0,
+		next_object: 0 as *mut obj,
 	}
 }
 
@@ -297,7 +291,7 @@ impl obj {
 
 pub type object = obj;
 
-pub static mut level_objects: object = obj::default();
+pub static mut level_objects: object = empty_obj();
 pub static mut dungeon: [[u16; DCOLS]; DROWS] = [[0; DCOLS]; DROWS];
 pub static mut foods: i16 = 0;
 pub static mut party_counter: isize = 0;
@@ -311,7 +305,7 @@ pub static mut rogue: fighter = fight {
 	hp_max: 12,
 	str_current: 16,
 	str_max: 16,
-	pack: obj::default(),
+	pack: empty_obj(),
 	gold: 0,
 	exp: 1,
 	exp_points: 0,
@@ -1189,33 +1183,11 @@ pub fn gr_weapon(obj: &mut obj, assign_wk: bool) {
 			}
 		}
 	}
-
-	match (*obj).which_kind {
-		BOW | DART => {
-			(*obj).damage = "1d1".to_string();
-		}
-		ARROW => {
-			(*obj).damage = "1d2".to_string();
-		}
-		DAGGER => {
-			(*obj).damage = "1d3".to_string();
-		}
-		SHURIKEN => {
-			(*obj).damage = "1d4".to_string();
-		}
-		MACE => {
-			(*obj).damage = "2d3".to_string();
-		}
-		LONG_SWORD => {
-			(*obj).damage = "3d4".to_string();
-		}
-		TWO_HANDED_SWORD => {
-			(*obj).damage = "4d5".to_string();
-		}
-		_ => unreachable!("invalid weapon kind")
-	}
 }
 
+pub fn weapon_damage(weapon: &obj) -> &'static str {
+	weapon_kind::damage(weapon.which_kind)
+}
 
 pub fn gr_armor(obj: &mut obj) {
 	(*obj).what_is = Armor;
@@ -1293,7 +1265,6 @@ pub unsafe fn alloc_object() -> *mut object {
 	(*obj).picked_up = (*obj).is_cursed;
 	(*obj).in_use_flags = 0;
 	(*obj).identified = false;
-	(*obj).damage = "1d1".to_string();
 	return obj;
 }
 

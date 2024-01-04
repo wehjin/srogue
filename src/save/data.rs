@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::level::{cur_level, cur_room, max_level, party_room};
 use crate::machdep::{get_current_time, RogueTime};
 use crate::monster::{fight, fighter};
-use crate::objects::{dungeon, foods, id, obj, party_counter, SaveObj};
+use crate::objects::{dungeon, empty_obj, foods, id, obj, party_counter, SaveObj};
 use crate::prelude::{bear_trap, being_held, blind, confused, DCOLS, detect_monster, DROWS, halluc, haste_self, levitate, m_moves, see_invisible, wizard};
 use crate::room::{room, rooms};
 use crate::save::{hunger_str, id_potions, id_rings, id_scrolls, id_wands, is_wood, level_monsters, level_objects, rogue, traps};
@@ -89,7 +89,7 @@ impl SaveFighter {
 			hp_max: self.hp_max,
 			str_current: self.str_current,
 			str_max: self.str_max,
-			pack: obj::default(),
+			pack: empty_obj(),
 			gold: self.gold,
 			exp: self.exp,
 			exp_points: self.exp_points,

@@ -240,6 +240,20 @@ pub mod food_kind {
 }
 
 pub mod weapon_kind {
+	pub fn damage(kind: u16) -> &'static str {
+		let damage = match kind {
+			BOW | DART => "1d1",
+			ARROW => "1d2",
+			DAGGER => "1d3",
+			SHURIKEN => "1d4",
+			MACE => "2d3",
+			LONG_SWORD => "3d4",
+			TWO_HANDED_SWORD => "4d5",
+			_ => unreachable!("invalid weapon kind")
+		};
+		damage
+	}
+
 	pub const BOW: u16 = 0;
 	pub const DART: u16 = 1;
 	pub const ARROW: u16 = 2;

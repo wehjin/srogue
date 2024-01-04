@@ -583,7 +583,9 @@ pub unsafe fn make_maze(r: usize, c: usize, tr: usize, br: usize, lc: usize, rc:
 		for _i in 0..10 {
 			let t1 = get_rand(0, 3) as usize;
 			let t2 = get_rand(0, 3) as usize;
-			mem::swap(&mut dirs[t1], &mut dirs[t2]);
+			let swap = dirs[t1];
+			dirs[t1] = dirs[t2];
+			dirs[t2] = swap;
 		}
 	}
 	for i in 0..4 {

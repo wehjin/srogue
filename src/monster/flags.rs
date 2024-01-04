@@ -54,32 +54,64 @@ impl MonsterFlags {
 		self.drops_level = value;
 	}
 
-	pub fn a() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, rusts: true, ..Default::default() } }
-	pub fn b() -> Self { MonsterFlags { asleep: true, wanders: true, flits: true, ..Default::default() } }
-	pub fn c() -> Self { MonsterFlags { asleep: true, wanders: true, ..Default::default() } }
-	pub fn d() -> Self { MonsterFlags { asleep: true, wakens: true, flames: true, ..Default::default() } }
-	pub fn e() -> Self { MonsterFlags { asleep: true, wakens: true, ..Default::default() } }
-	pub fn f() -> Self { MonsterFlags { holds: true, stationary: true, ..Default::default() } }
-	pub fn g() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, flies: true, ..Default::default() } }
-	pub fn h() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, ..Default::default() } }
-	pub fn i() -> Self { MonsterFlags { asleep: true, freezes: true, ..Default::default() } }
-	pub fn j() -> Self { MonsterFlags { asleep: true, wanders: true, ..Default::default() } }
-	pub fn k() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, flies: true, ..Default::default() } }
-	pub fn l() -> Self { MonsterFlags { asleep: true, steals_gold: true, ..Default::default() } }
-	pub fn m() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, confuses: true, ..Default::default() } }
-	pub fn n() -> Self { MonsterFlags { asleep: true, steals_item: true, ..Default::default() } }
-	pub fn o() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, seeks_gold: true, ..Default::default() } }
-	pub fn p() -> Self { MonsterFlags { asleep: true, invisible: true, wanders: true, flits: true, ..Default::default() } }
-	pub fn q() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, ..Default::default() } }
-	pub fn r() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, stings: true, ..Default::default() } }
-	pub fn s() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, ..Default::default() } }
-	pub fn t() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, ..Default::default() } }
-	pub fn u() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, ..Default::default() } }
-	pub fn v() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, drains_life: true, ..Default::default() } }
-	pub fn w() -> Self { MonsterFlags { asleep: true, wanders: true, drops_level: true, ..Default::default() } }
-	pub fn x() -> Self { MonsterFlags { asleep: true, imitates: true, ..Default::default() } }
-	pub fn y() -> Self { MonsterFlags { asleep: true, wanders: true, ..Default::default() } }
-	pub fn z() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, ..Default::default() } }
+	pub const fn a() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, rusts: true, ..Self::empty() } }
+	pub const fn b() -> Self { MonsterFlags { asleep: true, wanders: true, flits: true, ..Self::empty() } }
+	pub const fn c() -> Self { MonsterFlags { asleep: true, wanders: true, ..Self::empty() } }
+	pub const fn d() -> Self { MonsterFlags { asleep: true, wakens: true, flames: true, ..Self::empty() } }
+	pub const fn e() -> Self { MonsterFlags { asleep: true, wakens: true, ..Self::empty() } }
+	pub const fn f() -> Self { MonsterFlags { holds: true, stationary: true, ..Self::empty() } }
+	pub const fn g() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, flies: true, ..Self::empty() } }
+	pub const fn h() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, ..Self::empty() } }
+	pub const fn i() -> Self { MonsterFlags { asleep: true, freezes: true, ..Self::empty() } }
+	pub const fn j() -> Self { MonsterFlags { asleep: true, wanders: true, ..Self::empty() } }
+	pub const fn k() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, flies: true, ..Self::empty() } }
+	pub const fn l() -> Self { MonsterFlags { asleep: true, steals_gold: true, ..Self::empty() } }
+	pub const fn m() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, confuses: true, ..Self::empty() } }
+	pub const fn n() -> Self { MonsterFlags { asleep: true, steals_item: true, ..Self::empty() } }
+	pub const fn o() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, seeks_gold: true, ..Self::empty() } }
+	pub const fn p() -> Self { MonsterFlags { asleep: true, invisible: true, wanders: true, flits: true, ..Self::empty() } }
+	pub const fn q() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, ..Self::empty() } }
+	pub const fn r() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, stings: true, ..Self::empty() } }
+	pub const fn s() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, ..Self::empty() } }
+	pub const fn t() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, ..Self::empty() } }
+	pub const fn u() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, ..Self::empty() } }
+	pub const fn v() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, drains_life: true, ..Self::empty() } }
+	pub const fn w() -> Self { MonsterFlags { asleep: true, wanders: true, drops_level: true, ..Self::empty() } }
+	pub const fn x() -> Self { MonsterFlags { asleep: true, imitates: true, ..Self::empty() } }
+	pub const fn y() -> Self { MonsterFlags { asleep: true, wanders: true, ..Self::empty() } }
+	pub const fn z() -> Self { MonsterFlags { asleep: true, wakens: true, wanders: true, ..Self::empty() } }
+
+	pub const fn empty() -> Self {
+		MonsterFlags {
+			hasted: false,
+			slowed: false,
+			invisible: false,
+			asleep: false,
+			wakens: false,
+			wanders: false,
+			flies: false,
+			flits: false,
+			can_flit: false,
+			confused: false,
+			rusts: false,
+			holds: false,
+			freezes: false,
+			steals_gold: false,
+			steals_item: false,
+			stings: false,
+			drains_life: false,
+			drops_level: false,
+			seeks_gold: false,
+			freezing_rogue: false,
+			rust_vanished: false,
+			confuses: false,
+			imitates: false,
+			flames: false,
+			stationary: false,
+			napping: false,
+			already_moved: false,
+		}
+	}
 }
 
 pub const MONSTERS: usize = 26;

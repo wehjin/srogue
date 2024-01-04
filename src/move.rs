@@ -271,22 +271,19 @@ pub unsafe fn move_onto() {
 }
 
 pub unsafe fn get_dir_or_cancel() -> char {
-	let dir = {
-		let mut dir = char::default();
-		let mut first_miss: bool = true;
-		loop {
-			dir = rgetchar();
-			if is_direction(dir) {
-				break;
-			}
-			sound_bell();
-			if first_miss {
-				message("direction? ", 0);
-				first_miss = false;
-			}
+	let mut dir = CANCEL;
+	let mut first_miss: bool = true;
+	loop {
+		dir = rgetchar();
+		if is_direction(dir) {
+			break;
 		}
-		dir
-	};
+		sound_bell();
+		if first_miss {
+			message("direction? ", 0);
+			first_miss = false;
+		}
+	}
 	dir
 }
 

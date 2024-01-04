@@ -7,7 +7,7 @@ use crate::prelude::stat_const::{STAT_ARMOR, STAT_EXP, STAT_GOLD, STAT_HP, STAT_
 
 pub static mut msg_written: String = String::new();
 pub static mut msg_cleared: bool = true;
-pub static mut hunger_str: String = "".to_string();
+pub static mut hunger_str: String = String::new();
 
 pub unsafe extern "C" fn message(msg: &str, intrpt: i64) {
 	if !save_is_interactive {
