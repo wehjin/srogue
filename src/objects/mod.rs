@@ -1343,13 +1343,13 @@ unsafe fn get_kind(max_kind: usize) -> Option<usize> {
 				good_kind = None;
 				break;
 			}
-			match trimmed_line.parse::<usize>() {
+			match trimmed_line.parse::<isize>() {
 				Err(_) => {
 					sound_bell();
 				}
 				Ok(kind) => {
-					if kind >= 0 && kind <= max_kind {
-						good_kind = Some(kind);
+					if kind >= 0 && kind <= max_kind as isize {
+						good_kind = Some(kind as usize);
 						break;
 					}
 				}
