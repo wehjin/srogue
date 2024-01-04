@@ -833,19 +833,12 @@ pub static mut id_rings: [id; RINGS] = {
 	]
 };
 
-#[no_mangle]
-pub unsafe extern "C" fn put_objects() {
-	let mut i: c_short = 0;
-	let mut n: c_short = 0;
-	let mut obj: *mut object = 0 as *mut object;
-	if (cur_level as i64) < max_level as i64 {
+pub unsafe fn put_objects() {
+	if cur_level < max_level {
 		return;
 	}
-	n = (if coin_toss() {
-		get_rand(2, 4)
-	} else {
-		get_rand(3, 5)
-	}) as c_short;
+
+	let mut n = if coin_toss() { get_rand(2, 4) } else { get_rand(3, 5) };
 	while rand_percent(33) {
 		n += 1;
 	}
@@ -853,14 +846,11 @@ pub unsafe extern "C" fn put_objects() {
 		make_party();
 		party_counter = next_party();
 	}
-	i = 0;
-	while (i as i64) < n as i64 {
-		obj = gr_object();
+	for _i in 0..n {
+		let obj = gr_object();
 		rand_place(&mut *obj);
-		i += 1;
 	}
 	put_gold();
-	panic!("Reached end of non-void function without returning");
 }
 
 pub unsafe fn put_gold() {
