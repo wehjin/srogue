@@ -1178,7 +1178,7 @@ pub unsafe fn mon_can_go(monster: &obj, row: i64, col: i64) -> bool {
 	if SpotFlag::Nothing.is_set(dungeon[monster.row as usize][col as usize]) || SpotFlag::Nothing.is_set(dungeon[row as usize][monster.col as usize]) {
 		return false;
 	}
-	if !is_passable(row as c_int, col as c_int) || Monster.is_set(dungeon[row as usize][col as usize]) {
+	if !is_passable(row, col) || Monster.is_set(dungeon[row as usize][col as usize]) {
 		return false;
 	}
 	if (monster.row != row) && (monster.col != col)

@@ -130,57 +130,50 @@ unsafe fn mved() -> MoveResult {
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn multiple_move_rogue(mut dirch: i64) -> i64 {
-	let mut row = 0;
-	let mut col = 0;
-	let mut m: libc::c_short = 0;
+const BS: char = '\x08';
+const LF: char = '\x0a';
+const VT: char = '\x0b';
+const FF: char = '\x0c';
+const EM: char = '\x19';
+const NAK: char = '\x15';
+const SO: char = '\x0e';
+const STX: char = '\x02';
+
+pub unsafe fn multiple_move_rogue(dirch: i64) {
+	let dirch = dirch as u8 as char;
 	match dirch {
-		8 | 10 | 11 | 12 | 25 | 21 | 14 | 2 => {
+		BS | LF | VT | FF | EM | NAK | SO | STX => loop {
+			let row = rogue.row;
+			let col = rogue.col;
+			let m = one_move_rogue((dirch as u8 + 96) as char, true);
+			if m == MoveFailed || m == StoppedOnSomething || interrupted {
+				break;
+			}
+			if next_to_something(row, col) {
+				break;
+			}
+		},
+		'H' | 'J' | 'K' | 'L' | 'B' | 'Y' | 'U' | 'N' => {
 			loop {
-				row = rogue.row;
-				col = rogue.col;
-				m = one_move_rogue((dirch as u8 + 96) as char, true)
-					as libc::c_short;
-				if m as i64 == -1
-					|| m as libc::c_int == -(2 as libc::c_int)
-					|| interrupted as libc::c_int != 0
-				{
+				if interrupted {
 					break;
 				}
-				if next_to_something(row, col) {
+				let one_move_result = one_move_rogue((dirch as u8 + 32) as char, true);
+				if one_move_result != Moved {
 					break;
 				}
 			}
 		}
-		72 | 74 | 75 | 76 | 66 | 89 | 85 | 78 => {
-			while !interrupted && one_move_rogue((dirch as u8 + 32) as char, true) == Moved {}
-		}
 		_ => {}
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn is_passable(
-	mut row: libc::c_int,
-	mut col: libc::c_int,
-) -> bool {
-	if row < 1 as libc::c_int || row > 24 as libc::c_int - 2 as libc::c_int
-		|| col < 0 as libc::c_int || col > 80 as libc::c_int - 1 as libc::c_int
-	{
+pub unsafe fn is_passable(row: i64, col: i64) -> bool {
+	if is_off_screen(row, col) {
 		return false;
 	}
-	if dungeon[row as usize][col as usize] as libc::c_int
-		& 0o1000 as libc::c_int as libc::c_ushort as libc::c_int != 0
-	{
-		return if dungeon[row as usize][col as usize] as libc::c_int
-			& 0o400 as libc::c_int as libc::c_ushort as libc::c_int != 0
-		{
-			true
-		} else {
-			false
-		};
+	if Hidden.is_set(dungeon[row as usize][col as usize]) {
+		return if Trap.is_set(dungeon[row as usize][col as usize]) { true } else { false };
 	}
 	return SpotFlag::is_any_set(&vec![SpotFlag::Floor, Tunnel, Door, Stairs, Trap], dungeon[row as usize][col as usize]);
 }
@@ -246,7 +239,7 @@ pub unsafe fn next_to_something(drow: i64, dcol: i64) -> bool {
 }
 
 pub unsafe fn can_move(row1: i64, col1: i64, row2: i64, col2: i64) -> bool {
-	if is_passable(row2 as libc::c_int, col2 as libc::c_int) {
+	if is_passable(row2, col2) {
 		if row1 != row2 && col1 != col2 {
 			if Door.is_set(dungeon[row1 as usize][col1 as usize]) || Door.is_set(dungeon[row2 as usize][col2 as usize]) {
 				return false;
