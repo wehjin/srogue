@@ -44,16 +44,11 @@ pub unsafe fn add_to_pack(obj: *mut object, pack: *mut object, condense: i64) ->
 	return obj;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn take_from_pack(
-	mut obj: *mut object,
-	mut pack: *mut object,
-) -> i64 {
+pub unsafe fn take_from_pack(obj: *mut object, mut pack: *mut object) {
 	while (*pack).next_object != obj {
 		pack = (*pack).next_object;
 	}
 	(*pack).next_object = (*(*pack).next_object).next_object;
-	panic!("Reached end of non-void function without returning");
 }
 
 pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short) -> *mut object {
