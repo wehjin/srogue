@@ -31,7 +31,7 @@ mod zap;
 
 mod prelude;
 
-use libc::{setuid, perror, geteuid, getuid};
+use libc::{setuid, perror, geteuid, getuid, uid_t};
 use crate::prelude::stat_const::STAT_ALL;
 
 pub mod odds;

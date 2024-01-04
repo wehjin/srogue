@@ -2,7 +2,7 @@
 
 use std::{io};
 use std::io::Write;
-use libc::c_short;
+use libc::{c_short};
 use settings::nick_name;
 use crate::{console, settings};
 use crate::prelude::*;
@@ -52,10 +52,7 @@ pub unsafe fn init() -> bool {
 		}
 	}
 	if !score_only() && rest_file().is_none() {
-		print!("Hello {}, just a moment while I dig the dungeon...", match nick_name() {
-			None => settings::login_name(),
-			Some(name) => name,
-		});
+		print!("Hello {}, just a moment while I dig the dungeon...", nick_name().unwrap_or_else(|| settings::login_name()));
 		io::stdout().flush().expect("flush stdout");
 	}
 
@@ -166,8 +163,7 @@ pub unsafe fn byebye(ask_quit: bool) {
 	md_heed_signals();
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn onintr() -> i64 {
+pub unsafe fn onintr() {
 	md_ignore_signals();
 	if cant_int {
 		did_int = true;
@@ -176,7 +172,6 @@ pub unsafe extern "C" fn onintr() -> i64 {
 		message("interrupt", 1);
 	}
 	md_heed_signals();
-	panic!("Reached end of non-void function without returning");
 }
 
 pub unsafe fn error_save() {

@@ -2,54 +2,12 @@
 
 use std::{fs, process, thread};
 use std::error::Error;
-use std::ffi::CString;
+use std::ffi::{c_void, CString};
 use std::time::{Duration};
 use chrono::{Datelike, DateTime, Timelike, TimeZone, Utc};
-use libc::stat;
+use libc::{c_int, SIG_IGN, sighandler_t, SIGHUP, SIGINT, signal, SIGQUIT, SIGTSTP, stat};
 use serde::{Deserialize, Serialize};
-
-extern "C" {
-	fn localtime(_: *const time_t) -> *mut tm;
-	fn gettimeofday(_: *mut timeval, _: *mut libc::c_void) -> i64;
-	fn signal(
-		_: i64,
-		_: Option::<unsafe extern "C" fn(i64) -> ()>,
-	) -> Option::<unsafe extern "C" fn(i64) -> ()>;
-	fn error_save() -> i64;
-	fn onintr() -> i64;
-	fn byebye() -> i64;
-	fn getpid() -> pid_t;
-	fn getuid() -> uid_t;
-	fn unlink(_: *const libc::c_char) -> i64;
-	fn getpwuid(_: uid_t) -> *mut passwd;
-	fn malloc(_: libc::c_ulong) -> *mut libc::c_void;
-	fn exit(_: i64) -> !;
-}
-
-pub type __uint16_t = libc::c_ushort;
-pub type __int32_t = i64;
-pub type __uint32_t = libc::c_uint;
-pub type __int64_t = libc::c_longlong;
-pub type __uint64_t = libc::c_ulonglong;
-pub type __darwin_time_t = libc::c_long;
-pub type __darwin_blkcnt_t = __int64_t;
-pub type __darwin_blksize_t = __int32_t;
-pub type __darwin_dev_t = __int32_t;
-pub type __darwin_gid_t = __uint32_t;
-pub type __darwin_ino64_t = __uint64_t;
-pub type __darwin_mode_t = __uint16_t;
-pub type __darwin_off_t = __int64_t;
-pub type __darwin_pid_t = __int32_t;
-pub type __darwin_suseconds_t = __int32_t;
-pub type __darwin_uid_t = __uint32_t;
-pub type time_t = __darwin_time_t;
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct timespec {
-	pub tv_sec: __darwin_time_t,
-	pub tv_nsec: libc::c_long,
-}
+use crate::init::{byebye, error_save, onintr};
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -67,43 +25,12 @@ pub struct tm {
 	pub tm_zone: *mut libc::c_char,
 }
 
-pub type off_t = __darwin_off_t;
-pub type dev_t = __darwin_dev_t;
-pub type blkcnt_t = __darwin_blkcnt_t;
-pub type blksize_t = __darwin_blksize_t;
-pub type gid_t = __darwin_gid_t;
-pub type mode_t = __darwin_mode_t;
-pub type nlink_t = __uint16_t;
-pub type pid_t = __darwin_pid_t;
-pub type uid_t = __darwin_uid_t;
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct timeval {
-	pub tv_sec: __darwin_time_t,
-	pub tv_usec: __darwin_suseconds_t,
-}
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct timezone {
 	pub tz_minuteswest: i64,
 	pub tz_dsttime: i64,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct passwd {
-	pub pw_name: *mut libc::c_char,
-	pub pw_passwd: *mut libc::c_char,
-	pub pw_uid: uid_t,
-	pub pw_gid: gid_t,
-	pub pw_change: __darwin_time_t,
-	pub pw_class: *mut libc::c_char,
-	pub pw_gecos: *mut libc::c_char,
-	pub pw_dir: *mut libc::c_char,
-	pub pw_shell: *mut libc::c_char,
-	pub pw_expire: __darwin_time_t,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -162,84 +89,25 @@ pub fn md_control_keybord(_mode: libc::c_short) {
 	// See machdep.c for more details
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn md_heed_signals() -> i64 {
-	signal(
-		2 as i64,
-		::core::mem::transmute::<
-			Option::<unsafe extern "C" fn() -> i64>,
-			Option::<unsafe extern "C" fn(i64) -> ()>,
-		>(
-			Some(
-				::core::mem::transmute::<
-					unsafe extern "C" fn() -> i64,
-					unsafe extern "C" fn() -> i64,
-				>(onintr),
-			),
-		),
-	);
-	signal(
-		3 as i64,
-		::core::mem::transmute::<
-			Option::<unsafe extern "C" fn() -> i64>,
-			Option::<unsafe extern "C" fn(i64) -> ()>,
-		>(
-			Some(
-				::core::mem::transmute::<
-					unsafe extern "C" fn() -> i64,
-					unsafe extern "C" fn() -> i64,
-				>(byebye),
-			),
-		),
-	);
-	signal(
-		1,
-		::core::mem::transmute::<
-			Option::<unsafe extern "C" fn() -> i64>,
-			Option::<unsafe extern "C" fn(i64) -> ()>,
-		>(
-			Some(
-				::core::mem::transmute::<
-					unsafe extern "C" fn() -> i64,
-					unsafe extern "C" fn() -> i64,
-				>(error_save),
-			),
-		),
-	);
-	panic!("Reached end of non-void function without returning");
+
+unsafe fn sig_on_intr(_: c_int) { onintr(); }
+
+unsafe fn sig_on_quit(_: c_int) { byebye(true); }
+
+unsafe fn sig_on_hup(_: c_int) { error_save() }
+
+
+pub unsafe fn md_heed_signals() {
+	signal(SIGINT, sig_on_intr as unsafe fn(c_int) as *mut c_void as sighandler_t);
+	signal(SIGQUIT, sig_on_quit as unsafe fn(c_int) as *mut c_void as sighandler_t);
+	signal(SIGHUP, sig_on_hup as unsafe fn(c_int) as *mut c_void as sighandler_t);
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn md_ignore_signals() -> i64 {
-	signal(
-		3 as i64,
-		::core::mem::transmute::<
-			libc::intptr_t,
-			Option::<unsafe extern "C" fn(i64) -> ()>,
-		>(1 as libc::intptr_t),
-	);
-	signal(
-		2 as i64,
-		::core::mem::transmute::<
-			libc::intptr_t,
-			Option::<unsafe extern "C" fn(i64) -> ()>,
-		>(1 as libc::intptr_t),
-	);
-	signal(
-		1,
-		::core::mem::transmute::<
-			libc::intptr_t,
-			Option::<unsafe extern "C" fn(i64) -> ()>,
-		>(1 as libc::intptr_t),
-	);
-	signal(
-		18 as i64,
-		::core::mem::transmute::<
-			libc::intptr_t,
-			Option::<unsafe extern "C" fn(i64) -> ()>,
-		>(1 as libc::intptr_t),
-	);
-	panic!("Reached end of non-void function without returning");
+pub unsafe fn md_ignore_signals() {
+	signal(SIGINT, SIG_IGN);
+	signal(SIGINT, SIG_IGN);
+	signal(SIGINT, SIG_IGN);
+	signal(SIGTSTP, SIG_IGN);
 }
 
 pub unsafe fn md_get_file_id(file_path: &str) -> i64 {
