@@ -946,7 +946,7 @@ pub unsafe fn name_of(obj: &object) -> String {
 			ARROW => if obj.quantity > 1 { "arrows " } else { "arrow " },
 			DAGGER => if obj.quantity > 1 { "daggers " } else { "dagger " },
 			SHURIKEN => if obj.quantity > 1 { "shurikens " } else { "shuriken " },
-			_ => &id_weapons[obj.which_kind as usize].title
+			_ => get_title(obj),
 		}.to_string(),
 		Scroll => if obj.quantity > 1 { "scrolls " } else { "scroll " }.to_string(),
 		Potion => if obj.quantity > 1 { "potions " } else { "potion " }.to_string(),

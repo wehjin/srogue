@@ -9,7 +9,7 @@ pub static mut msg_written: String = String::new();
 pub static mut msg_cleared: bool = true;
 pub static mut hunger_str: String = String::new();
 
-pub unsafe extern "C" fn message(msg: &str, intrpt: i64) {
+pub unsafe fn message(msg: &str, intrpt: i64) {
 	if !save_is_interactive {
 		return;
 	}

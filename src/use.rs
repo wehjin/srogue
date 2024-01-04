@@ -498,7 +498,7 @@ unsafe fn go_blind() {
 
 pub unsafe fn get_ench_color() -> &'static str {
 	if halluc != 0 {
-		return &id_potions[get_rand(0, POTIONS - 1)].title;
+		return PotionKind::from_index(get_rand(0, POTIONS - 1)).title();
 	}
 	return "blue ";
 }

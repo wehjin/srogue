@@ -6,6 +6,7 @@ use crate::pack::wait_for_ack;
 use crate::random::get_rand;
 
 use crate::prelude::*;
+use crate::prelude::armor_kind::ArmorKind;
 use crate::prelude::food_kind::RATION;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::{PackFilter};
@@ -15,6 +16,7 @@ use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::prelude::ring_kind::{ADD_STRENGTH, DEXTERITY, RingKind, RINGS};
 use crate::prelude::scroll_kind::{ScrollKind, SCROLLS};
 use crate::prelude::wand_kind::{WandKind, WANDS};
+use crate::prelude::weapon_kind::WeaponKind;
 
 pub static mut is_wood: [bool; WANDS] = [false; WANDS];
 pub static wand_materials: [&'static str; WAND_MATERIALS] = [
@@ -167,11 +169,16 @@ pub unsafe fn inventory(pack: &object, filter: PackFilter) {
 }
 
 pub unsafe fn mix_colors() {
+	for i in 0..POTIONS {
+		if id_potions[i].title.is_none() {
+			id_potions[i].title = Some(PotionKind::from_index(i).to_index().to_string());
+		}
+	}
 	for _ in 0..=32 {
 		let j = get_rand(0, POTIONS - 1);
 		let k = get_rand(0, POTIONS - 1);
-		let t = id_potions[j].title.to_string();
-		id_potions[j].title = id_potions[k].title.to_string();
+		let t = id_potions[j].title.clone();
+		id_potions[j].title = id_potions[k].title.clone();
 		id_potions[k].title = t;
 	}
 }
@@ -179,7 +186,8 @@ pub unsafe fn mix_colors() {
 pub unsafe fn make_scroll_titles() {
 	for i in 0..SCROLLS {
 		let syllables = (0..get_rand(2, 5)).map(|_| random_syllable().to_string()).collect::<Vec<_>>();
-		id_scrolls[i].title = format!("'{}' ", syllables.join(""));
+		let title = format!("'{}' ", syllables.join(""));
+		id_scrolls[i].title = Some(title);
 	}
 }
 
@@ -196,9 +204,19 @@ fn get_quantity(obj: &object) -> String {
 	}
 }
 
-unsafe fn get_title(obj: &object) -> &String {
+pub unsafe fn get_title(obj: &object) -> &str {
 	let id_table = get_id_table(obj);
-	&id_table[obj.which_kind as usize].title
+	let id = &id_table[obj.which_kind as usize];
+	if let Some(title) = &id.title {
+		title
+	} else {
+		match obj.what_is {
+			Armor => ArmorKind::from_index(obj.which_kind as usize).title(),
+			Weapon => WeaponKind::from_index(obj.which_kind as usize).title(),
+			Potion => PotionKind::from_index(obj.which_kind as usize).title(),
+			_ => "",
+		}
+	}
 }
 
 unsafe fn get_id_status(obj: &object) -> IdStatus {
@@ -336,7 +354,7 @@ pub unsafe fn get_wand_and_ring_materials() {
 		let mut used = [false; WAND_MATERIALS];
 		for i in 0..WANDS {
 			let j = take_unused(&mut used);
-			id_wands[i].title = wand_materials[j].to_string();
+			id_wands[i].title = Some(wand_materials[j].to_string());
 			is_wood[i] = j > MAX_METAL;
 		}
 	}
@@ -344,7 +362,7 @@ pub unsafe fn get_wand_and_ring_materials() {
 		let mut used = [false; GEMS];
 		for i in 0..RINGS {
 			let j = take_unused(&mut used);
-			id_rings[i].title = gems[j].to_string();
+			id_rings[i].title = Some(gems[j].to_string());
 		}
 	}
 }

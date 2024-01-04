@@ -347,11 +347,11 @@ pub unsafe fn call_it() {
 			return;
 		}
 	}
-	let id_table = get_id_table(&*obj);
-	let new_name = get_input_line::<String>("call it:", None, Some(&id_table[(*obj).which_kind as usize].title), true, true);
+	let new_name = get_input_line::<String>("call it:", None, Some(get_title(&*obj)), true, true);
 	if !new_name.is_empty() {
+		let id_table = get_id_table(&*obj);
 		id_table[(*obj).which_kind as usize].id_status = Called;
-		id_table[(*obj).which_kind as usize].title = new_name;
+		id_table[(*obj).which_kind as usize].title = Some(new_name);
 	}
 }
 
