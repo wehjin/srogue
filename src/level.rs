@@ -1,8 +1,6 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-use std::mem;
-use std::os::raw::c_int;
-use libc::{c_short, c_ushort};
+use libc::{c_ushort};
 use ncurses::clear;
 use SpotFlag::Door;
 use crate::message::{message, print_stats};
@@ -23,7 +21,7 @@ pub static mut max_level: isize = 1;
 pub static mut cur_room: i64 = 0;
 pub static mut new_level_message: Option<String> = None;
 pub static mut party_room: i64 = NO_ROOM;
-pub static mut r_de: i64 = 0;
+pub static mut r_de: Option<usize> = None;
 pub const LEVEL_POINTS: [isize; MAX_EXP_LEVEL] = [
 	10,
 	20,
@@ -47,20 +45,47 @@ pub const LEVEL_POINTS: [isize; MAX_EXP_LEVEL] = [
 	10000000,
 	99900000,
 ];
-pub static mut random_rooms: [usize; 10] = [
-	3,
-	7,
-	5,
-	2,
-	0,
-	6,
-	1,
-	4,
-	8,
-	0,
-];
 
-pub unsafe fn make_level() {
+pub struct RandomRooms {
+	rooms: [usize; MAX_ROOM + 1],
+}
+
+impl RandomRooms {
+	pub fn new() -> Self {
+		RandomRooms {
+			rooms: [3, 7, 5, 2, 0, 6, 1, 4, 8, 0],
+		}
+	}
+	pub fn mix(&mut self) {
+		for _ in 0..(3 * MAX_ROOM) {
+			let (x, y) = {
+				let mut x = 0;
+				let mut y = 0;
+				while x == y {
+					x = get_rand(0, MAX_ROOM - 1);
+					y = get_rand(0, MAX_ROOM - 1);
+				}
+				(x, y)
+			};
+			self.rooms.swap(x, y);
+		}
+	}
+}
+
+pub struct Level {
+	random_rooms: RandomRooms,
+}
+
+impl Level {
+	pub fn new() -> Self {
+		Level {
+			random_rooms: RandomRooms::new()
+		}
+	}
+}
+
+pub unsafe fn make_level() -> Level {
+	let mut level = Level::new();
 	if (cur_level as i64) < 99 {
 		cur_level += 1;
 	}
@@ -86,25 +111,25 @@ pub unsafe fn make_level() {
 	}
 	if !big_room {
 		add_mazes();
-		mix_random_rooms();
+		level.random_rooms.mix();
 		for j in 0..MAX_ROOM {
-			let i = random_rooms[j];
+			let i = level.random_rooms.rooms[j];
 			if i < MAX_ROOM - 1 {
-				connect_rooms(i as i64, i as i64 + 1);
+				connect_rooms(i, i + 1);
 			}
 			if i < MAX_ROOM - 3 {
-				connect_rooms(i as i64, i as i64 + 3);
+				connect_rooms(i, i + 3);
 			}
 			if i < MAX_ROOM - 2 {
 				if ROOMS[i + 1].room_type == Nothing {
-					if connect_rooms(i as i64, i as i64 + 2) {
+					if connect_rooms(i, i + 2) {
 						ROOMS[i + 1].room_type = RoomType::Cross;
 					}
 				}
 			}
 			if i < MAX_ROOM - 6 {
 				if ROOMS[i + 3].room_type == Nothing {
-					if connect_rooms(i as i64, i as i64 + 6) {
+					if connect_rooms(i, i + 6) {
 						ROOMS[i + 3].room_type = RoomType::Cross;
 					}
 				}
@@ -112,12 +137,13 @@ pub unsafe fn make_level() {
 			if is_all_connected() {
 				break;
 			}
-			fill_out_level();
+			fill_out_level(&mut level);
 		}
 		if !has_amulet() && cur_level >= AMULET_LEVEL {
 			put_amulet();
 		}
 	}
+	level
 }
 
 pub unsafe fn make_room(rn: i64, r1: i64, r2: i64, r3: i64) {
@@ -182,8 +208,7 @@ pub unsafe fn make_room(rn: i64, r1: i64, r2: i64, r3: i64) {
 	ROOMS[rn as usize].right_col = right as i64;
 }
 
-pub unsafe fn connect_rooms(room1: i64, room2: i64) -> bool {
-	let (room1, room2) = (room1, room2);
+pub unsafe fn connect_rooms(room1: usize, room2: usize) -> bool {
 	if ROOMS[room1 as usize].room_type.is_nothing() || ROOMS[room2 as usize].room_type.is_nothing() {
 		return false;
 	}
@@ -198,7 +223,7 @@ pub unsafe fn connect_rooms(room1: i64, room2: i64) -> bool {
 	} else {
 		return false;
 	};
-	let dir2 = dir1.to_inverse();
+	let dir2 = dir1.invert();
 	let spot1 = put_door(&mut ROOMS[room1 as usize], dir1);
 	let spot2 = put_door(&mut ROOMS[room2 as usize], dir2);
 	let mut do_draw = true;
@@ -332,11 +357,11 @@ pub unsafe fn draw_simple_passage(spot1: &DungeonSpot, spot2: &DungeonSpot, dir:
 	}
 }
 
-pub fn same_row(room1: i64, room2: i64) -> bool {
+pub fn same_row(room1: usize, room2: usize) -> bool {
 	room1 / 3 == room2 / 3
 }
 
-pub fn same_col(room1: i64, room2: i64) -> bool {
+pub fn same_col(room1: usize, room2: usize) -> bool {
 	room1 % 3 == room2 % 3
 }
 
@@ -371,137 +396,114 @@ pub unsafe fn add_mazes() {
 	}
 }
 
-pub unsafe fn fill_out_level() {
-	mix_random_rooms();
-	r_de = NO_ROOM;
-
+pub unsafe fn fill_out_level(level: &mut Level) {
+	level.random_rooms.mix();
+	r_de = None;
 	for i in 0..MAX_ROOM {
-		let rn = random_rooms[i as usize] as i64;
-		// Note: original C uses (rooms[rn as usize].is_room & R_NOTHING) for the
-		// first clause of the conditional. Since R_NOTHING is 0, the first clause would always evaluate
-		// to false.
-		// Question is, was that a bad bug that should be fixed? Or was it a good bug that will break this
-		// function if fixed.  For now, we will fix the bug.
-		if (ROOMS[rn as usize].room_type == RoomType::Nothing) || ((ROOMS[rn as usize].room_type == RoomType::Cross) && coin_toss()) {
+		let rn = level.random_rooms.rooms[i];
+		if ROOMS[rn].room_type == RoomType::Nothing
+			|| ((ROOMS[rn].room_type == RoomType::Cross) && coin_toss()) {
 			fill_it(rn, true);
 		}
 	}
-	if r_de != NO_ROOM {
-		fill_it(r_de, false);
+	if let Some(rn) = r_de {
+		fill_it(rn, false);
 	}
 }
 
-pub unsafe fn fill_it(rn: i64, do_rec_de: bool) {
+pub unsafe fn fill_it(rn: usize, do_rec_de: bool) {
 	let mut did_this = false;
-	static mut OFFSETS: [i64; 4] = [-1, 1, 3, -3];
-
 	let mut srow: i64 = 0;
 	let mut scol: i64 = 0;
+	static mut OFFSETS: [isize; 4] = [-1, 1, 3, -3];
 	for _ in 0..10 {
 		srow = get_rand(0, 3);
 		scol = get_rand(0, 3);
-		let t = OFFSETS[srow as usize];
-		OFFSETS[srow as usize] = OFFSETS[scol as usize];
-		OFFSETS[scol as usize] = t;
+		OFFSETS.swap(srow as usize, scol as usize);
 	}
+	let mut rooms_found = 0;
 	for i in 0..4 {
-		let target_room = rn + OFFSETS[i];
-		let mut rooms_found: usize = 0;
-
-		if ((target_room < 0) || (target_room >= MAX_ROOM as i64))
-			|| (!same_row(rn, target_room) && !same_col(rn, target_room))
-			|| (ROOMS[target_room as usize].room_type != RoomType::Room && ROOMS[target_room as usize].room_type != RoomType::Maze) {
+		let target_room = rn as isize + OFFSETS[i];
+		if target_room < 0 || target_room >= MAX_ROOM as isize {
+			continue;
+		}
+		let target_room = target_room as usize;
+		if !(same_row(rn, target_room) || same_col(rn, target_room)) {
+			continue;
+		}
+		if !ROOMS[target_room].room_type.is_type(&vec![RoomType::Room, RoomType::Maze]) {
 			continue;
 		}
 		let tunnel_dir = get_tunnel_dir(rn, target_room);
-		let door_dir = tunnel_dir.to_inverse();
-		if ROOMS[target_room as usize].doors[door_dir.to_index()].oth_room.is_some() {
+		let door_dir = tunnel_dir.invert();
+		if ROOMS[target_room].doors[door_dir.to_index()].oth_room.is_some() {
 			continue;
 		}
-		let (mut srow, mut scol) = (srow, scol);
-		if ((!do_rec_de) || did_this) || (!mask_room(rn, &mut srow, &mut scol, Tunnel as c_ushort)) {
-			srow = (ROOMS[rn as usize].top_row + ROOMS[rn as usize].bottom_row) / 2;
-			scol = (ROOMS[rn as usize].left_col + ROOMS[rn as usize].right_col) / 2;
-		}
-		let d_spot = put_door(&mut ROOMS[target_room as usize], door_dir);
+		let start_spot = if (!do_rec_de || did_this) || !mask_room(rn, &mut srow, &mut scol, Tunnel as u16) {
+			ROOMS[rn].center_spot()
+		} else {
+			DungeonSpot { col: scol, row: srow }
+		};
+		let end_spot = put_door(&mut ROOMS[target_room], door_dir);
 		rooms_found += 1;
-		let s_spot = DungeonSpot { col: scol, row: srow };
-		draw_simple_passage(&s_spot, &d_spot, tunnel_dir);
-		ROOMS[rn as usize].room_type = RoomType::DeadEnd;
-		dungeon[srow as usize][scol as usize] = Tunnel as c_ushort;
-
+		draw_simple_passage(&start_spot, &end_spot, tunnel_dir);
+		ROOMS[rn].room_type = RoomType::DeadEnd;
+		dungeon[srow as usize][scol as usize] = Tunnel as u16;
 		if (i < 3) && !did_this {
 			did_this = true;
 			if coin_toss() {
 				continue;
 			}
 		}
-		if (rooms_found < 2) && do_rec_de {
-			recursive_deadend(rn, &OFFSETS, &s_spot);
+		if rooms_found < 2 && do_rec_de {
+			recursive_deadend(rn, &OFFSETS, &start_spot);
 		}
 		break;
 	}
 }
 
-pub unsafe fn recursive_deadend(rn: i64, offsets: &[i64; 4], s_spot: &DungeonSpot)
+pub unsafe fn recursive_deadend(rn: usize, offsets: &[isize; 4], s_spot: &DungeonSpot)
 {
-	ROOMS[rn as usize].room_type = RoomType::DeadEnd;
+	ROOMS[rn].room_type = RoomType::DeadEnd;
 	dungeon[s_spot.row as usize][s_spot.col as usize] = Tunnel as c_ushort;
 
 	for i in 0..4 {
-		let de = rn + offsets[i];
-		if ((de < 0) || (de >= MAX_ROOM as i64))
-			|| (!same_row(rn, de) && !same_col(rn, de)) {
+		let de: isize = rn as isize + offsets[i];
+		if de < 0 || de >= MAX_ROOM as isize {
 			continue;
 		}
-		if ROOMS[de as usize].room_type != RoomType::Nothing {
+		let de: usize = de as usize;
+		if !same_row(rn, de) && !same_col(rn, de) {
 			continue;
 		}
-		let d_spot = DungeonSpot {
-			col: (ROOMS[de as usize].left_col + ROOMS[de as usize].right_col) / 2,
-			row: (ROOMS[de as usize].top_row + ROOMS[de as usize].bottom_row) / 2,
-		};
+		if ROOMS[de].room_type != Nothing {
+			continue;
+		}
+		let d_spot = ROOMS[de].center_spot();
 		let tunnel_dir = get_tunnel_dir(rn, de);
 		draw_simple_passage(&s_spot, &d_spot, tunnel_dir);
-		r_de = de;
+		r_de = Some(de);
 		recursive_deadend(de, offsets, &d_spot);
 	}
 }
 
-unsafe fn get_tunnel_dir(rn: i64, de: i64) -> DoorDirection {
+unsafe fn get_tunnel_dir(rn: usize, de: usize) -> DoorDirection {
 	if same_row(rn, de) {
-		if ROOMS[rn as usize].left_col < ROOMS[de as usize].left_col { DoorDirection::Right } else { DoorDirection::Left }
+		if ROOMS[rn].left_col < ROOMS[de].left_col { DoorDirection::Right } else { DoorDirection::Left }
 	} else {
-		if ROOMS[rn as usize].top_row < ROOMS[de as usize].top_row { DoorDirection::Down } else { DoorDirection::Up }
+		if ROOMS[rn].top_row < ROOMS[de].top_row { DoorDirection::Down } else { DoorDirection::Up }
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn mask_room(
-	mut rn: i64,
-	mut row: *mut i64,
-	mut col: *mut i64,
-	mut mask: c_ushort,
-) -> bool {
-	let mut i = 0;
-	let mut j = 0;
-	i = (*ROOMS.as_mut_ptr().offset(rn as isize)).top_row;
-	while i
-		<= (*ROOMS.as_mut_ptr().offset(rn as isize)).bottom_row
-	{
-		j = (*ROOMS.as_mut_ptr().offset(rn as isize)).left_col;
-		while j
-			<= (*ROOMS.as_mut_ptr().offset(rn as isize)).right_col
-		{
-			if dungeon[i as usize][j as usize] as i64 & mask as i64 != 0
-			{
+pub unsafe fn mask_room(rn: usize, row: &mut i64, col: &mut i64, mask: u16) -> bool {
+	for i in ROOMS[rn].top_row..=ROOMS[rn].bottom_row {
+		for j in ROOMS[rn].left_col..=ROOMS[rn].right_col {
+			if dungeon[i as usize][j as usize] & mask != 0 {
 				*row = i;
 				*col = j;
 				return true;
 			}
-			j += 1;
 		}
-		i += 1;
 	}
 	return false;
 }
@@ -594,35 +596,32 @@ pub unsafe fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: 
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn put_player(mut nr: i64) {
-	let mut rn: i64 = nr;
-	let mut misses: c_short = 0;
+pub unsafe fn put_player(nr: i64) {
+	let mut rn = nr;
 	let mut row: i64 = 0;
 	let mut col: i64 = 0;
-	misses = 0;
-	while (misses as i64) < 2
-		&& rn == nr
-	{
+	for _misses in 0..2 {
+		if rn != nr {
+			break;
+		}
 		gr_row_col(&mut row, &mut col, vec![Floor, Tunnel, Object, Stairs]);
 		rn = get_room_number(row, col);
-		misses += 1;
 	}
 	rogue.row = row;
 	rogue.col = col;
-	if dungeon[rogue.row as usize][rogue.col as usize] as libc::c_int
-		& 0o200 as libc::c_int as c_ushort as libc::c_int != 0
-	{
+
+	if dungeon[rogue.row as usize][rogue.col as usize] & TUNNEL as u16 != 0 {
 		cur_room = PASSAGE;
 	} else {
 		cur_room = rn;
 	}
-	if cur_room as libc::c_int != -(3 as libc::c_int) {
+	if cur_room != PASSAGE {
 		light_up_room(cur_room);
 	} else {
 		light_passage(rogue.row, rogue.col);
 	}
-	wake_room(get_room_number(rogue.row, rogue.col), true, rogue.row, rogue.col);
+	let rn = get_room_number(rogue.row, rogue.col);
+	wake_room(rn, true, rogue.row, rogue.col);
 	if let Some(msg) = &new_level_message {
 		message(msg, 0);
 		new_level_message = None;
@@ -721,19 +720,4 @@ pub unsafe extern "C" fn show_average_hp() {
 	};
 	let msg = format!("R-Hp: {:.2}, E-Hp: {:.2} (!: {}, V: {})", real_average, effective_average, extra_hp, less_hp);
 	message(&msg, 0);
-}
-
-pub unsafe fn mix_random_rooms() {
-	for _i in 0..(3 * MAX_ROOM) {
-		let mut x: usize = 0;
-		let mut y: usize = 0;
-		loop {
-			x = get_rand(0, (MAX_ROOM - 1) as c_int) as usize;
-			y = get_rand(0, (MAX_ROOM - 1) as c_int) as usize;
-			if x != y {
-				break;
-			}
-		}
-		mem::swap(&mut random_rooms[x], &mut random_rooms[y]);
-	}
 }

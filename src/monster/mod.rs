@@ -18,6 +18,7 @@ use crate::prelude::object_what::ObjectWhat::Scroll;
 use crate::prelude::scroll_kind::ScrollKind;
 use crate::prelude::scroll_kind::ScrollKind::ScareMonster;
 use crate::prelude::SpotFlag::{Floor, Object, Stairs, Tunnel};
+use crate::room::RoomType::Maze;
 
 #[derive(Clone)]
 pub struct fight {
@@ -1152,7 +1153,7 @@ pub unsafe fn move_mon_to(monster: &mut object, row: i64, col: i64) {
 		}
 	}
 	if Door.is_set(dungeon[row as usize][col as usize])
-		&& (get_room_number(row, col) != cur_room)
+		&& !in_current_room(row, col)
 		&& Floor.is_only(dungeon[monster.row as usize][monster.col as usize])
 		&& blind == 0 {
 		ncurses::mvaddch((monster.row as usize) as i32, (monster.col as usize) as i32, chtype::from(' '));
@@ -1442,7 +1443,6 @@ pub unsafe fn gr_obj_char() -> u16 {
 pub unsafe fn aim_monster(monster: &mut object) {
 	let rn = get_room_number(monster.row, monster.col) as usize;
 	let r = get_rand(0, 12);
-
 	for i in 0..4 {
 		let d = ((r + i) % 4) as usize;
 		if ROOMS[rn].doors[d].oth_room.is_some() {
@@ -1481,20 +1481,16 @@ pub unsafe extern "C" fn aggravate() {
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn mon_sees(
-	mut monster: *mut object,
-	mut row: i64,
-	mut col: i64,
-) -> bool {
-	let mut rn: i64 = 0;
+
+pub unsafe fn mon_sees(monster: *mut object, row: i64, col: i64) -> bool {
 	let mut rdif: c_short = 0;
 	let mut cdif: c_short = 0;
-	rn = get_room_number(row, col);
-	if rn != -1
-		&& rn == get_room_number((*monster).row, (*monster).col)
-		&& (*ROOMS.as_mut_ptr().offset(rn as isize)).room_type as i64 & 0o4i64 == 0 {
-		return true;
+	let rn = get_opt_room_number(row, col);
+	if let Some(rn) = rn {
+		let mon_rn = get_opt_room_number((*monster).row, (*monster).col).expect("monster has room");
+		if rn == mon_rn && ROOMS[rn].room_type != Maze {
+			return true;
+		}
 	}
 	rdif = (row - (*monster).row) as c_short;
 	cdif = (col - (*monster).col) as c_short;
