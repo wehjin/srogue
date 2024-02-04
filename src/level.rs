@@ -394,17 +394,17 @@ pub unsafe fn add_mazes(level_depth: usize) {
 
 		for i in 0..MAX_ROOM {
 			let j = (start + i) % MAX_ROOM;
-			if ROOMS[j as usize].room_type.is_nothing() {
+			if ROOMS[j].room_type.is_nothing() {
 				let do_maze = rand_percent(maze_percent);
 				if do_maze {
-					ROOMS[j as usize].room_type = RoomType::Maze;
+					ROOMS[j].room_type = RoomType::Maze;
 					make_maze(
-						get_rand(ROOMS[j as usize].top_row + 1, ROOMS[j as usize].bottom_row - 1) as usize,
-						get_rand(ROOMS[j as usize].left_col + 1, ROOMS[j as usize].right_col - 1) as usize,
-						ROOMS[j as usize].top_row as usize, ROOMS[j as usize].bottom_row as usize,
-						ROOMS[j as usize].left_col as usize, ROOMS[j as usize].right_col as usize,
+						get_rand(ROOMS[j].top_row + 1, ROOMS[j].bottom_row - 1) as usize,
+						get_rand(ROOMS[j].left_col + 1, ROOMS[j].right_col - 1) as usize,
+						ROOMS[j].top_row as usize, ROOMS[j].bottom_row as usize,
+						ROOMS[j].left_col as usize, ROOMS[j].right_col as usize,
 					);
-					hide_boxed_passage(ROOMS[j as usize].top_row, ROOMS[j as usize].left_col, ROOMS[j as usize].bottom_row, ROOMS[j as usize].right_col, get_rand(0, 2), level_depth);
+					hide_boxed_passage(ROOMS[j].top_row, ROOMS[j].left_col, ROOMS[j].bottom_row, ROOMS[j].right_col, get_rand(0, 2), level_depth);
 				}
 			}
 		}
@@ -546,7 +546,7 @@ pub unsafe fn make_maze(r: usize, c: usize, tr: usize, br: usize, lc: usize, rc:
 					(dungeon[r - 1][c] != TUNNEL) &&
 					(dungeon[r - 1][c - 1] != TUNNEL) &&
 					(dungeon[r - 1][c + 1] != TUNNEL) &&
-					(dungeon[r - 2][c] != TUNNEL) {
+					(r >= 2 && dungeon[r - 2][c] != TUNNEL) {
 					make_maze(r - 1, c, tr, br, lc, rc);
 				}
 			}
@@ -555,7 +555,7 @@ pub unsafe fn make_maze(r: usize, c: usize, tr: usize, br: usize, lc: usize, rc:
 					(dungeon[r + 1][c] != TUNNEL) &&
 					(dungeon[r + 1][c - 1] != TUNNEL) &&
 					(dungeon[r + 1][c + 1] != TUNNEL) &&
-					(dungeon[r + 2][c] != TUNNEL) {
+					((r + 2 < DROWS) && dungeon[r + 2][c] != TUNNEL) {
 					make_maze(r + 1, c, tr, br, lc, rc);
 				}
 			}
@@ -564,7 +564,7 @@ pub unsafe fn make_maze(r: usize, c: usize, tr: usize, br: usize, lc: usize, rc:
 					(dungeon[r][c - 1] != TUNNEL) &&
 					(dungeon[r - 1][c - 1] != TUNNEL) &&
 					(dungeon[r + 1][c - 1] != TUNNEL) &&
-					(dungeon[r][c - 2] != TUNNEL) {
+					(c >= 2 && dungeon[r][c - 2] != TUNNEL) {
 					make_maze(r, c - 1, tr, br, lc, rc);
 				}
 			}
@@ -573,7 +573,7 @@ pub unsafe fn make_maze(r: usize, c: usize, tr: usize, br: usize, lc: usize, rc:
 					(dungeon[r][c + 1] != TUNNEL) &&
 					(dungeon[r - 1][c + 1] != TUNNEL) &&
 					(dungeon[r + 1][c + 1] != TUNNEL) &&
-					(dungeon[r][c + 2] != TUNNEL) {
+					((c + 2) < DCOLS && dungeon[r][c + 2] != TUNNEL) {
 					make_maze(r, c + 1, tr, br, lc, rc);
 				}
 			}
