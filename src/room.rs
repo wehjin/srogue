@@ -74,22 +74,22 @@ pub struct rm {
 
 pub type room = rm;
 
-pub static mut rooms: [room; MAXROOMS as usize] = [rm {
+pub static mut ROOMS: [room; MAX_ROOM] = [rm {
 	bottom_row: 0,
 	right_col: 0,
 	left_col: 0,
 	top_row: 0,
 	doors: [dr { oth_room: None, oth_row: None, oth_col: None, door_row: 0, door_col: 0 }; 4],
 	room_type: RoomType::Nothing,
-}; MAXROOMS as usize];
+}; MAX_ROOM];
 #[no_mangle]
 pub static mut rooms_visited: [libc::c_char; 9] = [0; 9];
 
 
 pub unsafe fn light_up_room(rn: i64) {
 	if blind == 0 {
-		for i in rooms[rn as usize].top_row..=rooms[rn as usize].bottom_row {
-			for j in rooms[rn as usize].left_col..=rooms[rn as usize].right_col {
+		for i in ROOMS[rn as usize].top_row..=ROOMS[rn as usize].bottom_row {
+			for j in ROOMS[rn as usize].left_col..=ROOMS[rn as usize].right_col {
 				if Monster.is_set(dungeon[i as usize][j as usize]) {
 					let monster = object_at(&level_monsters, i, j);
 					if !monster.is_null() {
@@ -124,8 +124,8 @@ pub unsafe fn light_passage(row: i64, col: i64) {
 }
 
 pub unsafe fn darken_room(rn: i64) {
-	for i in (rooms[rn as usize].top_row as usize + 1)..rooms[rn as usize].bottom_row as usize {
-		for j in (rooms[rn as usize].left_col as usize + 1)..rooms[rn as usize].right_col as usize {
+	for i in (ROOMS[rn as usize].top_row as usize + 1)..ROOMS[rn as usize].bottom_row as usize {
+		for j in (ROOMS[rn as usize].left_col as usize + 1)..ROOMS[rn as usize].right_col as usize {
 			if blind != 0 {
 				mvaddch(i as i32, j as i32, chtype::from(' '));
 			} else if !SpotFlag::is_any_set(&vec![Object, Stairs], dungeon[i][j])
@@ -214,7 +214,7 @@ pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, spots: Vec<SpotFlag>) {
 		let keep_looking = rn == NO_ROOM
 			|| !SpotFlag::is_any_set(&spots, dungeon[r as usize][c as usize])
 			|| SpotFlag::are_others_set(&spots, dungeon[r as usize][c as usize])
-			|| !(rooms[rn as usize].room_type == Room || rooms[rn as usize].room_type == Maze)
+			|| !(ROOMS[rn as usize].room_type == Room || ROOMS[rn as usize].room_type == Maze)
 			|| ((r == rogue.row) && (c == rogue.col));
 		if !keep_looking {
 			break;
@@ -226,8 +226,8 @@ pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, spots: Vec<SpotFlag>) {
 
 pub unsafe fn gr_room() -> i64 {
 	loop {
-		let i = get_rand(0, MAXROOMS as usize - 1);
-		if rooms[i].room_type == Room || rooms[i].room_type == Maze {
+		let i = get_rand(0, MAX_ROOM as usize - 1);
+		if ROOMS[i].room_type == Room || ROOMS[i].room_type == Maze {
 			return i as i64;
 		}
 	}
@@ -244,10 +244,10 @@ pub unsafe extern "C" fn party_objects(mut rn: i64) -> i64 {
 	let mut row: libc::c_short = 0;
 	let mut col: libc::c_short = 0;
 	let mut found: libc::c_char = 0;
-	N = ((rooms[rn as usize].bottom_row
-		- rooms[rn as usize].top_row - 1)
-		* (rooms[rn as usize].right_col
-		- rooms[rn as usize].left_col - 1))
+	N = ((ROOMS[rn as usize].bottom_row
+		- ROOMS[rn as usize].top_row - 1)
+		* (ROOMS[rn as usize].right_col
+		- ROOMS[rn as usize].left_col - 1))
 		as libc::c_short;
 	n = get_rand(5, 10);
 	if n as i64 > N as i64 {
@@ -259,12 +259,12 @@ pub unsafe extern "C" fn party_objects(mut rn: i64) -> i64 {
 		j = found as libc::c_short;
 		while found == 0 && (j as i64) < 250 {
 			row = get_rand(
-				rooms[rn as usize].top_row + 1,
-				rooms[rn as usize].bottom_row - 1,
+				ROOMS[rn as usize].top_row + 1,
+				ROOMS[rn as usize].bottom_row - 1,
 			) as libc::c_short;
 			col = get_rand(
-				rooms[rn as usize].left_col + 1,
-				rooms[rn as usize].right_col - 1,
+				ROOMS[rn as usize].left_col + 1,
+				ROOMS[rn as usize].right_col - 1,
 			) as libc::c_short;
 			if dungeon[row as usize][col as usize] as i64
 				== 0o100 as libc::c_ushort as i64
@@ -287,11 +287,11 @@ pub unsafe extern "C" fn party_objects(mut rn: i64) -> i64 {
 
 pub fn get_room_number(row: i64, col: i64) -> i64 {
 	unsafe {
-		for i in 0..MAXROOMS as usize {
-			let below_top_wall = row >= rooms[i].top_row;
-			let above_bottom_wall = row <= rooms[i].bottom_row;
-			let right_of_left_wall = col >= rooms[i].left_col;
-			let left_of_right_wall = col <= rooms[i].right_col;
+		for i in 0..MAX_ROOM as usize {
+			let below_top_wall = row >= ROOMS[i].top_row;
+			let above_bottom_wall = row <= ROOMS[i].bottom_row;
+			let right_of_left_wall = col >= ROOMS[i].left_col;
+			let left_of_right_wall = col <= ROOMS[i].right_col;
 			if below_top_wall && above_bottom_wall && right_of_left_wall && left_of_right_wall {
 				return i as i64;
 			}
@@ -311,15 +311,15 @@ pub fn get_opt_room_number(row: i64, col: i64) -> Option<i64> {
 
 pub unsafe fn is_all_connected() -> bool {
 	let mut starting_room = NO_ROOM;
-	for i in 0..MAXROOMS as usize {
+	for i in 0..MAX_ROOM as usize {
 		rooms_visited[i] = 0;
-		if rooms[i].room_type == Room || rooms[i].room_type == Maze {
+		if ROOMS[i].room_type == Room || ROOMS[i].room_type == Maze {
 			starting_room = i as i64;
 		}
 	}
 	visit_rooms(starting_room);
-	for i in 0..MAXROOMS as usize {
-		if (rooms[i].room_type == Room || rooms[i].room_type == Maze) && rooms_visited[i] == 0 {
+	for i in 0..MAX_ROOM as usize {
+		if (ROOMS[i].room_type == Room || ROOMS[i].room_type == Maze) && rooms_visited[i] == 0 {
 			return false;
 		}
 	}
@@ -330,7 +330,7 @@ pub unsafe fn visit_rooms(rn: i64) {
 	let rn = rn as usize;
 	rooms_visited[rn] = 1;
 	for i in 0..4usize {
-		if let Some(oth_rn) = rooms[rn].doors[i].oth_room {
+		if let Some(oth_rn) = ROOMS[rn].doors[i].oth_room {
 			if oth_rn >= 0 && rooms_visited[oth_rn as usize] == 0 {
 				visit_rooms(oth_rn);
 			}
@@ -388,16 +388,16 @@ pub unsafe fn dr_course(mut monster: *mut object, entering: bool, row: i64, col:
 	let rn = get_opt_room_number(row, col);
 	if entering {
 		/* look for door to some other room */
-		let r = get_rand(0, MAXROOMS as usize - 1);
-		for i in 0..MAXROOMS as usize {
-			let rr = (r + i) % MAXROOMS as usize;
-			if !(rooms[rr].room_type == Room || rooms[rr].room_type == Maze) || Some(rr as i64) == rn {
+		let r = get_rand(0, MAX_ROOM as usize - 1);
+		for i in 0..MAX_ROOM as usize {
+			let rr = (r + i) % MAX_ROOM as usize;
+			if !(ROOMS[rr].room_type == Room || ROOMS[rr].room_type == Maze) || Some(rr as i64) == rn {
 				continue;
 			}
 			for k in 0..4 {
-				if rooms[rr].doors[k].oth_room == rn {
-					(*monster).trow = rooms[rr].doors[k].oth_row.expect("oth row");
-					(*monster).tcol = rooms[rr].doors[k].oth_col.expect("oth col");
+				if ROOMS[rr].doors[k].oth_room == rn {
+					(*monster).trow = ROOMS[rr].doors[k].oth_row.expect("oth row");
+					(*monster).tcol = ROOMS[rr].doors[k].oth_col.expect("oth col");
 					if (*monster).trow == row && (*monster).tcol == col {
 						continue;
 					}
@@ -407,8 +407,8 @@ pub unsafe fn dr_course(mut monster: *mut object, entering: bool, row: i64, col:
 		}
 		/* look for door to dead end */
 		let rn = rn.expect("rn") as usize;
-		for i in rooms[rn].top_row..=rooms[rn].bottom_row {
-			for j in rooms[rn].left_col..=rooms[rn].right_col {
+		for i in ROOMS[rn].top_row..=ROOMS[rn].bottom_row {
+			for j in ROOMS[rn].left_col..=ROOMS[rn].right_col {
 				if i != (*monster).row && j != (*monster).col && Door.is_set(dungeon[i as usize][j as usize]) {
 					(*monster).trow = i;
 					(*monster).tcol = j;
@@ -417,13 +417,13 @@ pub unsafe fn dr_course(mut monster: *mut object, entering: bool, row: i64, col:
 			}
 		}
 		/* return monster to room that he came from */
-		for i in 0..MAXROOMS as usize {
+		for i in 0..MAX_ROOM as usize {
 			for j in 0..4usize {
-				if rooms[i].doors[j].oth_room == Some(rn as i64) {
+				if ROOMS[i].doors[j].oth_room == Some(rn as i64) {
 					for k in 0..4usize {
-						if rooms[rn].doors[k].oth_room == Some(i as i64) {
-							(*monster).trow = rooms[rn].doors[k].oth_row.expect("oth row");
-							(*monster).tcol = rooms[rn].doors[k].oth_col.expect("oth col");
+						if ROOMS[rn].doors[k].oth_room == Some(i as i64) {
+							(*monster).trow = ROOMS[rn].doors[k].oth_row.expect("oth row");
+							(*monster).tcol = ROOMS[rn].doors[k].oth_col.expect("oth col");
 							return;
 						}
 					}
@@ -451,22 +451,22 @@ pub unsafe fn dr_course(mut monster: *mut object, entering: bool, row: i64, col:
 
 pub unsafe fn get_oth_room(rn: i64, row: i64, col: i64) -> Option<(i64, i64)> {
 	let rn = rn as usize;
-	let d = if row == rooms[rn].top_row {
+	let d = if row == ROOMS[rn].top_row {
 		Some(Up)
-	} else if row == rooms[rn].bottom_row {
+	} else if row == ROOMS[rn].bottom_row {
 		Some(Down)
-	} else if col == rooms[rn].left_col {
+	} else if col == ROOMS[rn].left_col {
 		Some(Left)
-	} else if col == rooms[rn].right_col {
+	} else if col == ROOMS[rn].right_col {
 		Some(Right)
 	} else {
 		None
 	};
 	if let Some(d) = d {
 		let d = d.to_index();
-		if rooms[rn].doors[d].oth_room.is_some() {
-			let row = rooms[rn].doors[d].oth_row.expect("oth row");
-			let col = rooms[rn].doors[d].oth_col.expect("oth col");
+		if ROOMS[rn].doors[d].oth_room.is_some() {
+			let row = ROOMS[rn].doors[d].oth_row.expect("oth row");
+			let col = ROOMS[rn].doors[d].oth_col.expect("oth col");
 			return Some((row, col));
 		}
 	}

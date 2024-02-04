@@ -487,8 +487,8 @@ unsafe fn go_blind() {
 		}
 	}
 	if cur_room >= 0 {
-		for i in (rooms[cur_room as usize].top_row as usize + 1)..rooms[cur_room as usize].bottom_row as usize {
-			for j in (rooms[cur_room as usize].left_col as usize + 1)..rooms[cur_room as usize].right_col as usize {
+		for i in (ROOMS[cur_room as usize].top_row as usize + 1)..ROOMS[cur_room as usize].bottom_row as usize {
+			for j in (ROOMS[cur_room as usize].left_col as usize + 1)..ROOMS[cur_room as usize].right_col as usize {
 				mvaddch(i as i32, j as i32, chtype::from(' '));
 			}
 		}

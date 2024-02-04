@@ -68,25 +68,23 @@ pub mod console;
 pub mod settings;
 
 pub fn main() {
-	unsafe {
-		setuid(user().true_uid);
-		let mut level_ready = init();
-		loop {
-			if level_ready {
-				play_level();
-				free_stuff(&mut level_objects);
-				free_stuff(&mut level_monsters);
-			}
-
-			clear_level();
-			make_level();
-			put_objects();
-			put_stairs();
-			add_traps();
-			put_mons();
-			put_player(party_room);
-			print_stats(STAT_ALL);
-			level_ready = true;
+	unsafe { setuid(user().true_uid); }
+	let mut restored = unsafe { init() };
+	loop {
+		if !restored {
+			unsafe { clear_level(); }
+			unsafe { make_level(); }
+			unsafe { put_objects(); }
+			unsafe { put_stairs(); }
+			unsafe { add_traps(); }
+			unsafe { put_mons(); }
+			unsafe { put_player(party_room); }
+			unsafe { print_stats(STAT_ALL); }
+		} else {
+			restored = false;
 		}
-	};
+		unsafe { play_level(); }
+		unsafe { free_stuff(&mut level_objects); }
+		unsafe { free_stuff(&mut level_monsters); }
+	}
 }

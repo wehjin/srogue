@@ -55,8 +55,8 @@ pub struct tr {
 
 pub type trap = tr;
 
-pub const MAX_TRAPS: usize = 10;
-pub static mut traps: [trap; MAX_TRAPS] = [tr { trap_type: NoTrap, trap_row: 0, trap_col: 0 }; MAX_TRAPS];
+pub const MAX_TRAP: usize = 10;
+pub static mut TRAPS: [trap; MAX_TRAP] = [tr { trap_type: NoTrap, trap_row: 0, trap_col: 0 }; MAX_TRAP];
 pub static mut trap_door: bool = false;
 pub static mut bear_trap: usize = 0;
 
@@ -73,12 +73,12 @@ pub fn trap_message(trap: TrapKind) -> &'static str {
 }
 
 pub unsafe fn trap_at(row: usize, col: usize) -> TrapKind {
-	for i in 0..MAX_TRAPS {
-		if traps[i].trap_type != NoTrap {
+	for i in 0..MAX_TRAP {
+		if TRAPS[i].trap_type != NoTrap {
 			break;
 		}
-		if traps[i].trap_row == row && traps[i].trap_col == col {
-			return traps[i].trap_type;
+		if TRAPS[i].trap_row == row && TRAPS[i].trap_col == col {
+			return TRAPS[i].trap_type;
 		}
 	}
 	return NoTrap;
@@ -148,17 +148,17 @@ pub unsafe fn add_traps() {
 	} else if cur_level <= (AMULET_LEVEL + 2) {
 		n = get_rand(3, 5);
 	} else {
-		n = get_rand(5, MAX_TRAPS);
+		n = get_rand(5, MAX_TRAP);
 	}
 	for i in 0..n {
-		traps[i].trap_type = TrapKind::random();
+		TRAPS[i].trap_type = TrapKind::random();
 		let (row, col) = if i == 0 && party_room != NO_ROOM {
 			let mut row: usize;
 			let mut col: usize;
 			let mut tries = 0;
 			loop {
-				row = get_rand((rooms[party_room as usize].top_row + 1) as usize, (rooms[party_room as usize].bottom_row - 1) as usize);
-				col = get_rand((rooms[party_room as usize].left_col + 1) as usize, (rooms[party_room as usize].right_col - 1) as usize);
+				row = get_rand((ROOMS[party_room as usize].top_row + 1) as usize, (ROOMS[party_room as usize].bottom_row - 1) as usize);
+				col = get_rand((ROOMS[party_room as usize].left_col + 1) as usize, (ROOMS[party_room as usize].right_col - 1) as usize);
 				tries += 1;
 				let try_again = (SpotFlag::is_any_set(&vec![Object, Stairs, Trap, Tunnel], dungeon[row][col]) || SpotFlag::is_nothing(dungeon[row][col]))
 					&& tries < 15;
@@ -180,8 +180,8 @@ pub unsafe fn add_traps() {
 			gr_row_col(&mut row, &mut col, vec![Floor, Monster]);
 			(row as usize, col as usize)
 		};
-		traps[i].trap_row = row;
-		traps[i].trap_col = col;
+		TRAPS[i].trap_row = row;
+		TRAPS[i].trap_col = col;
 		Trap.set(&mut dungeon[row][col]);
 		Hidden.set(&mut dungeon[row][col]);
 	}

@@ -854,16 +854,16 @@ pub unsafe fn put_objects() {
 }
 
 pub unsafe fn put_gold() {
-	for i in 0..MAXROOMS as usize {
-		let is_maze = rooms[i].room_type == RoomType::Maze;
-		let is_room = rooms[i].room_type == RoomType::Room;
+	for i in 0..MAX_ROOM as usize {
+		let is_maze = ROOMS[i].room_type == RoomType::Maze;
+		let is_room = ROOMS[i].room_type == RoomType::Room;
 		if !(is_room || is_maze) {
 			continue;
 		}
 		if is_maze || rand_percent(GOLD_PERCENT) {
 			for _j in 0..50 {
-				let row = get_rand(rooms[i].top_row + 1, rooms[i].bottom_row - 1);
-				let col = get_rand(rooms[i].left_col + 1, rooms[i].right_col - 1);
+				let row = get_rand(ROOMS[i].top_row + 1, ROOMS[i].bottom_row - 1);
+				let col = get_rand(ROOMS[i].left_col + 1, ROOMS[i].right_col - 1);
 				if Floor.is_set(dungeon[row as usize][col as usize]) || Tunnel.is_set(dungeon[row as usize][col as usize]) {
 					plant_gold(row, col, is_maze);
 					break;

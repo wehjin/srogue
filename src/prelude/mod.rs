@@ -25,7 +25,7 @@ pub use crate::r#use::*;
 pub use crate::zap::*;
 
 
-pub const MAXROOMS: i64 = 9;
+pub const MAX_ROOM: usize = 9;
 pub const NO_ROOM: i64 = -1;
 pub const PASSAGE: i64 = -3;
 pub const BIG_ROOM: usize = 10;

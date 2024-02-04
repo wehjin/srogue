@@ -142,14 +142,14 @@ pub unsafe fn make_level() {
 				connect_rooms(i as i64, i as i64 + 3 as i64);
 			}
 			if (i as i64) < 9 as i64 - 2 as i64 {
-				if (*rooms
+				if (*ROOMS
 					.as_mut_ptr()
 					.offset((i as i64 + 1) as isize))
 					.room_type as i64
 					& 0o1 as c_ushort as i64 != 0
 				{
 					if connect_rooms(i as i64, i as i64 + 2 as i64) {
-						(*rooms
+						(*ROOMS
 							.as_mut_ptr()
 							.offset((i as i64 + 1) as isize))
 							.room_type = RoomType::Room;
@@ -157,14 +157,14 @@ pub unsafe fn make_level() {
 				}
 			}
 			if (i as i64) < 9 as i64 - 6 as i64 {
-				if (*rooms
+				if (*ROOMS
 					.as_mut_ptr()
 					.offset((i as i64 + 3 as i64) as isize))
 					.room_type as i64
 					& 0o1 as c_ushort as i64 != 0
 				{
 					if connect_rooms(i as i64, i as i64 + 6 as i64) {
-						(*rooms
+						(*ROOMS
 							.as_mut_ptr()
 							.offset((i as i64 + 3 as i64) as isize))
 							.room_type = RoomType::Room;
@@ -221,7 +221,7 @@ pub unsafe fn make_room(rn: i64, r1: i64, r2: i64, r3: i64) {
 	};
 	let (left, right, top, bottom) = (left, right, top, bottom);
 	if fill_dungeon {
-		rooms[room_index].room_type = RoomType::Room;
+		ROOMS[room_index].room_type = RoomType::Room;
 		for i in top..(bottom + 1) {
 			let top_border = i == top;
 			let bottom_border = i == bottom;
@@ -239,31 +239,31 @@ pub unsafe fn make_room(rn: i64, r1: i64, r2: i64, r3: i64) {
 			}
 		}
 	}
-	rooms[rn as usize].top_row = top as i64;
-	rooms[rn as usize].bottom_row = bottom as i64;
-	rooms[rn as usize].left_col = left as i64;
-	rooms[rn as usize].right_col = right as i64;
+	ROOMS[rn as usize].top_row = top as i64;
+	ROOMS[rn as usize].bottom_row = bottom as i64;
+	ROOMS[rn as usize].left_col = left as i64;
+	ROOMS[rn as usize].right_col = right as i64;
 }
 
 pub unsafe fn connect_rooms(room1: i64, room2: i64) -> bool {
 	let (room1, room2) = (room1, room2);
-	if rooms[room1 as usize].room_type.is_nothing() || rooms[room2 as usize].room_type.is_nothing() {
+	if ROOMS[room1 as usize].room_type.is_nothing() || ROOMS[room2 as usize].room_type.is_nothing() {
 		return false;
 	}
-	let dir1 = if same_row(room1, room2) && (rooms[room1 as usize].left_col > rooms[room2 as usize].right_col) {
+	let dir1 = if same_row(room1, room2) && (ROOMS[room1 as usize].left_col > ROOMS[room2 as usize].right_col) {
 		DoorDirection::Left
-	} else if same_row(room1, room2) && (rooms[room2 as usize].left_col > rooms[room1 as usize].right_col) {
+	} else if same_row(room1, room2) && (ROOMS[room2 as usize].left_col > ROOMS[room1 as usize].right_col) {
 		DoorDirection::Right
-	} else if same_col(room1, room2) && (rooms[room1 as usize].top_row > rooms[room2 as usize].bottom_row) {
+	} else if same_col(room1, room2) && (ROOMS[room1 as usize].top_row > ROOMS[room2 as usize].bottom_row) {
 		DoorDirection::Up
-	} else if same_col(room1, room2) && (rooms[room2 as usize].top_row > rooms[room1 as usize].bottom_row) {
+	} else if same_col(room1, room2) && (ROOMS[room2 as usize].top_row > ROOMS[room1 as usize].bottom_row) {
 		DoorDirection::Down
 	} else {
 		return false;
 	};
 	let dir2 = dir1.to_inverse();
-	let spot1 = put_door(&mut rooms[room1 as usize], dir1);
-	let spot2 = put_door(&mut rooms[room2 as usize], dir2);
+	let spot1 = put_door(&mut ROOMS[room1 as usize], dir1);
+	let spot2 = put_door(&mut ROOMS[room2 as usize], dir2);
 	let mut do_draw = true;
 	while do_draw {
 		draw_simple_passage(&spot1, &spot2, dir1);
@@ -272,24 +272,24 @@ pub unsafe fn connect_rooms(room1: i64, room2: i64) -> bool {
 
 	let door1_index = dir1.to_index();
 	let door2_index = dir2.to_index();
-	rooms[room1 as usize].doors[door1_index].oth_room = Some(room2);
-	rooms[room1 as usize].doors[door1_index].oth_row = Some(spot2.row);
-	rooms[room1 as usize].doors[door1_index].oth_col = Some(spot2.col);
-	rooms[room2 as usize].doors[door2_index].oth_room = Some(room1);
-	rooms[room2 as usize].doors[door2_index].oth_row = Some(spot1.row);
-	rooms[room2 as usize].doors[door2_index].oth_col = Some(spot1.col);
+	ROOMS[room1 as usize].doors[door1_index].oth_room = Some(room2);
+	ROOMS[room1 as usize].doors[door1_index].oth_row = Some(spot2.row);
+	ROOMS[room1 as usize].doors[door1_index].oth_col = Some(spot2.col);
+	ROOMS[room2 as usize].doors[door2_index].oth_room = Some(room1);
+	ROOMS[room2 as usize].doors[door2_index].oth_row = Some(spot1.row);
+	ROOMS[room2 as usize].doors[door2_index].oth_col = Some(spot1.col);
 	return true;
 }
 
 pub unsafe fn clear_level() {
-	for i in 0..MAXROOMS as usize {
-		rooms[i].room_type = Nothing;
+	for i in 0..MAX_ROOM {
+		ROOMS[i].room_type = Nothing;
 		for j in 0..4 {
-			rooms[i].doors[j].oth_room = None;
+			ROOMS[i].doors[j].oth_room = None;
 		}
 	}
-	for i in 0..MAX_TRAPS {
-		traps[i].trap_type = NoTrap;
+	for i in 0..MAX_TRAP {
+		TRAPS[i].trap_type = NoTrap;
 	}
 	for i in 0..DROWS {
 		for j in 0..DCOLS {
@@ -406,7 +406,7 @@ pub fn same_col(room1: i64, room2: i64) -> bool {
 
 pub unsafe fn add_mazes() {
 	if cur_level > 1 {
-		let start = get_rand(0, MAXROOMS - 1);
+		let start = get_rand(0, MAX_ROOM - 1);
 		let maze_percent = {
 			let mut nominal_percent = (cur_level * 5) / 4;
 			if cur_level > 15 {
@@ -416,19 +416,19 @@ pub unsafe fn add_mazes() {
 			}
 		} as usize;
 
-		for i in 0..MAXROOMS {
-			let j = (start + i) % MAXROOMS;
-			if rooms[j as usize].room_type.is_nothing() {
+		for i in 0..MAX_ROOM {
+			let j = (start + i) % MAX_ROOM;
+			if ROOMS[j as usize].room_type.is_nothing() {
 				let do_maze = rand_percent(maze_percent);
 				if do_maze {
-					rooms[j as usize].room_type = RoomType::Maze;
+					ROOMS[j as usize].room_type = RoomType::Maze;
 					make_maze(
-						get_rand(rooms[j as usize].top_row + 1, rooms[j as usize].bottom_row - 1) as usize,
-						get_rand(rooms[j as usize].left_col + 1, rooms[j as usize].right_col - 1) as usize,
-						rooms[j as usize].top_row as usize, rooms[j as usize].bottom_row as usize,
-						rooms[j as usize].left_col as usize, rooms[j as usize].right_col as usize,
+						get_rand(ROOMS[j as usize].top_row + 1, ROOMS[j as usize].bottom_row - 1) as usize,
+						get_rand(ROOMS[j as usize].left_col + 1, ROOMS[j as usize].right_col - 1) as usize,
+						ROOMS[j as usize].top_row as usize, ROOMS[j as usize].bottom_row as usize,
+						ROOMS[j as usize].left_col as usize, ROOMS[j as usize].right_col as usize,
 					);
-					hide_boxed_passage(rooms[j as usize].top_row, rooms[j as usize].left_col, rooms[j as usize].bottom_row, rooms[j as usize].right_col, get_rand(0, 2));
+					hide_boxed_passage(ROOMS[j as usize].top_row, ROOMS[j as usize].left_col, ROOMS[j as usize].bottom_row, ROOMS[j as usize].right_col, get_rand(0, 2));
 				}
 			}
 		}
@@ -439,14 +439,14 @@ pub unsafe fn fill_out_level() {
 	mix_random_rooms();
 	r_de = NO_ROOM;
 
-	for i in 0..MAXROOMS {
+	for i in 0..MAX_ROOM {
 		let rn = random_rooms[i as usize] as i64;
 		// Note: original C uses (rooms[rn as usize].is_room & R_NOTHING) for the
 		// first clause of the conditional. Since R_NOTHING is 0, the first clause would always evaluate
 		// to false.
 		// Question is, was that a bad bug that should be fixed? Or was it a good bug that will break this
 		// function if fixed.  For now, we will fix the bug.
-		if (rooms[rn as usize].room_type == RoomType::Nothing) || ((rooms[rn as usize].room_type == RoomType::Cross) && coin_toss()) {
+		if (ROOMS[rn as usize].room_type == RoomType::Nothing) || ((ROOMS[rn as usize].room_type == RoomType::Cross) && coin_toss()) {
 			fill_it(rn, true);
 		}
 	}
@@ -473,26 +473,26 @@ pub unsafe fn fill_it(rn: i64, do_rec_de: bool) {
 		let target_room = rn + OFFSETS[i];
 		let mut rooms_found: usize = 0;
 
-		if ((target_room < 0) || (target_room >= MAXROOMS))
+		if ((target_room < 0) || (target_room >= MAX_ROOM as i64))
 			|| (!same_row(rn, target_room) && !same_col(rn, target_room))
-			|| (rooms[target_room as usize].room_type != RoomType::Room && rooms[target_room as usize].room_type != RoomType::Maze) {
+			|| (ROOMS[target_room as usize].room_type != RoomType::Room && ROOMS[target_room as usize].room_type != RoomType::Maze) {
 			continue;
 		}
 		let tunnel_dir = get_tunnel_dir(rn, target_room);
 		let door_dir = tunnel_dir.to_inverse();
-		if rooms[target_room as usize].doors[door_dir.to_index()].oth_room.is_some() {
+		if ROOMS[target_room as usize].doors[door_dir.to_index()].oth_room.is_some() {
 			continue;
 		}
 		let (mut srow, mut scol) = (srow, scol);
 		if ((!do_rec_de) || did_this) || (!mask_room(rn, &mut srow, &mut scol, Tunnel as c_ushort)) {
-			srow = (rooms[rn as usize].top_row + rooms[rn as usize].bottom_row) / 2;
-			scol = (rooms[rn as usize].left_col + rooms[rn as usize].right_col) / 2;
+			srow = (ROOMS[rn as usize].top_row + ROOMS[rn as usize].bottom_row) / 2;
+			scol = (ROOMS[rn as usize].left_col + ROOMS[rn as usize].right_col) / 2;
 		}
-		let d_spot = put_door(&mut rooms[target_room as usize], door_dir);
+		let d_spot = put_door(&mut ROOMS[target_room as usize], door_dir);
 		rooms_found += 1;
 		let s_spot = DungeonSpot { col: scol, row: srow };
 		draw_simple_passage(&s_spot, &d_spot, tunnel_dir);
-		rooms[rn as usize].room_type = RoomType::DeadEnd;
+		ROOMS[rn as usize].room_type = RoomType::DeadEnd;
 		dungeon[srow as usize][scol as usize] = Tunnel as c_ushort;
 
 		if (i < 3) && !did_this {
@@ -510,21 +510,21 @@ pub unsafe fn fill_it(rn: i64, do_rec_de: bool) {
 
 pub unsafe fn recursive_deadend(rn: i64, offsets: &[i64; 4], s_spot: &DungeonSpot)
 {
-	rooms[rn as usize].room_type = RoomType::DeadEnd;
+	ROOMS[rn as usize].room_type = RoomType::DeadEnd;
 	dungeon[s_spot.row as usize][s_spot.col as usize] = Tunnel as c_ushort;
 
 	for i in 0..4 {
 		let de = rn + offsets[i];
-		if ((de < 0) || (de >= MAXROOMS))
+		if ((de < 0) || (de >= MAX_ROOM as i64))
 			|| (!same_row(rn, de) && !same_col(rn, de)) {
 			continue;
 		}
-		if rooms[de as usize].room_type != RoomType::Nothing {
+		if ROOMS[de as usize].room_type != RoomType::Nothing {
 			continue;
 		}
 		let d_spot = DungeonSpot {
-			col: (rooms[de as usize].left_col + rooms[de as usize].right_col) / 2,
-			row: (rooms[de as usize].top_row + rooms[de as usize].bottom_row) / 2,
+			col: (ROOMS[de as usize].left_col + ROOMS[de as usize].right_col) / 2,
+			row: (ROOMS[de as usize].top_row + ROOMS[de as usize].bottom_row) / 2,
 		};
 		let tunnel_dir = get_tunnel_dir(rn, de);
 		draw_simple_passage(&s_spot, &d_spot, tunnel_dir);
@@ -535,9 +535,9 @@ pub unsafe fn recursive_deadend(rn: i64, offsets: &[i64; 4], s_spot: &DungeonSpo
 
 unsafe fn get_tunnel_dir(rn: i64, de: i64) -> DoorDirection {
 	if same_row(rn, de) {
-		if rooms[rn as usize].left_col < rooms[de as usize].left_col { DoorDirection::Right } else { DoorDirection::Left }
+		if ROOMS[rn as usize].left_col < ROOMS[de as usize].left_col { DoorDirection::Right } else { DoorDirection::Left }
 	} else {
-		if rooms[rn as usize].top_row < rooms[de as usize].top_row { DoorDirection::Down } else { DoorDirection::Up }
+		if ROOMS[rn as usize].top_row < ROOMS[de as usize].top_row { DoorDirection::Down } else { DoorDirection::Up }
 	}
 }
 
@@ -551,13 +551,13 @@ pub unsafe extern "C" fn mask_room(
 ) -> bool {
 	let mut i = 0;
 	let mut j = 0;
-	i = (*rooms.as_mut_ptr().offset(rn as isize)).top_row;
+	i = (*ROOMS.as_mut_ptr().offset(rn as isize)).top_row;
 	while i
-		<= (*rooms.as_mut_ptr().offset(rn as isize)).bottom_row
+		<= (*ROOMS.as_mut_ptr().offset(rn as isize)).bottom_row
 	{
-		j = (*rooms.as_mut_ptr().offset(rn as isize)).left_col;
+		j = (*ROOMS.as_mut_ptr().offset(rn as isize)).left_col;
 		while j
-			<= (*rooms.as_mut_ptr().offset(rn as isize)).right_col
+			<= (*ROOMS.as_mut_ptr().offset(rn as isize)).right_col
 		{
 			if dungeon[i as usize][j as usize] as i64 & mask as i64 != 0
 			{
@@ -790,12 +790,12 @@ pub unsafe extern "C" fn show_average_hp() {
 }
 
 pub unsafe fn mix_random_rooms() {
-	for _i in 0..(3 * MAXROOMS) {
+	for _i in 0..(3 * MAX_ROOM) {
 		let mut x: usize = 0;
 		let mut y: usize = 0;
 		loop {
-			x = get_rand(0, (MAXROOMS - 1) as c_int) as usize;
-			y = get_rand(0, (MAXROOMS - 1) as c_int) as usize;
+			x = get_rand(0, (MAX_ROOM - 1) as c_int) as usize;
+			y = get_rand(0, (MAX_ROOM - 1) as c_int) as usize;
 			if x != y {
 				break;
 			}

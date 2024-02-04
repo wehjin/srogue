@@ -231,8 +231,8 @@ pub unsafe fn seek_gold(monster: &mut obj) -> bool {
 	}
 
 	let rn = rn as usize;
-	for i in (rooms[rn].top_row + 1)..rooms[rn].bottom_row {
-		for j in (rooms[rn].left_col + 1)..rooms[rn].right_col {
+	for i in (ROOMS[rn].top_row + 1)..ROOMS[rn].bottom_row {
+		for j in (ROOMS[rn].left_col + 1)..ROOMS[rn].right_col {
 			if gold_at(i, j) && !Monster.is_set(dungeon[i as usize][j as usize]) {
 				monster.m_flags.can_flit = true;
 				let can_go_if_while_can_flit = mon_can_go(monster, i, j);

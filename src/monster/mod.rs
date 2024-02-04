@@ -952,8 +952,8 @@ pub unsafe extern "C" fn party_monsters(rn: i64, n: i64) {
 		}
 		let mut found: Option<(i64, i64)> = None;
 		for _j in 0..250 {
-			let row = get_rand(rooms[rn as usize].top_row + 1, rooms[rn as usize].bottom_row - 1);
-			let col = get_rand(rooms[rn as usize].left_col + 1, rooms[rn as usize].right_col - 1);
+			let row = get_rand(ROOMS[rn as usize].top_row + 1, ROOMS[rn as usize].bottom_row - 1);
+			let col = get_rand(ROOMS[rn as usize].left_col + 1, ROOMS[rn as usize].right_col - 1);
 			let dungeon_spot = dungeon[row as usize][col as usize];
 			if !Monster.is_set(dungeon_spot) && SpotFlag::is_any_set(&vec![Floor, Tunnel], dungeon_spot) {
 				found = Some((row, col));
@@ -1371,7 +1371,7 @@ unsafe fn is_very_close(row: i64, col: i64) -> bool {
 }
 
 unsafe fn not_in_maze() -> bool {
-	rooms[cur_room as usize].room_type != RoomType::Maze
+	ROOMS[cur_room as usize].room_type != RoomType::Maze
 }
 
 unsafe fn in_current_room(row: i64, col: i64) -> bool {
@@ -1445,16 +1445,16 @@ pub unsafe fn aim_monster(monster: &mut object) {
 
 	for i in 0..4 {
 		let d = ((r + i) % 4) as usize;
-		if rooms[rn].doors[d].oth_room.is_some() {
-			monster.trow = rooms[rn].doors[d].door_row;
-			monster.tcol = rooms[rn].doors[d].door_col;
+		if ROOMS[rn].doors[d].oth_room.is_some() {
+			monster.trow = ROOMS[rn].doors[d].door_row;
+			monster.tcol = ROOMS[rn].doors[d].door_col;
 			break;
 		}
 	}
 }
 
 pub unsafe fn no_room_for_monster(rn: usize) -> bool {
-	let room = &rooms[rn];
+	let room = &ROOMS[rn];
 	for i in (room.top_row + 1)..room.bottom_row {
 		for j in (room.left_col + 1)..room.right_col {
 			if !Monster.is_set(dungeon[i as usize][j as usize]) {
@@ -1493,7 +1493,7 @@ pub unsafe extern "C" fn mon_sees(
 	rn = get_room_number(row, col);
 	if rn != -1
 		&& rn == get_room_number((*monster).row, (*monster).col)
-		&& (*rooms.as_mut_ptr().offset(rn as isize)).room_type as i64 & 0o4i64 == 0 {
+		&& (*ROOMS.as_mut_ptr().offset(rn as isize)).room_type as i64 & 0o4i64 == 0 {
 		return true;
 	}
 	rdif = (row - (*monster).row) as c_short;
