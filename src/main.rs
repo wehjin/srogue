@@ -67,23 +67,28 @@ pub unsafe extern "C" fn turn_into_user() {
 pub mod console;
 pub mod settings;
 
+pub mod hunger;
+
 pub fn main() {
 	unsafe { setuid(user().true_uid); }
-	let mut restored = unsafe { init() };
+	let (mut game, mut restored) = unsafe { init() };
 	loop {
 		if !restored {
 			unsafe { clear_level(); }
-			unsafe { make_level(); }
-			unsafe { put_objects(); }
+			unsafe {
+				game.depth = game.depth.descend();
+				make_level(game.depth.cur);
+			}
+			unsafe { put_objects(&game.depth); }
 			unsafe { put_stairs(); }
-			unsafe { add_traps(); }
-			unsafe { put_mons(); }
+			unsafe { add_traps(game.depth.cur); }
+			unsafe { put_mons(game.depth.cur); }
 			unsafe { put_player(party_room); }
-			unsafe { print_stats(STAT_ALL); }
+			unsafe { print_stats(STAT_ALL, game.depth.cur); }
 		} else {
 			restored = false;
 		}
-		unsafe { play_level(); }
+		unsafe { play_level(&mut game); }
 		unsafe { free_stuff(&mut level_objects); }
 		unsafe { free_stuff(&mut level_monsters); }
 	}

@@ -19,12 +19,14 @@ pub const BYEBYE_STRING: &'static str = "Okay, bye bye!";
 
 pub struct GameState {
 	seed: [u8; 32],
+	pub depth: RogueDepth,
 }
 
 impl GameState {
 	pub fn new() -> Self {
 		GameState {
 			seed: [1u8; 32],
+			depth: RogueDepth::new(),
 		}
 	}
 
@@ -42,7 +44,7 @@ impl GameState {
 	}
 }
 
-pub unsafe fn init() -> bool {
+pub unsafe fn init() -> (GameState, bool) {
 	match get_login_name() {
 		None => {
 			clean_up("Hey!  Who are you?");
@@ -66,12 +68,12 @@ pub unsafe fn init() -> bool {
 	md_heed_signals();
 
 	if score_only() {
-		put_scores(None);
+		put_scores(None, game.depth.max);
 	}
 	game.set_seed(md_get_seed());
 	if let Some(rest_file) = rest_file() {
-		restore(&rest_file);
-		return true;
+		restore(&rest_file, &mut game);
+		return (game, true);
 	}
 	mix_colors();
 	get_wand_and_ring_materials();
@@ -80,8 +82,8 @@ pub unsafe fn init() -> bool {
 	level_monsters.next_object = 0 as *mut obj;
 	player_init();
 	party_counter = get_rand(1, 10);
-	ring_stats(false);
-	return false;
+	ring_stats(false, game.depth.cur);
+	return (game, false);
 }
 
 unsafe fn player_init() {
@@ -153,10 +155,10 @@ pub unsafe fn clean_up(estr: &str) {
 }
 
 
-pub unsafe fn byebye(ask_quit: bool) {
+pub unsafe fn byebye(ask_quit: bool, max_level: usize) {
 	md_ignore_signals();
 	if ask_quit {
-		quit(true);
+		quit(true, max_level);
 	} else {
 		clean_up(BYEBYE_STRING);
 	}
@@ -174,8 +176,8 @@ pub unsafe fn onintr() {
 	md_heed_signals();
 }
 
-pub unsafe fn error_save() {
+pub unsafe fn error_save(game: &GameState) {
 	save_is_interactive = false;
-	save_into_file(ERROR_FILE);
+	save_into_file(ERROR_FILE, game);
 	clean_up("");
 }

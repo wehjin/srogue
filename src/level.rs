@@ -2,6 +2,7 @@
 
 use libc::{c_ushort};
 use ncurses::clear;
+use serde::{Deserialize, Serialize};
 use SpotFlag::Door;
 use crate::message::{message, print_stats};
 use crate::monster::wake_room;
@@ -16,8 +17,28 @@ use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
 use crate::prelude::trap_kind::TrapKind::NoTrap;
 use crate::room::RoomType::Nothing;
 
-pub static mut cur_level: isize = 0;
-pub static mut max_level: isize = 1;
+
+#[derive(Copy, Clone, Serialize, Deserialize)]
+pub struct RogueDepth {
+	pub cur: usize,
+	pub max: usize,
+}
+
+impl RogueDepth {
+	pub fn new() -> Self {
+		RogueDepth { cur: 0, max: 1 }
+	}
+	pub fn descend(&self) -> Self {
+		let cur = (self.cur + 1).max(99);
+		let max = self.max.max(cur);
+		RogueDepth { cur, max }
+	}
+	pub fn ascend(&self) -> Self {
+		let cur = if self.cur < 3 { 1 } else { self.cur - 2 };
+		RogueDepth { cur, max: self.max }
+	}
+}
+
 pub static mut cur_room: i64 = 0;
 pub static mut new_level_message: Option<String> = None;
 pub static mut party_room: i64 = NO_ROOM;
@@ -84,14 +105,8 @@ impl Level {
 	}
 }
 
-pub unsafe fn make_level() -> Level {
+pub unsafe fn make_level(level_depth: usize) -> Level {
 	let mut level = Level::new();
-	if (cur_level as i64) < 99 {
-		cur_level += 1;
-	}
-	if cur_level as i64 > max_level as i64 {
-		max_level = cur_level;
-	}
 	let (must_exist1, must_exist2, must_exist3) = match get_rand(0, 5) {
 		0 => (0, 1, 2),
 		1 => (3, 4, 5),
@@ -101,7 +116,7 @@ pub unsafe fn make_level() -> Level {
 		5 => (2, 5, 8),
 		_ => unreachable!("0 <= rand <= 5")
 	};
-	let big_room = cur_level == party_counter && rand_percent(1);
+	let big_room = level_depth == party_counter && rand_percent(1);
 	if big_room {
 		make_room(10, 0, 0, 0);
 	} else {
@@ -110,26 +125,26 @@ pub unsafe fn make_level() -> Level {
 		}
 	}
 	if !big_room {
-		add_mazes();
+		add_mazes(level_depth);
 		level.random_rooms.mix();
 		for j in 0..MAX_ROOM {
 			let i = level.random_rooms.rooms[j];
 			if i < MAX_ROOM - 1 {
-				connect_rooms(i, i + 1);
+				connect_rooms(i, i + 1, level_depth);
 			}
 			if i < MAX_ROOM - 3 {
-				connect_rooms(i, i + 3);
+				connect_rooms(i, i + 3, level_depth);
 			}
 			if i < MAX_ROOM - 2 {
 				if ROOMS[i + 1].room_type == Nothing {
-					if connect_rooms(i, i + 2) {
+					if connect_rooms(i, i + 2, level_depth) {
 						ROOMS[i + 1].room_type = RoomType::Cross;
 					}
 				}
 			}
 			if i < MAX_ROOM - 6 {
 				if ROOMS[i + 3].room_type == Nothing {
-					if connect_rooms(i, i + 6) {
+					if connect_rooms(i, i + 6, level_depth) {
 						ROOMS[i + 3].room_type = RoomType::Cross;
 					}
 				}
@@ -137,9 +152,9 @@ pub unsafe fn make_level() -> Level {
 			if is_all_connected() {
 				break;
 			}
-			fill_out_level(&mut level);
+			fill_out_level(&mut level, level_depth);
 		}
-		if !has_amulet() && cur_level >= AMULET_LEVEL {
+		if !has_amulet() && level_depth >= AMULET_LEVEL {
 			put_amulet();
 		}
 	}
@@ -208,7 +223,7 @@ pub unsafe fn make_room(rn: i64, r1: i64, r2: i64, r3: i64) {
 	ROOMS[rn as usize].right_col = right as i64;
 }
 
-pub unsafe fn connect_rooms(room1: usize, room2: usize) -> bool {
+pub unsafe fn connect_rooms(room1: usize, room2: usize, level_depth: usize) -> bool {
 	if ROOMS[room1 as usize].room_type.is_nothing() || ROOMS[room2 as usize].room_type.is_nothing() {
 		return false;
 	}
@@ -224,11 +239,11 @@ pub unsafe fn connect_rooms(room1: usize, room2: usize) -> bool {
 		return false;
 	};
 	let dir2 = dir1.invert();
-	let spot1 = put_door(&mut ROOMS[room1 as usize], dir1);
-	let spot2 = put_door(&mut ROOMS[room2 as usize], dir2);
+	let spot1 = put_door(&mut ROOMS[room1], dir1, level_depth);
+	let spot2 = put_door(&mut ROOMS[room2], dir2, level_depth);
 	let mut do_draw = true;
 	while do_draw {
-		draw_simple_passage(&spot1, &spot2, dir1);
+		draw_simple_passage(&spot1, &spot2, dir1, level_depth);
 		do_draw = rand_percent(4);
 	}
 
@@ -268,7 +283,7 @@ pub unsafe fn clear_level() {
 	clear();
 }
 
-pub unsafe fn put_door(room: &mut Room, door_dir: DoorDirection) -> DungeonSpot {
+pub unsafe fn put_door(room: &mut Room, door_dir: DoorDirection, level_depth: usize) -> DungeonSpot {
 	let wall_width = if RoomType::Maze == room.room_type { 0 } else { 1 };
 	let door_spot = match door_dir {
 		DoorDirection::Up | DoorDirection::Down => {
@@ -297,7 +312,7 @@ pub unsafe fn put_door(room: &mut Room, door_dir: DoorDirection) -> DungeonSpot 
 	if room.room_type == RoomType::Room {
 		dungeon[door_spot.row as usize][door_spot.col as usize] = Door as c_ushort;
 	}
-	if (cur_level > 2) && rand_percent(HIDE_PERCENT) {
+	if (level_depth > 2) && rand_percent(HIDE_PERCENT) {
 		dungeon[door_spot.row as usize][door_spot.col as usize] |= HIDDEN;
 	}
 	let door_index = door_dir.to_index();
@@ -306,7 +321,7 @@ pub unsafe fn put_door(room: &mut Room, door_dir: DoorDirection) -> DungeonSpot 
 	door_spot
 }
 
-pub unsafe fn draw_simple_passage(spot1: &DungeonSpot, spot2: &DungeonSpot, dir: DoorDirection) {
+pub unsafe fn draw_simple_passage(spot1: &DungeonSpot, spot2: &DungeonSpot, dir: DoorDirection, level_depth: usize) {
 	let (col1, row1, col2, row2) =
 		match dir {
 			DoorDirection::Left | DoorDirection::Right => {
@@ -353,7 +368,7 @@ pub unsafe fn draw_simple_passage(spot1: &DungeonSpot, spot2: &DungeonSpot, dir:
 			}
 		};
 	if rand_percent(HIDE_PERCENT) {
-		hide_boxed_passage(row1, col1, row2, col2, 1);
+		hide_boxed_passage(row1, col1, row2, col2, 1, level_depth);
 	}
 }
 
@@ -365,13 +380,13 @@ pub fn same_col(room1: usize, room2: usize) -> bool {
 	room1 % 3 == room2 % 3
 }
 
-pub unsafe fn add_mazes() {
-	if cur_level > 1 {
+pub unsafe fn add_mazes(level_depth: usize) {
+	if level_depth > 1 {
 		let start = get_rand(0, MAX_ROOM - 1);
 		let maze_percent = {
-			let mut nominal_percent = (cur_level * 5) / 4;
-			if cur_level > 15 {
-				nominal_percent + cur_level
+			let mut nominal_percent = (level_depth * 5) / 4;
+			if level_depth > 15 {
+				nominal_percent + level_depth
 			} else {
 				nominal_percent
 			}
@@ -389,29 +404,29 @@ pub unsafe fn add_mazes() {
 						ROOMS[j as usize].top_row as usize, ROOMS[j as usize].bottom_row as usize,
 						ROOMS[j as usize].left_col as usize, ROOMS[j as usize].right_col as usize,
 					);
-					hide_boxed_passage(ROOMS[j as usize].top_row, ROOMS[j as usize].left_col, ROOMS[j as usize].bottom_row, ROOMS[j as usize].right_col, get_rand(0, 2));
+					hide_boxed_passage(ROOMS[j as usize].top_row, ROOMS[j as usize].left_col, ROOMS[j as usize].bottom_row, ROOMS[j as usize].right_col, get_rand(0, 2), level_depth);
 				}
 			}
 		}
 	}
 }
 
-pub unsafe fn fill_out_level(level: &mut Level) {
+pub unsafe fn fill_out_level(level: &mut Level, level_depth: usize) {
 	level.random_rooms.mix();
 	r_de = None;
 	for i in 0..MAX_ROOM {
 		let rn = level.random_rooms.rooms[i];
 		if ROOMS[rn].room_type == RoomType::Nothing
 			|| ((ROOMS[rn].room_type == RoomType::Cross) && coin_toss()) {
-			fill_it(rn, true);
+			fill_it(rn, true, level_depth);
 		}
 	}
 	if let Some(rn) = r_de {
-		fill_it(rn, false);
+		fill_it(rn, false, level_depth);
 	}
 }
 
-pub unsafe fn fill_it(rn: usize, do_rec_de: bool) {
+pub unsafe fn fill_it(rn: usize, do_rec_de: bool, level_depth: usize) {
 	let mut did_this = false;
 	let mut srow: i64 = 0;
 	let mut scol: i64 = 0;
@@ -444,9 +459,9 @@ pub unsafe fn fill_it(rn: usize, do_rec_de: bool) {
 		} else {
 			DungeonSpot { col: scol, row: srow }
 		};
-		let end_spot = put_door(&mut ROOMS[target_room], door_dir);
+		let end_spot = put_door(&mut ROOMS[target_room], door_dir, level_depth);
 		rooms_found += 1;
-		draw_simple_passage(&start_spot, &end_spot, tunnel_dir);
+		draw_simple_passage(&start_spot, &end_spot, tunnel_dir, level_depth);
 		ROOMS[rn].room_type = RoomType::DeadEnd;
 		dungeon[srow as usize][scol as usize] = Tunnel as u16;
 		if (i < 3) && !did_this {
@@ -456,13 +471,13 @@ pub unsafe fn fill_it(rn: usize, do_rec_de: bool) {
 			}
 		}
 		if rooms_found < 2 && do_rec_de {
-			recursive_deadend(rn, &OFFSETS, &start_spot);
+			recursive_deadend(rn, &OFFSETS, &start_spot, level_depth);
 		}
 		break;
 	}
 }
 
-pub unsafe fn recursive_deadend(rn: usize, offsets: &[isize; 4], s_spot: &DungeonSpot)
+pub unsafe fn recursive_deadend(rn: usize, offsets: &[isize; 4], s_spot: &DungeonSpot, level_depth: usize)
 {
 	ROOMS[rn].room_type = RoomType::DeadEnd;
 	dungeon[s_spot.row as usize][s_spot.col as usize] = Tunnel as c_ushort;
@@ -481,9 +496,9 @@ pub unsafe fn recursive_deadend(rn: usize, offsets: &[isize; 4], s_spot: &Dungeo
 		}
 		let d_spot = ROOMS[de].center_spot();
 		let tunnel_dir = get_tunnel_dir(rn, de);
-		draw_simple_passage(&s_spot, &d_spot, tunnel_dir);
+		draw_simple_passage(&s_spot, &d_spot, tunnel_dir, level_depth);
 		r_de = Some(de);
-		recursive_deadend(de, offsets, &d_spot);
+		recursive_deadend(de, offsets, &d_spot, level_depth);
 	}
 }
 
@@ -566,8 +581,8 @@ pub unsafe fn make_maze(r: usize, c: usize, tr: usize, br: usize, lc: usize, rc:
 	}
 }
 
-pub unsafe fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: i64) {
-	if cur_level > 2 {
+pub unsafe fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: i64, level_depth: usize) {
+	if level_depth > 2 {
 		let (row1, row2) = if row1 > row2 { (row2, row1) } else { (row1, row2) };
 		let (col1, col2) = if col1 > col2 { (col2, col1) } else { (col1, col2) };
 		let h = row2 - row1;
@@ -647,7 +662,7 @@ pub unsafe extern "C" fn drop_check() -> bool {
 	return false;
 }
 
-pub unsafe fn check_up() -> bool {
+pub unsafe fn check_up(game: &mut GameState) -> bool {
 	if !wizard {
 		if !Stairs.is_set(dungeon[rogue.row as usize][rogue.col as usize]) {
 			message("I see no way up", 0);
@@ -659,16 +674,16 @@ pub unsafe fn check_up() -> bool {
 		}
 	}
 	new_level_message = Some("you feel a wrenching sensation in your gut".to_string());
-	if cur_level == 1 {
-		win();
+	if game.depth.cur == 1 {
+		win(&game.depth);
 	} else {
-		cur_level -= 2;
+		game.depth = game.depth.ascend();
 		return true;
 	}
 	return false;
 }
 
-pub unsafe fn add_exp(e: isize, promotion: bool) {
+pub unsafe fn add_exp(e: isize, promotion: bool, level_depth: usize) {
 	rogue.exp_points += e;
 
 	if rogue.exp_points >= LEVEL_POINTS[(rogue.exp - 1) as usize] {
@@ -685,10 +700,10 @@ pub unsafe fn add_exp(e: isize, promotion: bool) {
 				rogue.hp_max += hp;
 			}
 			rogue.exp = i;
-			print_stats(STAT_HP | STAT_EXP);
+			print_stats(STAT_HP | STAT_EXP, level_depth);
 		}
 	} else {
-		print_stats(STAT_EXP);
+		print_stats(STAT_EXP, level_depth);
 	}
 }
 

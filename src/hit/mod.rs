@@ -9,12 +9,12 @@ pub static mut fight_monster: *mut object = 0 as *const object as *mut object;
 pub static mut detect_monster: bool = false;
 pub static mut hit_message: String = String::new();
 
-pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool) {
+pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool, depth: &RogueDepth) {
 	if !fight_monster.is_null() && monster != fight_monster {
 		fight_monster = 0 as *mut object;
 	}
 	(*monster).trow = NO_ROOM;
-	let mut hit_chance: usize = if cur_level >= (AMULET_LEVEL * 2) {
+	let mut hit_chance: usize = if depth.cur >= (AMULET_LEVEL * 2) {
 		100
 	} else {
 		let hit_chance = (*monster).m_hit_chance();
@@ -58,8 +58,8 @@ pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool) {
 				damage = 1;
 			}
 		}
-		let minus: isize = if cur_level >= AMULET_LEVEL * 2 {
-			AMULET_LEVEL * 2 - cur_level
+		let minus: isize = if depth.cur >= AMULET_LEVEL * 2 {
+			(depth.cur - AMULET_LEVEL * 2) as isize * -1
 		} else {
 			let mut minus = get_armor_class(&*rogue.armor) * 3;
 			minus = (minus as f64 / 100.0 * damage as f64) as isize;
@@ -72,21 +72,21 @@ pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool) {
 		damage /= 3;
 	}
 	if damage > 0 {
-		rogue_damage(damage, &mut *monster);
+		rogue_damage(damage, &mut *monster, depth);
 	}
 	if (*monster).m_flags.special_hit() {
-		special_hit(&mut *monster);
+		special_hit(&mut *monster, depth);
 	}
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rogue_hit(monster: *mut object, force_hit: bool) {
+pub unsafe extern "C" fn rogue_hit(monster: *mut object, force_hit: bool, depth: &RogueDepth) {
 	if !monster.is_null() {
 		if check_imitator(&mut *monster) {
 			return;
 		}
 		let hit_chance = if force_hit { 100 } else { get_hit_chance(&mut *rogue.weapon) };
-		let hit_chance = if wizard { hit_chance * 2 } else { hit_chance } as usize;
+		let hit_chance = if wizard { hit_chance * 2 } else { hit_chance };
 		if !rand_percent(hit_chance) {
 			if fight_monster.is_null() {
 				hit_message = "you miss  ".to_string();
@@ -94,7 +94,7 @@ pub unsafe extern "C" fn rogue_hit(monster: *mut object, force_hit: bool) {
 		} else {
 			let damage = get_weapon_damage(&*rogue.weapon);
 			let damage = if wizard { damage * 3 } else { damage };
-			if mon_damage(&mut *monster, damage as usize) {
+			if mon_damage(&mut *monster, damage as usize, depth) {
 				if fight_monster.is_null() {
 					hit_message = "you hit  ".to_string();
 				}
@@ -105,19 +105,19 @@ pub unsafe extern "C" fn rogue_hit(monster: *mut object, force_hit: bool) {
 	}
 }
 
-pub unsafe fn rogue_damage(d: isize, monster: &mut object) {
+pub unsafe fn rogue_damage(d: isize, monster: &mut object, depth: &RogueDepth) {
 	if d >= rogue.hp_current {
 		rogue.hp_current = 0;
-		print_stats(STAT_HP);
-		killed_by(Ending::Monster(monster));
+		print_stats(STAT_HP, depth.cur);
+		killed_by(Ending::Monster(monster), depth.max);
 	}
 	rogue.hp_current -= d;
-	print_stats(STAT_HP);
+	print_stats(STAT_HP, depth.cur);
 }
 
 pub unsafe fn get_number(s: *const c_char) -> usize {
 	let mut total = 0;
-	let mut i = 0 as isize;
+	let mut i = 0;
 	loop {
 		let c = *s.offset(i) as u8 as char;
 		if c < '0' || c > '9' {
@@ -181,7 +181,7 @@ pub unsafe extern "C" fn damage_for_strength() -> i64 {
 	return 8 as i64;
 }
 
-pub unsafe fn mon_damage(monster: &mut object, damage: usize) -> bool {
+pub unsafe fn mon_damage(monster: &mut object, damage: usize, depth: &RogueDepth) -> bool {
 	monster.set_hp_to_kill(monster.hp_to_kill() - damage as libc::c_short);
 	if monster.hp_to_kill() <= 0 {
 		let row = monster.row as i64;
@@ -190,12 +190,12 @@ pub unsafe fn mon_damage(monster: &mut object, damage: usize) -> bool {
 		ncurses::mvaddch(row as i32, col as i32, get_dungeon_char(row, col));
 
 		fight_monster = 0 as *const object as *mut object;
-		cough_up(monster);
+		cough_up(monster, depth);
 		let mn = monster::mon_name(monster);
 		hit_message = format!("{}defeated the {}", hit_message, mn);
 		message(&hit_message, 1);
 		hit_message.clear();
-		add_exp(monster.kill_exp, true);
+		add_exp(monster.kill_exp, true, depth.cur);
 		take_from_pack(monster, &mut level_monsters);
 
 		if monster.m_flags.holds {
@@ -208,7 +208,7 @@ pub unsafe fn mon_damage(monster: &mut object, damage: usize) -> bool {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn fight(to_the_death: bool) {
+pub unsafe extern "C" fn fight(to_the_death: bool, depth: &RogueDepth) {
 	let mut first_miss: libc::c_char = 1 as libc::c_char;
 	let mut monster: *mut object = 0 as *mut object;
 	let mut ch: char = 0 as char;
@@ -249,7 +249,7 @@ pub unsafe extern "C" fn fight(to_the_death: bool) {
 		(*fight_monster).stationary_damage() - 1
 	};
 	while !fight_monster.is_null() {
-		one_move_rogue(ch, false);
+		one_move_rogue(ch, false, depth);
 		if (!to_the_death && rogue.hp_current <= possible_damage)
 			|| interrupted
 			|| !Monster.is_set(dungeon[row as usize][col as usize]) {

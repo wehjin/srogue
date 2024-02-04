@@ -31,13 +31,13 @@ pub struct fight {
 	pub str_current: isize,
 	pub str_max: isize,
 	pub pack: object,
-	pub gold: isize,
+	pub gold: usize,
 	pub exp: isize,
 	pub exp_points: isize,
 	pub row: i64,
 	pub col: i64,
 	pub fchar: char,
-	pub moves_left: i16,
+	pub moves_left: usize,
 }
 
 pub type fighter = fight;
@@ -868,10 +868,10 @@ pub static mut mon_tab: [object; 26] = [
 ];
 
 #[no_mangle]
-pub unsafe extern "C" fn put_mons() {
+pub unsafe extern "C" fn put_mons(level_depth: usize) {
 	let n = get_rand(4, 6);
 	for _i in 0..n {
-		let mut monster = gr_monster(0 as *mut object, 0);
+		let mut monster = gr_monster(0 as *mut object, 0, level_depth);
 		if (*monster).m_flags.wanders && coin_toss() {
 			wake_up(&mut *monster);
 		}
@@ -882,12 +882,12 @@ pub unsafe extern "C" fn put_mons() {
 	}
 }
 
-pub unsafe fn gr_monster(mut monster: *mut object, mut mn: usize) -> *mut object {
+pub unsafe fn gr_monster(mut monster: *mut object, mut mn: usize, cur_level: usize) -> *mut object {
 	if monster.is_null() {
 		monster = alloc_object();
 		loop {
 			mn = get_rand(0, MONSTERS - 1);
-			if cur_level >= mon_tab[mn].is_protected as isize && cur_level <= mon_tab[mn].is_cursed as isize {
+			if cur_level >= mon_tab[mn].is_protected as usize && cur_level <= mon_tab[mn].is_cursed as usize {
 				break;
 			}
 		}
@@ -904,7 +904,7 @@ pub unsafe fn gr_monster(mut monster: *mut object, mut mn: usize) -> *mut object
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mv_mons() {
+pub unsafe extern "C" fn mv_mons(depth: &RogueDepth) {
 	if haste_self as c_int % 2 as c_int != 0 {
 		return;
 	}
@@ -914,7 +914,7 @@ pub unsafe extern "C" fn mv_mons() {
 		let next_monster = (*monster).next_object;
 		if (*monster).m_flags.hasted {
 			mon_disappeared = false;
-			mv_monster(&mut *monster, rogue.row, rogue.col);
+			mv_monster(&mut *monster, rogue.row, rogue.col, depth);
 			if mon_disappeared {
 				done_with_monster = true;
 			}
@@ -931,10 +931,10 @@ pub unsafe extern "C" fn mv_mons() {
 			let mut flew = false;
 			if (*monster).m_flags.flies && !(*monster).m_flags.napping && !mon_can_go(&*monster, rogue.row, rogue.col) {
 				flew = true;
-				mv_monster(&mut *monster, rogue.row, rogue.col);
+				mv_monster(&mut *monster, rogue.row, rogue.col, depth);
 			}
 			if !flew || !mon_can_go(&*monster, rogue.row, rogue.col) {
-				mv_monster(&mut *monster, rogue.row, rogue.col);
+				mv_monster(&mut *monster, rogue.row, rogue.col, depth);
 			}
 		}
 		monster = next_monster;
@@ -942,9 +942,9 @@ pub unsafe extern "C" fn mv_mons() {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn party_monsters(rn: i64, n: i64) {
+pub unsafe extern "C" fn party_monsters(rn: i64, n: i64, level_depth: usize) {
 	for i in 0..MONSTERS {
-		mon_tab[i].set_first_level(mon_tab[i].first_level() - (cur_level % 3))
+		mon_tab[i].set_first_level(mon_tab[i].first_level() - (level_depth % 3))
 	}
 	let n = n + n;
 	for _i in 0..n {
@@ -962,7 +962,7 @@ pub unsafe extern "C" fn party_monsters(rn: i64, n: i64) {
 			}
 		}
 		if let Some((row, col)) = found {
-			let monster = gr_monster(0 as *mut object, 0);
+			let monster = gr_monster(0 as *mut object, 0, level_depth);
 			if !(*monster).m_flags.imitates {
 				(*monster).m_flags.wakens = true;
 			}
@@ -970,7 +970,7 @@ pub unsafe extern "C" fn party_monsters(rn: i64, n: i64) {
 		}
 	}
 	for i in 0..MONSTERS {
-		mon_tab[i].set_first_level(mon_tab[i].first_level() + (cur_level % 3))
+		mon_tab[i].set_first_level(mon_tab[i].first_level() + (level_depth % 3))
 	}
 }
 
@@ -1006,7 +1006,7 @@ pub unsafe extern "C" fn gmc(mut monster: *mut object) -> chtype {
 	}
 }
 
-pub unsafe fn mv_monster(monster: &mut object, row: i64, col: i64) {
+pub unsafe fn mv_monster(monster: &mut object, row: i64, col: i64, depth: &RogueDepth) {
 	if monster.m_flags.asleep {
 		if monster.m_flags.napping {
 			monster.decrement_nap();
@@ -1036,13 +1036,13 @@ pub unsafe fn mv_monster(monster: &mut object, row: i64, col: i64) {
 		return;
 	}
 	if mon_can_go(monster, rogue.row, rogue.col) {
-		mon_hit(monster, None, false);
+		mon_hit(monster, None, false, depth);
 		return;
 	}
-	if monster.m_flags.flames && flame_broil(monster) {
+	if monster.m_flags.flames && flame_broil(monster, depth) {
 		return;
 	}
-	if monster.m_flags.seeks_gold && seek_gold(monster) {
+	if monster.m_flags.seeks_gold && seek_gold(monster, depth) {
 		return;
 	}
 
@@ -1266,7 +1266,7 @@ pub unsafe fn rogue_is_around(row: i64, col: i64) -> bool {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn wanderer() {
+pub unsafe extern "C" fn wanderer(level_depth: usize) {
 	let mut monster: *mut object = 0 as *mut object;
 	let mut row: i64 = 0;
 	let mut col: i64 = 0;
@@ -1274,7 +1274,7 @@ pub unsafe extern "C" fn wanderer() {
 	{
 		let mut i: c_short = 0;
 		while i < 15 && !found {
-			monster = gr_monster(0 as *mut object, 0);
+			monster = gr_monster(0 as *mut object, 0, level_depth);
 			let monster_wanders_or_wakens = (*monster).m_flags.wakens || (*monster).m_flags.wanders;
 			if monster_wanders_or_wakens {
 				found = true;
@@ -1320,7 +1320,7 @@ pub unsafe extern "C" fn show_monsters() {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn create_monster() {
+pub unsafe extern "C" fn create_monster(level_depth: usize) {
 	let mut found = false;
 	let mut row = rogue.row;
 	let mut col = rogue.col;
@@ -1342,7 +1342,7 @@ pub unsafe extern "C" fn create_monster() {
 		}
 	}
 	if found {
-		let mut monster = gr_monster(0 as *mut object, 0);
+		let mut monster = gr_monster(0 as *mut object, 0, level_depth);
 		put_m_at(row, col, &mut *monster);
 		ncurses::mvaddch(row as i32, col as i32, gmc(monster));
 		if (*monster).m_flags.wanders || (*monster).m_flags.wakens {
@@ -1501,12 +1501,12 @@ pub unsafe fn mon_sees(monster: *mut object, row: i64, col: i64) -> bool {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mv_aquatars() {
+pub unsafe extern "C" fn mv_aquatars(depth: &RogueDepth) {
 	let mut monster: *mut object = 0 as *mut object;
 	monster = level_monsters.next_object;
 	while !monster.is_null() {
 		if (*monster).m_char() == chtype::from('A') && mon_can_go(&*monster, rogue.row, rogue.col) {
-			mv_monster(&mut *monster, rogue.row, rogue.col);
+			mv_monster(&mut *monster, rogue.row, rogue.col, depth);
 			(*monster).m_flags.already_moved = true;
 		}
 		monster = (*monster).next_object;

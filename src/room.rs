@@ -249,7 +249,7 @@ pub unsafe fn gr_room() -> i64 {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn party_objects(mut rn: i64) -> i64 {
+pub unsafe extern "C" fn party_objects(mut rn: i64, level_depth: usize) -> i64 {
 	let mut i: libc::c_short = 0;
 	let mut j: libc::c_short = 0;
 	let mut nf: libc::c_short = 0;
@@ -291,7 +291,7 @@ pub unsafe extern "C" fn party_objects(mut rn: i64) -> i64 {
 			j += 1;
 		}
 		if found != 0 {
-			obj = gr_object();
+			obj = gr_object(level_depth);
 			place_at(&mut *obj, row as i64, col as i64);
 			nf += 1;
 		}

@@ -9,19 +9,19 @@ use crate::prelude::*;
 use crate::save::data::SaveData;
 use crate::settings::{login_name, save_file};
 
-pub unsafe fn save_game() {
+pub unsafe fn save_game(game: &GameState) {
 	let file_name = get_input_line("file name?", save_file().clone(), Some("game not saved"), false, true);
 	if file_name.is_empty() {
 		return;
 	}
 	check_message();
 	message(&file_name, 0);
-	save_into_file(&file_name);
+	save_into_file(&file_name, game);
 }
 
 mod data;
 
-pub unsafe fn save_into_file(save_path: &str) {
+pub unsafe fn save_into_file(save_path: &str, game: &GameState) {
 	let save_path = expand_tilde(&save_path);
 	let file = File::create(&save_path);
 	let mut file = match file {
@@ -40,7 +40,7 @@ pub unsafe fn save_into_file(save_path: &str) {
 	}
 	md_ignore_signals();
 	xxx(true);
-	let save_data = SaveData::read_from_statics(file_id);
+	let save_data = SaveData::read_from_statics(file_id, game);
 	let json = serde_json::to_string_pretty(&save_data).expect("serialize data");
 	let write_failed = if let Err(_) = file.write(json.as_bytes()) {
 		message("write() failed, don't know why", 0);
@@ -69,7 +69,7 @@ fn expand_tilde(file: &str) -> String {
 	}
 }
 
-pub unsafe fn restore(file_path: &str) {
+pub unsafe fn restore(file_path: &str, game: &mut GameState) {
 	let new_file_id = md_get_file_id(file_path);
 	if new_file_id == -1 {
 		clean_up("cannot open file");
@@ -109,6 +109,7 @@ pub unsafe fn restore(file_path: &str) {
 		}
 	}
 	save_data.write_to_statics();
+	game.depth = save_data.depth;
 
 	if !save_data.wizard && !delete_file(file_path) {
 		clean_up("cannot delete file");
@@ -116,7 +117,7 @@ pub unsafe fn restore(file_path: &str) {
 	}
 
 	msg_cleared = false;
-	ring_stats(false);
+	ring_stats(false, game.depth.cur);
 }
 
 fn has_been_touched(saved_time: &RogueTime, mod_time: &RogueTime) -> bool {

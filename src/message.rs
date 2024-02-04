@@ -130,7 +130,7 @@ pub fn rgetchar() -> char {
 	}
 }
 
-pub unsafe fn print_stats(stat_mask: usize) {
+pub unsafe fn print_stats(stat_mask: usize, cur_level: usize) {
 	const STATS_ROW: i32 = DROWS as i32 - 1;
 	let label = if stat_mask & STAT_LABEL != 0 { true } else { false };
 

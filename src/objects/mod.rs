@@ -215,10 +215,10 @@ impl obj {
 	pub fn set_stationary_damage(&mut self, value: isize) {
 		self.stationary_damage = value;
 	}
-	pub fn first_level(&self) -> isize {
-		self.is_protected as isize
+	pub fn first_level(&self) -> usize {
+		self.is_protected as usize
 	}
-	pub fn set_first_level(&mut self, value: isize) {
+	pub fn set_first_level(&mut self, value: usize) {
 		self.is_protected = value as i16;
 	}
 	pub fn drop_percent(&self) -> usize { self.which_kind as usize }
@@ -292,7 +292,7 @@ pub type object = obj;
 pub static mut level_objects: object = empty_obj();
 pub static mut dungeon: [[u16; DCOLS]; DROWS] = [[0; DCOLS]; DROWS];
 pub static mut foods: i16 = 0;
-pub static mut party_counter: isize = 0;
+pub static mut party_counter: usize = 0;
 pub static mut free_list: *mut object = 0 as *mut object;
 pub static mut rogue: fighter = fight {
 	armor: 0 as *mut object,
@@ -833,8 +833,8 @@ pub static mut id_rings: [id; RINGS] = {
 	]
 };
 
-pub unsafe fn put_objects() {
-	if cur_level < max_level {
+pub unsafe fn put_objects(depth: &RogueDepth) {
+	if depth.cur < depth.max {
 		return;
 	}
 
@@ -842,19 +842,19 @@ pub unsafe fn put_objects() {
 	while rand_percent(33) {
 		n += 1;
 	}
-	if cur_level == party_counter {
-		make_party();
-		party_counter = next_party();
+	if depth.cur == party_counter {
+		make_party(depth.cur);
+		party_counter = next_party(depth.cur);
 	}
 	for _i in 0..n {
-		let obj = gr_object();
+		let obj = gr_object(depth.cur);
 		rand_place(&mut *obj);
 	}
-	put_gold();
+	put_gold(depth.cur);
 }
 
-pub unsafe fn put_gold() {
-	for i in 0..MAX_ROOM as usize {
+pub unsafe fn put_gold(level_depth: usize) {
+	for i in 0..MAX_ROOM {
 		let is_maze = ROOMS[i].room_type == RoomType::Maze;
 		let is_room = ROOMS[i].room_type == RoomType::Room;
 		if !(is_room || is_maze) {
@@ -865,7 +865,7 @@ pub unsafe fn put_gold() {
 				let row = get_rand(ROOMS[i].top_row + 1, ROOMS[i].bottom_row - 1);
 				let col = get_rand(ROOMS[i].left_col + 1, ROOMS[i].right_col - 1);
 				if Floor.is_set(dungeon[row as usize][col as usize]) || Tunnel.is_set(dungeon[row as usize][col as usize]) {
-					plant_gold(row, col, is_maze);
+					plant_gold(row, col, is_maze, level_depth);
 					break;
 				}
 			}
@@ -873,7 +873,7 @@ pub unsafe fn put_gold() {
 	}
 }
 
-pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool) {
+pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: usize) {
 	let obj = alloc_object();
 	(*obj).row = row;
 	(*obj).col = col;
@@ -939,7 +939,7 @@ pub unsafe fn name_of(obj: &object) -> String {
 	}
 }
 
-pub unsafe fn gr_object() -> *mut object {
+pub unsafe fn gr_object(cur_level: usize) -> *mut object {
 	let mut obj = alloc_object();
 	if foods < (cur_level / 2) as i16 {
 		(*obj).what_is = Food;
@@ -1167,7 +1167,7 @@ pub unsafe fn alloc_object() -> *mut object {
 		obj = md_malloc(core::mem::size_of::<object>() as i64) as *mut object;
 		if obj.is_null() {
 			message("cannot allocate object, saving game", 0);
-			save_into_file(ERROR_FILE);
+			save_into_file(ERROR_FILE, unimplemented!("Acquire game state or move error handling to higher level"));
 		}
 	}
 	(*obj).quantity = 1;
@@ -1184,11 +1184,11 @@ pub unsafe fn free_object(obj: *mut object) {
 	free_list = obj;
 }
 
-pub unsafe fn make_party() {
+pub unsafe fn make_party(level_depth: usize) {
 	party_room = gr_room();
-	let n = if rand_percent(99) { party_objects(party_room) } else { 11 };
+	let n = if rand_percent(99) { party_objects(party_room, level_depth) } else { 11 };
 	if rand_percent(99) {
-		party_monsters(party_room, n);
+		party_monsters(party_room, n, level_depth);
 	}
 }
 
@@ -1336,7 +1336,7 @@ unsafe fn get_kind(max_kind: usize) -> Option<usize> {
 	good_kind
 }
 
-pub unsafe fn next_party() -> isize {
+pub unsafe fn next_party(cur_level: usize) -> usize {
 	let mut n = cur_level;
 	while (n % PARTY_TIME) > 0 {
 		n += 1;

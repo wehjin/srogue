@@ -2,6 +2,7 @@
 
 use ncurses::{chtype, mvaddch, refresh};
 use MoveResult::MoveFailed;
+use crate::hunger::HUNGRY;
 use crate::odds::R_TELE_PERCENT;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
@@ -22,7 +23,7 @@ pub enum MoveResult {
 }
 
 
-pub unsafe fn one_move_rogue(dirch: char, pickup: bool) -> MoveResult {
+pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth) -> MoveResult {
 	let dirch = if confused != 0 { Move::random8().to_char() } else { dirch };
 	let mut row = rogue.row;
 	let mut col = rogue.col;
@@ -36,7 +37,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool) -> MoveResult {
 				message("you are being held", 1);
 			} else {
 				message("you are still stuck in the bear trap", 0);
-				reg_move();
+				reg_move(depth);
 			}
 			return MoveFailed;
 		}
@@ -48,8 +49,8 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool) -> MoveResult {
 		}
 	}
 	if Monster.is_set(dungeon[row as usize][col as usize]) {
-		rogue_hit(object_at(&level_monsters, row, col), false);
-		reg_move();
+		rogue_hit(object_at(&level_monsters, row, col), false, depth);
+		reg_move(depth);
 		return MoveFailed;
 	}
 	if Door.is_set(dungeon[row as usize][col as usize]) {
@@ -81,48 +82,48 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool) -> MoveResult {
 		}
 		if pickup && levitate == 0 {
 			let mut status = 0;
-			let obj = pick_up(row, col, &mut status);
+			let obj = pick_up(row, col, &mut status, depth);
 			if !obj.is_null() {
 				if (*obj).what_is == Gold {
 					free_object(obj);
-					not_in_pack(&get_desc(&*obj))
+					not_in_pack(&get_desc(&*obj), depth)
 				} else {
 					let desc = format!("{}({})", get_desc(&*obj), (*obj).ichar);
-					not_in_pack(&desc)
+					not_in_pack(&desc, depth)
 				}
 			} else if status != 0 {
-				mved()
+				mved(depth)
 			} else {
-				move_on(row, col)
+				move_on(row, col, depth)
 			}
 		} else {
-			move_on(row, col)
+			move_on(row, col, depth)
 		}
 	} else if SpotFlag::is_any_set(&vec![Door, Stairs, Trap], dungeon[row as usize][col as usize]) {
 		if levitate == 0 && Trap.is_set(dungeon[row as usize][col as usize]) {
-			trap_player(row as usize, col as usize);
+			trap_player(row as usize, col as usize, depth);
 		}
-		reg_move();
+		reg_move(depth);
 		StoppedOnSomething
 	} else {
-		mved()
+		mved(depth)
 	}
 }
 
-unsafe fn move_on(row: i64, col: i64) -> MoveResult {
+unsafe fn move_on(row: i64, col: i64, depth: &RogueDepth) -> MoveResult {
 	let obj = object_at(&level_objects, row, col);
 	let desc = format!("moved onto {}", get_desc(&*obj));
-	return not_in_pack(&desc);
+	return not_in_pack(&desc, depth);
 }
 
-unsafe fn not_in_pack(desc: &str) -> MoveResult {
+unsafe fn not_in_pack(desc: &str, depth: &RogueDepth) -> MoveResult {
 	message(desc, 1);
-	reg_move();
+	reg_move(depth);
 	return StoppedOnSomething;
 }
 
-unsafe fn mved() -> MoveResult {
-	if reg_move() != 0 {
+unsafe fn mved(depth: &RogueDepth) -> MoveResult {
+	if reg_move(depth) {
 		/* fainted from hunger */
 		StoppedOnSomething
 	} else {
@@ -139,13 +140,13 @@ const NAK: char = '\x15';
 const SO: char = '\x0e';
 const STX: char = '\x02';
 
-pub unsafe fn multiple_move_rogue(dirch: i64) {
+pub unsafe fn multiple_move_rogue(dirch: i64, depth: &RogueDepth) {
 	let dirch = dirch as u8 as char;
 	match dirch {
 		BS | LF | VT | FF | EM | NAK | SO | STX => loop {
 			let row = rogue.row;
 			let col = rogue.col;
-			let m = one_move_rogue((dirch as u8 + 96) as char, true);
+			let m = one_move_rogue((dirch as u8 + 96) as char, true, depth);
 			if m == MoveFailed || m == StoppedOnSomething || interrupted {
 				break;
 			}
@@ -158,7 +159,7 @@ pub unsafe fn multiple_move_rogue(dirch: i64) {
 				if interrupted {
 					break;
 				}
-				let one_move_result = one_move_rogue((dirch as u8 + 32) as char, true);
+				let one_move_result = one_move_rogue((dirch as u8 + 32) as char, true, depth);
 				if one_move_result != Moved {
 					break;
 				}
@@ -254,11 +255,11 @@ pub unsafe fn can_move(row1: i64, col1: i64, row2: i64, col2: i64) -> bool {
 	}
 }
 
-pub unsafe fn move_onto() {
+pub unsafe fn move_onto(depth: &RogueDepth) {
 	let ch = get_dir_or_cancel();
 	check_message();
 	if ch != CANCEL {
-		one_move_rogue(ch, false);
+		one_move_rogue(ch, false, depth);
 	}
 }
 
@@ -285,33 +286,32 @@ pub unsafe fn is_direction(c: char) -> bool {
 		|| c == CANCEL
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn check_hunger(mut messages_only: libc::c_char) -> libc::c_char {
+pub unsafe fn check_hunger(mut messages_only: libc::c_char, depth: &RogueDepth) -> bool {
 	let mut i: libc::c_short = 0;
 	let mut n: libc::c_short = 0;
-	let mut fainted: libc::c_char = 0 as libc::c_int as libc::c_char;
+	let mut fainted: bool = false;
 	if rogue.moves_left as libc::c_int == 300 as libc::c_int {
 		hunger_str = "hungry".to_string();
 		message(&hunger_str, 0);
-		print_stats(STAT_HUNGER);
+		print_stats(STAT_HUNGER, depth.cur);
 	}
 	if rogue.moves_left as libc::c_int == 150 as libc::c_int {
 		hunger_str = "weak".to_string();
 		message(&hunger_str, 1);
-		print_stats(STAT_HUNGER);
+		print_stats(STAT_HUNGER, depth.cur);
 	}
 	if rogue.moves_left as libc::c_int <= 20 as libc::c_int {
 		if rogue.moves_left as libc::c_int == 20 as libc::c_int {
 			hunger_str = "faint".to_string();
 			message(&hunger_str, 1);
-			print_stats(STAT_HUNGER);
+			print_stats(STAT_HUNGER, depth.cur);
 		}
 		n = get_rand(
 			0 as libc::c_int,
 			20 as libc::c_int - rogue.moves_left as libc::c_int,
 		) as libc::c_short;
 		if n as libc::c_int > 0 as libc::c_int {
-			fainted = 1 as libc::c_int as libc::c_char;
+			fainted = true;
 			if rand_percent(40) {
 				rogue.moves_left += 1;
 				rogue.moves_left;
@@ -320,7 +320,7 @@ pub unsafe extern "C" fn check_hunger(mut messages_only: libc::c_char) -> libc::
 			i = 0 as libc::c_int as libc::c_short;
 			while (i as libc::c_int) < n as libc::c_int {
 				if coin_toss() {
-					mv_mons();
+					mv_mons(depth);
 				}
 				i += 1;
 			}
@@ -331,13 +331,11 @@ pub unsafe extern "C" fn check_hunger(mut messages_only: libc::c_char) -> libc::
 		return fainted;
 	}
 	if rogue.moves_left as libc::c_int <= 0 as libc::c_int {
-		killed_by(Ending::Starvation);
+		killed_by(Ending::Starvation, depth.max);
 	}
 	match e_rings as libc::c_int {
 		-1 => {
-			rogue
-				.moves_left = (rogue.moves_left as libc::c_int
-				- rogue.moves_left as libc::c_int % 2 as libc::c_int) as libc::c_short;
+			rogue.moves_left = (rogue.moves_left as libc::c_int - rogue.moves_left as libc::c_int % 2 as libc::c_int) as usize;
 		}
 		0 => {
 			rogue.moves_left -= 1;
@@ -346,15 +344,13 @@ pub unsafe extern "C" fn check_hunger(mut messages_only: libc::c_char) -> libc::
 		1 => {
 			rogue.moves_left -= 1;
 			rogue.moves_left;
-			check_hunger(1);
-			rogue
-				.moves_left = (rogue.moves_left as libc::c_int
-				- rogue.moves_left as libc::c_int % 2 as libc::c_int) as libc::c_short;
+			check_hunger(1, depth);
+			rogue.moves_left = (rogue.moves_left as libc::c_int - rogue.moves_left as libc::c_int % 2 as libc::c_int) as usize;
 		}
 		2 => {
 			rogue.moves_left -= 1;
 			rogue.moves_left;
-			check_hunger(1);
+			check_hunger(1, depth);
 			rogue.moves_left -= 1;
 			rogue.moves_left;
 		}
@@ -363,21 +359,17 @@ pub unsafe extern "C" fn check_hunger(mut messages_only: libc::c_char) -> libc::
 	return fainted;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn reg_move() -> libc::c_char {
-	let mut fainted: libc::c_char = 0;
-	if rogue.moves_left as libc::c_int <= 300 as libc::c_int
-		|| cur_level as libc::c_int >= max_level as libc::c_int
-	{
-		fainted = check_hunger(0);
+pub unsafe fn reg_move(depth: &RogueDepth) -> bool {
+	let fainted = if rogue.moves_left <= HUNGRY || depth.cur >= depth.max {
+		check_hunger(0, depth)
 	} else {
-		fainted = 0 as libc::c_int as libc::c_char;
-	}
-	mv_mons();
+		false
+	};
+	mv_mons(depth);
 	m_moves += 1;
 	if m_moves as libc::c_int >= 120 as libc::c_int {
 		m_moves = 0 as libc::c_int as libc::c_short;
-		wanderer();
+		wanderer(depth.cur);
 	}
 	if halluc != 0 {
 		halluc -= 1;
@@ -409,7 +401,7 @@ pub unsafe extern "C" fn reg_move() -> libc::c_char {
 			if dungeon[rogue.row as usize][rogue.col as usize] as libc::c_int
 				& 0o400 as libc::c_int as libc::c_ushort as libc::c_int != 0
 			{
-				trap_player(rogue.row as usize, rogue.col as usize);
+				trap_player(rogue.row as usize, rogue.col as usize, depth);
 			}
 		}
 	}
@@ -419,15 +411,15 @@ pub unsafe extern "C" fn reg_move() -> libc::c_char {
 			message("you feel yourself slowing down", 0);
 		}
 	}
-	heal();
+	heal(depth.cur);
 	if auto_search > 0 {
-		search(auto_search as usize, auto_search > 0);
+		search(auto_search as usize, auto_search > 0, depth);
 	}
 	return fainted;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rest(mut count: libc::c_int) -> libc::c_int {
+pub unsafe extern "C" fn rest(mut count: libc::c_int, depth: &RogueDepth) -> libc::c_int {
 	let mut i: libc::c_int = 0;
 	interrupted = false;
 	i = 0 as libc::c_int;
@@ -435,14 +427,14 @@ pub unsafe extern "C" fn rest(mut count: libc::c_int) -> libc::c_int {
 		if interrupted {
 			break;
 		}
-		reg_move();
+		reg_move(depth);
 		i += 1;
 	}
 	panic!("Reached end of non-void function without returning");
 }
 
 
-pub unsafe fn heal() {
+pub unsafe fn heal(level_depth: usize) {
 	static mut heal_exp: isize = -1;
 	static mut n: isize = 0;
 	static mut c: isize = 0;
@@ -481,6 +473,6 @@ pub unsafe fn heal() {
 		if rogue.hp_current > rogue.hp_max {
 			rogue.hp_current = rogue.hp_max;
 		}
-		print_stats(STAT_HP);
+		print_stats(STAT_HP, level_depth);
 	}
 }

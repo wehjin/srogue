@@ -1,11 +1,11 @@
 use std::error::Error;
 use std::fs;
 use serde::{Deserialize, Serialize};
-use crate::level::{cur_level, cur_room, max_level, party_room};
+use crate::level::{cur_room, party_room, RogueDepth};
 use crate::machdep::{get_current_time, RogueTime};
 use crate::monster::{fight, fighter};
 use crate::objects::{dungeon, empty_obj, foods, id, obj, party_counter, SaveObj};
-use crate::prelude::{bear_trap, being_held, blind, confused, DCOLS, detect_monster, DROWS, halluc, haste_self, levitate, m_moves, Room, see_invisible, wizard};
+use crate::prelude::{bear_trap, being_held, blind, confused, DCOLS, detect_monster, DROWS, GameState, halluc, haste_self, levitate, m_moves, Room, see_invisible, wizard};
 use crate::room::ROOMS;
 use crate::save::{hunger_str, id_potions, id_rings, id_scrolls, id_wands, IS_WOOD, level_monsters, level_objects, rogue, TRAPS};
 use crate::settings;
@@ -53,13 +53,13 @@ pub struct SaveFighter {
 	pub hp_max: isize,
 	pub str_current: isize,
 	pub str_max: isize,
-	pub gold: isize,
+	pub gold: usize,
 	pub exp: isize,
 	pub exp_points: isize,
 	pub row: i64,
 	pub col: i64,
 	pub fchar: char,
-	pub moves_left: i16,
+	pub moves_left: usize,
 }
 
 impl SaveFighter {
@@ -132,13 +132,12 @@ impl SaveDungeon {
 
 #[derive(Serialize, Deserialize)]
 pub struct SaveData {
+	pub depth: RogueDepth,
 	pub detect_monster: bool,
-	pub cur_level: isize,
-	pub max_level: isize,
 	pub hunger_str: String,
 	pub login_name: String,
 	pub party_room: i64,
-	pub party_counter: isize,
+	pub party_counter: usize,
 	pub level_monsters: SavePack,
 	pub level_objects: SavePack,
 	pub file_id: i64,
@@ -169,11 +168,10 @@ pub struct SaveData {
 }
 
 impl SaveData {
-	pub unsafe fn read_from_statics(file_id: i64) -> Self {
+	pub unsafe fn read_from_statics(file_id: i64, game: &GameState) -> Self {
 		SaveData {
+			depth: game.depth,
 			detect_monster,
-			cur_level,
-			max_level,
 			hunger_str: hunger_str.clone(),
 			login_name: login_name().to_string(),
 			party_room,
@@ -209,8 +207,6 @@ impl SaveData {
 	}
 	pub unsafe fn write_to_statics(&self) {
 		detect_monster = self.detect_monster;
-		cur_level = self.cur_level;
-		max_level = self.max_level;
 		hunger_str = self.hunger_str.clone();
 		settings::set_login_name(&self.login_name);
 		party_room = self.party_room;

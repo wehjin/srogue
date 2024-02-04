@@ -10,7 +10,7 @@ use crate::prelude::stat_const::STAT_ARMOR;
 use crate::prelude::weapon_kind::{ARROW, BOW, DAGGER, DART, SHURIKEN};
 use crate::throw::Move::{Up, UpLeft, UpRight, Left, Right, Same, Down, DownLeft, DownRight};
 
-pub unsafe fn throw() {
+pub unsafe fn throw(depth: &RogueDepth) {
 	let dir = get_dir_or_cancel();
 	check_message();
 	if dir == CANCEL {
@@ -36,11 +36,11 @@ pub unsafe fn throw() {
 	if ((*weapon).in_use_flags & BEING_WIELDED) != 0 && (*weapon).quantity <= 1 {
 		unwield(rogue.weapon);
 	} else if ((*weapon).in_use_flags & BEING_WORN) != 0 {
-		mv_aquatars();
+		mv_aquatars(depth);
 		unwear(rogue.armor);
-		print_stats(STAT_ARMOR);
+		print_stats(STAT_ARMOR, depth.cur);
 	} else if ((*weapon).in_use_flags & ON_EITHER_HAND) != 0 {
-		un_put_on(weapon);
+		un_put_on(weapon, depth.cur);
 	}
 	let monster = get_thrown_at_monster(weapon, dir, &mut row, &mut col);
 	mvaddch(rogue.row as i32, rogue.col as i32, chtype::from(rogue.fchar));
@@ -52,16 +52,16 @@ pub unsafe fn throw() {
 	if !monster.is_null() {
 		wake_up(&mut *monster);
 		check_gold_seeker(&mut *monster);
-		if !throw_at_monster(&mut *monster, &mut *weapon) {
+		if !throw_at_monster(&mut *monster, &mut *weapon, depth) {
 			flop_weapon(&mut *weapon, row, col);
 		}
 	} else {
 		flop_weapon(&mut *weapon, row, col);
 	}
-	vanish(&mut *weapon, true, &mut rogue.pack);
+	vanish(&mut *weapon, true, &mut rogue.pack, depth);
 }
 
-unsafe fn throw_at_monster(monster: &mut obj, weapon: &mut obj) -> bool {
+unsafe fn throw_at_monster(monster: &mut obj, weapon: &mut obj, depth: &RogueDepth) -> bool {
 	let mut hit_chance = get_hit_chance(weapon);
 	let mut damage = get_weapon_damage(weapon);
 	if weapon.which_kind == ARROW && rogue_weapon_is_bow() {
@@ -85,9 +85,9 @@ unsafe fn throw_at_monster(monster: &mut obj, weapon: &mut obj) -> bool {
 	}
 	hit_message += "hit  ";
 	if weapon.what_is == Wand && rand_percent(75) {
-		zap_monster(monster, weapon.which_kind);
+		zap_monster(monster, weapon.which_kind, depth);
 	} else {
-		mon_damage(monster, damage as usize);
+		mon_damage(monster, damage as usize, depth);
 	}
 	return true;
 }

@@ -76,22 +76,26 @@ pub fn md_control_keybord(_mode: libc::c_short) {
 
 unsafe fn sig_on_intr(_: c_int) { onintr(); }
 
-unsafe fn sig_on_quit(_: c_int) { byebye(true); }
+unsafe fn sig_on_quit(_: c_int) {
+	byebye(true, unimplemented!("Acquire max_level for quit"));
+}
 
-unsafe fn sig_on_hup(_: c_int) { error_save() }
+unsafe fn sig_on_hup(_: c_int) {
+	error_save(unimplemented!("Acquire game state for interrupt"))
+}
 
 
 pub unsafe fn md_heed_signals() {
-	signal(SIGINT, sig_on_intr as unsafe fn(c_int) as *mut c_void as sighandler_t);
-	signal(SIGQUIT, sig_on_quit as unsafe fn(c_int) as *mut c_void as sighandler_t);
-	signal(SIGHUP, sig_on_hup as unsafe fn(c_int) as *mut c_void as sighandler_t);
+	// signal(SIGINT, sig_on_intr as unsafe fn(c_int) as *mut c_void as sighandler_t);
+	// signal(SIGQUIT, sig_on_quit as unsafe fn(c_int) as *mut c_void as sighandler_t);
+	// signal(SIGHUP, sig_on_hup as unsafe fn(c_int) as *mut c_void as sighandler_t);
 }
 
 pub unsafe fn md_ignore_signals() {
-	signal(SIGINT, SIG_IGN);
-	signal(SIGINT, SIG_IGN);
-	signal(SIGINT, SIG_IGN);
-	signal(SIGTSTP, SIG_IGN);
+	// signal(SIGQUIT, SIG_IGN);
+	// signal(SIGINT, SIG_IGN);
+	// signal(SIGHUP, SIG_IGN);
+	// signal(SIGTSTP, SIG_IGN);
 }
 
 pub unsafe fn md_get_file_id(file_path: &str) -> i64 {

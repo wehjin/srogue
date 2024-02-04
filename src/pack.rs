@@ -51,7 +51,7 @@ pub unsafe fn take_from_pack(obj: *mut object, mut pack: *mut object) {
 	(*pack).next_object = (*(*pack).next_object).next_object;
 }
 
-pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short) -> *mut object {
+pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short, depth: &RogueDepth) -> *mut object {
 	let obj = object_at(&level_objects, row, col);
 	*status = 1;
 	if (*obj).what_is == Scroll
@@ -59,7 +59,7 @@ pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short) -> *mut obje
 		&& (*obj).picked_up != 0 {
 		message("the scroll turns to dust as you pick it up", 0);
 		dungeon[row as usize][col as usize] = dungeon[row as usize][col as usize] & !Object.code();
-		vanish(&mut *obj, false, &mut level_objects);
+		vanish(&mut *obj, false, &mut level_objects, depth);
 		*status = 0;
 		if id_scrolls[ScareMonster.to_index()].id_status == Unidentified {
 			id_scrolls[ScareMonster.to_index()].id_status = Identified
@@ -67,10 +67,10 @@ pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short) -> *mut obje
 		return 0 as *mut object;
 	}
 	if (*obj).what_is == Gold {
-		rogue.gold += (*obj).quantity as isize;
+		rogue.gold += (*obj).quantity as usize;
 		dungeon[row as usize][col as usize] = dungeon[row as usize][col as usize] & !Object.code();
 		take_from_pack(obj, &mut level_objects);
-		print_stats(STAT_GOLD);
+		print_stats(STAT_GOLD, depth.cur);
 		return obj;
 	}
 	if pack_count(obj) >= MAX_PACK_COUNT {
@@ -85,7 +85,7 @@ pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short) -> *mut obje
 	return obj;
 }
 
-pub unsafe fn drop_0() {
+pub unsafe fn drop_0(depth: &RogueDepth) {
 	if SpotFlag::is_any_set(&vec![Object, Stairs, Trap], dungeon[rogue.row as usize][rogue.col as usize]) {
 		message("there's already something there", 0);
 		return;
@@ -114,15 +114,15 @@ pub unsafe fn drop_0() {
 			message(CURSE_MESSAGE, 0);
 			return;
 		}
-		mv_aquatars();
+		mv_aquatars(depth);
 		unwear(rogue.armor);
-		print_stats(STAT_ARMOR);
+		print_stats(STAT_ARMOR, depth.cur);
 	} else if (*obj).in_use_flags & ON_EITHER_HAND != 0 {
 		if (*obj).is_cursed != 0 {
 			message(CURSE_MESSAGE, 0);
 			return;
 		}
-		un_put_on(obj);
+		un_put_on(obj, depth.cur);
 	}
 	(*obj).row = rogue.row;
 	(*obj).col = rogue.col;
@@ -139,7 +139,7 @@ pub unsafe fn drop_0() {
 	}
 	place_at(&mut *obj, rogue.row, rogue.col);
 	message(&format!("dropped {}", get_desc(&*obj)), 0);
-	reg_move();
+	reg_move(depth);
 }
 
 pub unsafe fn check_duplicate(obj: &object, pack: &mut object) -> *mut object {
@@ -227,24 +227,24 @@ pub unsafe fn pack_letter(prompt: &str, filter: PackFilter) -> char {
 	}
 }
 
-pub unsafe fn take_off() {
+pub unsafe fn take_off(depth: &RogueDepth) {
 	if !rogue.armor.is_null() {
 		if (*rogue.armor).is_cursed != 0 {
 			message(CURSE_MESSAGE, 0);
 		} else {
-			mv_aquatars();
+			mv_aquatars(depth);
 			let obj = rogue.armor;
 			unwear(rogue.armor);
 			message(&format!("was wearing {}", get_desc(&*obj)), 0);
-			print_stats(STAT_ARMOR);
-			reg_move();
+			print_stats(STAT_ARMOR, depth.cur);
+			reg_move(depth);
 		}
 	} else {
 		message("not wearing any", 0);
 	}
 }
 
-pub unsafe fn wear() {
+pub unsafe fn wear(depth: &RogueDepth) {
 	if !rogue.armor.is_null() {
 		message("your already wearing some", 0);
 		return;
@@ -265,8 +265,8 @@ pub unsafe fn wear() {
 	(*obj).identified = true;
 	message(&format!("wearing {}", get_desc(&*obj)), 0);
 	do_wear(&mut *obj);
-	print_stats(STAT_ARMOR);
-	reg_move();
+	print_stats(STAT_ARMOR, depth.cur);
+	reg_move(depth);
 }
 
 pub unsafe fn do_wear(obj: &mut obj) {
@@ -283,7 +283,7 @@ pub unsafe fn unwear(obj: *mut object) {
 }
 
 
-pub unsafe fn wield() {
+pub unsafe fn wield(depth: &RogueDepth) {
 	if !rogue.weapon.is_null() && (*rogue.weapon).is_cursed != 0 {
 		message(CURSE_MESSAGE, 0);
 		return;
@@ -308,7 +308,7 @@ pub unsafe fn wield() {
 		unwield(rogue.weapon);
 		message(&format!("wielding {}", get_desc(&*obj)), 0);
 		do_wield(&mut *obj);
-		reg_move();
+		reg_move(depth);
 	}
 }
 
@@ -409,12 +409,12 @@ pub unsafe fn has_amulet() -> bool {
 	mask_pack(&rogue.pack, Amulets)
 }
 
-pub unsafe fn kick_into_pack() {
+pub unsafe fn kick_into_pack(depth: &RogueDepth) {
 	if Object.is_set(dungeon[rogue.row as usize][rogue.col as usize]) {
 		message("nothing here", 0);
 	} else {
 		let mut status = 0;
-		let obj = pick_up(rogue.row, rogue.col, &mut status);
+		let obj = pick_up(rogue.row, rogue.col, &mut status, depth);
 		if !obj.is_null() {
 			let obj_desc = get_desc(&*obj);
 			if (*obj).what_is == Gold {
@@ -425,7 +425,7 @@ pub unsafe fn kick_into_pack() {
 			}
 		}
 		if !obj.is_null() || status == 0 {
-			reg_move();
+			reg_move(depth);
 		}
 	}
 }

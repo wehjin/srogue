@@ -11,7 +11,7 @@ use crate::settings::set_score_only;
 
 pub static mut wizard: bool = false;
 
-pub unsafe fn zapp() {
+pub unsafe fn zapp(depth: &RogueDepth) {
 	let dir = get_dir_or_cancel();
 	check_message();
 	if dir == CANCEL {
@@ -43,11 +43,11 @@ pub unsafe fn zapp() {
 		let monster = get_zapped_monster(dir, &mut row, &mut col);
 		if !monster.is_null() {
 			wake_up(&mut *monster);
-			zap_monster(&mut *monster, (*wand).which_kind);
+			zap_monster(&mut *monster, (*wand).which_kind, depth);
 			relight();
 		}
 	}
-	reg_move();
+	reg_move(depth);
 }
 
 pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64) -> *mut object {
@@ -69,7 +69,7 @@ pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64) -> *mu
 	}
 }
 
-pub unsafe fn zap_monster(monster: &mut obj, which_kind: u16) {
+pub unsafe fn zap_monster(monster: &mut obj, which_kind: u16, depth: &RogueDepth) {
 	let row = monster.row;
 	let col = monster.col;
 	match WandKind::from_index(which_kind as usize) {
@@ -104,7 +104,7 @@ pub unsafe fn zap_monster(monster: &mut obj, which_kind: u16) {
 			}
 			let nm = monster.next_monster();
 			let tc = monster.trail_char();
-			gr_monster(monster, get_rand(0, MONSTERS - 1));
+			gr_monster(monster, get_rand(0, MONSTERS - 1), depth.cur);
 			monster.row = row;
 			monster.col = col;
 			monster.set_next_monster(nm);
@@ -119,7 +119,7 @@ pub unsafe fn zap_monster(monster: &mut obj, which_kind: u16) {
 			monster.set_nap_length(get_rand(3, 6));
 		}
 		WandKind::MagicMissile => {
-			rogue_hit(monster, true);
+			rogue_hit(monster, true, depth);
 		}
 		WandKind::Cancellation => {
 			if monster.m_flags.holds {

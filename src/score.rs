@@ -1,6 +1,6 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-use std::cmp::Ordering;
+use std::cmp::{Ordering};
 use std::fs::File;
 use std::io::{Read, Seek, Write};
 use std::sync::{RwLock};
@@ -20,10 +20,10 @@ use crate::settings::{login_name, nick_name};
 
 pub const SCORE_FILE: &'static str = "/usr/games/rogue.scores";
 
-pub unsafe fn killed_by(ending: Ending) {
+pub unsafe fn killed_by(ending: Ending, max_level: usize) {
 	md_ignore_signals();
 	if !ending.is_quit() {
-		rogue.gold = ((rogue.gold as f64 * 9.0) / 10.0) as isize;
+		rogue.gold = ((rogue.gold as f64 * 9.0) / 10.0) as usize;
 	}
 
 	let mut how_ended = ending_string(&ending);
@@ -58,7 +58,7 @@ pub unsafe fn killed_by(ending: Ending) {
 		message(&how_ended, 0);
 	}
 	message("", 0);
-	put_scores(Some(ending));
+	put_scores(Some(ending), max_level);
 }
 
 unsafe fn ending_string(ending: &Ending) -> String {
@@ -76,11 +76,11 @@ unsafe fn ending_string(ending: &Ending) -> String {
 	}
 }
 
-pub unsafe fn win() {
+pub unsafe fn win(depth: &RogueDepth) {
 	unwield(rogue.weapon);          /* disarm and relax */
 	unwear(rogue.armor);
-	un_put_on(rogue.left_ring);
-	un_put_on(rogue.right_ring);
+	un_put_on(rogue.left_ring, depth.cur);
+	un_put_on(rogue.right_ring, depth.cur);
 
 	clear();
 	mvaddstr(10, 11, "@   @  @@@   @   @      @  @  @   @@@   @   @   @");
@@ -95,10 +95,10 @@ pub unsafe fn win() {
 	message("", 0);
 	id_all();
 	sell_pack();
-	put_scores(Some(Ending::Win));
+	put_scores(Some(Ending::Win), depth.max);
 }
 
-pub unsafe fn quit(from_intrpt: bool) {
+pub unsafe fn quit(from_intrpt: bool, max_level: usize) {
 	md_ignore_signals();
 	let mut orow = 0;
 	let mut ocol = 0;
@@ -131,10 +131,10 @@ pub unsafe fn quit(from_intrpt: bool) {
 		clean_up(BYEBYE_STRING);
 	}
 	check_message();
-	killed_by(Ending::Quit);
+	killed_by(Ending::Quit, max_level);
 }
 
-pub unsafe fn put_scores(ending: Option<Ending>) {
+pub unsafe fn put_scores(ending: Option<Ending>, max_level: usize) {
 	turn_into_games();
 	let mut file = File::options().read(true).write(true).open(SCORE_FILE).unwrap_or_else(|_| {
 		match File::options().write(true).open(SCORE_FILE) {
@@ -214,7 +214,7 @@ pub unsafe fn put_scores(ending: Option<Ending>) {
 				None => "".to_string(),
 				Some(name) => name.to_string(),
 			};
-			insert_score(&mut scores, &mut n_names, &name, rank, ne, ending.expect("ending"));
+			insert_score(&mut scores, &mut n_names, &name, rank, ne, ending.expect("ending"), max_level);
 		}
 		file.rewind().expect("rewind file");
 	}
@@ -249,13 +249,13 @@ pub unsafe fn put_scores(ending: Option<Ending>) {
 	clean_up("");
 }
 
-fn gold_in_score(score: &str) -> Option<isize> {
+fn gold_in_score(score: &str) -> Option<usize> {
 	let slice = &score[6..12];
 	let trimmed = slice.trim();
-	trimmed.parse::<isize>().ok()
+	trimmed.parse::<usize>().ok()
 }
 
-unsafe fn insert_score(scores: &mut Vec<String>, n_names: &mut Vec<String>, n_name: &str, rank: usize, n: usize, ending: Ending) {
+unsafe fn insert_score(scores: &mut Vec<String>, n_names: &mut Vec<String>, n_name: &str, rank: usize, n: usize, ending: Ending, max_level: usize) {
 	let mut buf = format!("{:2}    {:6}   {}: ", rank + 1, rogue.gold, login_name());
 	buf += &ending_string(&ending);
 	buf += &format!(" on level {} ", max_level);
@@ -312,7 +312,7 @@ pub unsafe fn sell_pack()
 	message("", 0);
 }
 
-unsafe fn get_value(obj: &obj) -> isize {
+unsafe fn get_value(obj: &obj) -> usize {
 	let wc = obj.which_kind;
 	let mut val = match obj.what_is {
 		ObjectWhat::Weapon => {
@@ -344,7 +344,7 @@ unsafe fn get_value(obj: &obj) -> isize {
 	if val <= 0 {
 		val = 10;
 	}
-	return val as isize;
+	return val as usize;
 }
 
 

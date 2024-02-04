@@ -13,36 +13,36 @@ pub static mut less_hp: isize = 0;
 pub static FLAME_NAME: &'static str = "flame";
 pub static mut being_held: bool = false;
 
-pub unsafe fn special_hit(monster: &mut object) {
+pub unsafe fn special_hit(monster: &mut object, depth: &RogueDepth) {
 	if monster.m_flags.confused && rand_percent(66) {
 		return;
 	}
 	if monster.m_flags.rusts {
-		rust(Some(monster));
+		rust(Some(monster), depth.cur);
 	}
 	if monster.m_flags.holds && levitate == 0 {
 		being_held = true;
 	}
 	if monster.m_flags.freezes {
-		freeze(monster);
+		freeze(monster, depth);
 	}
 	if monster.m_flags.stings {
-		sting(monster);
+		sting(monster, depth.cur);
 	}
 	if monster.m_flags.drains_life {
-		drain_life();
+		drain_life(depth.cur);
 	}
 	if monster.m_flags.drops_level {
-		drop_level();
+		drop_level(depth.cur);
 	}
 	if monster.m_flags.steals_gold {
-		steal_gold(monster);
+		steal_gold(monster, depth.cur);
 	} else if monster.m_flags.steals_item {
-		steal_item(monster);
+		steal_item(monster, depth);
 	}
 }
 
-pub unsafe fn rust(monster: Option<&mut obj>) {
+pub unsafe fn rust(monster: Option<&mut obj>, level_depth: usize) {
 	if rogue.armor.is_null() || (get_armor_class(&*rogue.armor) <= 1) || ((*rogue.armor).which_kind == LEATHER) {
 		return;
 	}
@@ -56,11 +56,11 @@ pub unsafe fn rust(monster: Option<&mut obj>) {
 	} else {
 		(*rogue.armor).d_enchant -= 1;
 		message("your armor weakens", 0);
-		print_stats(STAT_ARMOR);
+		print_stats(STAT_ARMOR, level_depth);
 	}
 }
 
-unsafe fn freeze(monster: &mut obj) {
+unsafe fn freeze(monster: &mut obj, depth: &RogueDepth) {
 	if rand_percent(12) {
 		return;
 	}
@@ -75,20 +75,20 @@ unsafe fn freeze(monster: &mut obj) {
 
 		let n = get_rand(4, 8);
 		for _ in 0..n {
-			mv_mons();
+			mv_mons(depth);
 		}
 		if rand_percent(freeze_percent as usize) {
 			for _ in 0..50 {
-				mv_mons();
+				mv_mons(depth);
 			}
-			killed_by(Ending::Hypothermia);
+			killed_by(Ending::Hypothermia, depth.max);
 		}
 		message(YOU_CAN_MOVE_AGAIN, 1);
 		monster.m_flags.freezing_rogue = false;
 	}
 }
 
-unsafe fn steal_gold(monster: &mut obj) {
+unsafe fn steal_gold(monster: &mut obj, cur_level: usize) {
 	if rogue.gold <= 0 || rand_percent(10) {
 		return;
 	}
@@ -96,11 +96,11 @@ unsafe fn steal_gold(monster: &mut obj) {
 	let amount = get_rand(cur_level * 10, cur_level * 30).min(rogue.gold);
 	rogue.gold -= amount;
 	message("your purse feels lighter", 0);
-	print_stats(STAT_GOLD);
+	print_stats(STAT_GOLD, cur_level);
 	disappear(monster);
 }
 
-unsafe fn steal_item(monster: &mut obj) {
+unsafe fn steal_item(monster: &mut obj, depth: &RogueDepth) {
 	if rand_percent(15) {
 		return;
 	}
@@ -148,7 +148,7 @@ unsafe fn steal_item(monster: &mut obj) {
 	};
 	message(&msg, 0);
 
-	vanish(&mut *obj, false, &mut rogue.pack);
+	vanish(&mut *obj, false, &mut rogue.pack, depth);
 	disappear(monster);
 }
 
@@ -166,20 +166,20 @@ unsafe fn disappear(monster: &mut obj) {
 }
 
 
-pub unsafe fn cough_up(monster: &mut obj) {
-	if cur_level < max_level {
+pub unsafe fn cough_up(monster: &mut obj, depth: &RogueDepth) {
+	if depth.cur < depth.max {
 		return;
 	}
 	let obj = if (*monster).m_flags.steals_gold {
 		let obj = alloc_object();
 		(*obj).what_is = Gold;
-		(*obj).quantity = get_rand((cur_level * 15) as i16, (cur_level * 30) as i16);
+		(*obj).quantity = get_rand((depth.cur * 15) as i16, (depth.cur * 30) as i16);
 		obj
 	} else {
 		if !rand_percent((*monster).drop_percent()) {
 			return;
 		}
-		gr_object()
+		gr_object(depth.cur)
 	};
 	let row = (*monster).row;
 	let col = (*monster).col;
@@ -224,7 +224,7 @@ unsafe fn try_to_cough(row: i64, col: i64, obj: &mut obj) -> bool {
 	return false;
 }
 
-pub unsafe fn seek_gold(monster: &mut obj) -> bool {
+pub unsafe fn seek_gold(monster: &mut obj, depth: &RogueDepth) -> bool {
 	let rn = get_room_number(monster.row, monster.col);
 	if rn < 0 {
 		return false;
@@ -246,7 +246,7 @@ pub unsafe fn seek_gold(monster: &mut obj) -> bool {
 				}
 				monster.m_flags.seeks_gold = false;
 				monster.m_flags.can_flit = true;
-				mv_monster(monster, i, j);
+				mv_monster(monster, i, j, depth);
 				monster.m_flags.can_flit = false;
 				monster.m_flags.seeks_gold = true;
 				return true;
@@ -296,7 +296,7 @@ pub unsafe fn imitating(row: i64, col: i64) -> bool {
 	return false;
 }
 
-unsafe fn sting(monster: &obj) {
+unsafe fn sting(monster: &obj, level_depth: usize) {
 	if rogue.str_current <= 3 || sustain_strength {
 		return;
 	}
@@ -310,11 +310,11 @@ unsafe fn sting(monster: &obj) {
 	if rand_percent(sting_chance as usize) {
 		message(&format!("the {}'s bite has weakened you", mon_name(monster)), 0);
 		rogue.str_current -= 1;
-		print_stats(STAT_STRENGTH);
+		print_stats(STAT_STRENGTH, level_depth);
 	}
 }
 
-unsafe fn drop_level() {
+unsafe fn drop_level(level_depth: usize) {
 	if rand_percent(80) || rogue.exp <= 5 {
 		return;
 	}
@@ -331,10 +331,10 @@ unsafe fn drop_level() {
 	if rogue.hp_max <= 0 {
 		rogue.hp_max = 1;
 	}
-	add_exp(1, false);
+	add_exp(1, false, level_depth);
 }
 
-unsafe fn drain_life() {
+unsafe fn drain_life(level_depth: usize) {
 	if rand_percent(60) || rogue.hp_max <= 30 || rogue.hp_current < 10 {
 		return;
 	}
@@ -356,7 +356,7 @@ unsafe fn drain_life() {
 			}
 		}
 	}
-	print_stats(STAT_STRENGTH | STAT_HP);
+	print_stats(STAT_STRENGTH | STAT_HP, level_depth);
 }
 
 pub unsafe fn m_confuse(monster: &mut object) -> bool {
@@ -378,7 +378,7 @@ pub unsafe fn m_confuse(monster: &mut object) -> bool {
 	return false;
 }
 
-pub unsafe fn flame_broil(monster: &mut object) -> bool {
+pub unsafe fn flame_broil(monster: &mut object, depth: &RogueDepth) -> bool {
 	if !mon_sees(monster, rogue.row, rogue.col) || coin_toss() {
 		return false;
 	}
@@ -423,7 +423,7 @@ pub unsafe fn flame_broil(monster: &mut object) -> bool {
 			}
 		}
 	}
-	mon_hit(monster, Some(FLAME_NAME), true);
+	mon_hit(monster, Some(FLAME_NAME), true, depth);
 	return true;
 }
 
