@@ -72,7 +72,7 @@ pub unsafe fn quaff() {
 			}
 		}
 		PotionKind::RaiseLevel => {
-			rogue.exp_points = level_points[(rogue.exp - 1) as usize];
+			rogue.exp_points = LEVEL_POINTS[(rogue.exp - 1) as usize];
 			add_exp(1, true);
 		}
 		PotionKind::Blindness => {

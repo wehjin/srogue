@@ -24,7 +24,7 @@ pub static mut cur_room: i64 = 0;
 pub static mut new_level_message: Option<String> = None;
 pub static mut party_room: i64 = NO_ROOM;
 pub static mut r_de: i64 = 0;
-pub static mut level_points: [isize; MAX_EXP_LEVEL] = [
+pub const LEVEL_POINTS: [isize; MAX_EXP_LEVEL] = [
 	10,
 	20,
 	40,
@@ -738,7 +738,7 @@ pub unsafe fn check_up() -> bool {
 pub unsafe fn add_exp(e: isize, promotion: bool) {
 	rogue.exp_points += e;
 
-	if rogue.exp_points >= level_points[(rogue.exp - 1) as usize] {
+	if rogue.exp_points >= LEVEL_POINTS[(rogue.exp - 1) as usize] {
 		let new_exp = get_exp_level(rogue.exp_points);
 		if rogue.exp_points > MAX_EXP {
 			rogue.exp_points = MAX_EXP + 1;
@@ -761,7 +761,7 @@ pub unsafe fn add_exp(e: isize, promotion: bool) {
 
 pub unsafe fn get_exp_level(e: isize) -> isize {
 	for i in 0..(MAX_EXP_LEVEL - 1) {
-		if level_points[i] > e {
+		if LEVEL_POINTS[i] > e {
 			return (i + 1) as isize;
 		}
 	}

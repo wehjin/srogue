@@ -319,7 +319,7 @@ unsafe fn drop_level() {
 		return;
 	}
 
-	rogue.exp_points = level_points[rogue.exp as usize - 2] - get_rand(9, 29);
+	rogue.exp_points = LEVEL_POINTS[rogue.exp as usize - 2] - get_rand(9, 29);
 	rogue.exp -= 2;
 
 	let hp = hp_raise();
