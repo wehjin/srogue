@@ -47,8 +47,7 @@ pub const LEVEL_POINTS: [isize; MAX_EXP_LEVEL] = [
 	10000000,
 	99900000,
 ];
-#[no_mangle]
-pub static mut random_rooms: [libc::c_char; 10] = [
+pub static mut random_rooms: [usize; 10] = [
 	3,
 	7,
 	5,
@@ -62,124 +61,62 @@ pub static mut random_rooms: [libc::c_char; 10] = [
 ];
 
 pub unsafe fn make_level() {
-	let mut i: c_short = 0;
-	let mut j: c_short = 0;
-	let mut must_exist1: c_short = 0;
-	let mut must_exist2: c_short = 0;
-	let mut must_exist3: c_short = 0;
-	let mut big_room: libc::c_char = 0;
 	if (cur_level as i64) < 99 {
 		cur_level += 1;
 	}
 	if cur_level as i64 > max_level as i64 {
 		max_level = cur_level;
 	}
-	must_exist1 = get_rand(0, 5) as c_short;
-	match must_exist1 {
-		0 => {
-			must_exist1 = 0 as i64 as c_short;
-			must_exist2 = 1 as c_short;
-			must_exist3 = 2 as i64 as c_short;
-		}
-		1 => {
-			must_exist1 = 3 as i64 as c_short;
-			must_exist2 = 4 as i64 as c_short;
-			must_exist3 = 5 as i64 as c_short;
-		}
-		2 => {
-			must_exist1 = 6 as i64 as c_short;
-			must_exist2 = 7 as i64 as c_short;
-			must_exist3 = 8 as i64 as c_short;
-		}
-		3 => {
-			must_exist1 = 0 as i64 as c_short;
-			must_exist2 = 3 as i64 as c_short;
-			must_exist3 = 6 as i64 as c_short;
-		}
-		4 => {
-			must_exist1 = 1 as c_short;
-			must_exist2 = 4 as i64 as c_short;
-			must_exist3 = 7 as i64 as c_short;
-		}
-		5 => {
-			must_exist1 = 2 as i64 as c_short;
-			must_exist2 = 5 as i64 as c_short;
-			must_exist3 = 8 as i64 as c_short;
-		}
-		_ => {}
-	}
-	big_room = (cur_level as i64 == party_counter as i64
-		&& rand_percent(1)) as i64 as libc::c_char;
-	if big_room != 0 {
-		make_room(
-			10 as i64,
-			0 as i64,
-			0 as i64,
-			0 as i64,
-		);
+	let (must_exist1, must_exist2, must_exist3) = match get_rand(0, 5) {
+		0 => (0, 1, 2),
+		1 => (3, 4, 5),
+		2 => (6, 7, 8),
+		3 => (0, 3, 6),
+		4 => (1, 4, 7),
+		5 => (2, 5, 8),
+		_ => unreachable!("0 <= rand <= 5")
+	};
+	let big_room = cur_level == party_counter && rand_percent(1);
+	if big_room {
+		make_room(10, 0, 0, 0);
 	} else {
-		i = 0 as i64 as c_short;
-		while (i as i64) < 9 as i64 {
-			make_room(
-				i as i64,
-				must_exist1 as i64,
-				must_exist2 as i64,
-				must_exist3 as i64,
-			);
-			i += 1;
+		for i in 0..MAX_ROOM {
+			make_room(i as i64, must_exist1 as i64, must_exist2 as i64, must_exist3 as i64);
 		}
 	}
-	if big_room == 0 {
+	if !big_room {
 		add_mazes();
 		mix_random_rooms();
-		j = 0 as i64 as c_short;
-		while (j as i64) < 9 as i64 {
-			i = random_rooms[j as usize] as c_short;
-			if (i as i64) < 9 as i64 - 1 {
+		for j in 0..MAX_ROOM {
+			let i = random_rooms[j];
+			if i < MAX_ROOM - 1 {
 				connect_rooms(i as i64, i as i64 + 1);
 			}
-			if (i as i64) < 9 as i64 - 3 as i64 {
-				connect_rooms(i as i64, i as i64 + 3 as i64);
+			if i < MAX_ROOM - 3 {
+				connect_rooms(i as i64, i as i64 + 3);
 			}
-			if (i as i64) < 9 as i64 - 2 as i64 {
-				if (*ROOMS
-					.as_mut_ptr()
-					.offset((i as i64 + 1) as isize))
-					.room_type as i64
-					& 0o1 as c_ushort as i64 != 0
-				{
-					if connect_rooms(i as i64, i as i64 + 2 as i64) {
-						(*ROOMS
-							.as_mut_ptr()
-							.offset((i as i64 + 1) as isize))
-							.room_type = RoomType::Room;
+			if i < MAX_ROOM - 2 {
+				if ROOMS[i + 1].room_type == Nothing {
+					if connect_rooms(i as i64, i as i64 + 2) {
+						ROOMS[i + 1].room_type = RoomType::Cross;
 					}
 				}
 			}
-			if (i as i64) < 9 as i64 - 6 as i64 {
-				if (*ROOMS
-					.as_mut_ptr()
-					.offset((i as i64 + 3 as i64) as isize))
-					.room_type as i64
-					& 0o1 as c_ushort as i64 != 0
-				{
-					if connect_rooms(i as i64, i as i64 + 6 as i64) {
-						(*ROOMS
-							.as_mut_ptr()
-							.offset((i as i64 + 3 as i64) as isize))
-							.room_type = RoomType::Room;
+			if i < MAX_ROOM - 6 {
+				if ROOMS[i + 3].room_type == Nothing {
+					if connect_rooms(i as i64, i as i64 + 6) {
+						ROOMS[i + 3].room_type = RoomType::Cross;
 					}
 				}
 			}
 			if is_all_connected() {
 				break;
 			}
-			j += 1;
+			fill_out_level();
 		}
-		fill_out_level();
-	}
-	if !has_amulet() && cur_level >= AMULET_LEVEL {
-		put_amulet();
+		if !has_amulet() && cur_level >= AMULET_LEVEL {
+			put_amulet();
+		}
 	}
 }
 
@@ -395,7 +332,6 @@ pub unsafe fn draw_simple_passage(spot1: &DungeonSpot, spot2: &DungeonSpot, dir:
 	}
 }
 
-
 pub fn same_row(room1: i64, room2: i64) -> bool {
 	room1 / 3 == room2 / 3
 }
@@ -454,7 +390,6 @@ pub unsafe fn fill_out_level() {
 		fill_it(r_de, false);
 	}
 }
-
 
 pub unsafe fn fill_it(rn: i64, do_rec_de: bool) {
 	let mut did_this = false;
@@ -540,7 +475,6 @@ unsafe fn get_tunnel_dir(rn: i64, de: i64) -> DoorDirection {
 		if ROOMS[rn as usize].top_row < ROOMS[de as usize].top_row { DoorDirection::Down } else { DoorDirection::Up }
 	}
 }
-
 
 #[no_mangle]
 pub unsafe extern "C" fn mask_room(
