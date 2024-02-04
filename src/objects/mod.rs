@@ -19,7 +19,7 @@ use crate::prelude::ring_kind::RINGS;
 use crate::prelude::scroll_kind::ScrollKind::{AggravateMonster, CreateMonster, EnchArmor, EnchWeapon, HoldMonster, Identify, MagicMapping, ProtectArmor, RemoveCurse, ScareMonster, Sleep, Teleport};
 use crate::prelude::scroll_kind::SCROLLS;
 use crate::prelude::SpotFlag::{Floor, Monster, Object, Stairs, Tunnel};
-use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, WANDS};
+use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, MAX_WAND};
 use crate::prelude::weapon_kind::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
 use crate::settings::fruit;
 
@@ -656,7 +656,7 @@ pub static mut id_armors: [id; ARMORS] = {
 		},
 	]
 };
-pub static mut id_wands: [id; WANDS] = {
+pub static mut id_wands: [id; MAX_WAND] = {
 	[
 		{
 			let mut init = id {
@@ -932,7 +932,7 @@ pub unsafe fn name_of(obj: &object) -> String {
 		Scroll => if obj.quantity > 1 { "scrolls " } else { "scroll " }.to_string(),
 		Potion => if obj.quantity > 1 { "potions " } else { "potion " }.to_string(),
 		Food => if obj.which_kind == RATION { "food ".to_string() } else { fruit() }
-		Wand => if is_wood[obj.which_kind as usize] { "staff " } else { "wand " }.to_string(),
+		Wand => if IS_WOOD[obj.which_kind as usize] { "staff " } else { "wand " }.to_string(),
 		Ring => "ring ".to_string(),
 		Amulet => "amulet ".to_string(),
 		_ => "unknown ".to_string(),
@@ -1128,7 +1128,7 @@ pub fn gr_armor(obj: &mut obj) {
 
 pub fn gr_wand(obj: &mut obj) {
 	(*obj).what_is = Wand;
-	(*obj).which_kind = get_rand(0, (WANDS - 1) as u16);
+	(*obj).which_kind = get_rand(0, (MAX_WAND - 1) as u16);
 	if (*obj).which_kind == MAGIC_MISSILE {
 		(*obj).class = get_rand(6, 12);
 	} else if (*obj).which_kind == CANCELLATION {
@@ -1167,7 +1167,7 @@ pub unsafe fn alloc_object() -> *mut object {
 		obj = md_malloc(core::mem::size_of::<object>() as i64) as *mut object;
 		if obj.is_null() {
 			message("cannot allocate object, saving game", 0);
-			save_into_file(error_file);
+			save_into_file(ERROR_FILE);
 		}
 	}
 	(*obj).quantity = 1;
@@ -1286,7 +1286,7 @@ pub unsafe fn new_object_for_wizard() {
 		}
 		'/' => {
 			gr_wand(&mut *obj);
-			Some(WANDS - 1)
+			Some(MAX_WAND - 1)
 		}
 		'=' => {
 			(*obj).what_is = Ring;

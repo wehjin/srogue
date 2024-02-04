@@ -70,7 +70,6 @@ pub mod settings;
 pub fn main() {
 	unsafe {
 		setuid(user().true_uid);
-
 		let mut level_ready = init();
 		loop {
 			if level_ready {

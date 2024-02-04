@@ -14,8 +14,8 @@ use crate::settings::{rest_file, score_only};
 pub static mut cant_int: bool = false;
 pub static mut did_int: bool = false;
 pub static mut save_is_interactive: bool = true;
-pub static mut error_file: &'static str = "rogue.esave";
-pub static BYEBYE_STRING: &'static str = "Okay, bye bye!";
+pub const ERROR_FILE: &'static str = "rogue.esave";
+pub const BYEBYE_STRING: &'static str = "Okay, bye bye!";
 
 pub struct GameState {
 	seed: [u8; 32],
@@ -176,6 +176,6 @@ pub unsafe fn onintr() {
 
 pub unsafe fn error_save() {
 	save_is_interactive = false;
-	save_into_file(error_file);
+	save_into_file(ERROR_FILE);
 	clean_up("");
 }

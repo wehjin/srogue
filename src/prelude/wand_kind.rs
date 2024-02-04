@@ -11,7 +11,7 @@ pub const PUT_TO_SLEEP: u16 = 6;
 pub const MAGIC_MISSILE: u16 = 7;
 pub const CANCELLATION: u16 = 8;
 pub const DO_NOTHING: u16 = 9;
-pub const WANDS: usize = 10;
+pub const MAX_WAND: usize = 10;
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum WandKind {
@@ -28,11 +28,11 @@ pub enum WandKind {
 }
 
 impl WandKind {
-	pub const ALL_WANDS: [WandKind; WANDS] = [
+	pub const ALL_WANDS: [WandKind; MAX_WAND] = [
 		TeleAway, SlowMonster, ConfuseMonster, Invisibility, Polymorph,
 		HasteMonster, PutToSleep, MagicMissile, Cancellation, DoNothing,
 	];
-	pub const REAL_NAME: [&'static str; WANDS] = [
+	pub const REAL_NAME: [&'static str; MAX_WAND] = [
 		"of teleport away ", "of slow monster ", "of confuse monster ", "of invisibility ", "of polymorph ",
 		"of haste monster ", "of sleep ", "of magic missile ", "of cancellation ", "of do nothing ",
 	];

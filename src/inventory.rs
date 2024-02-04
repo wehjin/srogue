@@ -15,11 +15,11 @@ use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::prelude::ring_kind::{ADD_STRENGTH, DEXTERITY, RingKind, RINGS};
 use crate::prelude::scroll_kind::{ScrollKind, SCROLLS};
-use crate::prelude::wand_kind::{WandKind, WANDS};
+use crate::prelude::wand_kind::{WandKind, MAX_WAND};
 use crate::prelude::weapon_kind::WeaponKind;
 
-pub static mut is_wood: [bool; WANDS] = [false; WANDS];
-pub static wand_materials: [&'static str; WAND_MATERIALS] = [
+pub static mut IS_WOOD: [bool; MAX_WAND] = [false; MAX_WAND];
+const WAND_MATERIALS: [&'static str; MAX_WAND_MATERIAL] = [
 	"steel ",
 	"bronze ",
 	"gold ",
@@ -52,7 +52,7 @@ pub static wand_materials: [&'static str; WAND_MATERIALS] = [
 	"wooden ",
 ];
 
-pub static gems: [&'static str; GEMS] = [
+const GEMS: [&'static str; MAX_GEM] = [
 	"diamond ",
 	"stibotantalite ",
 	"lapi-lazuli ",
@@ -68,7 +68,7 @@ pub static gems: [&'static str; GEMS] = [
 	"pearl ",
 	"garnet ",
 ];
-const SYLLABLES: [&'static str; MAXSYLLABLES] = [
+const SYLLABLES: [&'static str; MAX_SYLLABLE] = [
 	"blech ",
 	"foo ",
 	"barf ",
@@ -112,7 +112,7 @@ const SYLLABLES: [&'static str; MAXSYLLABLES] = [
 ];
 
 fn random_syllable() -> &'static str {
-	SYLLABLES[get_rand(1, MAXSYLLABLES - 1)]
+	SYLLABLES[get_rand(1, MAX_SYLLABLE - 1)]
 }
 
 pub unsafe fn inventory(pack: &object, filter: PackFilter) {
@@ -351,18 +351,18 @@ fn get_in_use_description(obj: &object) -> &'static str {
 
 pub unsafe fn get_wand_and_ring_materials() {
 	{
-		let mut used = [false; WAND_MATERIALS];
-		for i in 0..WANDS {
+		let mut used = [false; MAX_WAND_MATERIAL];
+		for i in 0..MAX_WAND {
 			let j = take_unused(&mut used);
-			id_wands[i].title = Some(wand_materials[j].to_string());
-			is_wood[i] = j > MAX_METAL;
+			id_wands[i].title = Some(WAND_MATERIALS[j].to_string());
+			IS_WOOD[i] = j > MAX_METAL;
 		}
 	}
 	{
-		let mut used = [false; GEMS];
+		let mut used = [false; MAX_GEM];
 		for i in 0..RINGS {
 			let j = take_unused(&mut used);
-			id_rings[i].title = Some(gems[j].to_string());
+			id_rings[i].title = Some(GEMS[j].to_string());
 		}
 	}
 }
