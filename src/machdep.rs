@@ -2,10 +2,10 @@
 
 use std::{fs, process, thread};
 use std::error::Error;
-use std::ffi::{c_void, CString};
+use std::ffi::{CString};
 use std::time::{Duration};
 use chrono::{Datelike, DateTime, Timelike, TimeZone, Utc};
-use libc::{c_int, SIG_IGN, sighandler_t, SIGHUP, SIGINT, signal, SIGQUIT, SIGTSTP, stat};
+use libc::{c_int, stat};
 use serde::{Deserialize, Serialize};
 use crate::init::{byebye, error_save, onintr};
 

@@ -418,19 +418,14 @@ pub unsafe fn reg_move(depth: &RogueDepth) -> bool {
 	return fainted;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn rest(mut count: libc::c_int, depth: &RogueDepth) -> libc::c_int {
-	let mut i: libc::c_int = 0;
+pub unsafe fn rest(count: libc::c_int, depth: &RogueDepth) {
 	interrupted = false;
-	i = 0 as libc::c_int;
-	while i < count {
+	for _i in 0..count {
 		if interrupted {
 			break;
 		}
 		reg_move(depth);
-		i += 1;
 	}
-	panic!("Reached end of non-void function without returning");
 }
 
 
