@@ -7,7 +7,7 @@ use crate::prelude::DoorDirection::{Left, Right};
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::SpotFlag::{Door, Floor, Hidden, HorWall, Monster, Object, Stairs, Trap, Tunnel, VertWall};
 use crate::room::DoorDirection::{Up, Down};
-use crate::room::RoomType::{Maze, Room};
+use crate::room::RoomType::{Maze};
 
 #[derive(Copy, Clone, Default, Serialize, Deserialize)]
 pub struct dr {
@@ -63,7 +63,7 @@ impl DoorDirection {
 }
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
-pub struct rm {
+pub struct Room {
 	pub bottom_row: i64,
 	pub right_col: i64,
 	pub left_col: i64,
@@ -72,9 +72,8 @@ pub struct rm {
 	pub room_type: RoomType,
 }
 
-pub type room = rm;
-
-pub static mut ROOMS: [room; MAX_ROOM] = [rm {
+pub const MAX_ROOM: usize = 9;
+pub static mut ROOMS: [Room; MAX_ROOM] = [Room {
 	bottom_row: 0,
 	right_col: 0,
 	left_col: 0,
@@ -214,7 +213,7 @@ pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, spots: Vec<SpotFlag>) {
 		let keep_looking = rn == NO_ROOM
 			|| !SpotFlag::is_any_set(&spots, dungeon[r as usize][c as usize])
 			|| SpotFlag::are_others_set(&spots, dungeon[r as usize][c as usize])
-			|| !(ROOMS[rn as usize].room_type == Room || ROOMS[rn as usize].room_type == Maze)
+			|| !(ROOMS[rn as usize].room_type == RoomType::Room || ROOMS[rn as usize].room_type == Maze)
 			|| ((r == rogue.row) && (c == rogue.col));
 		if !keep_looking {
 			break;
@@ -227,7 +226,7 @@ pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, spots: Vec<SpotFlag>) {
 pub unsafe fn gr_room() -> i64 {
 	loop {
 		let i = get_rand(0, MAX_ROOM as usize - 1);
-		if ROOMS[i].room_type == Room || ROOMS[i].room_type == Maze {
+		if ROOMS[i].room_type == RoomType::Room || ROOMS[i].room_type == Maze {
 			return i as i64;
 		}
 	}
@@ -313,13 +312,13 @@ pub unsafe fn is_all_connected() -> bool {
 	let mut starting_room = NO_ROOM;
 	for i in 0..MAX_ROOM as usize {
 		rooms_visited[i] = 0;
-		if ROOMS[i].room_type == Room || ROOMS[i].room_type == Maze {
+		if ROOMS[i].room_type == RoomType::Room || ROOMS[i].room_type == Maze {
 			starting_room = i as i64;
 		}
 	}
 	visit_rooms(starting_room);
 	for i in 0..MAX_ROOM as usize {
-		if (ROOMS[i].room_type == Room || ROOMS[i].room_type == Maze) && rooms_visited[i] == 0 {
+		if (ROOMS[i].room_type == RoomType::Room || ROOMS[i].room_type == Maze) && rooms_visited[i] == 0 {
 			return false;
 		}
 	}
@@ -391,7 +390,7 @@ pub unsafe fn dr_course(mut monster: *mut object, entering: bool, row: i64, col:
 		let r = get_rand(0, MAX_ROOM as usize - 1);
 		for i in 0..MAX_ROOM as usize {
 			let rr = (r + i) % MAX_ROOM as usize;
-			if !(ROOMS[rr].room_type == Room || ROOMS[rr].room_type == Maze) || Some(rr as i64) == rn {
+			if !(ROOMS[rr].room_type == RoomType::Room || ROOMS[rr].room_type == Maze) || Some(rr as i64) == rn {
 				continue;
 			}
 			for k in 0..4 {
@@ -417,7 +416,7 @@ pub unsafe fn dr_course(mut monster: *mut object, entering: bool, row: i64, col:
 			}
 		}
 		/* return monster to room that he came from */
-		for i in 0..MAX_ROOM as usize {
+		for i in 0..MAX_ROOM {
 			for j in 0..4usize {
 				if ROOMS[i].doors[j].oth_room == Some(rn as i64) {
 					for k in 0..4usize {

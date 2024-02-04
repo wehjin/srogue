@@ -5,8 +5,8 @@ use crate::level::{cur_level, cur_room, max_level, party_room};
 use crate::machdep::{get_current_time, RogueTime};
 use crate::monster::{fight, fighter};
 use crate::objects::{dungeon, empty_obj, foods, id, obj, party_counter, SaveObj};
-use crate::prelude::{bear_trap, being_held, blind, confused, DCOLS, detect_monster, DROWS, halluc, haste_self, levitate, m_moves, see_invisible, wizard};
-use crate::room::{room, ROOMS};
+use crate::prelude::{bear_trap, being_held, blind, confused, DCOLS, detect_monster, DROWS, halluc, haste_self, levitate, m_moves, Room, see_invisible, wizard};
+use crate::room::ROOMS;
 use crate::save::{hunger_str, id_potions, id_rings, id_scrolls, id_wands, IS_WOOD, level_monsters, level_objects, rogue, TRAPS};
 use crate::settings;
 use crate::settings::{login_name, score_only};
@@ -153,7 +153,7 @@ pub struct SaveData {
 	pub traps: Vec<trap>,
 	pub is_wood: Vec<bool>,
 	pub cur_room: i64,
-	pub rooms: Vec<room>,
+	pub rooms: Vec<Room>,
 	pub being_held: bool,
 	pub bear_trap: usize,
 	pub halluc: usize,

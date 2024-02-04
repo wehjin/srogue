@@ -306,7 +306,7 @@ pub unsafe fn clear_level() {
 	clear();
 }
 
-pub unsafe fn put_door(room: &mut room, door_dir: DoorDirection) -> DungeonSpot {
+pub unsafe fn put_door(room: &mut Room, door_dir: DoorDirection) -> DungeonSpot {
 	let wall_width = if RoomType::Maze == room.room_type { 0 } else { 1 };
 	let door_spot = match door_dir {
 		DoorDirection::Up | DoorDirection::Down => {
