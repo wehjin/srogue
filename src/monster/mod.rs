@@ -88,15 +88,16 @@ pub unsafe fn gr_monster(mut monster: *mut object, mut mn: usize, cur_level: usi
 	return monster;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn mv_mons(depth: &RogueDepth) {
-	if haste_self as c_int % 2 as c_int != 0 {
+pub unsafe fn mv_mons(depth: &RogueDepth) {
+	if haste_self % 2 != 0 {
 		return;
 	}
-	let mut monster: *mut object = level_monsters.next_object;
+
+	let mut monster: *mut object = level_monsters.next_monster();
 	while !monster.is_null() {
+		let next_monster = (*monster).next_monster();
+
 		let mut done_with_monster = false;
-		let next_monster = (*monster).next_object;
 		if (*monster).m_flags.hasted {
 			mon_disappeared = false;
 			mv_monster(&mut *monster, rogue.row, rogue.col, depth);
@@ -109,16 +110,20 @@ pub unsafe extern "C" fn mv_mons(depth: &RogueDepth) {
 				done_with_monster = true;
 			}
 		}
-		if !done_with_monster && (*monster).m_flags.confused && move_confused(&mut *monster) {
-			done_with_monster = true;
+		if !done_with_monster && (*monster).m_flags.confused {
+			if move_confused(&mut *monster) {
+				done_with_monster = true;
+			}
 		}
 		if !done_with_monster {
 			let mut flew = false;
-			if (*monster).m_flags.flies && !(*monster).m_flags.napping && !mon_can_go(&*monster, rogue.row, rogue.col) {
+			if (*monster).m_flags.flies
+				&& !(*monster).m_flags.napping
+				&& !mon_can_go(&*monster, rogue.row, rogue.col) {
 				flew = true;
 				mv_monster(&mut *monster, rogue.row, rogue.col, depth);
 			}
-			if !flew || !mon_can_go(&*monster, rogue.row, rogue.col) {
+			if !(flew && mon_can_go(&*monster, rogue.row, rogue.col)) {
 				mv_monster(&mut *monster, rogue.row, rogue.col, depth);
 			}
 		}
