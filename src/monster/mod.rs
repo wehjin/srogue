@@ -23,7 +23,7 @@ use crate::prelude::SpotFlag::{Floor, Object, Stairs, Tunnel};
 use crate::room::RoomType::Maze;
 
 #[derive(Clone)]
-pub struct fight {
+pub struct Fighter {
 	pub armor: *mut object,
 	pub weapon: *mut object,
 	pub left_ring: *mut object,
@@ -41,8 +41,6 @@ pub struct fight {
 	pub fchar: char,
 	pub moves_left: usize,
 }
-
-pub type fighter = fight;
 
 pub static mut level_monsters: object = empty_obj();
 pub static mut mon_disappeared: bool = false;

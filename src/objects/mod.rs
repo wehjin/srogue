@@ -290,7 +290,7 @@ pub static mut dungeon: [[u16; DCOLS]; DROWS] = [[0; DCOLS]; DROWS];
 pub static mut foods: i16 = 0;
 pub static mut party_counter: usize = 0;
 pub static mut free_list: *mut object = 0 as *mut object;
-pub static mut rogue: fighter = fight {
+pub static mut rogue: Fighter = Fighter {
 	armor: 0 as *mut object,
 	weapon: 0 as *mut object,
 	left_ring: 0 as *mut object,

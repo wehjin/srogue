@@ -3,7 +3,7 @@ use std::fs;
 use serde::{Deserialize, Serialize};
 use crate::level::{cur_room, party_room, RogueDepth};
 use crate::machdep::{get_current_time, RogueTime};
-use crate::monster::{fight, fighter};
+use crate::monster::Fighter;
 use crate::objects::{dungeon, empty_obj, foods, id, obj, party_counter, SaveObj};
 use crate::prelude::{bear_trap, being_held, blind, confused, DCOLS, detect_monster, DROWS, GameState, halluc, haste_self, levitate, m_moves, Room, see_invisible, wizard};
 use crate::room::ROOMS;
@@ -63,7 +63,7 @@ pub struct SaveFighter {
 }
 
 impl SaveFighter {
-	pub fn from_fighter(fighter: &fighter) -> Self {
+	pub fn from_fighter(fighter: &Fighter) -> Self {
 		SaveFighter {
 			hp_current: fighter.hp_current,
 			hp_max: fighter.hp_max,
@@ -79,8 +79,8 @@ impl SaveFighter {
 		}
 	}
 
-	pub fn to_fighter(&self) -> fight {
-		fight {
+	pub fn to_fighter(&self) -> Fighter {
+		Fighter {
 			armor: 0 as *mut obj,
 			weapon: 0 as *mut obj,
 			left_ring: 0 as *mut obj,
