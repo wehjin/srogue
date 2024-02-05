@@ -394,7 +394,7 @@ pub unsafe fn tele() {
 	if cur_room >= 0 {
 		darken_room(cur_room);
 	}
-	put_player(get_room_number(rogue.row, rogue.col));
+	put_player(get_opt_room_number(rogue.row, rogue.col));
 	being_held = false;
 	bear_trap = 0;
 }

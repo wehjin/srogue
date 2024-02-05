@@ -136,7 +136,7 @@ pub struct SaveData {
 	pub detect_monster: bool,
 	pub hunger_str: String,
 	pub login_name: String,
-	pub party_room: i64,
+	pub party_room: Option<usize>,
 	pub party_counter: usize,
 	pub level_monsters: SavePack,
 	pub level_objects: SavePack,

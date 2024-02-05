@@ -215,12 +215,8 @@ impl obj {
 	pub fn set_stationary_damage(&mut self, value: isize) {
 		self.stationary_damage = value;
 	}
-	pub fn first_level(&self) -> usize {
-		self.is_protected as usize
-	}
-	pub fn set_first_level(&mut self, value: usize) {
-		self.is_protected = value as i16;
-	}
+	pub fn first_level(&self) -> usize { self.is_protected as usize }
+	pub fn last_level(&self) -> usize { self.is_cursed as usize }
 	pub fn drop_percent(&self) -> usize { self.which_kind as usize }
 	pub fn set_drop_percent(&mut self, value: usize) {
 		self.which_kind = value as u16;
@@ -1185,10 +1181,11 @@ pub unsafe fn free_object(obj: *mut object) {
 }
 
 pub unsafe fn make_party(level_depth: usize) {
-	party_room = gr_room();
-	let n = if rand_percent(99) { party_objects(party_room, level_depth) } else { 11 };
+	party_room = Some(gr_room());
+	let cur_party_room = party_room.expect("some party room");
+	let n = if rand_percent(99) { party_objects(cur_party_room, level_depth) } else { 11 };
 	if rand_percent(99) {
-		party_monsters(party_room, n, level_depth);
+		party_monsters(cur_party_room, n, level_depth);
 	}
 }
 

@@ -2,6 +2,7 @@
 
 use libc::{c_int, c_short};
 use ncurses::chtype;
+use serde::{Deserialize, Serialize};
 use crate::message::message;
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::room::gr_row_col;
@@ -44,36 +45,82 @@ pub type fighter = fight;
 
 pub static mut level_monsters: object = empty_obj();
 pub static mut mon_disappeared: bool = false;
-pub static mut m_names: [&'static str; 26] = [
-	"aquator",
-	"bat",
-	"centaur",
-	"dragon",
-	"emu",
-	"venus fly-trap",
-	"griffin",
-	"hobgoblin",
-	"ice monster",
-	"jabberwock",
-	"kestrel",
-	"leprechaun",
-	"medusa",
-	"nymph",
-	"orc",
-	"phantom",
-	"quagga",
-	"rattlesnake",
-	"snake",
-	"troll",
-	"black unicorn",
-	"vampire",
-	"wraith",
-	"xeroc",
-	"yeti",
-	"zombie",
-];
-#[no_mangle]
-pub static mut mon_tab: [object; 26] = [
+
+#[derive(Copy, Clone, Serialize, Deserialize)]
+pub enum MonsterType {
+	Aquator,
+	Bat,
+	Centaur,
+	Dragon,
+	Emu,
+	FlyTrap,
+	Griffin,
+	Hobgoblin,
+	IceMonster,
+	Jabberwock,
+	Kestrel,
+	Leprechaun,
+	Medusa,
+	Nymph,
+	Orc,
+	Phantom,
+	Quagga,
+	Rattlesnake,
+	Snake,
+	Troll,
+	Unicorn,
+	Vampire,
+	Wraith,
+	Xeroc,
+	Yeti,
+	Zombie,
+}
+
+impl From<usize> for MonsterType {
+	fn from(value: usize) -> Self { MonsterType::LIST[value] }
+}
+
+impl MonsterType {
+	pub const LIST: [MonsterType; 26] = [
+		MonsterType::Aquator, MonsterType::Bat, MonsterType::Centaur, MonsterType::Dragon, MonsterType::Emu, MonsterType::FlyTrap,
+		MonsterType::Griffin, MonsterType::Hobgoblin, MonsterType::IceMonster, MonsterType::Jabberwock, MonsterType::Kestrel, MonsterType::Leprechaun,
+		MonsterType::Medusa, MonsterType::Nymph, MonsterType::Orc, MonsterType::Phantom, MonsterType::Quagga, MonsterType::Rattlesnake,
+		MonsterType::Snake, MonsterType::Troll, MonsterType::Unicorn, MonsterType::Vampire, MonsterType::Wraith, MonsterType::Xeroc,
+		MonsterType::Yeti, MonsterType::Zombie,
+	];
+	pub fn name(&self) -> &'static str {
+		match self {
+			MonsterType::Aquator => "aquator",
+			MonsterType::Bat => "bat",
+			MonsterType::Centaur => "centaur",
+			MonsterType::Dragon => "dragon",
+			MonsterType::Emu => "emu",
+			MonsterType::FlyTrap => "venus fly-trap",
+			MonsterType::Griffin => "griffin",
+			MonsterType::Hobgoblin => "hobgoblin",
+			MonsterType::IceMonster => "ice monster",
+			MonsterType::Jabberwock => "jabberwock",
+			MonsterType::Kestrel => "kestrel",
+			MonsterType::Leprechaun => "leprechaun",
+			MonsterType::Medusa => "medusa",
+			MonsterType::Nymph => "nymph",
+			MonsterType::Orc => "orc",
+			MonsterType::Phantom => "phantom",
+			MonsterType::Quagga => "quagga",
+			MonsterType::Rattlesnake => "rattlesnake",
+			MonsterType::Snake => "snake",
+			MonsterType::Troll => "troll",
+			MonsterType::Unicorn => "black unicorn",
+			MonsterType::Vampire => "vampire",
+			MonsterType::Wraith => "wraith",
+			MonsterType::Xeroc => "xeroc",
+			MonsterType::Yeti => "yeti",
+			MonsterType::Zombie => "zombie",
+		}
+	}
+}
+
+pub const mon_tab: [object; 26] = [
 	{
 		let mut init = obj {
 			m_flags: MonsterFlags::a(),
@@ -871,7 +918,7 @@ pub static mut mon_tab: [object; 26] = [
 pub unsafe extern "C" fn put_mons(level_depth: usize) {
 	let n = get_rand(4, 6);
 	for _i in 0..n {
-		let mut monster = gr_monster(0 as *mut object, 0, level_depth);
+		let mut monster = gr_monster(0 as *mut object, 0, level_depth, 0);
 		if (*monster).m_flags.wanders && coin_toss() {
 			wake_up(&mut *monster);
 		}
@@ -882,12 +929,18 @@ pub unsafe extern "C" fn put_mons(level_depth: usize) {
 	}
 }
 
-pub unsafe fn gr_monster(mut monster: *mut object, mut mn: usize, cur_level: usize) -> *mut object {
+pub unsafe fn gr_monster(mut monster: *mut object, mut mn: usize, cur_level: usize, first_level_boost: usize) -> *mut object {
 	if monster.is_null() {
 		monster = alloc_object();
 		loop {
 			mn = get_rand(0, MONSTERS - 1);
-			if cur_level >= mon_tab[mn].is_protected as usize && cur_level <= mon_tab[mn].is_cursed as usize {
+			let first_level = {
+				let nominal = mon_tab[mn].first_level();
+				let boost = first_level_boost.min(nominal);
+				nominal - boost
+			};
+			if cur_level >= first_level
+				&& cur_level <= mon_tab[mn].last_level() {
 				break;
 			}
 		}
@@ -941,20 +994,17 @@ pub unsafe extern "C" fn mv_mons(depth: &RogueDepth) {
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn party_monsters(rn: i64, n: i64, level_depth: usize) {
-	for i in 0..MONSTERS {
-		mon_tab[i].set_first_level(mon_tab[i].first_level() - (level_depth % 3))
-	}
+pub unsafe fn party_monsters(rn: usize, n: i64, level_depth: usize) {
+	let first_level_shift = level_depth % 3;
 	let n = n + n;
 	for _i in 0..n {
-		if no_room_for_monster(rn as usize) {
+		if no_spot_for_monster(rn) {
 			break;
 		}
 		let mut found: Option<(i64, i64)> = None;
 		for _j in 0..250 {
-			let row = get_rand(ROOMS[rn as usize].top_row + 1, ROOMS[rn as usize].bottom_row - 1);
-			let col = get_rand(ROOMS[rn as usize].left_col + 1, ROOMS[rn as usize].right_col - 1);
+			let row = get_rand(ROOMS[rn].top_row + 1, ROOMS[rn].bottom_row - 1);
+			let col = get_rand(ROOMS[rn].left_col + 1, ROOMS[rn].right_col - 1);
 			let dungeon_spot = dungeon[row as usize][col as usize];
 			if !Monster.is_set(dungeon_spot) && SpotFlag::is_any_set(&vec![Floor, Tunnel], dungeon_spot) {
 				found = Some((row, col));
@@ -962,15 +1012,12 @@ pub unsafe extern "C" fn party_monsters(rn: i64, n: i64, level_depth: usize) {
 			}
 		}
 		if let Some((row, col)) = found {
-			let monster = gr_monster(0 as *mut object, 0, level_depth);
+			let monster = gr_monster(0 as *mut object, 0, level_depth, first_level_shift);
 			if !(*monster).m_flags.imitates {
 				(*monster).m_flags.wakens = true;
 			}
 			put_m_at(row, col, &mut *monster);
 		}
-	}
-	for i in 0..MONSTERS {
-		mon_tab[i].set_first_level(mon_tab[i].first_level() + (level_depth % 3))
 	}
 }
 
@@ -1212,7 +1259,7 @@ pub fn wake_up(monster: &mut object) {
 #[no_mangle]
 pub unsafe extern "C" fn wake_room(rn: i64, entering: bool, row: i64, col: i64) {
 	let wake_percent = {
-		let wake_percent = if rn == party_room { odds::PARTY_WAKE_PERCENT } else { odds::WAKE_PERCENT };
+		let wake_percent = if Some(rn as usize) == party_room { odds::PARTY_WAKE_PERCENT } else { odds::WAKE_PERCENT };
 		if stealthy > 0 {
 			wake_percent / (odds::STEALTH_FACTOR + stealthy as usize)
 		} else {
@@ -1242,7 +1289,8 @@ pub unsafe fn mon_name(monster: &object) -> &'static str {
 	if player_is_blind() || (monster.m_flags.invisible && !bypass_invisibility()) {
 		"something"
 	} else if player_hallucinating() {
-		m_names[get_rand(0, m_names.len() - 1)]
+		let monster = MonsterType::LIST[get_rand(0, MonsterType::LIST.len() - 1)];
+		monster.name()
 	} else {
 		mon_real_name(monster)
 	}
@@ -1250,7 +1298,7 @@ pub unsafe fn mon_name(monster: &object) -> &'static str {
 
 pub unsafe fn mon_real_name(monster: &obj) -> &'static str {
 	let index = monster.m_char() as usize - 'A' as usize;
-	m_names[index]
+	MonsterType::LIST[index].name()
 }
 
 pub unsafe fn player_hallucinating() -> bool { halluc != 0 }
@@ -1274,7 +1322,7 @@ pub unsafe extern "C" fn wanderer(level_depth: usize) {
 	{
 		let mut i: c_short = 0;
 		while i < 15 && !found {
-			monster = gr_monster(0 as *mut object, 0, level_depth);
+			monster = gr_monster(0 as *mut object, 0, level_depth, 0);
 			let monster_wanders_or_wakens = (*monster).m_flags.wakens || (*monster).m_flags.wanders;
 			if monster_wanders_or_wakens {
 				found = true;
@@ -1342,7 +1390,7 @@ pub unsafe extern "C" fn create_monster(level_depth: usize) {
 		}
 	}
 	if found {
-		let mut monster = gr_monster(0 as *mut object, 0, level_depth);
+		let mut monster = gr_monster(0 as *mut object, 0, level_depth, 0);
 		put_m_at(row, col, &mut *monster);
 		ncurses::mvaddch(row as i32, col as i32, gmc(monster));
 		if (*monster).m_flags.wanders || (*monster).m_flags.wakens {
@@ -1453,7 +1501,7 @@ pub unsafe fn aim_monster(monster: &mut object) {
 	}
 }
 
-pub unsafe fn no_room_for_monster(rn: usize) -> bool {
+pub unsafe fn no_spot_for_monster(rn: usize) -> bool {
 	let room = &ROOMS[rn];
 	for i in (room.top_row + 1)..room.bottom_row {
 		for j in (room.left_col + 1)..room.right_col {

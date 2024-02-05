@@ -152,13 +152,14 @@ pub unsafe fn add_traps(cur_level: usize) {
 	}
 	for i in 0..n {
 		TRAPS[i].trap_type = TrapKind::random();
-		let (row, col) = if i == 0 && party_room != NO_ROOM {
+		let (row, col) = if i == 0 && party_room.is_some() {
+			let cur_party_room = party_room.expect("party room is some");
 			let mut row: usize;
 			let mut col: usize;
 			let mut tries = 0;
 			loop {
-				row = get_rand((ROOMS[party_room as usize].top_row + 1) as usize, (ROOMS[party_room as usize].bottom_row - 1) as usize);
-				col = get_rand((ROOMS[party_room as usize].left_col + 1) as usize, (ROOMS[party_room as usize].right_col - 1) as usize);
+				row = get_rand((ROOMS[cur_party_room].top_row + 1) as usize, (ROOMS[cur_party_room].bottom_row - 1) as usize);
+				col = get_rand((ROOMS[cur_party_room].left_col + 1) as usize, (ROOMS[cur_party_room].right_col - 1) as usize);
 				tries += 1;
 				let try_again = (SpotFlag::is_any_set(&vec![Object, Stairs, Trap, Tunnel], dungeon[row][col]) || SpotFlag::is_nothing(dungeon[row][col]))
 					&& tries < 15;

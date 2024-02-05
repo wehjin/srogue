@@ -41,7 +41,7 @@ impl RogueDepth {
 
 pub static mut cur_room: i64 = 0;
 pub static mut new_level_message: Option<String> = None;
-pub static mut party_room: i64 = NO_ROOM;
+pub static mut party_room: Option<usize> = None;
 pub static mut r_de: Option<usize> = None;
 pub const LEVEL_POINTS: [isize; MAX_EXP_LEVEL] = [
 	10,
@@ -277,7 +277,7 @@ pub unsafe fn clear_level() {
 	detect_monster = false;
 	bear_trap = 0;
 	being_held = false;
-	party_room = NO_ROOM;
+	party_room = None;
 	rogue.col = -1;
 	rogue.row = -1;
 	clear();
@@ -611,25 +611,25 @@ pub unsafe fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: 
 	}
 }
 
-pub unsafe fn put_player(nr: i64) {
-	let mut rn = nr;
+pub unsafe fn put_player(nr: Option<usize>) {
 	let mut row: i64 = 0;
 	let mut col: i64 = 0;
+	let mut rn = nr;
 	for _misses in 0..2 {
 		if rn != nr {
 			break;
 		}
 		gr_row_col(&mut row, &mut col, vec![Floor, Tunnel, Object, Stairs]);
-		rn = get_room_number(row, col);
+		rn = get_opt_room_number(row, col);
 	}
+	let rn = rn.expect("room number to put player") as i64;
 	rogue.row = row;
 	rogue.col = col;
-
-	if dungeon[rogue.row as usize][rogue.col as usize] & TUNNEL as u16 != 0 {
-		cur_room = PASSAGE;
+	cur_room = if Tunnel.is_set(dungeon[rogue.row as usize][rogue.col as usize]) {
+		PASSAGE
 	} else {
-		cur_room = rn;
-	}
+		rn
+	};
 	if cur_room != PASSAGE {
 		light_up_room(cur_room);
 	} else {

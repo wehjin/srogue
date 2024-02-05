@@ -239,17 +239,17 @@ pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, spots: Vec<SpotFlag>) {
 	*col = c;
 }
 
-pub unsafe fn gr_room() -> i64 {
+pub unsafe fn gr_room() -> usize {
 	loop {
 		let i = get_rand(0, MAX_ROOM - 1);
 		if ROOMS[i].room_type == RoomType::Room || ROOMS[i].room_type == Maze {
-			return i as i64;
+			return i;
 		}
 	}
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn party_objects(mut rn: i64, level_depth: usize) -> i64 {
+pub unsafe extern "C" fn party_objects(rn: usize, level_depth: usize) -> i64 {
 	let mut i: libc::c_short = 0;
 	let mut j: libc::c_short = 0;
 	let mut nf: libc::c_short = 0;

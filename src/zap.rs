@@ -104,7 +104,7 @@ pub unsafe fn zap_monster(monster: &mut obj, which_kind: u16, depth: &RogueDepth
 			}
 			let nm = monster.next_monster();
 			let tc = monster.trail_char();
-			gr_monster(monster, get_rand(0, MONSTERS - 1), depth.cur);
+			gr_monster(monster, get_rand(0, MONSTERS - 1), depth.cur, 0);
 			monster.row = row;
 			monster.col = col;
 			monster.set_next_monster(nm);
