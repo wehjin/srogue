@@ -14,7 +14,7 @@ pub static mut less_hp: isize = 0;
 pub static FLAME_NAME: &'static str = "flame";
 pub static mut being_held: bool = false;
 
-pub unsafe fn special_hit(monster: &mut Monster, depth: &RogueDepth) {
+pub unsafe fn special_hit(monster: &mut Monster, depth: &RogueDepth, level: &Level) {
 	if monster.m_flags.confused && rand_percent(66) {
 		return;
 	}
@@ -25,7 +25,7 @@ pub unsafe fn special_hit(monster: &mut Monster, depth: &RogueDepth) {
 		being_held = true;
 	}
 	if monster.m_flags.freezes {
-		freeze(monster, depth);
+		freeze(monster, depth, level);
 	}
 	if monster.m_flags.stings {
 		sting(monster, depth.cur);
@@ -37,9 +37,9 @@ pub unsafe fn special_hit(monster: &mut Monster, depth: &RogueDepth) {
 		drop_level(depth.cur);
 	}
 	if monster.m_flags.steals_gold {
-		steal_gold(monster, depth.cur);
+		steal_gold(monster, depth.cur, level);
 	} else if monster.m_flags.steals_item {
-		steal_item(monster, depth);
+		steal_item(monster, depth, level);
 	}
 }
 
@@ -61,7 +61,7 @@ pub unsafe fn rust(monster: Option<&mut Monster>, level_depth: usize) {
 	}
 }
 
-unsafe fn freeze(monster: &mut Monster, depth: &RogueDepth) {
+unsafe fn freeze(monster: &mut Monster, depth: &RogueDepth, level: &Level) {
 	if rand_percent(12) {
 		return;
 	}
@@ -76,11 +76,11 @@ unsafe fn freeze(monster: &mut Monster, depth: &RogueDepth) {
 
 		let n = get_rand(4, 8);
 		for _ in 0..n {
-			mv_mons(depth);
+			mv_mons(depth, level);
 		}
 		if rand_percent(freeze_percent as usize) {
 			for _ in 0..50 {
-				mv_mons(depth);
+				mv_mons(depth, level);
 			}
 			killed_by(Ending::Hypothermia, depth.max);
 		}
@@ -89,25 +89,25 @@ unsafe fn freeze(monster: &mut Monster, depth: &RogueDepth) {
 	}
 }
 
-unsafe fn steal_gold(monster: &mut Monster, cur_level: usize) {
+unsafe fn steal_gold(monster: &mut Monster, level_depth: usize, level: &Level) {
 	if rogue.gold <= 0 || rand_percent(10) {
 		return;
 	}
 
-	let amount = get_rand(cur_level * 10, cur_level * 30).min(rogue.gold);
+	let amount = get_rand(level_depth * 10, level_depth * 30).min(rogue.gold);
 	rogue.gold -= amount;
 	message("your purse feels lighter", 0);
-	print_stats(STAT_GOLD, cur_level);
-	disappear(monster);
+	print_stats(STAT_GOLD, level_depth);
+	disappear(monster, level);
 }
 
-unsafe fn steal_item(monster: &mut Monster, depth: &RogueDepth) {
+unsafe fn steal_item(monster: &mut Monster, depth: &RogueDepth, level: &Level) {
 	if rand_percent(15) {
 		return;
 	}
 	let mut obj = rogue.pack.next_object;
 	if obj.is_null() {
-		disappear(monster);
+		disappear(monster, level);
 		return;
 	}
 	let mut has_something = false;
@@ -119,7 +119,7 @@ unsafe fn steal_item(monster: &mut Monster, depth: &RogueDepth) {
 		obj = (*obj).next_object;
 	}
 	if !has_something {
-		disappear(monster);
+		disappear(monster, level);
 		return;
 	}
 
@@ -149,13 +149,13 @@ unsafe fn steal_item(monster: &mut Monster, depth: &RogueDepth) {
 	};
 	message(&msg, 0);
 
-	vanish(&mut *obj, false, &mut rogue.pack, depth);
-	disappear(monster);
+	vanish(&mut *obj, false, &mut rogue.pack, depth, level);
+	disappear(monster, level);
 }
 
-unsafe fn disappear(monster: &mut Monster) {
+unsafe fn disappear(monster: &mut Monster, level: &Level) {
 	SpotFlag::Monster.clear(&mut dungeon[monster.spot.row as usize][monster.spot.col as usize]);
-	if rogue_can_see(monster.spot.row, monster.spot.col) {
+	if rogue_can_see(monster.spot.row, monster.spot.col, level) {
 		let dungeon_char = get_dungeon_char(monster.spot.row, monster.spot.col);
 		mvaddch(monster.spot.row as i32, monster.spot.col as i32, dungeon_char);
 	}
@@ -222,21 +222,21 @@ unsafe fn try_to_cough(row: i64, col: i64, obj: &mut obj) -> bool {
 	return false;
 }
 
-pub unsafe fn seek_gold(monster: &mut Monster, depth: &RogueDepth) -> bool {
-	let rn = get_room_number(monster.spot.row, monster.spot.col);
+pub unsafe fn seek_gold(monster: &mut Monster, depth: &RogueDepth, level: &Level) -> bool {
+	let rn = get_room_number(monster.spot.row, monster.spot.col, level);
 	if rn < 0 {
 		return false;
 	}
 
 	let rn = rn as usize;
-	for i in (ROOMS[rn].top_row + 1)..ROOMS[rn].bottom_row {
-		for j in (ROOMS[rn].left_col + 1)..ROOMS[rn].right_col {
+	for i in (level.rooms[rn].top_row + 1)..level.rooms[rn].bottom_row {
+		for j in (level.rooms[rn].left_col + 1)..level.rooms[rn].right_col {
 			if gold_at(i, j) && !SpotFlag::Monster.is_set(dungeon[i as usize][j as usize]) {
 				monster.m_flags.can_flit = true;
 				let can_go_if_while_can_flit = mon_can_go(monster, i, j);
 				monster.m_flags.can_flit = false;
 				if can_go_if_while_can_flit {
-					move_mon_to(monster, i, j);
+					move_mon_to(monster, i, j, level);
 					monster.m_flags.asleep = true;
 					monster.m_flags.wakens = false;
 					monster.m_flags.seeks_gold = false;
@@ -244,7 +244,7 @@ pub unsafe fn seek_gold(monster: &mut Monster, depth: &RogueDepth) -> bool {
 				}
 				monster.m_flags.seeks_gold = false;
 				monster.m_flags.can_flit = true;
-				mv_monster(monster, i, j, depth);
+				mv_monster(monster, i, j, depth, level);
 				monster.m_flags.can_flit = false;
 				monster.m_flags.seeks_gold = true;
 				return true;
@@ -356,8 +356,8 @@ unsafe fn drain_life(level_depth: usize) {
 	print_stats(STAT_STRENGTH | STAT_HP, level_depth);
 }
 
-pub unsafe fn m_confuse(monster: &mut Monster) -> bool {
-	if !rogue_can_see(monster.spot.row, monster.spot.col) {
+pub unsafe fn m_confuse(monster: &mut Monster, level: &Level) -> bool {
+	if !rogue_can_see(monster.spot.row, monster.spot.col, level) {
 		return false;
 	}
 	if rand_percent(45) {
@@ -375,8 +375,8 @@ pub unsafe fn m_confuse(monster: &mut Monster) -> bool {
 	return false;
 }
 
-pub unsafe fn flame_broil(monster: &mut Monster, depth: &RogueDepth) -> bool {
-	if !mon_sees(monster, rogue.row, rogue.col) || coin_toss() {
+pub unsafe fn flame_broil(monster: &mut Monster, depth: &RogueDepth, level: &Level) -> bool {
+	if !mon_sees(monster, rogue.row, rogue.col, level) || coin_toss() {
 		return false;
 	}
 	{
@@ -420,7 +420,7 @@ pub unsafe fn flame_broil(monster: &mut Monster, depth: &RogueDepth) -> bool {
 			}
 		}
 	}
-	mon_hit(monster, Some(FLAME_NAME), true, depth);
+	mon_hit(monster, Some(FLAME_NAME), true, depth, level);
 	return true;
 }
 

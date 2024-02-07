@@ -4,6 +4,8 @@
 extern "C" {}
 
 use std::sync::OnceLock;
+use std::thread::sleep;
+use std::time::Duration;
 use crate::prelude::*;
 
 mod message;
@@ -74,22 +76,20 @@ pub fn main() {
 	let (mut game, mut restored) = unsafe { init() };
 	loop {
 		if !restored {
-			unsafe { clear_level(); }
-			unsafe {
-				game.depth = game.depth.descend();
-				make_level(game.depth.cur);
-			}
-			unsafe { put_objects(&game.depth); }
-			unsafe { put_stairs(); }
-			unsafe { add_traps(game.depth.cur); }
-			unsafe { put_mons(game.depth.cur); }
-			unsafe { put_player(party_room); }
+			unsafe { clear_level(&mut game.level); }
+			game.depth = game.depth.descend();
+			unsafe { make_level(game.depth.cur, &mut game.level) };
+			unsafe { put_objects(&game.depth, &game.level); }
+			unsafe { put_stairs(&mut game.level); }
+			unsafe { add_traps(game.depth.cur, &game.level); }
+			unsafe { put_mons(game.depth.cur, &game.level); }
+			unsafe { put_player(party_room, &game.level); }
 			unsafe { print_stats(STAT_ALL, game.depth.cur); }
-		} else {
-			restored = false;
+			sleep(Duration::from_secs(1));
 		}
 		unsafe { play_level(&mut game); }
 		unsafe { free_stuff(&mut level_objects); }
 		unsafe { MASH.clear(); }
+		restored = false;
 	}
 }

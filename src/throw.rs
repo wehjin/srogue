@@ -13,7 +13,7 @@ use crate::prelude::stat_const::STAT_ARMOR;
 use crate::prelude::weapon_kind::{ARROW, BOW, DAGGER, DART, SHURIKEN};
 use crate::throw::Move::{Up, UpLeft, UpRight, Left, Right, Same, Down, DownLeft, DownRight};
 
-pub unsafe fn throw(depth: &RogueDepth) {
+pub unsafe fn throw(depth: &RogueDepth, level: &Level) {
 	let dir = get_dir_or_cancel();
 	check_message();
 	if dir == CANCEL {
@@ -39,33 +39,33 @@ pub unsafe fn throw(depth: &RogueDepth) {
 	if ((*weapon).in_use_flags & BEING_WIELDED) != 0 && (*weapon).quantity <= 1 {
 		unwield(rogue.weapon);
 	} else if ((*weapon).in_use_flags & BEING_WORN) != 0 {
-		mv_aquatars(depth);
+		mv_aquatars(depth, level);
 		unwear(rogue.armor);
 		print_stats(STAT_ARMOR, depth.cur);
 	} else if ((*weapon).in_use_flags & ON_EITHER_HAND) != 0 {
-		un_put_on(weapon, depth.cur);
+		un_put_on(weapon, depth.cur, level);
 	}
-	let monster_id = get_thrown_at_monster(weapon, dir, &mut row, &mut col);
+	let monster_id = get_thrown_at_monster(weapon, dir, &mut row, &mut col, level);
 	mvaddch(rogue.row as i32, rogue.col as i32, chtype::from(rogue.fchar));
 	refresh();
 
-	if rogue_can_see(row, col) && (row != rogue.row || col != rogue.col) {
+	if rogue_can_see(row, col, level) && (row != rogue.row || col != rogue.col) {
 		mvaddch(row as i32, col as i32, get_dungeon_char(row, col));
 	}
 	if let Some(monster_id) = monster_id {
 		let monster = MASH.monster_with_id_mut(monster_id).expect("monster with id");
 		monster.wake_up();
 		clear_gold_seeker(&mut *monster);
-		if !throw_at_monster(&mut *monster, &mut *weapon, depth) {
-			flop_weapon(&mut *weapon, row, col);
+		if !throw_at_monster(&mut *monster, &mut *weapon, depth, level) {
+			flop_weapon(&mut *weapon, row, col, level);
 		}
 	} else {
-		flop_weapon(&mut *weapon, row, col);
+		flop_weapon(&mut *weapon, row, col, level);
 	}
-	vanish(&mut *weapon, true, &mut rogue.pack, depth);
+	vanish(&mut *weapon, true, &mut rogue.pack, depth, level);
 }
 
-unsafe fn throw_at_monster(monster: &mut monster::Monster, weapon: &mut obj, depth: &RogueDepth) -> bool {
+unsafe fn throw_at_monster(monster: &mut monster::Monster, weapon: &mut obj, depth: &RogueDepth, level: &Level) -> bool {
 	let mut hit_chance = get_hit_chance(weapon);
 	let mut damage = get_weapon_damage(weapon);
 	if weapon.which_kind == ARROW && rogue_weapon_is_bow() {
@@ -89,7 +89,7 @@ unsafe fn throw_at_monster(monster: &mut monster::Monster, weapon: &mut obj, dep
 	}
 	hit_message += "hit  ";
 	if weapon.what_is == Wand && rand_percent(75) {
-		zap_monster(monster, weapon.which_kind, depth);
+		zap_monster(monster, weapon.which_kind, depth, level);
 	} else {
 		mon_damage(monster, damage as usize, depth);
 	}
@@ -101,7 +101,7 @@ unsafe fn rogue_weapon_is_bow() -> bool {
 }
 
 
-pub unsafe fn get_thrown_at_monster(obj: *mut object, dir: char, row: &mut i64, col: &mut i64) -> Option<u64> {
+pub unsafe fn get_thrown_at_monster(obj: *mut object, dir: char, row: &mut i64, col: &mut i64, level: &Level) -> Option<u64> {
 	let mut orow = *row;
 	let mut ocol = *col;
 	let ch = get_mask_char((*obj).what_is);
@@ -113,10 +113,10 @@ pub unsafe fn get_thrown_at_monster(obj: *mut object, dir: char, row: &mut i64, 
 			*col = ocol;
 			return None;
 		}
-		if i != 0 && rogue_can_see(orow, ocol) {
+		if i != 0 && rogue_can_see(orow, ocol, level) {
 			mvaddch(orow as i32, ocol as i32, get_dungeon_char(orow, ocol));
 		}
-		if rogue_can_see(*row, *col) {
+		if rogue_can_see(*row, *col, level) {
 			if !Monster.is_set(dungeon[*row as usize][*col as usize]) {
 				mvaddch(*row as i32, *col as i32, chtype::from(ch));
 			}
@@ -136,7 +136,7 @@ pub unsafe fn get_thrown_at_monster(obj: *mut object, dir: char, row: &mut i64, 
 	return None;
 }
 
-unsafe fn flop_weapon(weapon: &mut obj, mut row: i64, mut col: i64) {
+unsafe fn flop_weapon(weapon: &mut obj, mut row: i64, mut col: i64, level: &Level) {
 	let mut found = false;
 	let mut walk = RandomWalk::new(row, col);
 	for _ in 0..9 {
@@ -163,7 +163,7 @@ unsafe fn flop_weapon(weapon: &mut obj, mut row: i64, mut col: i64) {
 		(*new_weapon).quantity = 1;
 		(*new_weapon).ichar = 'L';
 		place_at(&mut *new_weapon, row, col);
-		if rogue_can_see(row, col) && (row != rogue.row || col != rogue.col) {
+		if rogue_can_see(row, col, level) && (row != rogue.row || col != rogue.col) {
 			let mon = Monster.is_set(dungeon[row as usize][col as usize]);
 			Monster.clear(&mut dungeon[row as usize][col as usize]);
 			let dch = get_dungeon_char(row, col);

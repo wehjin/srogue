@@ -11,7 +11,7 @@ fn reduce_chance(chance: usize, reduction: isize) -> usize {
 	if chance <= reduction { 0 } else { chance - reduction }
 }
 
-pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame: bool, depth: &RogueDepth) {
+pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame: bool, depth: &RogueDepth, level: &Level) {
 	if let Some(monster_id) = FIGHT_MONSTER {
 		if monster.id() == monster_id {
 			FIGHT_MONSTER = None;
@@ -78,7 +78,7 @@ pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame
 		rogue_damage(damage, monster, depth);
 	}
 	if monster.m_flags.special_hit() {
-		special_hit(monster, depth);
+		special_hit(monster, depth, level);
 	}
 }
 
@@ -157,28 +157,28 @@ pub unsafe extern "C" fn damage_for_strength() -> i64 {
 	let mut strength: libc::c_short = 0;
 	strength = (rogue.str_current as i64 + add_strength as i64)
 		as libc::c_short;
-	if strength as i64 <= 6 as i64 {
-		return strength as i64 - 5 as i64;
+	if strength as i64 <= 6i64 {
+		return strength as i64 - 5i64;
 	}
-	if strength as i64 <= 14 as i64 {
+	if strength as i64 <= 14i64 {
 		return 1;
 	}
-	if strength as i64 <= 17 as i64 {
-		return 3 as i64;
+	if strength as i64 <= 17i64 {
+		return 3i64;
 	}
-	if strength as i64 <= 18 as i64 {
-		return 4 as i64;
+	if strength as i64 <= 18i64 {
+		return 4i64;
 	}
-	if strength as i64 <= 20 as i64 {
-		return 5 as i64;
+	if strength as i64 <= 20i64 {
+		return 5i64;
 	}
 	if strength as i64 <= 21 {
-		return 6 as i64;
+		return 6i64;
 	}
-	if strength as i64 <= 30 as i64 {
-		return 7 as i64;
+	if strength as i64 <= 30i64 {
+		return 7i64;
 	}
-	return 8 as i64;
+	return 8i64;
 }
 
 pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: usize, depth: &RogueDepth) -> bool {
@@ -205,7 +205,7 @@ pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: usize, depth: &
 	return true;
 }
 
-pub unsafe fn fight(to_the_death: bool, depth: &RogueDepth) {
+pub unsafe fn fight(to_the_death: bool, depth: &RogueDepth, level: &Level) {
 	let mut first_miss: bool = true;
 	let mut ch: char = 0 as char;
 	loop {
@@ -249,7 +249,7 @@ pub unsafe fn fight(to_the_death: bool, depth: &RogueDepth) {
 		}
 	};
 	while FIGHT_MONSTER.is_some() {
-		one_move_rogue(ch, false, depth);
+		one_move_rogue(ch, false, depth, level);
 		if (!to_the_death && rogue.hp_current <= possible_damage)
 			|| interrupted
 			|| !SpotFlag::Monster.is_set(dungeon[row as usize][col as usize]) {
@@ -330,7 +330,7 @@ pub unsafe fn get_weapon_damage(weapon: &object) -> isize {
 mod safe;
 
 pub use safe::*;
-use crate::level::{add_exp, RogueDepth, SpotFlag};
+use crate::level::{add_exp, Level, RogueDepth, SpotFlag};
 use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
 use crate::monster;
 use crate::monster::{MASH, mon_name};

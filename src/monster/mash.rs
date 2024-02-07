@@ -1,6 +1,7 @@
 use ncurses::chtype;
 use rand::{RngCore, thread_rng};
 use serde::{Deserialize, Serialize};
+use crate::level::Level;
 use crate::monster::{MonsterFlags, MonsterKind};
 use crate::prelude::{DungeonSpot};
 use crate::room::get_opt_room_number;
@@ -161,9 +162,9 @@ impl Monster {
 			self.m_flags.confuses = false;
 		}
 	}
-	pub fn in_same_room_as_spot(&self, row: i64, col: i64) -> Option<usize> {
-		if let Some(rn) = get_opt_room_number(row, col) {
-			if let Some(mon_rn) = get_opt_room_number(self.spot.row, self.spot.col) {
+	pub fn in_same_room_as_spot(&self, row: i64, col: i64, level: &Level) -> Option<usize> {
+		if let Some(rn) = get_opt_room_number(row, col, level) {
+			if let Some(mon_rn) = get_opt_room_number(self.spot.row, self.spot.col, level) {
 				if rn == mon_rn {
 					return Some(rn);
 				}
@@ -178,8 +179,8 @@ impl Monster {
 	pub fn wanders_or_wakens(&self) -> bool { self.m_flags.wakens || self.m_flags.wanders }
 	pub fn is_invisible(&self) -> bool { self.m_flags.invisible }
 	pub fn name(&self) -> &'static str { self.kind.name() }
-	pub fn in_room(&self, rn: i64) -> bool {
-		let monster_rn = get_opt_room_number(self.spot.row, self.spot.col);
+	pub fn in_room(&self, rn: i64, level: &Level) -> bool {
+		let monster_rn = get_opt_room_number(self.spot.row, self.spot.col, level);
 		if let Some(monster_rn) = monster_rn {
 			monster_rn == (rn as usize)
 		} else {

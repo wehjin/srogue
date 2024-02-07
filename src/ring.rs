@@ -25,7 +25,7 @@ pub static mut r_see_invisible: bool = false;
 pub static mut sustain_strength: bool = false;
 pub static mut maintain_armor: bool = false;
 
-pub unsafe fn put_on_ring(depth: &RogueDepth) {
+pub unsafe fn put_on_ring(depth: &RogueDepth, level: &Level) {
 	if r_rings == 2 {
 		message("wearing two rings already", 0);
 		return;
@@ -68,10 +68,10 @@ pub unsafe fn put_on_ring(depth: &RogueDepth) {
 	} else {
 		do_put_on(&mut *ring, false);
 	}
-	ring_stats(true, depth.cur);
+	ring_stats(true, depth.cur, level);
 	check_message();
 	message(&get_desc(&*ring), 0);
-	reg_move(depth);
+	reg_move(depth, level);
 }
 
 unsafe fn ask_left_or_right() -> char {
@@ -97,7 +97,7 @@ pub unsafe fn do_put_on(ring: &mut obj, on_left: bool) {
 	}
 }
 
-pub unsafe fn remove_ring(depth: &RogueDepth) {
+pub unsafe fn remove_ring(depth: &RogueDepth, level: &Level) {
 	let mut left = false;
 	let mut right = false;
 	if r_rings == 0 {
@@ -128,14 +128,14 @@ pub unsafe fn remove_ring(depth: &RogueDepth) {
 		if (*ring).is_cursed != 0 {
 			message(CURSE_MESSAGE, 0);
 		} else {
-			un_put_on(ring, depth.cur);
+			un_put_on(ring, depth.cur, level);
 			message(&format!("removed {}", get_desc(&*ring)), 0);
-			reg_move(depth);
+			reg_move(depth, level);
 		}
 	}
 }
 
-pub unsafe fn un_put_on(ring: *mut obj, level_depth: usize) {
+pub unsafe fn un_put_on(ring: *mut obj, level_depth: usize, level: &Level) {
 	if !ring.is_null() && ((*ring).in_use_flags & ON_LEFT_HAND != 0) {
 		(*ring).in_use_flags &= !ON_LEFT_HAND;
 		rogue.left_ring = 0 as *mut object;
@@ -143,7 +143,7 @@ pub unsafe fn un_put_on(ring: *mut obj, level_depth: usize) {
 		(*ring).in_use_flags &= !ON_RIGHT_HAND;
 		rogue.right_ring = 0 as *mut object;
 	}
-	ring_stats(true, level_depth);
+	ring_stats(true, level_depth, level);
 }
 
 pub fn gr_ring(ring: &mut object, assign_wk: bool) {
@@ -204,7 +204,7 @@ impl RingHand {
 	pub const ALL: &'static [RingHand; 2] = &[RingHand::Left, RingHand::Right];
 }
 
-pub unsafe fn ring_stats(print: bool, level_depth: usize) {
+pub unsafe fn ring_stats(print: bool, level_depth: usize, level: &Level) {
 	r_rings = 0;
 	e_rings = 0;
 	r_teleport = false;
@@ -243,6 +243,6 @@ pub unsafe fn ring_stats(print: bool, level_depth: usize) {
 	}
 	if print {
 		print_stats(STAT_STRENGTH, level_depth);
-		relight();
+		relight(level);
 	}
 }

@@ -84,7 +84,7 @@ pub unsafe fn trap_at(row: usize, col: usize) -> TrapKind {
 	return NoTrap;
 }
 
-pub unsafe fn trap_player(row: usize, col: usize, depth: &RogueDepth) {
+pub unsafe fn trap_player(row: usize, col: usize, depth: &RogueDepth, level: &Level) {
 	let t = trap_at(row, col);
 	if t == NoTrap {
 		return;
@@ -106,7 +106,7 @@ pub unsafe fn trap_player(row: usize, col: usize, depth: &RogueDepth) {
 		}
 		TeleTrap => {
 			mvaddch(rogue.row as i32, rogue.col as i32, chtype::from('^'));
-			tele();
+			tele(level);
 		}
 		DartTrap => {
 			message(trap_message(t), 1);
@@ -124,7 +124,7 @@ pub unsafe fn trap_player(row: usize, col: usize, depth: &RogueDepth) {
 		}
 		SleepingGasTrap => {
 			message(trap_message(t), 1);
-			take_a_nap(depth);
+			take_a_nap(depth, level);
 		}
 		RustTrap => {
 			message(trap_message(t), 1);
@@ -133,7 +133,7 @@ pub unsafe fn trap_player(row: usize, col: usize, depth: &RogueDepth) {
 	}
 }
 
-pub unsafe fn add_traps(cur_level: usize) {
+pub unsafe fn add_traps(cur_level: usize, level: &Level) {
 	let n: usize;
 	if cur_level <= 2 {
 		n = 0;
@@ -158,8 +158,8 @@ pub unsafe fn add_traps(cur_level: usize) {
 			let mut col: usize;
 			let mut tries = 0;
 			loop {
-				row = get_rand((ROOMS[cur_party_room].top_row + 1) as usize, (ROOMS[cur_party_room].bottom_row - 1) as usize);
-				col = get_rand((ROOMS[cur_party_room].left_col + 1) as usize, (ROOMS[cur_party_room].right_col - 1) as usize);
+				row = get_rand((level.rooms[cur_party_room].top_row + 1) as usize, (level.rooms[cur_party_room].bottom_row - 1) as usize);
+				col = get_rand((level.rooms[cur_party_room].left_col + 1) as usize, (level.rooms[cur_party_room].right_col - 1) as usize);
 				tries += 1;
 				let try_again = (SpotFlag::is_any_set(&vec![Object, Stairs, Trap, Tunnel], dungeon[row][col]) || SpotFlag::is_nothing(dungeon[row][col]))
 					&& tries < 15;
@@ -170,7 +170,7 @@ pub unsafe fn add_traps(cur_level: usize) {
 			if tries >= 15 {
 				let mut row = 0;
 				let mut col = 0;
-				gr_row_col(&mut row, &mut col, vec![Floor, Monster]);
+				gr_row_col(&mut row, &mut col, vec![Floor, Monster], level);
 				(row as usize, col as usize)
 			} else {
 				(row, col)
@@ -178,7 +178,7 @@ pub unsafe fn add_traps(cur_level: usize) {
 		} else {
 			let mut row = 0;
 			let mut col = 0;
-			gr_row_col(&mut row, &mut col, vec![Floor, Monster]);
+			gr_row_col(&mut row, &mut col, vec![Floor, Monster], level);
 			(row as usize, col as usize)
 		};
 		TRAPS[i].trap_row = row;
@@ -225,7 +225,7 @@ pub unsafe fn show_traps() {
 	}
 }
 
-pub unsafe fn search(n: usize, is_auto: bool, depth: &RogueDepth) {
+pub unsafe fn search(n: usize, is_auto: bool, depth: &RogueDepth, level: &Level) {
 	static mut reg_search: bool = false;
 
 	let mut found = 0;
@@ -272,7 +272,7 @@ pub unsafe fn search(n: usize, is_auto: bool, depth: &RogueDepth) {
 		if !is_auto {
 			reg_search = !reg_search;
 			if reg_search {
-				reg_move(depth);
+				reg_move(depth, level);
 			}
 		}
 	}

@@ -741,7 +741,7 @@ pub static mut id_rings: [id; RINGS] = {
 	]
 };
 
-pub unsafe fn put_objects(depth: &RogueDepth) {
+pub unsafe fn put_objects(depth: &RogueDepth, level: &Level) {
 	if depth.cur < depth.max {
 		return;
 	}
@@ -751,27 +751,27 @@ pub unsafe fn put_objects(depth: &RogueDepth) {
 		n += 1;
 	}
 	if depth.cur == party_counter {
-		make_party(depth.cur);
+		make_party(depth.cur, level);
 		party_counter = next_party(depth.cur);
 	}
 	for _i in 0..n {
 		let obj = gr_object(depth.cur);
-		rand_place(&mut *obj);
+		rand_place(&mut *obj, level);
 	}
-	put_gold(depth.cur);
+	put_gold(depth.cur, level);
 }
 
-pub unsafe fn put_gold(level_depth: usize) {
+pub unsafe fn put_gold(level_depth: usize, level: &Level) {
 	for i in 0..MAX_ROOM {
-		let is_maze = ROOMS[i].room_type == RoomType::Maze;
-		let is_room = ROOMS[i].room_type == RoomType::Room;
+		let is_maze = level.rooms[i].room_type == RoomType::Maze;
+		let is_room = level.rooms[i].room_type == RoomType::Room;
 		if !(is_room || is_maze) {
 			continue;
 		}
 		if is_maze || rand_percent(GOLD_PERCENT) {
 			for _j in 0..50 {
-				let row = get_rand(ROOMS[i].top_row + 1, ROOMS[i].bottom_row - 1);
-				let col = get_rand(ROOMS[i].left_col + 1, ROOMS[i].right_col - 1);
+				let row = get_rand(level.rooms[i].top_row + 1, level.rooms[i].bottom_row - 1);
+				let col = get_rand(level.rooms[i].left_col + 1, level.rooms[i].right_col - 1);
 				if Floor.is_set(dungeon[row as usize][col as usize]) || Tunnel.is_set(dungeon[row as usize][col as usize]) {
 					plant_gold(row, col, is_maze, level_depth);
 					break;
@@ -1055,10 +1055,10 @@ pub fn get_food(obj: &mut obj, force_ration: bool) {
 	}
 }
 
-pub unsafe fn put_stairs() {
+pub unsafe fn put_stairs(level: &Level) {
 	let mut row = 0;
 	let mut col = 0;
-	gr_row_col(&mut row, &mut col, vec![Floor, Tunnel]);
+	gr_row_col(&mut row, &mut col, vec![Floor, Tunnel], level);
 	Stairs.set(&mut dungeon[row as usize][col as usize]);
 }
 
@@ -1092,12 +1092,12 @@ pub unsafe fn free_object(obj: *mut object) {
 	free_list = obj;
 }
 
-pub unsafe fn make_party(level_depth: usize) {
-	party_room = Some(gr_room());
+pub unsafe fn make_party(level_depth: usize, level: &Level) {
+	party_room = Some(gr_room(level));
 	let cur_party_room = party_room.expect("some party room");
-	let n = if rand_percent(99) { party_objects(cur_party_room, level_depth) } else { 11 };
+	let n = if rand_percent(99) { party_objects(cur_party_room, level_depth, level) } else { 11 };
 	if rand_percent(99) {
-		party_monsters(cur_party_room, n, level_depth);
+		party_monsters(cur_party_room, n, level_depth, level);
 	}
 }
 
@@ -1126,16 +1126,16 @@ pub unsafe fn show_objects() {
 	}
 }
 
-pub unsafe fn put_amulet() {
+pub unsafe fn put_amulet(level: &Level) {
 	let mut obj = alloc_object();
 	(*obj).what_is = Amulet;
-	rand_place(&mut *obj);
+	rand_place(&mut *obj, level);
 }
 
-pub unsafe fn rand_place(obj: &mut obj) {
+pub unsafe fn rand_place(obj: &mut obj, level: &Level) {
 	let mut row = 0;
 	let mut col = 0;
-	gr_row_col(&mut row, &mut col, vec![Floor, Tunnel]);
+	gr_row_col(&mut row, &mut col, vec![Floor, Tunnel], level);
 	place_at(obj, row, col);
 }
 

@@ -11,7 +11,7 @@ use crate::settings::set_score_only;
 
 pub static mut wizard: bool = false;
 
-pub unsafe fn zapp(depth: &RogueDepth) {
+pub unsafe fn zapp(depth: &RogueDepth, level: &Level) {
 	let dir = get_dir_or_cancel();
 	check_message();
 	if dir == CANCEL {
@@ -43,12 +43,12 @@ pub unsafe fn zapp(depth: &RogueDepth) {
 		if let Some(monster_id) = get_zapped_monster(dir, &mut row, &mut col) {
 			if let Some(monster) = MASH.monster_with_id_mut(monster_id) {
 				monster.wake_up();
-				zap_monster(monster, (*wand).which_kind, depth);
-				relight();
+				zap_monster(monster, (*wand).which_kind, depth, level);
+				relight(level);
 			}
 		}
 	}
-	reg_move(depth);
+	reg_move(depth, level);
 }
 
 pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64) -> Option<u64> {
@@ -70,7 +70,7 @@ pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64) -> Opt
 	}
 }
 
-pub unsafe fn zap_monster(monster: &mut monster::Monster, which_kind: u16, depth: &RogueDepth) {
+pub unsafe fn zap_monster(monster: &mut monster::Monster, which_kind: u16, depth: &RogueDepth, level: &Level) {
 	let row = monster.spot.row;
 	let col = monster.spot.col;
 	match WandKind::from_index(which_kind as usize) {
@@ -90,7 +90,7 @@ pub unsafe fn zap_monster(monster: &mut monster::Monster, which_kind: u16, depth
 			}
 		}
 		WandKind::TeleAway => {
-			tele_away(monster);
+			tele_away(monster, level);
 		}
 		WandKind::ConfuseMonster => {
 			monster.m_flags.confused = true;
@@ -148,14 +148,14 @@ pub unsafe fn zap_monster(monster: &mut monster::Monster, which_kind: u16, depth
 	}
 }
 
-unsafe fn tele_away(monster: &mut monster::Monster) {
+unsafe fn tele_away(monster: &mut monster::Monster, level: &Level) {
 	if monster.m_flags.holds {
 		being_held = false;
 	}
 	let (row, col) = {
 		let mut row = 0;
 		let mut col = 0;
-		gr_row_col(&mut row, &mut col, vec![Floor, Tunnel, Stairs, Object]);
+		gr_row_col(&mut row, &mut col, vec![Floor, Tunnel, Stairs, Object], level);
 		(row, col)
 	};
 
@@ -167,7 +167,7 @@ unsafe fn tele_away(monster: &mut monster::Monster) {
 	Monster.set(&mut dungeon[row as usize][col as usize]);
 	monster.trail_char = mvinch(row as i32, col as i32);
 
-	if detect_monster || rogue_can_see(row, col) {
+	if detect_monster || rogue_can_see(row, col, level) {
 		mvaddch(row as i32, col as i32, gmc(monster));
 	}
 }

@@ -98,21 +98,10 @@ impl Room {
 	}
 }
 
-pub const MAX_ROOM: usize = 9;
-pub static mut ROOMS: [Room; MAX_ROOM] = [Room {
-	bottom_row: 0,
-	right_col: 0,
-	left_col: 0,
-	top_row: 0,
-	doors: [dr { oth_room: None, oth_row: None, oth_col: None, door_row: 0, door_col: 0 }; 4],
-	room_type: RoomType::Nothing,
-}; MAX_ROOM];
-
-
-pub unsafe fn light_up_room(rn: i64) {
+pub unsafe fn light_up_room(rn: i64, level: &Level) {
 	if blind == 0 {
-		for i in ROOMS[rn as usize].top_row..=ROOMS[rn as usize].bottom_row {
-			for j in ROOMS[rn as usize].left_col..=ROOMS[rn as usize].right_col {
+		for i in level.rooms[rn as usize].top_row..=level.rooms[rn as usize].bottom_row {
+			for j in level.rooms[rn as usize].left_col..=level.rooms[rn as usize].right_col {
 				if Monster.is_set(dungeon[i as usize][j as usize]) {
 					if let Some(monster) = MASH.monster_at_spot_mut(i, j) {
 						Monster.clear(&mut dungeon[monster.spot.row as usize][monster.spot.col as usize]);
@@ -145,9 +134,9 @@ pub unsafe fn light_passage(row: i64, col: i64) {
 	}
 }
 
-pub unsafe fn darken_room(rn: i64) {
-	for i in (ROOMS[rn as usize].top_row as usize + 1)..ROOMS[rn as usize].bottom_row as usize {
-		for j in (ROOMS[rn as usize].left_col as usize + 1)..ROOMS[rn as usize].right_col as usize {
+pub unsafe fn darken_room(rn: i64, level: &Level) {
+	for i in (level.rooms[rn as usize].top_row as usize + 1)..level.rooms[rn as usize].bottom_row as usize {
+		for j in (level.rooms[rn as usize].left_col as usize + 1)..level.rooms[rn as usize].right_col as usize {
 			if blind != 0 {
 				mvaddch(i as i32, j as i32, chtype::from(' '));
 			} else if !SpotFlag::is_any_set(&vec![Object, Stairs], dungeon[i][j])
@@ -225,24 +214,24 @@ pub fn get_mask_char(mask: ObjectWhat) -> char {
 	}
 }
 
-pub unsafe fn random_spot_with_flag(flags: Vec<SpotFlag>) -> DungeonSpot {
+pub unsafe fn random_spot_with_flag(flags: Vec<SpotFlag>, level: &Level) -> DungeonSpot {
 	let mut row: i64 = 0;
 	let mut col: i64 = 0;
-	gr_row_col(&mut row, &mut col, flags);
+	gr_row_col(&mut row, &mut col, flags, level);
 	DungeonSpot { row, col }
 }
 
-pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, spots: Vec<SpotFlag>) {
+pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, spots: Vec<SpotFlag>, level: &Level) {
 	let mut r = 0;
 	let mut c = 0;
 	loop {
 		r = get_rand(MIN_ROW, DROWS as i64 - 2);
 		c = get_rand(0, DCOLS as i64 - 1);
-		let rn = get_room_number(r, c);
+		let rn = get_room_number(r, c, level);
 		let keep_looking = rn == NO_ROOM
 			|| !SpotFlag::is_any_set(&spots, dungeon[r as usize][c as usize])
 			|| SpotFlag::are_others_set(&spots, dungeon[r as usize][c as usize])
-			|| !(ROOMS[rn as usize].room_type == RoomType::Room || ROOMS[rn as usize].room_type == Maze)
+			|| !(level.rooms[rn as usize].room_type == RoomType::Room || level.rooms[rn as usize].room_type == Maze)
 			|| ((r == rogue.row) && (c == rogue.col));
 		if !keep_looking {
 			break;
@@ -252,17 +241,17 @@ pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, spots: Vec<SpotFlag>) {
 	*col = c;
 }
 
-pub unsafe fn gr_room() -> usize {
+pub unsafe fn gr_room(level: &Level) -> usize {
 	loop {
 		let i = get_rand(0, MAX_ROOM - 1);
-		if ROOMS[i].room_type == RoomType::Room || ROOMS[i].room_type == Maze {
+		if level.rooms[i].room_type == RoomType::Room || level.rooms[i].room_type == Maze {
 			return i;
 		}
 	}
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn party_objects(rn: usize, level_depth: usize) -> i64 {
+pub unsafe extern "C" fn party_objects(rn: usize, level_depth: usize, level: &Level) -> i64 {
 	let mut i: libc::c_short = 0;
 	let mut j: libc::c_short = 0;
 	let mut nf: libc::c_short = 0;
@@ -272,10 +261,10 @@ pub unsafe extern "C" fn party_objects(rn: usize, level_depth: usize) -> i64 {
 	let mut row: libc::c_short = 0;
 	let mut col: libc::c_short = 0;
 	let mut found: libc::c_char = 0;
-	N = ((ROOMS[rn as usize].bottom_row
-		- ROOMS[rn as usize].top_row - 1)
-		* (ROOMS[rn as usize].right_col
-		- ROOMS[rn as usize].left_col - 1))
+	N = ((level.rooms[rn].bottom_row
+		- level.rooms[rn].top_row - 1)
+		* (level.rooms[rn].right_col
+		- level.rooms[rn].left_col - 1))
 		as libc::c_short;
 	n = get_rand(5, 10);
 	if n as i64 > N as i64 {
@@ -287,12 +276,12 @@ pub unsafe extern "C" fn party_objects(rn: usize, level_depth: usize) -> i64 {
 		j = found as libc::c_short;
 		while found == 0 && (j as i64) < 250 {
 			row = get_rand(
-				ROOMS[rn as usize].top_row + 1,
-				ROOMS[rn as usize].bottom_row - 1,
+				level.rooms[rn].top_row + 1,
+				level.rooms[rn].bottom_row - 1,
 			) as libc::c_short;
 			col = get_rand(
-				ROOMS[rn as usize].left_col + 1,
-				ROOMS[rn as usize].right_col - 1,
+				level.rooms[rn].left_col + 1,
+				level.rooms[rn].right_col - 1,
 			) as libc::c_short;
 			if dungeon[row as usize][col as usize] as i64
 				== 0o100 as libc::c_ushort as i64
@@ -313,19 +302,17 @@ pub unsafe extern "C" fn party_objects(rn: usize, level_depth: usize) -> i64 {
 	return nf as i64;
 }
 
-pub fn get_room_number(row: i64, col: i64) -> i64 {
-	unsafe {
-		for i in 0..MAX_ROOM {
-			if ROOMS[i].contains_spot(row, col) {
-				return i as i64;
-			}
+pub fn get_room_number(row: i64, col: i64, level: &Level) -> i64 {
+	for i in 0..MAX_ROOM {
+		if level.rooms[i].contains_spot(row, col) {
+			return i as i64;
 		}
 	}
 	return NO_ROOM;
 }
 
-pub fn get_opt_room_number(row: i64, col: i64) -> Option<usize> {
-	let rn = get_room_number(row, col);
+pub fn get_opt_room_number(row: i64, col: i64, level: &Level) -> Option<usize> {
+	let rn = get_room_number(row, col, level);
 	if rn == NO_ROOM {
 		None
 	} else {
@@ -434,27 +421,27 @@ pub unsafe fn draw_magic_map() {
 	}
 }
 
-pub unsafe fn dr_course(monster: &mut monster::Monster, entering: bool, row: i64, col: i64) {
+pub unsafe fn dr_course(monster: &mut monster::Monster, entering: bool, row: i64, col: i64, level: &Level) {
 	monster.spot.row = row;
 	monster.spot.col = col;
-	if mon_sees(monster, rogue.row, rogue.col) {
+	if mon_sees(monster, rogue.row, rogue.col, level) {
 		monster.clear_target_spot();
 		return;
 	}
-	let rn = get_opt_room_number(row, col);
+	let rn = get_opt_room_number(row, col, level);
 	if entering {
 		/* look for door to some other room */
 		let r = get_rand(0, MAX_ROOM - 1);
 		for i in 0..MAX_ROOM {
 			let rr = (r + i) % MAX_ROOM;
-			if !(ROOMS[rr].room_type == RoomType::Room || ROOMS[rr].room_type == Maze) || Some(rr) == rn {
+			if !(level.rooms[rr].room_type == RoomType::Room || level.rooms[rr].room_type == Maze) || Some(rr) == rn {
 				continue;
 			}
 			for k in 0..4 {
-				if ROOMS[rr].doors[k].oth_room == rn {
+				if level.rooms[rr].doors[k].oth_room == rn {
 					monster.set_target_spot(
-						ROOMS[rr].doors[k].oth_row.expect("oth row"),
-						ROOMS[rr].doors[k].oth_col.expect("oth col"),
+						level.rooms[rr].doors[k].oth_row.expect("oth row"),
+						level.rooms[rr].doors[k].oth_col.expect("oth col"),
 					);
 					let monster_target_spot = monster.target_spot.expect("target spot");
 					if monster_target_spot.is_at(row, col) {
@@ -466,8 +453,8 @@ pub unsafe fn dr_course(monster: &mut monster::Monster, entering: bool, row: i64
 		}
 		/* look for door to dead end */
 		let rn = rn.expect("rn");
-		for i in ROOMS[rn].top_row..=ROOMS[rn].bottom_row {
-			for j in ROOMS[rn].left_col..=ROOMS[rn].right_col {
+		for i in level.rooms[rn].top_row..=level.rooms[rn].bottom_row {
+			for j in level.rooms[rn].left_col..=level.rooms[rn].right_col {
 				if i != monster.spot.row && j != monster.spot.col && Door.is_set(dungeon[i as usize][j as usize]) {
 					monster.set_target_spot(i, j);
 					return;
@@ -477,12 +464,12 @@ pub unsafe fn dr_course(monster: &mut monster::Monster, entering: bool, row: i64
 		/* return monster to room that he came from */
 		for i in 0..MAX_ROOM {
 			for j in 0..4usize {
-				if ROOMS[i].doors[j].oth_room == Some(rn) {
+				if level.rooms[i].doors[j].oth_room == Some(rn) {
 					for k in 0..4usize {
-						if ROOMS[rn].doors[k].oth_room == Some(i) {
+						if level.rooms[rn].doors[k].oth_room == Some(i) {
 							monster.set_target_spot(
-								ROOMS[rn].doors[k].oth_row.expect("oth row"),
-								ROOMS[rn].doors[k].oth_col.expect("oth col"),
+								level.rooms[rn].doors[k].oth_row.expect("oth row"),
+								level.rooms[rn].doors[k].oth_col.expect("oth col"),
 							);
 							return;
 						}
@@ -494,7 +481,7 @@ pub unsafe fn dr_course(monster: &mut monster::Monster, entering: bool, row: i64
 	} else {
 		//* exiting room */
 		if let Some(rn) = rn {
-			if let Some((row, col)) = get_oth_room(rn as i64, row, col) {
+			if let Some((row, col)) = get_oth_room(rn as i64, row, col, level) {
 				monster.set_target_spot(row, col);
 			} else {
 				monster.clear_target_spot();
@@ -505,24 +492,24 @@ pub unsafe fn dr_course(monster: &mut monster::Monster, entering: bool, row: i64
 	}
 }
 
-pub unsafe fn get_oth_room(rn: i64, row: i64, col: i64) -> Option<(i64, i64)> {
+pub unsafe fn get_oth_room(rn: i64, row: i64, col: i64, level: &Level) -> Option<(i64, i64)> {
 	let rn = rn as usize;
-	let d = if row == ROOMS[rn].top_row {
+	let d = if row == level.rooms[rn].top_row {
 		Some(Up)
-	} else if row == ROOMS[rn].bottom_row {
+	} else if row == level.rooms[rn].bottom_row {
 		Some(Down)
-	} else if col == ROOMS[rn].left_col {
+	} else if col == level.rooms[rn].left_col {
 		Some(Left)
-	} else if col == ROOMS[rn].right_col {
+	} else if col == level.rooms[rn].right_col {
 		Some(Right)
 	} else {
 		None
 	};
 	if let Some(d) = d {
 		let d = d.to_index();
-		if ROOMS[rn].doors[d].oth_room.is_some() {
-			let row = ROOMS[rn].doors[d].oth_row.expect("oth row");
-			let col = ROOMS[rn].doors[d].oth_col.expect("oth col");
+		if level.rooms[rn].doors[d].oth_room.is_some() {
+			let row = level.rooms[rn].doors[d].oth_row.expect("oth row");
+			let col = level.rooms[rn].doors[d].oth_col.expect("oth col");
 			return Some((row, col));
 		}
 	}

@@ -110,6 +110,7 @@ pub unsafe fn restore(file_path: &str, game: &mut GameState) {
 	}
 	save_data.write_to_statics();
 	game.depth = save_data.depth;
+	game.level = save_data.level;
 
 	if !save_data.wizard && !delete_file(file_path) {
 		clean_up("cannot delete file");
@@ -117,7 +118,7 @@ pub unsafe fn restore(file_path: &str, game: &mut GameState) {
 	}
 
 	msg_cleared = false;
-	ring_stats(false, game.depth.cur);
+	ring_stats(false, game.depth.cur, &game.level);
 }
 
 fn has_been_touched(saved_time: &RogueTime, mod_time: &RogueTime) -> bool {

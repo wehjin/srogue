@@ -20,6 +20,7 @@ pub const BYEBYE_STRING: &'static str = "Okay, bye bye!";
 pub struct GameState {
 	seed: [u8; 32],
 	pub depth: RogueDepth,
+	pub level: Level,
 }
 
 impl GameState {
@@ -27,6 +28,7 @@ impl GameState {
 		GameState {
 			seed: [1u8; 32],
 			depth: RogueDepth::new(),
+			level: Level::new(),
 		}
 	}
 
@@ -82,7 +84,7 @@ pub unsafe fn init() -> (GameState, bool) {
 	MASH.clear();
 	player_init();
 	party_counter = get_rand(1, 10);
-	ring_stats(false, game.depth.cur);
+	ring_stats(false, game.depth.cur, &game.level);
 	return (game, false);
 }
 

@@ -76,11 +76,11 @@ unsafe fn ending_string(ending: &Ending) -> String {
 	}
 }
 
-pub unsafe fn win(depth: &RogueDepth) {
+pub unsafe fn win(depth: &RogueDepth, level: &Level) {
 	unwield(rogue.weapon);          /* disarm and relax */
 	unwear(rogue.armor);
-	un_put_on(rogue.left_ring, depth.cur);
-	un_put_on(rogue.right_ring, depth.cur);
+	un_put_on(rogue.left_ring, depth.cur, level);
+	un_put_on(rogue.right_ring, depth.cur, level);
 
 	clear();
 	mvaddstr(10, 11, "@   @  @@@   @   @      @  @  @   @@@   @   @   @");
@@ -137,14 +137,11 @@ pub unsafe fn quit(from_intrpt: bool, max_level: usize) {
 pub unsafe fn put_scores(ending: Option<Ending>, max_level: usize) {
 	turn_into_games();
 	let mut file = File::options().read(true).write(true).open(SCORE_FILE).unwrap_or_else(|_| {
-		match File::options().write(true).open(SCORE_FILE) {
-			Ok(file) => file,
-			Err(_) => {
-				message("cannot read/write/create score file", 0);
-				sf_error();
-				unreachable!("sf_error")
-			}
-		}
+		File::options().write(true).open(SCORE_FILE).unwrap_or_else(|_| {
+			message("cannot read/write/create score file", 0);
+			sf_error();
+			unreachable!("sf_error")
+		})
 	});
 	turn_into_user();
 	xxx(true);

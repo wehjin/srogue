@@ -23,7 +23,7 @@ pub enum MoveResult {
 }
 
 
-pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth) -> MoveResult {
+pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth, level: &Level) -> MoveResult {
 	let dirch = if confused != 0 { Move::random8().to_char() } else { dirch };
 	let mut row = rogue.row;
 	let mut col = rogue.col;
@@ -37,14 +37,14 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth) -> M
 				message("you are being held", 1);
 			} else {
 				message("you are still stuck in the bear trap", 0);
-				reg_move(depth);
+				reg_move(depth, level);
 			}
 			return MoveFailed;
 		}
 	}
 	if r_teleport {
 		if rand_percent(R_TELE_PERCENT) {
-			tele();
+			tele(level);
 			return StoppedOnSomething;
 		}
 	}
@@ -54,21 +54,21 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth) -> M
 			false,
 			depth,
 		);
-		reg_move(depth);
+		reg_move(depth, level);
 		return MoveFailed;
 	}
 	if Door.is_set(dungeon[row as usize][col as usize]) {
 		if cur_room == PASSAGE {
-			cur_room = get_room_number(row, col);
-			light_up_room(cur_room);
-			wake_room(cur_room, true, row, col);
+			cur_room = get_room_number(row, col, level);
+			light_up_room(cur_room, level);
+			wake_room(cur_room, true, row, col, level);
 		} else {
 			light_passage(row, col);
 		}
 	} else if Door.is_set(dungeon[rogue.row as usize][rogue.col as usize]) && Tunnel.is_set(dungeon[row as usize][col as usize]) {
 		light_passage(row, col);
-		wake_room(cur_room, false, rogue.row, rogue.col);
-		darken_room(cur_room);
+		wake_room(cur_room, false, rogue.row, rogue.col, level);
+		darken_room(cur_room, level);
 		cur_room = PASSAGE;
 	} else if Tunnel.is_set(dungeon[row as usize][col as usize]) {
 		light_passage(row, col);
@@ -86,48 +86,48 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth) -> M
 		}
 		if pickup && levitate == 0 {
 			let mut status = 0;
-			let obj = pick_up(row, col, &mut status, depth);
+			let obj = pick_up(row, col, &mut status, depth, level);
 			if !obj.is_null() {
 				if (*obj).what_is == Gold {
 					free_object(obj);
-					not_in_pack(&get_desc(&*obj), depth)
+					not_in_pack(&get_desc(&*obj), depth, level)
 				} else {
 					let desc = format!("{}({})", get_desc(&*obj), (*obj).ichar);
-					not_in_pack(&desc, depth)
+					not_in_pack(&desc, depth, level)
 				}
 			} else if status != 0 {
-				mved(depth)
+				mved(depth, level)
 			} else {
-				move_on(row, col, depth)
+				move_on(row, col, depth, level)
 			}
 		} else {
-			move_on(row, col, depth)
+			move_on(row, col, depth, level)
 		}
 	} else if SpotFlag::is_any_set(&vec![Door, Stairs, Trap], dungeon[row as usize][col as usize]) {
 		if levitate == 0 && Trap.is_set(dungeon[row as usize][col as usize]) {
-			trap_player(row as usize, col as usize, depth);
+			trap_player(row as usize, col as usize, depth, level);
 		}
-		reg_move(depth);
+		reg_move(depth, level);
 		StoppedOnSomething
 	} else {
-		mved(depth)
+		mved(depth, level)
 	}
 }
 
-unsafe fn move_on(row: i64, col: i64, depth: &RogueDepth) -> MoveResult {
+unsafe fn move_on(row: i64, col: i64, depth: &RogueDepth, level: &Level) -> MoveResult {
 	let obj = object_at(&level_objects, row, col);
 	let desc = format!("moved onto {}", get_desc(&*obj));
-	return not_in_pack(&desc, depth);
+	return not_in_pack(&desc, depth, level);
 }
 
-unsafe fn not_in_pack(desc: &str, depth: &RogueDepth) -> MoveResult {
+unsafe fn not_in_pack(desc: &str, depth: &RogueDepth, level: &Level) -> MoveResult {
 	message(desc, 1);
-	reg_move(depth);
+	reg_move(depth, level);
 	return StoppedOnSomething;
 }
 
-unsafe fn mved(depth: &RogueDepth) -> MoveResult {
-	if reg_move(depth) {
+unsafe fn mved(depth: &RogueDepth, level: &Level) -> MoveResult {
+	if reg_move(depth, level) {
 		/* fainted from hunger */
 		StoppedOnSomething
 	} else {
@@ -144,13 +144,13 @@ const NAK: char = '\x15';
 const SO: char = '\x0e';
 const STX: char = '\x02';
 
-pub unsafe fn multiple_move_rogue(dirch: i64, depth: &RogueDepth) {
+pub unsafe fn multiple_move_rogue(dirch: i64, depth: &RogueDepth, level: &Level) {
 	let dirch = dirch as u8 as char;
 	match dirch {
 		BS | LF | VT | FF | EM | NAK | SO | STX => loop {
 			let row = rogue.row;
 			let col = rogue.col;
-			let m = one_move_rogue((dirch as u8 + 96) as char, true, depth);
+			let m = one_move_rogue((dirch as u8 + 96) as char, true, depth, level);
 			if m == MoveFailed || m == StoppedOnSomething || interrupted {
 				break;
 			}
@@ -163,7 +163,7 @@ pub unsafe fn multiple_move_rogue(dirch: i64, depth: &RogueDepth) {
 				if interrupted {
 					break;
 				}
-				let one_move_result = one_move_rogue((dirch as u8 + 32) as char, true, depth);
+				let one_move_result = one_move_rogue((dirch as u8 + 32) as char, true, depth, level);
 				if one_move_result != Moved {
 					break;
 				}
@@ -259,11 +259,11 @@ pub unsafe fn can_move(row1: i64, col1: i64, row2: i64, col2: i64) -> bool {
 	}
 }
 
-pub unsafe fn move_onto(depth: &RogueDepth) {
+pub unsafe fn move_onto(depth: &RogueDepth, level: &Level) {
 	let ch = get_dir_or_cancel();
 	check_message();
 	if ch != CANCEL {
-		one_move_rogue(ch, false, depth);
+		one_move_rogue(ch, false, depth, level);
 	}
 }
 
@@ -290,7 +290,7 @@ pub unsafe fn is_direction(c: char) -> bool {
 		|| c == CANCEL
 }
 
-pub unsafe fn check_hunger(mut messages_only: libc::c_char, depth: &RogueDepth) -> bool {
+pub unsafe fn check_hunger(mut messages_only: libc::c_char, depth: &RogueDepth, level: &Level) -> bool {
 	let mut i: libc::c_short = 0;
 	let mut n: libc::c_short = 0;
 	let mut fainted: bool = false;
@@ -324,7 +324,7 @@ pub unsafe fn check_hunger(mut messages_only: libc::c_char, depth: &RogueDepth) 
 			i = 0 as libc::c_int as libc::c_short;
 			while (i as libc::c_int) < n as libc::c_int {
 				if coin_toss() {
-					mv_mons(depth);
+					mv_mons(depth, level);
 				}
 				i += 1;
 			}
@@ -348,13 +348,13 @@ pub unsafe fn check_hunger(mut messages_only: libc::c_char, depth: &RogueDepth) 
 		1 => {
 			rogue.moves_left -= 1;
 			rogue.moves_left;
-			check_hunger(1, depth);
+			check_hunger(1, depth, level);
 			rogue.moves_left = (rogue.moves_left as libc::c_int - rogue.moves_left as libc::c_int % 2 as libc::c_int) as usize;
 		}
 		2 => {
 			rogue.moves_left -= 1;
 			rogue.moves_left;
-			check_hunger(1, depth);
+			check_hunger(1, depth, level);
 			rogue.moves_left -= 1;
 			rogue.moves_left;
 		}
@@ -363,22 +363,22 @@ pub unsafe fn check_hunger(mut messages_only: libc::c_char, depth: &RogueDepth) 
 	return fainted;
 }
 
-pub unsafe fn reg_move(depth: &RogueDepth) -> bool {
+pub unsafe fn reg_move(depth: &RogueDepth, level: &Level) -> bool {
 	let fainted = if rogue.moves_left <= HUNGRY || depth.cur >= depth.max {
-		check_hunger(0, depth)
+		check_hunger(0, depth, level)
 	} else {
 		false
 	};
-	mv_mons(depth);
+	mv_mons(depth, level);
 	m_moves += 1;
 	if m_moves >= 120 {
 		m_moves = 0;
-		put_wanderer(depth.cur);
+		put_wanderer(depth.cur, level);
 	}
 	if halluc != 0 {
 		halluc -= 1;
 		if halluc == 0 {
-			unhallucinate();
+			unhallucinate(level);
 		} else {
 			hallucinate();
 		}
@@ -386,7 +386,7 @@ pub unsafe fn reg_move(depth: &RogueDepth) -> bool {
 	if blind != 0 {
 		blind -= 1;
 		if blind == 0 {
-			unblind();
+			unblind(level);
 		}
 	}
 	if confused != 0 {
@@ -405,7 +405,7 @@ pub unsafe fn reg_move(depth: &RogueDepth) -> bool {
 			if dungeon[rogue.row as usize][rogue.col as usize] as libc::c_int
 				& 0o400 as libc::c_int as libc::c_ushort as libc::c_int != 0
 			{
-				trap_player(rogue.row as usize, rogue.col as usize, depth);
+				trap_player(rogue.row as usize, rogue.col as usize, depth, level);
 			}
 		}
 	}
@@ -417,18 +417,18 @@ pub unsafe fn reg_move(depth: &RogueDepth) -> bool {
 	}
 	heal(depth.cur);
 	if auto_search > 0 {
-		search(auto_search as usize, auto_search > 0, depth);
+		search(auto_search as usize, auto_search > 0, depth, level);
 	}
 	return fainted;
 }
 
-pub unsafe fn rest(count: libc::c_int, depth: &RogueDepth) {
+pub unsafe fn rest(count: libc::c_int, depth: &RogueDepth, level: &Level) {
 	interrupted = false;
 	for _i in 0..count {
 		if interrupted {
 			break;
 		}
-		reg_move(depth);
+		reg_move(depth, level);
 	}
 }
 

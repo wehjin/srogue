@@ -22,7 +22,7 @@ pub static mut see_invisible: bool = false;
 pub static mut extra_hp: isize = 0;
 pub static strange_feeling: &'static str = "you have a strange feeling for a moment, then it passes";
 
-pub unsafe fn quaff(depth: &RogueDepth) {
+pub unsafe fn quaff(depth: &RogueDepth, level: &Level) {
 	let ch = pack_letter("quaff what?", Potions);
 	if ch == CANCEL {
 		return;
@@ -53,11 +53,11 @@ pub unsafe fn quaff(depth: &RogueDepth) {
 		}
 		PotionKind::Healing => {
 			message("you begin to feel better", 0);
-			potion_heal(false);
+			potion_heal(false, level);
 		}
 		PotionKind::ExtraHealing => {
 			message("you begin to feel much better", 0);
-			potion_heal(true);
+			potion_heal(true, level);
 		}
 		PotionKind::Poison => {
 			if !sustain_strength {
@@ -68,7 +68,7 @@ pub unsafe fn quaff(depth: &RogueDepth) {
 			}
 			message("you feel very sick now", 0);
 			if halluc != 0 {
-				unhallucinate();
+				unhallucinate(level);
 			}
 		}
 		PotionKind::RaiseLevel => {
@@ -76,7 +76,7 @@ pub unsafe fn quaff(depth: &RogueDepth) {
 			add_exp(1, true, depth.cur);
 		}
 		PotionKind::Blindness => {
-			go_blind();
+			go_blind(level);
 		}
 		PotionKind::Hallucination => {
 			message("oh wow, everything seems so cosmic", 0);
@@ -117,20 +117,20 @@ pub unsafe fn quaff(depth: &RogueDepth) {
 		PotionKind::SeeInvisible => {
 			message(&format!("hmm, this potion tastes like {}juice", fruit()), 0);
 			if blind != 0 {
-				unblind();
+				unblind(level);
 			}
 			see_invisible = true;
-			relight();
+			relight(level);
 		}
 	}
 	print_stats(STAT_STRENGTH | STAT_HP, depth.cur);
 	if id_potions[potion_kind.to_index()].id_status != Called {
 		id_potions[potion_kind.to_index()].id_status = Identified;
 	}
-	vanish(&mut *obj, true, &mut rogue.pack, depth);
+	vanish(&mut *obj, true, &mut rogue.pack, depth, level);
 }
 
-pub unsafe fn read_scroll(depth: &RogueDepth) {
+pub unsafe fn read_scroll(depth: &RogueDepth, level: &Level) {
 	if blind != 0 {
 		message("You can't see to read the scroll.", 0);
 		return;
@@ -196,11 +196,11 @@ pub unsafe fn read_scroll(depth: &RogueDepth) {
 			idntfy();
 		}
 		ScrollKind::Teleport => {
-			tele();
+			tele(level);
 		}
 		ScrollKind::Sleep => {
 			message("you fall asleep", 0);
-			take_a_nap(depth);
+			take_a_nap(depth, level);
 		}
 		ScrollKind::ProtectArmor => {
 			if !rogue.armor.is_null() {
@@ -220,10 +220,10 @@ pub unsafe fn read_scroll(depth: &RogueDepth) {
 			uncurse_all();
 		}
 		ScrollKind::CreateMonster => {
-			create_monster(depth.cur);
+			create_monster(depth.cur, level);
 		}
 		ScrollKind::AggravateMonster => {
-			aggravate();
+			aggravate(level);
 		}
 		ScrollKind::MagicMapping => {
 			message("this scroll seems to have a map on it", 0);
@@ -233,10 +233,10 @@ pub unsafe fn read_scroll(depth: &RogueDepth) {
 	if id_scrolls[scroll_kind.to_index()].id_status != Called {
 		id_scrolls[scroll_kind.to_index()].id_status = Identified;
 	}
-	vanish(&mut *obj, scroll_kind != ScrollKind::Sleep, &mut rogue.pack, depth);
+	vanish(&mut *obj, scroll_kind != ScrollKind::Sleep, &mut rogue.pack, depth, level);
 }
 
-pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj, depth: &RogueDepth) {
+pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj, depth: &RogueDepth, level: &Level) {
 	/* vanish() does NOT handle a quiver of weapons with more than one
 	   arrow (or whatever) in the quiver.  It will only decrement the count.
 	*/
@@ -248,17 +248,17 @@ pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj, depth
 		} else if ((*obj).in_use_flags & BEING_WORN) != 0 {
 			unwear(obj);
 		} else if ((*obj).in_use_flags & ON_EITHER_HAND) != 0 {
-			un_put_on(obj, depth.cur);
+			un_put_on(obj, depth.cur, level);
 		}
 		take_from_pack(obj, pack);
 		free_object(obj);
 	}
 	if do_regular_move {
-		reg_move(depth);
+		reg_move(depth, level);
 	}
 }
 
-unsafe fn potion_heal(extra: bool) {
+unsafe fn potion_heal(extra: bool, level: &Level) {
 	rogue.hp_current += rogue.exp;
 
 	let mut ratio = rogue.hp_current as f32 / rogue.hp_max as f32;
@@ -284,7 +284,7 @@ unsafe fn potion_heal(extra: bool) {
 		}
 	}
 	if blind != 0 {
-		unblind();
+		unblind(level);
 	}
 	if confused != 0 && extra {
 		unconfuse();
@@ -292,7 +292,7 @@ unsafe fn potion_heal(extra: bool) {
 		confused = (confused / 2) + 1;
 	}
 	if halluc != 0 && extra {
-		unhallucinate();
+		unhallucinate(level);
 	} else if halluc != 0 {
 		halluc = (halluc / 2) + 1;
 	}
@@ -326,7 +326,7 @@ unsafe fn idntfy() {
 }
 
 
-pub unsafe fn eat(depth: &RogueDepth) {
+pub unsafe fn eat(depth: &RogueDepth, level: &Level) {
 	let ch = pack_letter("eat what?", Foods);
 	if ch == CANCEL {
 		return;
@@ -359,7 +359,7 @@ pub unsafe fn eat(depth: &RogueDepth) {
 	hunger_str.clear();
 	print_stats(STAT_HUNGER, depth.cur);
 
-	vanish(&mut *obj, true, &mut rogue.pack, depth);
+	vanish(&mut *obj, true, &mut rogue.pack, depth, level);
 }
 
 unsafe fn hold_monster() {
@@ -388,13 +388,13 @@ unsafe fn hold_monster() {
 	}
 }
 
-pub unsafe fn tele() {
+pub unsafe fn tele(level: &Level) {
 	mvaddch(rogue.row as i32, rogue.col as i32, get_dungeon_char(rogue.row, rogue.col));
 
 	if cur_room >= 0 {
-		darken_room(cur_room);
+		darken_room(cur_room, level);
 	}
-	put_player(get_opt_room_number(rogue.row, rogue.col));
+	put_player(get_opt_room_number(rogue.row, rogue.col, level), level);
 	being_held = false;
 	bear_trap = 0;
 }
@@ -432,17 +432,17 @@ pub fn is_monster_char(ch: chtype) -> bool {
 	}
 }
 
-pub unsafe fn unhallucinate() {
+pub unsafe fn unhallucinate(level: &Level) {
 	halluc = 0;
-	relight();
+	relight(level);
 	message("everything looks SO boring now", 1);
 }
 
-pub unsafe fn unblind()
+pub unsafe fn unblind(level: &Level)
 {
 	blind = 0;
 	message("the veil of darkness lifts", 1);
-	relight();
+	relight(level);
 	if halluc != 0 {
 		hallucinate();
 	}
@@ -451,27 +451,27 @@ pub unsafe fn unblind()
 	}
 }
 
-pub unsafe fn relight() {
+pub unsafe fn relight(level: &Level) {
 	if cur_room == PASSAGE {
 		light_passage(rogue.row, rogue.col);
 	} else {
-		light_up_room(cur_room);
+		light_up_room(cur_room, level);
 	}
 	mvaddch(rogue.row as i32, rogue.col as i32, chtype::from(rogue.fchar));
 }
 
-pub unsafe fn take_a_nap(depth: &RogueDepth) {
+pub unsafe fn take_a_nap(depth: &RogueDepth, level: &Level) {
 	let mut i = get_rand(2, 5);
 	md_sleep(1);
 	while i > 0 {
 		i -= 1;
-		mv_mons(depth);
+		mv_mons(depth, level);
 	}
 	md_sleep(1);
 	message(YOU_CAN_MOVE_AGAIN, 0);
 }
 
-unsafe fn go_blind() {
+unsafe fn go_blind(level: &Level) {
 	if blind == 0 {
 		message("a cloak of darkness falls around you", 0);
 	}
@@ -483,8 +483,8 @@ unsafe fn go_blind() {
 		}
 	}
 	if cur_room >= 0 {
-		for i in (ROOMS[cur_room as usize].top_row as usize + 1)..ROOMS[cur_room as usize].bottom_row as usize {
-			for j in (ROOMS[cur_room as usize].left_col as usize + 1)..ROOMS[cur_room as usize].right_col as usize {
+		for i in (level.rooms[cur_room as usize].top_row as usize + 1)..level.rooms[cur_room as usize].bottom_row as usize {
+			for j in (level.rooms[cur_room as usize].left_col as usize + 1)..level.rooms[cur_room as usize].right_col as usize {
 				mvaddch(i as i32, j as i32, chtype::from(' '));
 			}
 		}

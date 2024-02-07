@@ -10,6 +10,7 @@ pub static mut interrupted: bool = false;
 
 pub static unknown_command: &'static str = "unknown command";
 
+
 pub unsafe fn play_level(game: &mut GameState) {
 	let mut count = 0;
 	let mut deck_ch = None;
@@ -39,46 +40,46 @@ pub unsafe fn play_level(game: &mut GameState) {
 				Instructions();
 			}
 			'.' => {
-				rest(if count > 0 { count } else { 1 } as c_int, &game.depth);
+				rest(if count > 0 { count } else { 1 } as c_int, &game.depth, &game.level);
 			}
 			's' => {
-				search(if count > 0 { count } else { 1 } as usize, false, &game.depth);
+				search(if count > 0 { count } else { 1 } as usize, false, &game.depth, &game.level);
 			}
 			'i' => {
 				inventory(&mut rogue.pack, AllObjects);
 			}
 			'f' => {
-				fight(false, &game.depth);
+				fight(false, &game.depth, &game.level);
 			}
 			'F' => {
-				fight(true, &game.depth);
+				fight(true, &game.depth, &game.level);
 			}
 			'h' | 'j' | 'k' | 'l' | 'y' | 'u' | 'n' | 'b' => {
-				one_move_rogue(ch, true, &game.depth);
+				one_move_rogue(ch, true, &game.depth, &game.level);
 			}
 			'H' | 'J' | 'K' | 'L' | 'B' | 'Y' | 'U' | 'N' | '\x08' | '\x0a' | '\x0b' | '\x0c' | '\x19' | '\x15' | '\x0e' | '\x02' => {
-				multiple_move_rogue(ch as i64, &game.depth);
+				multiple_move_rogue(ch as i64, &game.depth, &game.level);
 			}
 			'e' => {
-				eat(&game.depth);
+				eat(&game.depth, &game.level);
 			}
 			'q' => {
-				quaff(&game.depth);
+				quaff(&game.depth, &game.level);
 			}
 			'r' => {
-				read_scroll(&game.depth);
+				read_scroll(&game.depth, &game.level);
 			}
 			'm' => {
-				move_onto(&game.depth);
+				move_onto(&game.depth, &game.level);
 			}
 			'd' => {
-				drop_0(&game.depth);
+				drop_0(&game.depth, &game.level);
 			}
 			'P' => {
-				put_on_ring(&game.depth);
+				put_on_ring(&game.depth, &game.level);
 			}
 			'R' => {
-				remove_ring(&game.depth);
+				remove_ring(&game.depth, &game.level);
 			}
 			'\x10' => {
 				remessage();
@@ -109,22 +110,22 @@ pub unsafe fn play_level(game: &mut GameState) {
 				single_inv(None);
 			}
 			'T' => {
-				take_off(&game.depth);
+				take_off(&game.depth, &game.level);
 			}
 			'W' => {
-				wear(&game.depth);
+				wear(&game.depth, &game.level);
 			}
 			'w' => {
-				wield(&game.depth);
+				wield(&game.depth, &game.level);
 			}
 			'c' => {
 				call_it();
 			}
 			'z' => {
-				zapp(&game.depth);
+				zapp(&game.depth, &game.level);
 			}
 			't' => {
-				throw(&game.depth);
+				throw(&game.depth, &game.level);
 			}
 			'v' => {
 				message("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims", 0);
@@ -199,7 +200,7 @@ pub unsafe fn play_level(game: &mut GameState) {
 				save_game(game);
 			}
 			',' => {
-				kick_into_pack(&game.depth);
+				kick_into_pack(&game.depth, &game.level);
 			}
 			_ => {
 				message(unknown_command, 0);
