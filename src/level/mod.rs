@@ -151,7 +151,7 @@ pub unsafe fn make_level(level_depth: usize) -> Level {
 					}
 				}
 			}
-			if is_all_connected() {
+			if is_all_connected(&ROOMS) {
 				break;
 			}
 			fill_out_level(&mut level, level_depth);

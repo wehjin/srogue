@@ -8,6 +8,7 @@ use crate::prelude::DoorDirection::{Left, Right};
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::SpotFlag::{Door, Floor, Hidden, HorWall, Monster, Object, Stairs, Trap, Tunnel, VertWall};
 use crate::room::DoorDirection::{Up, Down};
+use crate::room::room_visitor::RoomVisitor;
 use crate::room::RoomType::{Maze};
 
 #[derive(Copy, Clone, Default, Serialize, Deserialize)]
@@ -106,7 +107,6 @@ pub static mut ROOMS: [Room; MAX_ROOM] = [Room {
 	doors: [dr { oth_room: None, oth_row: None, oth_col: None, door_row: 0, door_col: 0 }; 4],
 	room_type: RoomType::Nothing,
 }; MAX_ROOM];
-pub static mut ROOMS_VISITED: [bool; MAX_ROOM] = [false; MAX_ROOM];
 
 
 pub unsafe fn light_up_room(rn: i64) {
@@ -333,35 +333,66 @@ pub fn get_opt_room_number(row: i64, col: i64) -> Option<usize> {
 	}
 }
 
-pub unsafe fn is_all_connected() -> bool {
-	let mut starting_room = None;
-	for i in 0..MAX_ROOM {
-		ROOMS_VISITED[i] = false;
-		if ROOMS[i].room_type == RoomType::Room || ROOMS[i].room_type == Maze {
-			starting_room = Some(i);
-		}
-	}
-	if let Some(rn) = starting_room {
-		visit_rooms(rn);
-	}
-	for i in 0..MAX_ROOM {
-		if (ROOMS[i].room_type == RoomType::Room || ROOMS[i].room_type == Maze)
-			&& ROOMS_VISITED[i] == false {
-			return false;
-		}
-	}
-	return true;
-}
+mod room_visitor {
+	use crate::room::{MAX_ROOM, Room, RoomType};
 
-pub unsafe fn visit_rooms(rn: usize) {
-	ROOMS_VISITED[rn] = true;
-	for i in 0..4 {
-		if let Some(oth_rn) = ROOMS[rn].doors[i].oth_room {
-			if ROOMS_VISITED[oth_rn] == false {
-				visit_rooms(oth_rn);
+	pub struct Unvisited {
+		starting_room: Option<usize>,
+	}
+
+	pub struct Visited {
+		visited: [bool; MAX_ROOM],
+	}
+
+	pub struct RoomVisitor<'a, ST> {
+		rooms: &'a [Room; MAX_ROOM],
+		state: ST,
+	}
+
+	impl<'a, ST> RoomVisitor<'a, ST> {
+		fn is_included_room_type(room_type: RoomType) -> bool {
+			vec![RoomType::Room, RoomType::Maze].iter().position(|acceptable| room_type == *acceptable).is_some()
+		}
+	}
+
+	impl<'a> RoomVisitor<'a, Unvisited> {
+		pub fn new(rooms: &'a [Room; MAX_ROOM]) -> Self {
+			let starting_room = rooms.iter().map(|room| room.room_type).position(Self::is_included_room_type);
+			RoomVisitor { rooms, state: Unvisited { starting_room } }
+		}
+		pub fn visit_rooms(&self) -> RoomVisitor<Visited> {
+			let mut visited = [false; MAX_ROOM];
+			if let Some(rn) = self.state.starting_room {
+				self.visit_each_room(rn, &mut visited);
+			}
+			RoomVisitor { rooms: self.rooms, state: Visited { visited } }
+		}
+		fn visit_each_room(&self, rn: usize, visited: &mut [bool; MAX_ROOM]) {
+			visited[rn] = true;
+			for dn in 0..4 {
+				if let Some(other_rn) = self.rooms[rn].doors[dn].oth_room {
+					if visited[other_rn] == false {
+						self.visit_each_room(other_rn, visited);
+					}
+				}
 			}
 		}
 	}
+
+	impl<'a> RoomVisitor<'a, Visited> {
+		pub fn to_is_all_connected(&self) -> bool {
+			for rn in 0..MAX_ROOM {
+				if Self::is_included_room_type(self.rooms[rn].room_type) && !self.state.visited[rn] {
+					return false;
+				}
+			}
+			true
+		}
+	}
+}
+
+pub unsafe fn is_all_connected(rooms: &[Room; MAX_ROOM]) -> bool {
+	RoomVisitor::new(rooms).visit_rooms().to_is_all_connected()
 }
 
 pub unsafe fn draw_magic_map() {
