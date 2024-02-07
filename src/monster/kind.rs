@@ -211,7 +211,6 @@ impl MonsterKind {
 
 const MONSTER_TABLE: [object; 26] = [
 	obj {
-		m_flags: MonsterFlags::a(),
 		quantity: 25,
 		ichar: 'A',
 		kill_exp: 20,
@@ -236,7 +235,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::b(),
 		quantity: 10,
 		ichar: 'B',
 		kill_exp: 2,
@@ -261,7 +259,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::c(),
 		quantity: 32,
 		ichar: 'C',
 		kill_exp: 15,
@@ -286,7 +283,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::d(),
 		quantity: 145,
 		ichar: 'D',
 		kill_exp: 5000,
@@ -312,7 +308,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::e(),
 		quantity: 11,
 		ichar: 'E',
 		kill_exp: 2,
@@ -337,7 +332,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::f(),
 		quantity: 73,
 		ichar: 'F',
 		kill_exp: 91,
@@ -362,7 +356,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::g(),
 		quantity: 115,
 		ichar: 'G',
 		kill_exp: 2000,
@@ -388,7 +381,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::h(),
 		quantity: 15,
 		ichar: 'H',
 		kill_exp: 3,
@@ -413,7 +405,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::i(),
 		quantity: 15,
 		ichar: 'I',
 		kill_exp: 5,
@@ -438,7 +429,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::j(),
 		quantity: 132,
 		ichar: 'J',
 		kill_exp: 3000,
@@ -463,7 +453,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::k(),
 		quantity: 10,
 		ichar: 'K',
 		kill_exp: 2,
@@ -488,7 +477,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::l(),
 		quantity: 25,
 		ichar: 'L',
 		kill_exp: 21,
@@ -513,7 +501,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::m(),
 		quantity: 97,
 		ichar: 'M',
 		kill_exp: 250,
@@ -539,7 +526,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::n(),
 		quantity: 25,
 		ichar: 'N',
 		kill_exp: 39,
@@ -565,7 +551,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::o(),
 		quantity: 25,
 		ichar: 'O',
 		kill_exp: 5,
@@ -591,7 +576,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::p(),
 		quantity: 76,
 		ichar: 'P',
 		kill_exp: 120,
@@ -617,7 +601,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::q(),
 		quantity: 30,
 		ichar: 'Q',
 		kill_exp: 20,
@@ -643,7 +626,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::r(),
 		quantity: 19,
 		ichar: 'R',
 		kill_exp: 10,
@@ -668,7 +650,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::s(),
 		quantity: 8,
 		ichar: 'S',
 		kill_exp: 2,
@@ -693,7 +674,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::t(),
 		quantity: 75,
 		ichar: 'T',
 		kill_exp: 125,
@@ -719,7 +699,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::u(),
 		quantity: 90,
 		ichar: 'U',
 		kill_exp: 200,
@@ -745,7 +724,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::v(),
 		quantity: 55,
 		ichar: 'V',
 		kill_exp: 350,
@@ -771,7 +749,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::w(),
 		quantity: 45,
 		ichar: 'W',
 		kill_exp: 55,
@@ -796,7 +773,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::x(),
 		quantity: 42,
 		ichar: 'X',
 		kill_exp: 110,
@@ -821,7 +797,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::y(),
 		quantity: 35,
 		ichar: 'Y',
 		kill_exp: 50,
@@ -847,7 +822,6 @@ const MONSTER_TABLE: [object; 26] = [
 		next_object: 0 as *const obj as *mut obj,
 	},
 	obj {
-		m_flags: MonsterFlags::z(),
 		quantity: 21,
 		ichar: 'Z',
 		kill_exp: 8,

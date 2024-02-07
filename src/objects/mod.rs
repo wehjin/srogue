@@ -38,7 +38,6 @@ pub enum IdStatus {
 
 #[derive(Serialize, Deserialize)]
 pub struct SaveObj {
-	pub m_flags: MonsterFlags,
 	pub quantity: i16,
 	pub ichar: char,
 	pub kill_exp: isize,
@@ -73,7 +72,6 @@ impl SaveObj {
 	pub unsafe fn to_obj(&self, is_rogue: bool) -> *mut obj {
 		let heap_obj = alloc_object();
 		*heap_obj = obj {
-			m_flags: self.m_flags,
 			quantity: self.quantity,
 			ichar: self.ichar,
 			kill_exp: self.kill_exp,
@@ -110,7 +108,6 @@ impl SaveObj {
 	}
 	pub fn from_obj(obj: &obj) -> Self {
 		Self {
-			m_flags: obj.m_flags,
 			quantity: obj.quantity,
 			ichar: obj.ichar,
 			kill_exp: obj.kill_exp,
@@ -138,7 +135,6 @@ impl SaveObj {
 
 #[derive(Clone)]
 pub struct obj {
-	pub m_flags: MonsterFlags,
 	pub quantity: i16,
 	pub ichar: char,
 	pub kill_exp: isize,
@@ -165,7 +161,6 @@ pub struct obj {
 
 pub const fn empty_obj() -> obj {
 	obj {
-		m_flags: MonsterFlags::empty(),
 		quantity: 0,
 		ichar: '\x00',
 		kill_exp: 0,
