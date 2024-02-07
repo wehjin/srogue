@@ -1,6 +1,5 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-use libc::{c_int, c_short};
 use ncurses::chtype;
 use crate::message::message;
 use crate::random::{coin_toss, get_rand, rand_percent};
@@ -562,23 +561,15 @@ pub unsafe fn aggravate() {
 	}
 }
 
-
 pub unsafe fn mon_sees(monster: &Monster, row: i64, col: i64) -> bool {
-	let mut rdif: c_short = 0;
-	let mut cdif: c_short = 0;
-	let rn = get_opt_room_number(row, col);
-	if let Some(rn) = rn {
-		let mon_rn = get_opt_room_number(monster.spot.row, monster.spot.col).expect("monster has room");
-		if rn == mon_rn && ROOMS[rn].room_type != Maze {
+	if let Some(rn) = monster.in_same_room_as_spot(row, col) {
+		if ROOMS[rn].room_type != Maze {
 			return true;
 		}
 	}
-	rdif = (row - monster.spot.row) as c_short;
-	cdif = (col - monster.spot.col) as c_short;
-	return rdif as c_int >= -(1 as c_int)
-		&& rdif as c_int <= 1 as c_int
-		&& cdif as c_int >= -(1 as c_int)
-		&& cdif as c_int <= 1 as c_int;
+	let row_diff = row - monster.spot.row;
+	let ool_diff = col - monster.spot.col;
+	row_diff >= -1 && row_diff <= 1 && ool_diff >= -1 && ool_diff <= 1
 }
 
 pub unsafe fn mv_aquatars(depth: &RogueDepth) {

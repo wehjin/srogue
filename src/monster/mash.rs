@@ -161,6 +161,16 @@ impl Monster {
 			self.m_flags.confuses = false;
 		}
 	}
+	pub fn in_same_room_as_spot(&self, row: i64, col: i64) -> Option<usize> {
+		if let Some(rn) = get_opt_room_number(row, col) {
+			if let Some(mon_rn) = get_opt_room_number(self.spot.row, self.spot.col) {
+				if rn == mon_rn {
+					return Some(rn);
+				}
+			}
+		}
+		None
+	}
 	pub fn id(&self) -> u64 { self.id }
 	pub fn kill_exp(&self) -> isize { self.kind.kill_exp() }
 	pub fn m_hit_chance(&self) -> usize { self.kind.m_hit_chance() }

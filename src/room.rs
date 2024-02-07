@@ -82,6 +82,13 @@ pub struct Room {
 }
 
 impl Room {
+	pub fn contains_spot(&self, row: i64, col: i64) -> bool {
+		let below_top_wall = row >= self.top_row;
+		let above_bottom_wall = row <= self.bottom_row;
+		let right_of_left_wall = col >= self.left_col;
+		let left_of_right_wall = col <= self.right_col;
+		below_top_wall && above_bottom_wall && right_of_left_wall && left_of_right_wall
+	}
 	pub fn center_spot(&self) -> DungeonSpot {
 		DungeonSpot {
 			col: (self.left_col + self.right_col) / 2,
@@ -309,11 +316,7 @@ pub unsafe extern "C" fn party_objects(rn: usize, level_depth: usize) -> i64 {
 pub fn get_room_number(row: i64, col: i64) -> i64 {
 	unsafe {
 		for i in 0..MAX_ROOM {
-			let below_top_wall = row >= ROOMS[i].top_row;
-			let above_bottom_wall = row <= ROOMS[i].bottom_row;
-			let right_of_left_wall = col >= ROOMS[i].left_col;
-			let left_of_right_wall = col <= ROOMS[i].right_col;
-			if below_top_wall && above_bottom_wall && right_of_left_wall && left_of_right_wall {
+			if ROOMS[i].contains_spot(row, col) {
 				return i as i64;
 			}
 		}
