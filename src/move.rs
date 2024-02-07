@@ -49,7 +49,11 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth) -> M
 		}
 	}
 	if Monster.is_set(dungeon[row as usize][col as usize]) {
-		rogue_hit(object_at(&level_monsters, row, col), false, depth);
+		rogue_hit(
+			&mut MASH.monster_at_spot_mut(row, col).expect("monster at spot"),
+			false,
+			depth,
+		);
 		reg_move(depth);
 		return MoveFailed;
 	}
@@ -367,9 +371,9 @@ pub unsafe fn reg_move(depth: &RogueDepth) -> bool {
 	};
 	mv_mons(depth);
 	m_moves += 1;
-	if m_moves as libc::c_int >= 120 as libc::c_int {
-		m_moves = 0 as libc::c_int as libc::c_short;
-		wanderer(depth.cur);
+	if m_moves >= 120 {
+		m_moves = 0;
+		put_wanderer(depth.cur);
 	}
 	if halluc != 0 {
 		halluc -= 1;

@@ -1,5 +1,5 @@
-use std::collections::HashSet;
 use libc::{c_ushort};
+use serde::{Deserialize, Serialize};
 pub use crate::message::*;
 pub use crate::level::*;
 pub use crate::monster::*;
@@ -12,7 +12,6 @@ pub use crate::r#move::*;
 pub use crate::objects::*;
 pub use crate::pack::*;
 pub use crate::play::*;
-use crate::prelude::SpotFlag::{Door, Floor, Hidden, HorWall, Monster, Object, Stairs, Trap, Tunnel, VertWall};
 pub use crate::random::*;
 pub use crate::ring::*;
 pub use crate::room::*;
@@ -57,85 +56,37 @@ pub const LAST_DUNGEON: usize = 99;
 pub const INIT_HP: isize = 12;
 pub const PARTY_TIME: usize = 10;   /* one party somewhere in each 10 level span */
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
 pub struct DungeonSpot {
 	pub col: i64,
 	pub row: i64,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub enum SpotFlag {
-	Nothing = 0x0,
-	Object = 0o1,
-	Monster = 0o2,
-	Stairs = 0o4,
-	HorWall = 0o10,
-	VertWall = 0o20,
-	Door = 0o40,
-	Floor = 0o100,
-	Tunnel = 0o200,
-	Trap = 0o400,
-	Hidden = 0o1000,
-}
-
-impl SpotFlag {
-	pub fn union(flags: &Vec<SpotFlag>) -> u16 {
-		flags.iter().fold(0, |it, more| it & more.code())
-	}
-	pub fn is_any_set(flags: &Vec<SpotFlag>, value: u16) -> bool {
-		for flag in flags {
-			if flag.is_set(value) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	pub fn is_nothing(value: u16) -> bool {
-		value == 0
-	}
-	pub fn set_nothing(value: &mut u16) {
-		*value = 0;
-	}
-	pub fn are_others_set(flags: &Vec<SpotFlag>, value: u16) -> bool {
-		let all = vec![Object, Monster, Stairs, HorWall, VertWall, Door, Floor, Tunnel, Trap, Hidden];
-		let all_set = all.into_iter().collect::<HashSet<_>>();
-		let exclude_set = flags.iter().cloned().collect::<HashSet<_>>();
-		let difference_set = all_set.difference(&exclude_set).cloned().collect::<Vec<_>>();
-		SpotFlag::is_any_set(&difference_set, value)
-	}
-
-	pub fn is_set(&self, value: u16) -> bool {
-		match self {
-			SpotFlag::Nothing => value == 0,
-			_ => (value & self.code()) != 0,
+impl DungeonSpot {
+	fn new_closest_value(value: i64, target: i64) -> i64 {
+		if value > target {
+			value - 1
+		} else if value < target {
+			value + 1
+		} else {
+			value
 		}
 	}
-	pub fn is_only(&self, value: u16) -> bool {
-		value == self.code()
+	pub fn next_closest_row(&self, target_row: i64) -> i64 {
+		Self::new_closest_value(self.row, target_row)
 	}
-	pub fn clear(&self, value: &mut u16) {
-		let code = self.code();
-		*value &= !code;
+	pub fn next_closest_col(&self, target_col: i64) -> i64 {
+		Self::new_closest_value(self.col, target_col)
 	}
-	pub fn set(&self, value: &mut u16) {
-		let code = self.code();
-		*value |= code;
+	pub fn is_at(&self, row: i64, col: i64) -> bool {
+		self.row == row && self.col == col
 	}
-	pub fn code(&self) -> u16 {
-		match self {
-			SpotFlag::Nothing => 0o0,
-			SpotFlag::Object => 0o1,
-			SpotFlag::Monster => 0o2,
-			SpotFlag::Stairs => 0o4,
-			SpotFlag::HorWall => 0o10,
-			SpotFlag::VertWall => 0o20,
-			SpotFlag::Door => 0o40,
-			SpotFlag::Floor => 0o100,
-			SpotFlag::Tunnel => 0o200,
-			SpotFlag::Trap => 0o400,
-			SpotFlag::Hidden => 0o1000,
-		}
+	pub fn is_out_of_bounds(&self) -> bool {
+		self.row < MIN_ROW || self.row > (DROWS - 2) as i64 || self.col < 0 || self.col > (DCOLS - 1) as i64
+	}
+	pub fn set(&mut self, row: i64, col: i64) {
+		self.row = row;
+		self.col = col;
 	}
 }
 
@@ -237,6 +188,7 @@ pub mod food_kind {
 	pub const RATION: u16 = 0;
 	pub const FRUIT: u16 = 1;
 }
+
 pub mod weapon_kind;
 pub mod armor_kind;
 pub mod potion_kind;

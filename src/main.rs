@@ -90,6 +90,6 @@ pub fn main() {
 		}
 		unsafe { play_level(&mut game); }
 		unsafe { free_stuff(&mut level_objects); }
-		unsafe { free_stuff(&mut level_monsters); }
+		unsafe { MASH.clear(); }
 	}
 }

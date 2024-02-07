@@ -114,7 +114,6 @@ impl MonsterFlags {
 	}
 }
 
-pub const MONSTERS: usize = 26;
 pub const HASTED: u64 = 0o1;
 pub const SLOWED: u64 = 0o2;
 pub const INVISIBLE: u64 = 0o4;

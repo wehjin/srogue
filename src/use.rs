@@ -84,7 +84,7 @@ pub unsafe fn quaff(depth: &RogueDepth) {
 		}
 		PotionKind::DetectMonster => {
 			show_monsters();
-			if level_monsters.next_object.is_null() {
+			if MASH.is_empty() {
 				message(strange_feeling, 0);
 			}
 		}
@@ -372,9 +372,9 @@ unsafe fn hold_monster() {
 				continue;
 			}
 			if Monster.is_set(dungeon[row as usize][col as usize]) {
-				let monster = object_at(&level_monsters, row, col);
-				(*monster).m_flags.asleep = true;
-				(*monster).m_flags.wakens = false;
+				let monster = MASH.monster_at_spot_mut(row, col).expect("monster at spot");
+				monster.m_flags.asleep = true;
+				monster.m_flags.wakens = false;
 				mcount += 1;
 			}
 		}
@@ -417,13 +417,11 @@ pub unsafe fn hallucinate() {
 		}
 		obj = (*obj).next_object;
 	}
-	let mut monster = level_monsters.next_object;
-	while !monster.is_null() {
-		let ch = mvinch((*monster).row as i32, (*monster).col as i32);
+	for monster in &MASH.monsters {
+		let ch = mvinch(monster.spot.row as i32, monster.spot.col as i32);
 		if is_monster_char(ch) {
 			addch(get_rand(chtype::from('A'), chtype::from('Z')));
 		}
-		monster = (*monster).next_object;
 	}
 }
 
@@ -480,10 +478,8 @@ unsafe fn go_blind() {
 	blind += get_rand(500, 800);
 
 	if detect_monster {
-		let mut monster = level_monsters.next_monster();
-		while !monster.is_null() {
-			mvaddch((*monster).row as i32, (*monster).col as i32, (*monster).trail_char());
-			monster = (*monster).next_monster();
+		for monster in &MASH.monsters {
+			mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.trail_char);
 		}
 	}
 	if cur_room >= 0 {

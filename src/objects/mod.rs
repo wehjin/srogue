@@ -2,7 +2,6 @@
 
 use std::clone::Clone;
 use std::string::ToString;
-use libc::{c_short};
 use ncurses::{chtype, mvaddch, mvinch};
 use serde::{Deserialize, Serialize};
 use ObjectWhat::{Armor, Potion, Scroll, Weapon};
@@ -47,7 +46,6 @@ pub struct SaveObj {
 	pub is_cursed: i16,
 	pub class: isize,
 	pub identified: bool,
-	pub stationary_damage: isize,
 	pub which_kind: u16,
 	pub o_row: i64,
 	pub o_col: i64,
@@ -60,7 +58,6 @@ pub struct SaveObj {
 	pub tcol: i64,
 	pub hit_enchant: i16,
 	pub what_is: ObjectWhat,
-	pub disguise: u16,
 	pub picked_up: i16,
 	pub in_use_flags: u16,
 }
@@ -84,7 +81,6 @@ impl SaveObj {
 			is_cursed: self.is_cursed,
 			class: self.class,
 			identified: self.identified,
-			stationary_damage: self.stationary_damage,
 			which_kind: self.which_kind,
 			o_row: self.o_row,
 			o_col: self.o_col,
@@ -97,7 +93,6 @@ impl SaveObj {
 			tcol: self.tcol,
 			hit_enchant: self.hit_enchant,
 			what_is: self.what_is,
-			disguise: self.disguise,
 			picked_up: self.picked_up,
 			in_use_flags: self.in_use_flags,
 			next_object: 0 as *mut obj,
@@ -123,7 +118,6 @@ impl SaveObj {
 			is_cursed: obj.is_cursed,
 			class: obj.class,
 			identified: obj.identified,
-			stationary_damage: obj.stationary_damage,
 			which_kind: obj.which_kind,
 			o_row: obj.o_row,
 			o_col: obj.o_col,
@@ -136,7 +130,6 @@ impl SaveObj {
 			tcol: obj.tcol,
 			hit_enchant: obj.hit_enchant,
 			what_is: obj.what_is,
-			disguise: obj.disguise,
 			picked_up: obj.picked_up,
 			in_use_flags: obj.in_use_flags,
 		}
@@ -153,7 +146,6 @@ pub struct obj {
 	pub is_cursed: i16,
 	pub class: isize,
 	pub identified: bool,
-	pub stationary_damage: isize,
 	pub which_kind: u16,
 	pub o_row: i64,
 	pub o_col: i64,
@@ -166,7 +158,6 @@ pub struct obj {
 	pub tcol: i64,
 	pub hit_enchant: i16,
 	pub what_is: ObjectWhat,
-	pub disguise: u16,
 	pub picked_up: i16,
 	pub in_use_flags: u16,
 	pub next_object: *mut obj,
@@ -182,7 +173,6 @@ pub const fn empty_obj() -> obj {
 		is_cursed: 0,
 		class: 0,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 0,
 		o_row: 0,
 		o_col: 0,
@@ -195,7 +185,6 @@ pub const fn empty_obj() -> obj {
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *mut obj,
@@ -203,83 +192,11 @@ pub const fn empty_obj() -> obj {
 }
 
 impl obj {
-	pub fn m_hit_chance(&self) -> usize {
-		self.class as usize
-	}
-	pub fn hp_to_kill(&self) -> c_short { self.quantity }
-	pub fn set_hp_to_kill(&mut self, value: c_short) { self.quantity = value }
-	pub fn m_char(&self) -> chtype {
-		self.ichar as chtype
-	}
-	pub fn stationary_damage(&self) -> isize { self.stationary_damage }
-	pub fn set_stationary_damage(&mut self, value: isize) {
-		self.stationary_damage = value;
-	}
-	pub fn first_level(&self) -> usize { self.is_protected as usize }
-	pub fn last_level(&self) -> usize { self.is_cursed as usize }
-	pub fn drop_percent(&self) -> usize { self.which_kind as usize }
-	pub fn set_drop_percent(&mut self, value: usize) {
-		self.which_kind = value as u16;
-	}
-	pub fn set_trail_char(&mut self, ch: chtype) { self.d_enchant = ch as isize; }
-	pub fn trail_char(&self) -> chtype {
-		self.d_enchant as chtype
-	}
-	pub fn slowed_toggle(&self) -> bool {
-		self.quiver != 0
-	}
-	pub fn set_slowed_toggle(&mut self, value: bool) {
-		self.quiver = match value {
-			true => 1,
-			false => 0,
-		}
-	}
-	pub fn flip_slowed_toggle(&mut self) {
-		if self.quiver == 1 {
-			self.quiver = 0;
-		} else {
-			self.quiver = 1;
-		}
-	}
-	pub fn disguise(&self) -> chtype {
-		self.disguise as chtype
-	}
-	pub fn nap_length(&self) -> c_short {
-		self.picked_up
-	}
-	pub fn set_nap_length(&mut self, value: c_short) {
-		self.picked_up = value;
-	}
-	pub fn decrement_nap(&mut self) {
-		self.set_nap_length(self.nap_length() - 1);
-		if self.nap_length() <= 0 {
-			self.m_flags.napping = false;
-			self.m_flags.asleep = false;
-		}
-	}
-	pub fn moves_confused(&self) -> c_short {
-		self.hit_enchant
-	}
-	pub fn set_moves_confused(&mut self, value: c_short) {
-		self.hit_enchant = value;
-	}
-
-	pub fn decrement_moves_confused(&mut self) {
-		self.hit_enchant -= 1;
-		if self.hit_enchant <= 0 {
-			self.m_flags.confuses = false;
-		}
-	}
-
 	pub fn next_monster(&self) -> *mut obj {
 		self.next_object
 	}
 	pub fn set_next_monster(&mut self, value: *mut obj) {
 		self.next_object = value;
-	}
-	pub fn in_room(&self, rn: i64) -> bool {
-		let object_rn = get_room_number(self.row, self.col);
-		object_rn != NO_ROOM && object_rn == rn
 	}
 }
 
@@ -1196,9 +1113,9 @@ pub unsafe fn show_objects() {
 		let col = (*obj).col;
 		let rc = get_mask_char((*obj).what_is) as chtype;
 		if Monster.is_set(dungeon[row as usize][col as usize]) {
-			let monster = object_at(&level_monsters, row, col);
-			if !monster.is_null() {
-				(*monster).set_trail_char(rc);
+			let monster = MASH.monster_at_spot_mut(row, col);
+			if let Some(monster) = monster {
+				monster.trail_char = rc;
 			}
 		}
 		let mc = mvinch(row as i32, col as i32);
@@ -1207,12 +1124,10 @@ pub unsafe fn show_objects() {
 		}
 		obj = (*obj).next_object;
 	}
-	let mut monster = level_monsters.next_object;
-	while !monster.is_null() {
-		if (*monster).m_flags.imitates {
-			mvaddch((*monster).row as i32, (*monster).col as i32, (*monster).disguise as chtype);
+	for monster in &MASH.monsters {
+		if monster.m_flags.imitates {
+			mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.disguise_char);
 		}
-		monster = (*monster).next_object;
 	}
 }
 

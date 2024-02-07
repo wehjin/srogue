@@ -1,10 +1,12 @@
+use ncurses::chtype;
 use serde::{Deserialize, Serialize};
-use crate::monster::MonsterFlags;
+use crate::monster::{MonsterFlags};
 use crate::objects::{obj, object};
+use crate::prelude::{get_rand};
 use crate::prelude::object_what::ObjectWhat;
 
-#[derive(Copy, Clone, Serialize, Deserialize)]
-pub enum MonsterType {
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum MonsterKind {
 	Aquator,
 	Bat,
 	Centaur,
@@ -33,80 +35,177 @@ pub enum MonsterType {
 	Zombie,
 }
 
-impl From<usize> for MonsterType {
-	fn from(value: usize) -> Self { MonsterType::LIST[value] }
+impl From<usize> for MonsterKind {
+	fn from(value: usize) -> Self { MonsterKind::LIST[value] }
 }
 
-impl MonsterType {
-	pub fn first_level(&self) -> usize { MONSTER_TABLE[self.index()].first_level() }
-	pub fn last_level(&self) -> usize { MONSTER_TABLE[self.index()].last_level() }
-	pub fn create(&self) -> object { MONSTER_TABLE[self.index()].clone() }
+impl MonsterKind {
+	pub fn random_any() -> Self {
+		Self::LIST[get_rand(0, MONSTERS - 1)]
+	}
+	pub fn random(level_depth: usize, level_boost: usize) -> Self {
+		loop {
+			let mn = get_rand(0, MonsterKind::LIST.len() - 1);
+			let kind = MonsterKind::from(mn);
+			let first_level = {
+				let nominal = kind.first_level();
+				let boost = level_boost.min(nominal);
+				nominal - boost
+			};
+			if level_depth >= first_level && level_depth <= kind.last_level() {
+				return kind;
+			}
+		}
+	}
+	pub fn damage(&self) -> &'static str {
+		MON_DAMAGE[self.index()]
+	}
+	pub fn hp_to_kill(&self) -> isize {
+		MONSTER_TABLE[self.index()].quantity as isize
+	}
+	pub fn random_name() -> &'static str {
+		let random_kind = MonsterKind::LIST[get_rand(0, MonsterKind::LIST.len() - 1)];
+		random_kind.name()
+	}
+	pub fn first_level(&self) -> usize {
+		MONSTER_TABLE[self.index()].is_protected as usize
+	}
+	pub fn last_level(&self) -> usize {
+		MONSTER_TABLE[self.index()].is_cursed as usize
+	}
+	pub fn kill_exp(&self) -> isize {
+		MONSTER_TABLE[self.index()].kill_exp
+	}
+	pub fn m_char(&self) -> chtype { chtype::from(self.screen_char()) }
+	pub fn m_hit_chance(&self) -> usize {
+		MONSTER_TABLE[self.index()].class as usize
+	}
 	pub fn name(&self) -> &'static str {
 		match self {
-			MonsterType::Aquator => "aquator",
-			MonsterType::Bat => "bat",
-			MonsterType::Centaur => "centaur",
-			MonsterType::Dragon => "dragon",
-			MonsterType::Emu => "emu",
-			MonsterType::FlyTrap => "venus fly-trap",
-			MonsterType::Griffin => "griffin",
-			MonsterType::Hobgoblin => "hobgoblin",
-			MonsterType::IceMonster => "ice monster",
-			MonsterType::Jabberwock => "jabberwock",
-			MonsterType::Kestrel => "kestrel",
-			MonsterType::Leprechaun => "leprechaun",
-			MonsterType::Medusa => "medusa",
-			MonsterType::Nymph => "nymph",
-			MonsterType::Orc => "orc",
-			MonsterType::Phantom => "phantom",
-			MonsterType::Quagga => "quagga",
-			MonsterType::Rattlesnake => "rattlesnake",
-			MonsterType::Snake => "snake",
-			MonsterType::Troll => "troll",
-			MonsterType::Unicorn => "black unicorn",
-			MonsterType::Vampire => "vampire",
-			MonsterType::Wraith => "wraith",
-			MonsterType::Xeroc => "xeroc",
-			MonsterType::Yeti => "yeti",
-			MonsterType::Zombie => "zombie",
+			MonsterKind::Aquator => "aquator",
+			MonsterKind::Bat => "bat",
+			MonsterKind::Centaur => "centaur",
+			MonsterKind::Dragon => "dragon",
+			MonsterKind::Emu => "emu",
+			MonsterKind::FlyTrap => "venus fly-trap",
+			MonsterKind::Griffin => "griffin",
+			MonsterKind::Hobgoblin => "hobgoblin",
+			MonsterKind::IceMonster => "ice monster",
+			MonsterKind::Jabberwock => "jabberwock",
+			MonsterKind::Kestrel => "kestrel",
+			MonsterKind::Leprechaun => "leprechaun",
+			MonsterKind::Medusa => "medusa",
+			MonsterKind::Nymph => "nymph",
+			MonsterKind::Orc => "orc",
+			MonsterKind::Phantom => "phantom",
+			MonsterKind::Quagga => "quagga",
+			MonsterKind::Rattlesnake => "rattlesnake",
+			MonsterKind::Snake => "snake",
+			MonsterKind::Troll => "troll",
+			MonsterKind::Unicorn => "black unicorn",
+			MonsterKind::Vampire => "vampire",
+			MonsterKind::Wraith => "wraith",
+			MonsterKind::Xeroc => "xeroc",
+			MonsterKind::Yeti => "yeti",
+			MonsterKind::Zombie => "zombie",
+		}
+	}
+	pub fn screen_char(&self) -> char {
+		match self {
+			MonsterKind::Aquator => 'A',
+			MonsterKind::Bat => 'B',
+			MonsterKind::Centaur => 'C',
+			MonsterKind::Dragon => 'D',
+			MonsterKind::Emu => 'E',
+			MonsterKind::FlyTrap => 'F',
+			MonsterKind::Griffin => 'G',
+			MonsterKind::Hobgoblin => 'H',
+			MonsterKind::IceMonster => 'I',
+			MonsterKind::Jabberwock => 'J',
+			MonsterKind::Kestrel => 'K',
+			MonsterKind::Leprechaun => 'L',
+			MonsterKind::Medusa => 'M',
+			MonsterKind::Nymph => 'N',
+			MonsterKind::Orc => 'O',
+			MonsterKind::Phantom => 'P',
+			MonsterKind::Quagga => 'Q',
+			MonsterKind::Rattlesnake => 'R',
+			MonsterKind::Snake => 'S',
+			MonsterKind::Troll => 'T',
+			MonsterKind::Unicorn => 'U',
+			MonsterKind::Vampire => 'V',
+			MonsterKind::Wraith => 'W',
+			MonsterKind::Xeroc => 'X',
+			MonsterKind::Yeti => 'Y',
+			MonsterKind::Zombie => 'Z',
+		}
+	}
+	pub fn flags(&self) -> MonsterFlags {
+		match self {
+			MonsterKind::Aquator => MonsterFlags::a(),
+			MonsterKind::Bat => MonsterFlags::b(),
+			MonsterKind::Centaur => MonsterFlags::c(),
+			MonsterKind::Dragon => MonsterFlags::d(),
+			MonsterKind::Emu => MonsterFlags::e(),
+			MonsterKind::FlyTrap => MonsterFlags::f(),
+			MonsterKind::Griffin => MonsterFlags::g(),
+			MonsterKind::Hobgoblin => MonsterFlags::h(),
+			MonsterKind::IceMonster => MonsterFlags::i(),
+			MonsterKind::Jabberwock => MonsterFlags::j(),
+			MonsterKind::Kestrel => MonsterFlags::k(),
+			MonsterKind::Leprechaun => MonsterFlags::l(),
+			MonsterKind::Medusa => MonsterFlags::m(),
+			MonsterKind::Nymph => MonsterFlags::n(),
+			MonsterKind::Orc => MonsterFlags::o(),
+			MonsterKind::Phantom => MonsterFlags::p(),
+			MonsterKind::Quagga => MonsterFlags::q(),
+			MonsterKind::Rattlesnake => MonsterFlags::r(),
+			MonsterKind::Snake => MonsterFlags::s(),
+			MonsterKind::Troll => MonsterFlags::t(),
+			MonsterKind::Unicorn => MonsterFlags::u(),
+			MonsterKind::Vampire => MonsterFlags::v(),
+			MonsterKind::Wraith => MonsterFlags::w(),
+			MonsterKind::Xeroc => MonsterFlags::x(),
+			MonsterKind::Yeti => MonsterFlags::y(),
+			MonsterKind::Zombie => MonsterFlags::z(),
 		}
 	}
 	pub fn index(&self) -> usize {
 		match self {
-			MonsterType::Aquator => 0,
-			MonsterType::Bat => 1,
-			MonsterType::Centaur => 2,
-			MonsterType::Dragon => 3,
-			MonsterType::Emu => 4,
-			MonsterType::FlyTrap => 5,
-			MonsterType::Griffin => 6,
-			MonsterType::Hobgoblin => 7,
-			MonsterType::IceMonster => 8,
-			MonsterType::Jabberwock => 9,
-			MonsterType::Kestrel => 10,
-			MonsterType::Leprechaun => 11,
-			MonsterType::Medusa => 12,
-			MonsterType::Nymph => 13,
-			MonsterType::Orc => 14,
-			MonsterType::Phantom => 15,
-			MonsterType::Quagga => 16,
-			MonsterType::Rattlesnake => 17,
-			MonsterType::Snake => 18,
-			MonsterType::Troll => 19,
-			MonsterType::Unicorn => 20,
-			MonsterType::Vampire => 21,
-			MonsterType::Wraith => 22,
-			MonsterType::Xeroc => 23,
-			MonsterType::Yeti => 24,
-			MonsterType::Zombie => 25,
+			MonsterKind::Aquator => 0,
+			MonsterKind::Bat => 1,
+			MonsterKind::Centaur => 2,
+			MonsterKind::Dragon => 3,
+			MonsterKind::Emu => 4,
+			MonsterKind::FlyTrap => 5,
+			MonsterKind::Griffin => 6,
+			MonsterKind::Hobgoblin => 7,
+			MonsterKind::IceMonster => 8,
+			MonsterKind::Jabberwock => 9,
+			MonsterKind::Kestrel => 10,
+			MonsterKind::Leprechaun => 11,
+			MonsterKind::Medusa => 12,
+			MonsterKind::Nymph => 13,
+			MonsterKind::Orc => 14,
+			MonsterKind::Phantom => 15,
+			MonsterKind::Quagga => 16,
+			MonsterKind::Rattlesnake => 17,
+			MonsterKind::Snake => 18,
+			MonsterKind::Troll => 19,
+			MonsterKind::Unicorn => 20,
+			MonsterKind::Vampire => 21,
+			MonsterKind::Wraith => 22,
+			MonsterKind::Xeroc => 23,
+			MonsterKind::Yeti => 24,
+			MonsterKind::Zombie => 25,
 		}
 	}
-	pub const LIST: [MonsterType; 26] = [
-		MonsterType::Aquator, MonsterType::Bat, MonsterType::Centaur, MonsterType::Dragon, MonsterType::Emu, MonsterType::FlyTrap,
-		MonsterType::Griffin, MonsterType::Hobgoblin, MonsterType::IceMonster, MonsterType::Jabberwock, MonsterType::Kestrel, MonsterType::Leprechaun,
-		MonsterType::Medusa, MonsterType::Nymph, MonsterType::Orc, MonsterType::Phantom, MonsterType::Quagga, MonsterType::Rattlesnake,
-		MonsterType::Snake, MonsterType::Troll, MonsterType::Unicorn, MonsterType::Vampire, MonsterType::Wraith, MonsterType::Xeroc,
-		MonsterType::Yeti, MonsterType::Zombie,
+	pub const LIST: [MonsterKind; 26] = [
+		MonsterKind::Aquator, MonsterKind::Bat, MonsterKind::Centaur, MonsterKind::Dragon, MonsterKind::Emu, MonsterKind::FlyTrap,
+		MonsterKind::Griffin, MonsterKind::Hobgoblin, MonsterKind::IceMonster, MonsterKind::Jabberwock, MonsterKind::Kestrel, MonsterKind::Leprechaun,
+		MonsterKind::Medusa, MonsterKind::Nymph, MonsterKind::Orc, MonsterKind::Phantom, MonsterKind::Quagga, MonsterKind::Rattlesnake,
+		MonsterKind::Snake, MonsterKind::Troll, MonsterKind::Unicorn, MonsterKind::Vampire, MonsterKind::Wraith, MonsterKind::Xeroc,
+		MonsterKind::Yeti, MonsterKind::Zombie,
 	];
 }
 
@@ -120,7 +219,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 18,
 		class: 100,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 0,
 		o_row: 0,
 		o_col: 0,
@@ -133,7 +231,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -147,7 +244,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 8,
 		class: 60,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 0,
 		o_row: 0,
 		o_col: 0,
@@ -160,7 +256,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -174,7 +269,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 16,
 		class: 85,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 10,
 		o_row: 0,
 		o_col: 0,
@@ -187,7 +281,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -201,7 +294,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 126,
 		class: 100,
 		identified: false,
-		stationary_damage: 0,
 		which_kind:
 		90,
 		o_row: 0,
@@ -215,7 +307,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -229,7 +320,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 7,
 		class: 65,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 0,
 		o_row: 0,
 		o_col: 0,
@@ -242,7 +332,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -256,7 +345,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 126,
 		class: 80,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 0,
 		o_row: 0,
 		o_col: 0,
@@ -269,7 +357,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -283,7 +370,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 126,
 		class: 85,
 		identified: false,
-		stationary_damage: 0,
 		which_kind:
 		10,
 		o_row: 0,
@@ -297,7 +383,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -311,7 +396,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 10,
 		class: 67,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 0,
 		o_row: 0,
 		o_col: 0,
@@ -324,7 +408,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -338,7 +421,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 11,
 		class: 68,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 0,
 		o_row: 0,
 		o_col: 0,
@@ -351,7 +433,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -365,7 +446,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 126,
 		class: 100,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 0,
 		o_row: 0,
 		o_col: 0,
@@ -378,7 +458,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -392,7 +471,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 6,
 		class: 60,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 0,
 		o_row: 0,
 		o_col: 0,
@@ -405,7 +483,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -419,7 +496,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 16,
 		class: 75,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 0,
 		o_row: 0,
 		o_col: 0,
@@ -432,7 +508,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -446,7 +521,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 126,
 		class: 85,
 		identified: false,
-		stationary_damage: 0,
 		which_kind:
 		25,
 		o_row: 0,
@@ -460,7 +534,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -474,7 +547,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 19,
 		class: 75,
 		identified: false,
-		stationary_damage: 0,
 		which_kind:
 		100,
 		o_row: 0,
@@ -488,7 +560,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -502,7 +573,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 13,
 		class: 70,
 		identified: false,
-		stationary_damage: 0,
 		which_kind:
 		10,
 		o_row: 0,
@@ -516,7 +586,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -530,7 +599,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 24,
 		class: 80,
 		identified: false,
-		stationary_damage: 0,
 		which_kind:
 		50,
 		o_row: 0,
@@ -544,7 +612,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -558,7 +625,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 17,
 		class: 78,
 		identified: false,
-		stationary_damage: 0,
 		which_kind:
 		20,
 		o_row: 0,
@@ -572,7 +638,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -586,7 +651,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 12,
 		class: 70,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 0,
 		o_row: 0,
 		o_col: 0,
@@ -599,7 +663,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -613,7 +676,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 9,
 		class: 50,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 0,
 		o_row: 0,
 		o_col: 0,
@@ -626,7 +688,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -640,7 +701,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 22,
 		class: 75,
 		identified: false,
-		stationary_damage: 0,
 		which_kind:
 		33,
 		o_row: 0,
@@ -654,7 +714,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -668,7 +727,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 26,
 		class: 85,
 		identified: false,
-		stationary_damage: 0,
 		which_kind:
 		33,
 		o_row: 0,
@@ -682,7 +740,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -696,7 +753,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 126,
 		class: 85,
 		identified: false,
-		stationary_damage: 0,
 		which_kind:
 		18,
 		o_row: 0,
@@ -710,7 +766,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -724,7 +779,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 23,
 		class: 75,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 0,
 		o_row: 0,
 		o_col: 0,
@@ -737,7 +791,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -751,7 +804,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 25,
 		class: 75,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 0,
 		o_row: 0,
 		o_col: 0,
@@ -764,7 +816,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -778,7 +829,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 20,
 		class: 80,
 		identified: false,
-		stationary_damage: 0,
 		which_kind:
 		20,
 		o_row: 0,
@@ -792,7 +842,6 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
@@ -806,7 +855,6 @@ const MONSTER_TABLE: [object; 26] = [
 		is_cursed: 14,
 		class: 69,
 		identified: false,
-		stationary_damage: 0,
 		which_kind: 0,
 		o_row: 0,
 		o_col: 0,
@@ -819,9 +867,15 @@ const MONSTER_TABLE: [object; 26] = [
 		tcol: 0,
 		hit_enchant: 0,
 		what_is: ObjectWhat::None,
-		disguise: 0,
 		picked_up: 0,
 		in_use_flags: 0,
 		next_object: 0 as *const obj as *mut obj,
 	},
 ];
+
+pub const MONSTERS: usize = 26;
+const MON_DAMAGE: [&'static str; MONSTERS] = [
+	"0d0", "1d3", "3d3/2d5", "4d6/4d9", "1d3", "5d5", "5d5/5d5", "1d3/1d2", "0d0", "3d10/4d5", "1d4", "0d0", "4d4/3d7",
+	"0d0", "1d6", "5d4", "3d5", "2d5", "1d3", "4d6/1d4", "4d10", "1d14/1d4", "2d8", "4d6", "3d6", "1d7",
+];
+

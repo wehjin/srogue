@@ -1,57 +1,56 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
 use libc::{c_char};
-use crate::monster;
-use crate::prelude::*;
 
-#[no_mangle]
-pub static mut fight_monster: *mut object = 0 as *const object as *mut object;
+pub static mut FIGHT_MONSTER: Option<u64> = None;
 pub static mut detect_monster: bool = false;
 pub static mut hit_message: String = String::new();
 
-pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool, depth: &RogueDepth) {
-	if !fight_monster.is_null() && monster != fight_monster {
-		fight_monster = 0 as *mut object;
+fn reduce_chance(chance: usize, reduction: isize) -> usize {
+	let reduction: usize = reduction.max(0) as usize;
+	if chance <= reduction { 0 } else { chance - reduction }
+}
+
+pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame: bool, depth: &RogueDepth) {
+	if let Some(monster_id) = FIGHT_MONSTER {
+		if monster.id() == monster_id {
+			FIGHT_MONSTER = None;
+		}
 	}
-	(*monster).trow = NO_ROOM;
+	monster.clear_target_spot();
 	let mut hit_chance: usize = if depth.cur >= (AMULET_LEVEL * 2) {
 		100
 	} else {
-		let hit_chance = (*monster).m_hit_chance();
-		hit_chance - (2 * rogue.exp + 2 * ring_exp - r_rings) as usize
+		reduce_chance(monster.m_hit_chance(), 2 * rogue.exp + 2 * ring_exp - r_rings)
 	};
 	if wizard {
 		hit_chance /= 2;
 	}
-
-	if fight_monster.is_null() {
+	if FIGHT_MONSTER.is_none() {
 		interrupted = true;
 	}
+
 	if other.is_some() {
-		hit_chance -= (rogue.exp + ring_exp - r_rings) as usize;
+		hit_chance = reduce_chance(hit_chance, rogue.exp + ring_exp - r_rings);
 	}
 
 	let base_monster_name = mon_name(&*monster);
 	let monster_name = if let Some(name) = other { name } else { &base_monster_name };
 	if !rand_percent(hit_chance) {
-		if fight_monster.is_null() {
+		if FIGHT_MONSTER.is_none() {
 			hit_message = format!("{}the {} misses", hit_message, monster_name);
 			message(&hit_message, 1);
 			hit_message.clear();
 		}
 		return;
 	}
-	if fight_monster.is_null() {
+	if FIGHT_MONSTER.is_none() {
 		hit_message = format!("{}the {} hit", hit_message, monster_name);
 		message(&hit_message, 1);
 		hit_message.clear();
 	}
-	let mut damage: isize = if (*monster).m_flags.stationary {
-		let stationary_damage = (*monster).stationary_damage();
-		(*monster).set_stationary_damage(stationary_damage + 1);
-		stationary_damage
-	} else {
-		let mut damage = get_damage(m_damage(&*monster), DamageEffect::Roll);
+	let mut damage: isize = if !monster.m_flags.stationary {
+		let mut damage = get_damage(monster.m_damage(), DamageEffect::Roll);
 		if other.is_some() && flame {
 			damage -= get_armor_class(&*rogue.armor);
 			if damage < 0 {
@@ -67,45 +66,46 @@ pub unsafe fn mon_hit(monster: *mut object, other: Option<&str>, flame: bool, de
 		};
 		damage -= minus;
 		damage
+	} else {
+		let original = monster.stationary_damage;
+		monster.stationary_damage += 1;
+		original
 	};
 	if wizard {
 		damage /= 3;
 	}
 	if damage > 0 {
-		rogue_damage(damage, &mut *monster, depth);
+		rogue_damage(damage, monster, depth);
 	}
-	if (*monster).m_flags.special_hit() {
-		special_hit(&mut *monster, depth);
-	}
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn rogue_hit(monster: *mut object, force_hit: bool, depth: &RogueDepth) {
-	if !monster.is_null() {
-		if check_imitator(&mut *monster) {
-			return;
-		}
-		let hit_chance = if force_hit { 100 } else { get_hit_chance(&mut *rogue.weapon) };
-		let hit_chance = if wizard { hit_chance * 2 } else { hit_chance };
-		if !rand_percent(hit_chance) {
-			if fight_monster.is_null() {
-				hit_message = "you miss  ".to_string();
-			}
-		} else {
-			let damage = get_weapon_damage(&*rogue.weapon);
-			let damage = if wizard { damage * 3 } else { damage };
-			if mon_damage(&mut *monster, damage as usize, depth) {
-				if fight_monster.is_null() {
-					hit_message = "you hit  ".to_string();
-				}
-			}
-		}
-		check_gold_seeker(&mut *monster);
-		wake_up(&mut *monster);
+	if monster.m_flags.special_hit() {
+		special_hit(monster, depth);
 	}
 }
 
-pub unsafe fn rogue_damage(d: isize, monster: &mut object, depth: &RogueDepth) {
+pub unsafe fn rogue_hit(monster: &mut monster::Monster, force_hit: bool, depth: &RogueDepth) {
+	if check_imitator(monster) {
+		return;
+	}
+	let hit_chance = if force_hit { 100 } else { get_hit_chance(&mut *rogue.weapon) };
+	let hit_chance = if wizard { hit_chance * 2 } else { hit_chance };
+	if !rand_percent(hit_chance) {
+		if FIGHT_MONSTER.is_none() {
+			hit_message = "you miss  ".to_string();
+		}
+	} else {
+		let damage = get_weapon_damage(&*rogue.weapon);
+		let damage = if wizard { damage * 3 } else { damage };
+		if mon_damage(monster, damage as usize, depth) {
+			if FIGHT_MONSTER.is_none() {
+				hit_message = "you hit  ".to_string();
+			}
+		}
+	}
+	clear_gold_seeker(monster);
+	monster.wake_up();
+}
+
+pub unsafe fn rogue_damage(d: isize, monster: &monster::Monster, depth: &RogueDepth) {
 	if d >= rogue.hp_current {
 		rogue.hp_current = 0;
 		print_stats(STAT_HP, depth.cur);
@@ -181,36 +181,32 @@ pub unsafe extern "C" fn damage_for_strength() -> i64 {
 	return 8 as i64;
 }
 
-pub unsafe fn mon_damage(monster: &mut object, damage: usize, depth: &RogueDepth) -> bool {
-	monster.set_hp_to_kill(monster.hp_to_kill() - damage as libc::c_short);
-	if monster.hp_to_kill() <= 0 {
-		let row = monster.row as i64;
-		let col = monster.col as i64;
+pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: usize, depth: &RogueDepth) -> bool {
+	monster.hp_to_kill -= damage as isize;
+	if monster.hp_to_kill <= 0 {
+		let row = monster.spot.row;
+		let col = monster.spot.col;
 		SpotFlag::Monster.clear(&mut dungeon[row as usize][col as usize]);
 		ncurses::mvaddch(row as i32, col as i32, get_dungeon_char(row, col));
 
-		fight_monster = 0 as *const object as *mut object;
+		FIGHT_MONSTER = None;
 		cough_up(monster, depth);
-		let mn = monster::mon_name(monster);
+		let mn = mon_name(monster);
 		hit_message = format!("{}defeated the {}", hit_message, mn);
 		message(&hit_message, 1);
 		hit_message.clear();
-		add_exp(monster.kill_exp, true, depth.cur);
-		take_from_pack(monster, &mut level_monsters);
-
+		add_exp(monster.kill_exp(), true, depth.cur);
 		if monster.m_flags.holds {
 			being_held = false;
 		}
-		free_object(monster);
+		MASH.remove_monster(monster.id());
 		return false;
 	}
 	return true;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn fight(to_the_death: bool, depth: &RogueDepth) {
-	let mut first_miss: libc::c_char = 1 as libc::c_char;
-	let mut monster: *mut object = 0 as *mut object;
+pub unsafe fn fight(to_the_death: bool, depth: &RogueDepth) {
+	let mut first_miss: bool = true;
 	let mut ch: char = 0 as char;
 	loop {
 		ch = rgetchar() as u8 as char;
@@ -218,13 +214,13 @@ pub unsafe extern "C" fn fight(to_the_death: bool, depth: &RogueDepth) {
 			break;
 		}
 		sound_bell();
-		if first_miss != 0 {
+		if first_miss {
 			message("direction?", 0);
-			first_miss = 0 as i64 as libc::c_char;
+			first_miss = false;
 		}
 	}
 	check_message();
-	if ch as u32 == '\u{1b}' as u32 {
+	if ch == CANCEL {
 		return;
 	}
 	let mut row = rogue.row;
@@ -233,31 +229,35 @@ pub unsafe extern "C" fn fight(to_the_death: bool, depth: &RogueDepth) {
 	let c = ncurses::mvinch(row as i32, col as i32);
 	{
 		let not_a_monster = (c as i64) < 'A' as i64 || c as i64 > 'Z' as i64;
-		let cannot_move = !can_move(rogue.row as i64, rogue.col as i64, row, col);
+		let cannot_move = !can_move(rogue.row, rogue.col, row, col);
 		if not_a_monster || cannot_move {
 			message("I see no monster there", 0);
 			return;
 		}
 	}
-	fight_monster = object_at(&level_monsters, row, col);
-	if fight_monster.is_null() {
+	FIGHT_MONSTER = MASH.monster_at_spot(row, col).map(|m| m.id());
+	if FIGHT_MONSTER.is_none() {
 		return;
 	}
-	let possible_damage = if !(*fight_monster).m_flags.stationary {
-		get_damage(m_damage(&*fight_monster), DamageEffect::None) * 2 / 3
-	} else {
-		(*fight_monster).stationary_damage() - 1
+	let possible_damage = {
+		let fight_id = FIGHT_MONSTER.expect("some fight-monster id");
+		let fight_monster = MASH.monster_with_id(fight_id).expect("fight monster");
+		if !fight_monster.m_flags.stationary {
+			get_damage(fight_monster.m_damage(), DamageEffect::None) * 2 / 3
+		} else {
+			fight_monster.stationary_damage - 1
+		}
 	};
-	while !fight_monster.is_null() {
+	while FIGHT_MONSTER.is_some() {
 		one_move_rogue(ch, false, depth);
 		if (!to_the_death && rogue.hp_current <= possible_damage)
 			|| interrupted
-			|| !Monster.is_set(dungeon[row as usize][col as usize]) {
-			fight_monster = 0 as *mut object;
+			|| !SpotFlag::Monster.is_set(dungeon[row as usize][col as usize]) {
+			FIGHT_MONSTER = None;
 		} else {
-			monster = object_at(&level_monsters, row, col);
-			if monster != fight_monster {
-				fight_monster = 0 as *mut object;
+			let monster_id = MASH.monster_at_spot(row, col).map(|m| m.id());
+			if monster_id != FIGHT_MONSTER {
+				FIGHT_MONSTER = None;
 			}
 		}
 	}
@@ -330,7 +330,20 @@ pub unsafe fn get_weapon_damage(weapon: &object) -> isize {
 mod safe;
 
 pub use safe::*;
+use crate::level::{add_exp, RogueDepth, SpotFlag};
+use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
+use crate::monster;
+use crate::monster::{MASH, mon_name};
+use crate::objects::{dungeon, get_armor_class, object, rogue};
+use crate::play::interrupted;
+use crate::prelude::{AMULET_LEVEL, DCOLS, DROWS, MIN_ROW, weapon_kind};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
-use crate::prelude::SpotFlag::Monster;
 use crate::prelude::stat_const::STAT_HP;
+use crate::r#move::{can_move, is_direction, one_move_rogue};
+use crate::random::rand_percent;
+use crate::ring::{add_strength, r_rings, ring_exp};
+use crate::room::get_dungeon_char;
+use crate::score::killed_by;
+use crate::spec_hit::{being_held, clear_gold_seeker, check_imitator, cough_up, special_hit};
+use crate::zap::wizard;

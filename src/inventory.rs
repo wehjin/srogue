@@ -129,7 +129,7 @@ pub unsafe fn inventory(pack: &object, filter: PackFilter) {
 				let what = obj.what_is;
 				if filter.includes(what) {
 					let close_char = if what == Armor && obj.is_protected != 0 { '}' } else { ')' };
-					let line = format!(" {}{} {}", obj.m_char() as u8 as char, close_char, get_desc(obj));
+					let line = format!(" {}{} {}", obj.ichar, close_char, get_desc(obj));
 					item_lines.push(line);
 				}
 			}

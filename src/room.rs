@@ -2,6 +2,7 @@
 
 use ncurses::{addch, chtype, mvaddch, mvinch};
 use serde::{Deserialize, Serialize};
+use crate::monster;
 use crate::prelude::*;
 use crate::prelude::DoorDirection::{Left, Right};
 use crate::prelude::object_what::ObjectWhat;
@@ -106,11 +107,10 @@ pub unsafe fn light_up_room(rn: i64) {
 		for i in ROOMS[rn as usize].top_row..=ROOMS[rn as usize].bottom_row {
 			for j in ROOMS[rn as usize].left_col..=ROOMS[rn as usize].right_col {
 				if Monster.is_set(dungeon[i as usize][j as usize]) {
-					let monster = object_at(&level_monsters, i, j);
-					if !monster.is_null() {
-						Monster.clear(&mut dungeon[(*monster).row as usize][(*monster).col as usize]);
-						(*monster).set_trail_char(get_dungeon_char((*monster).row, (*monster).col));
-						Monster.set(&mut dungeon[(*monster).row as usize][(*monster).col as usize]);
+					if let Some(monster) = MASH.monster_at_spot_mut(i, j) {
+						Monster.clear(&mut dungeon[monster.spot.row as usize][monster.spot.col as usize]);
+						monster.trail_char = get_dungeon_char(monster.spot.row, monster.spot.col);
+						Monster.set(&mut dungeon[monster.spot.row as usize][monster.spot.col as usize]);
 					}
 				}
 				mvaddch(i as i32, j as i32, get_dungeon_char(i, j));
@@ -218,6 +218,12 @@ pub fn get_mask_char(mask: ObjectWhat) -> char {
 	}
 }
 
+pub unsafe fn random_spot_with_flag(flags: Vec<SpotFlag>) -> DungeonSpot {
+	let mut row: i64 = 0;
+	let mut col: i64 = 0;
+	gr_row_col(&mut row, &mut col, flags);
+	DungeonSpot { row, col }
+}
 
 pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, spots: Vec<SpotFlag>) {
 	let mut r = 0;
@@ -384,9 +390,8 @@ pub unsafe fn draw_magic_map() {
 						addch(chtype::from(ch));
 					}
 					if Monster.is_set(s) {
-						let monster = object_at(&mut level_monsters, i as i64, j as i64);
-						if !monster.is_null() {
-							(*monster).set_trail_char(chtype::from(ch));
+						if let Some(monster) = MASH.monster_at_spot_mut(i as i64, j as i64) {
+							monster.trail_char = chtype::from(ch);
 						}
 					}
 				}
@@ -395,11 +400,11 @@ pub unsafe fn draw_magic_map() {
 	}
 }
 
-pub unsafe fn dr_course(mut monster: *mut object, entering: bool, row: i64, col: i64) {
-	(*monster).row = row;
-	(*monster).col = col;
+pub unsafe fn dr_course(monster: &mut monster::Monster, entering: bool, row: i64, col: i64) {
+	monster.spot.row = row;
+	monster.spot.col = col;
 	if mon_sees(monster, rogue.row, rogue.col) {
-		(*monster).trow = -1;
+		monster.clear_target_spot();
 		return;
 	}
 	let rn = get_opt_room_number(row, col);
@@ -413,9 +418,12 @@ pub unsafe fn dr_course(mut monster: *mut object, entering: bool, row: i64, col:
 			}
 			for k in 0..4 {
 				if ROOMS[rr].doors[k].oth_room == rn {
-					(*monster).trow = ROOMS[rr].doors[k].oth_row.expect("oth row");
-					(*monster).tcol = ROOMS[rr].doors[k].oth_col.expect("oth col");
-					if (*monster).trow == row && (*monster).tcol == col {
+					monster.set_target_spot(
+						ROOMS[rr].doors[k].oth_row.expect("oth row"),
+						ROOMS[rr].doors[k].oth_col.expect("oth col"),
+					);
+					let monster_target_spot = monster.target_spot.expect("target spot");
+					if monster_target_spot.is_at(row, col) {
 						continue;
 					}
 					return;
@@ -426,9 +434,8 @@ pub unsafe fn dr_course(mut monster: *mut object, entering: bool, row: i64, col:
 		let rn = rn.expect("rn");
 		for i in ROOMS[rn].top_row..=ROOMS[rn].bottom_row {
 			for j in ROOMS[rn].left_col..=ROOMS[rn].right_col {
-				if i != (*monster).row && j != (*monster).col && Door.is_set(dungeon[i as usize][j as usize]) {
-					(*monster).trow = i;
-					(*monster).tcol = j;
+				if i != monster.spot.row && j != monster.spot.col && Door.is_set(dungeon[i as usize][j as usize]) {
+					monster.set_target_spot(i, j);
 					return;
 				}
 			}
@@ -439,29 +446,27 @@ pub unsafe fn dr_course(mut monster: *mut object, entering: bool, row: i64, col:
 				if ROOMS[i].doors[j].oth_room == Some(rn) {
 					for k in 0..4usize {
 						if ROOMS[rn].doors[k].oth_room == Some(i) {
-							(*monster).trow = ROOMS[rn].doors[k].oth_row.expect("oth row");
-							(*monster).tcol = ROOMS[rn].doors[k].oth_col.expect("oth col");
+							monster.set_target_spot(
+								ROOMS[rn].doors[k].oth_row.expect("oth row"),
+								ROOMS[rn].doors[k].oth_col.expect("oth col"),
+							);
 							return;
 						}
 					}
 				}
 			}
 		}
-		(*monster).trow = -1;
+		monster.clear_target_spot();
 	} else {
 		//* exiting room */
-		match rn {
-			None => {
-				(*monster).trow = -1;
+		if let Some(rn) = rn {
+			if let Some((row, col)) = get_oth_room(rn as i64, row, col) {
+				monster.set_target_spot(row, col);
+			} else {
+				monster.clear_target_spot();
 			}
-			Some(rn) => {
-				if let Some((row, col)) = get_oth_room(rn as i64, row, col) {
-					(*monster).trow = row;
-					(*monster).tcol = col;
-				} else {
-					(*monster).trow = -1;
-				}
-			}
+		} else if let None = rn {
+			monster.clear_target_spot();
 		}
 	}
 }

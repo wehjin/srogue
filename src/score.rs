@@ -64,7 +64,7 @@ pub unsafe fn killed_by(ending: Ending, max_level: usize) {
 unsafe fn ending_string(ending: &Ending) -> String {
 	match ending {
 		&Ending::Monster(monster) => {
-			let name = mon_real_name(&monster);
+			let name = monster.name();
 			let article = if is_vowel(name.chars().nth(0).unwrap()) { "an" } else { "a" };
 			format!("Killed by {} {}", article, name)
 		}

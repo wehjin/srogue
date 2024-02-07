@@ -16,7 +16,9 @@ use crate::prelude::SpotFlag::{Floor, HorWall, Object, Stairs, Tunnel, VertWall}
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
 use crate::prelude::trap_kind::TrapKind::NoTrap;
 use crate::room::RoomType::Nothing;
+pub use spot::*;
 
+mod spot;
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
 pub struct RogueDepth {

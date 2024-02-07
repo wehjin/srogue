@@ -1,6 +1,9 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
 use ncurses::{chtype, mvaddch, mvinch, refresh};
+use rand::prelude::SliceRandom;
+use rand::thread_rng;
+use crate::monster;
 use crate::prelude::*;
 use crate::prelude::item_usage::{BEING_USED, BEING_WIELDED, BEING_WORN, NOT_USED, ON_EITHER_HAND};
 use crate::prelude::object_what::ObjectWhat::Wand;
@@ -42,16 +45,17 @@ pub unsafe fn throw(depth: &RogueDepth) {
 	} else if ((*weapon).in_use_flags & ON_EITHER_HAND) != 0 {
 		un_put_on(weapon, depth.cur);
 	}
-	let monster = get_thrown_at_monster(weapon, dir, &mut row, &mut col);
+	let monster_id = get_thrown_at_monster(weapon, dir, &mut row, &mut col);
 	mvaddch(rogue.row as i32, rogue.col as i32, chtype::from(rogue.fchar));
 	refresh();
 
 	if rogue_can_see(row, col) && (row != rogue.row || col != rogue.col) {
 		mvaddch(row as i32, col as i32, get_dungeon_char(row, col));
 	}
-	if !monster.is_null() {
-		wake_up(&mut *monster);
-		check_gold_seeker(&mut *monster);
+	if let Some(monster_id) = monster_id {
+		let monster = MASH.monster_with_id_mut(monster_id).expect("monster with id");
+		monster.wake_up();
+		clear_gold_seeker(&mut *monster);
 		if !throw_at_monster(&mut *monster, &mut *weapon, depth) {
 			flop_weapon(&mut *weapon, row, col);
 		}
@@ -61,7 +65,7 @@ pub unsafe fn throw(depth: &RogueDepth) {
 	vanish(&mut *weapon, true, &mut rogue.pack, depth);
 }
 
-unsafe fn throw_at_monster(monster: &mut obj, weapon: &mut obj, depth: &RogueDepth) -> bool {
+unsafe fn throw_at_monster(monster: &mut monster::Monster, weapon: &mut obj, depth: &RogueDepth) -> bool {
 	let mut hit_chance = get_hit_chance(weapon);
 	let mut damage = get_weapon_damage(weapon);
 	if weapon.which_kind == ARROW && rogue_weapon_is_bow() {
@@ -97,7 +101,7 @@ unsafe fn rogue_weapon_is_bow() -> bool {
 }
 
 
-pub unsafe fn get_thrown_at_monster(obj: *mut object, dir: char, row: &mut i64, col: &mut i64) -> *mut object {
+pub unsafe fn get_thrown_at_monster(obj: *mut object, dir: char, row: &mut i64, col: &mut i64) -> Option<u64> {
 	let mut orow = *row;
 	let mut ocol = *col;
 	let ch = get_mask_char((*obj).what_is);
@@ -107,7 +111,7 @@ pub unsafe fn get_thrown_at_monster(obj: *mut object, dir: char, row: &mut i64, 
 			|| (SpotFlag::is_any_set(&vec![HorWall, VertWall, Hidden], dungeon[*row as usize][*col as usize]) && !Trap.is_set(dungeon[*row as usize][*col as usize])) {
 			*row = orow;
 			*col = ocol;
-			return 0 as *mut object;
+			return None;
 		}
 		if i != 0 && rogue_can_see(orow, ocol) {
 			mvaddch(orow as i32, ocol as i32, get_dungeon_char(orow, ocol));
@@ -122,36 +126,37 @@ pub unsafe fn get_thrown_at_monster(obj: *mut object, dir: char, row: &mut i64, 
 		ocol = *col;
 		if Monster.is_set(dungeon[*row as usize][*col as usize]) {
 			if !imitating(*row, *col) {
-				return object_at(&level_monsters, *row, *col);
+				return MASH.monster_at_spot(*row, *col).map(|m| m.id());
 			}
 		}
 		if Tunnel.is_set(dungeon[*row as usize][*col as usize]) {
 			i += 2;
 		}
 	}
-	return 0 as *mut object;
+	return None;
 }
 
-unsafe fn flop_weapon(weapon: &mut obj, row: i64, col: i64) {
-	let mut i = 0;
+unsafe fn flop_weapon(weapon: &mut obj, mut row: i64, mut col: i64) {
 	let mut found = false;
-	let mut row = row;
-	let mut col = col;
-	while i < 9 && SpotFlag::are_others_set(&vec![Floor, Tunnel, Door, Monster], dungeon[row as usize][col as usize]) {
-		let (new_row, new_col) = rand_around(i, row, col);
-		i += 1;
-		row = new_row;
-		col = new_col;
-		if row > (DROWS - 2) as i64 || row < MIN_ROW || col > (DCOLS - 1) as i64 || col < 0
-			|| SpotFlag::is_nothing(dungeon[row as usize][col as usize])
-			|| SpotFlag::are_others_set(&vec![Floor, Tunnel, Door, Monster], dungeon[row as usize][col as usize]) {
+	let mut walk = RandomWalk::new(row, col);
+	for _ in 0..9 {
+		if SpotFlag::are_others_set(&vec![Floor, Tunnel, Door, Monster], dungeon[walk.row as usize][walk.col as usize]) {
+			break;
+		}
+		walk.step();
+		let spot = walk.to_spot();
+		if spot.is_out_of_bounds()
+			|| SpotFlag::is_nothing(dungeon[spot.row as usize][spot.col as usize])
+			|| SpotFlag::are_others_set(&vec![Floor, Tunnel, Door, Monster], dungeon[spot.row as usize][spot.col as usize]) {
 			continue;
 		}
+		row = spot.row;
+		col = spot.col;
 		found = true;
 		break;
 	}
 
-	if found || i == 0 {
+	if found || walk.index == 0 {
 		let new_weapon = alloc_object();
 		*new_weapon = weapon.clone();
 		(*new_weapon).in_use_flags = NOT_USED;
@@ -164,9 +169,8 @@ unsafe fn flop_weapon(weapon: &mut obj, row: i64, col: i64) {
 			let dch = get_dungeon_char(row, col);
 			if mon {
 				let mch = mvinch(row as i32, col as i32) as u8 as char;
-				let monster = object_at(&level_monsters, row, col);
-				if !monster.is_null() {
-					(*monster).set_trail_char(dch);
+				if let Some(monster) = MASH.monster_at_spot_mut(row, col) {
+					monster.trail_char = dch;
 				}
 				if (mch < 'A') || (mch > 'Z') {
 					mvaddch(row as i32, col as i32, dch);
@@ -259,22 +263,28 @@ impl Move {
 	}
 }
 
-pub unsafe fn rand_around(i: u8, r: i64, c: i64) -> (i64, i64) {
-	static mut moves: [Move; 9] = [Left, Up, DownLeft, UpLeft, Right, Down, UpRight, Same, DownRight];
-	static mut row: usize = 0;
-	static mut col: usize = 0;
+pub struct RandomWalk {
+	pub row: i64,
+	pub col: i64,
+	moves: [Move; 9],
+	pub index: usize,
+}
 
-	if i == 0 {
-		row = r as usize;
-		col = c as usize;
-		let o = get_rand(1, 8);
-		for _j in 0..5 {
-			let x = get_rand(0, 8) as usize;
-			let y = (x + o) % 9;
-			let t = moves[x];
-			moves[x] = moves[y];
-			moves[y] = t;
+impl RandomWalk {
+	pub fn new(row: i64, col: i64) -> Self {
+		let mut moves: [Move; 9] = [Left, Up, DownLeft, UpLeft, Right, Down, UpRight, Same, DownRight];
+		moves.shuffle(&mut thread_rng());
+		RandomWalk { row, col, moves, index: 0 }
+	}
+	pub fn step(&mut self) {
+		if self.index < self.moves.len() {
+			let (row, col) = self.moves[self.index].apply(self.row, self.col);
+			self.row = row;
+			self.col = col;
+			self.index += 1;
 		}
 	}
-	moves[i as usize].apply(r, c)
+	pub fn to_spot(&self) -> DungeonSpot {
+		DungeonSpot { row: self.row, col: self.col }
+	}
 }

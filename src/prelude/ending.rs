@@ -1,4 +1,4 @@
-use crate::objects::object;
+use crate::monster;
 
 const HYPOTHERMIA: usize = 1;
 const STARVATION: usize = 2;
@@ -9,7 +9,7 @@ const WIN: usize = 5;
 
 #[derive(Copy, Clone)]
 pub enum Ending<'a> {
-	Monster(&'a object),
+	Monster(&'a monster::Monster),
 	Hypothermia,
 	Starvation,
 	PoisonDart,

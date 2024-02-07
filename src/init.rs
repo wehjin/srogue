@@ -79,7 +79,7 @@ pub unsafe fn init() -> (GameState, bool) {
 	get_wand_and_ring_materials();
 	make_scroll_titles();
 	level_objects.next_object = 0 as *mut obj;
-	level_monsters.next_object = 0 as *mut obj;
+	MASH.clear();
 	player_init();
 	party_counter = get_rand(1, 10);
 	ring_stats(false, game.depth.cur);
