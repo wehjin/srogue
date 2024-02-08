@@ -39,7 +39,6 @@ pub unsafe fn save_into_file(save_path: &str, game: &GameState) {
 		return;
 	}
 	md_ignore_signals();
-	xxx(true);
 	let save_data = SaveData::read_from_statics(file_id, game);
 	let json = serde_json::to_string_pretty(&save_data).expect("serialize data");
 	let write_failed = if let Err(_) = file.write(json.as_bytes()) {
@@ -79,7 +78,6 @@ pub unsafe fn restore(file_path: &str, game: &mut GameState) {
 		clean_up("file has link");
 		unreachable!("post clean up")
 	}
-	xxx(true);
 	let save_data = match data::from_file(file_path) {
 		Ok(result) => result,
 		Err(e) => {

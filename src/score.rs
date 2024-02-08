@@ -144,7 +144,6 @@ pub unsafe fn put_scores(ending: Option<Ending>, max_level: usize) {
 		})
 	});
 	turn_into_user();
-	xxx(true);
 
 	let mut score_only = score_only();
 	let mut scores: Vec<String> = Vec::new();
@@ -371,35 +370,6 @@ pub fn name_cmp(s1: &str, s2: &str) -> Ordering {
 		&s1[..]
 	};
 	pre_colon.cmp(s2)
-}
-
-
-pub fn xxxx<const N: usize>(buf: &mut [u8; N], n: usize) {
-	for i in 0..n {
-		/* It does not matter if accuracy is lost during this assignment */
-		let c = xxx(false) as u8;
-		buf[i] ^= c;
-	}
-}
-
-pub fn xxx(reset: bool) -> isize {
-	static FS: RwLock<(isize, isize)> = RwLock::new((0, 0));
-	if reset {
-		let mut write = FS.write().unwrap();
-		*write = (37, 7);
-		0
-	} else {
-		let (f, s) = {
-			let read = FS.read().unwrap();
-			*read
-		};
-		let r = (f * s + 9337) % 8887;
-		{
-			let mut write = FS.write().unwrap();
-			*write = (s, r);
-		}
-		r
-	}
 }
 
 const START_OF_NAME: usize = 15;

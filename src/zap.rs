@@ -179,7 +179,6 @@ pub unsafe fn wizardize() {
 	} else {
 		let line = get_input_line::<String>("wizard's password:", None, None, false, false);
 		if !line.is_empty() {
-			xxx(true);
 			if line == "\u{A7}DV\u{BA}M\u{A3}\u{17}" {
 				wizard = true;
 				set_score_only(true);
