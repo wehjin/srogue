@@ -5,8 +5,8 @@ use crate::level::{cur_room, Level, party_room, RogueDepth};
 use crate::machdep::{get_current_time, RogueTime};
 use crate::monster::{Fighter, MonsterMash};
 use crate::objects::{dungeon, empty_obj, foods, id, obj, party_counter, SaveObj};
-use crate::prelude::{bear_trap, being_held, blind, confused, DCOLS, detect_monster, DROWS, GameState, halluc, haste_self, levitate, m_moves, see_invisible, Trap, wizard};
-use crate::save::{hunger_str, id_potions, id_rings, id_scrolls, id_wands, IS_WOOD, MASH, level_objects, rogue, TRAPS};
+use crate::prelude::{bear_trap, being_held, blind, confused, DCOLS, detect_monster, DROWS, GameState, halluc, haste_self, levitate, m_moves, see_invisible, wizard};
+use crate::save::{hunger_str, id_potions, id_rings, id_scrolls, id_wands, IS_WOOD, MASH, level_objects, rogue};
 use crate::settings;
 use crate::settings::{login_name, score_only};
 
@@ -147,7 +147,6 @@ pub struct SaveData {
 	pub id_scrolls: SaveIdTable,
 	pub id_wands: SaveIdTable,
 	pub id_rings: SaveIdTable,
-	pub traps: Vec<Trap>,
 	pub is_wood: Vec<bool>,
 	pub cur_room: i64,
 	pub level: Level,
@@ -185,7 +184,6 @@ impl SaveData {
 			id_scrolls: SaveIdTable::from_array(&id_scrolls),
 			id_wands: SaveIdTable::from_array(&id_wands),
 			id_rings: SaveIdTable::from_array(&id_rings),
-			traps: TRAPS.to_vec(),
 			is_wood: IS_WOOD.to_vec(),
 			cur_room,
 			level: game.level.clone(),
@@ -219,7 +217,6 @@ impl SaveData {
 		load_array(&mut id_scrolls, &self.id_scrolls.ids);
 		load_array(&mut id_wands, &self.id_wands.ids);
 		load_array(&mut id_rings, &self.id_rings.ids);
-		load_array(&mut TRAPS, &self.traps);
 		load_array(&mut IS_WOOD, &self.is_wood);
 		cur_room = self.cur_room;
 		being_held = self.being_held;

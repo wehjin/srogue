@@ -40,6 +40,10 @@ pub enum RoomType {
 	Cross,
 }
 
+impl Default for RoomType {
+	fn default() -> Self { Nothing }
+}
+
 impl RoomType {
 	pub fn is_nothing(&self) -> bool {
 		*self == RoomType::Nothing
@@ -92,7 +96,7 @@ impl DoorDirection {
 	}
 }
 
-#[derive(Copy, Clone, Serialize, Deserialize)]
+#[derive(Copy, Clone, Serialize, Deserialize, Default)]
 pub struct Room {
 	pub bottom_row: i64,
 	pub right_col: i64,

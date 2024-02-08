@@ -104,7 +104,7 @@ pub unsafe fn play_level(game: &mut GameState) {
 				inv_rings();
 			}
 			'^' => {
-				id_trap();
+				id_trap(&game.level);
 			}
 			'I' => {
 				single_inv(None);

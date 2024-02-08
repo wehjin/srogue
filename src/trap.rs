@@ -26,6 +26,10 @@ pub mod trap_kind {
 		RustTrap,
 	}
 
+	impl Default for TrapKind {
+		fn default() -> Self { NoTrap }
+	}
+
 	impl TrapKind {
 		pub fn name(&self) -> &'static str {
 			match self {
@@ -46,15 +50,23 @@ pub mod trap_kind {
 	}
 }
 
-#[derive(Copy, Clone, Serialize, Deserialize)]
+#[derive(Copy, Clone, Serialize, Deserialize, Default)]
 pub struct Trap {
 	pub trap_type: TrapKind,
 	pub trap_row: usize,
 	pub trap_col: usize,
 }
 
-pub const MAX_TRAP: usize = 10;
-pub static mut TRAPS: [Trap; MAX_TRAP] = [Trap { trap_type: NoTrap, trap_row: 0, trap_col: 0 }; MAX_TRAP];
+impl Trap {
+	pub fn clear(&mut self) {
+		self.trap_type = NoTrap;
+	}
+	pub fn set_spot(&mut self, row: usize, col: usize) {
+		self.trap_row = row;
+		self.trap_col = col;
+	}
+}
+
 pub static mut trap_door: bool = false;
 pub static mut bear_trap: usize = 0;
 
@@ -70,20 +82,20 @@ pub fn trap_message(trap: TrapKind) -> &'static str {
 	}
 }
 
-pub unsafe fn trap_at(row: usize, col: usize) -> TrapKind {
+pub unsafe fn trap_at(row: usize, col: usize, level: &Level) -> TrapKind {
 	for i in 0..MAX_TRAP {
-		if TRAPS[i].trap_type != NoTrap {
+		if level.traps[i].trap_type != NoTrap {
 			break;
 		}
-		if TRAPS[i].trap_row == row && TRAPS[i].trap_col == col {
-			return TRAPS[i].trap_type;
+		if level.traps[i].trap_row == row && level.traps[i].trap_col == col {
+			return level.traps[i].trap_type;
 		}
 	}
 	return NoTrap;
 }
 
 pub unsafe fn trap_player(row: usize, col: usize, depth: &RogueDepth, level: &Level) {
-	let t = trap_at(row, col);
+	let t = trap_at(row, col, level);
 	if t == NoTrap {
 		return;
 	}
@@ -131,7 +143,7 @@ pub unsafe fn trap_player(row: usize, col: usize, depth: &RogueDepth, level: &Le
 	}
 }
 
-pub unsafe fn add_traps(cur_level: usize, level: &Level) {
+pub unsafe fn add_traps(cur_level: usize, level: &mut Level) {
 	let n: usize;
 	if cur_level <= 2 {
 		n = 0;
@@ -149,7 +161,7 @@ pub unsafe fn add_traps(cur_level: usize, level: &Level) {
 		n = get_rand(5, MAX_TRAP);
 	}
 	for i in 0..n {
-		TRAPS[i].trap_type = TrapKind::random();
+		level.traps[i].trap_type = TrapKind::random();
 		let (row, col) = if i == 0 && party_room.is_some() {
 			let cur_party_room = party_room.expect("party room is some");
 			let mut row: usize;
@@ -179,14 +191,13 @@ pub unsafe fn add_traps(cur_level: usize, level: &Level) {
 			gr_row_col(&mut row, &mut col, vec![Floor, Monster], level);
 			(row as usize, col as usize)
 		};
-		TRAPS[i].trap_row = row;
-		TRAPS[i].trap_col = col;
+		level.traps[i].set_spot(row, col);
 		SpotFlag::Trap.set(&mut dungeon[row][col]);
 		Hidden.set(&mut dungeon[row][col]);
 	}
 }
 
-pub unsafe fn id_trap() {
+pub unsafe fn id_trap(level: &Level) {
 	message("direction? ", 0);
 	let mut dir: char;
 	loop {
@@ -205,7 +216,7 @@ pub unsafe fn id_trap() {
 	let mut col = rogue.col;
 	get_dir_rc(dir, &mut row, &mut col, false);
 	if SpotFlag::Trap.is_set(dungeon[row as usize][col as usize]) && !Hidden.is_set(dungeon[row as usize][col as usize]) {
-		let t = trap_at(row as usize, col as usize);
+		let t = trap_at(row as usize, col as usize, level);
 		message(t.name(), 0);
 	} else {
 		message("no trap there", 0);
@@ -257,7 +268,7 @@ pub unsafe fn search(n: usize, is_auto: bool, depth: &RogueDepth, level: &Level)
 						}
 						shown += 1;
 						if SpotFlag::Trap.is_set(dungeon[row as usize][col as usize]) {
-							let t = trap_at(row as usize, col as usize);
+							let t = trap_at(row as usize, col as usize, level);
 							message(t.name(), 1);
 						}
 					}

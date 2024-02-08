@@ -80,28 +80,27 @@ pub fn shuffled_rns() -> [usize; MAX_ROOM] {
 }
 
 pub const MAX_ROOM: usize = 9;
+pub const MAX_TRAP: usize = 10;
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
 pub struct Level {
 	pub rooms: [Room; MAX_ROOM],
+	pub traps: [Trap; MAX_TRAP],
 }
 
 impl Level {
 	pub fn new() -> Self {
 		Level {
-			rooms: [Room {
-				bottom_row: 0,
-				right_col: 0,
-				left_col: 0,
-				top_row: 0,
-				doors: [dr { oth_room: None, oth_row: None, oth_col: None, door_row: 0, door_col: 0 }; 4],
-				room_type: RoomType::Nothing,
-			}; MAX_ROOM],
+			rooms: [Room::default(); MAX_ROOM],
+			traps: [Trap::default(); MAX_TRAP],
 		}
 	}
 	pub fn clear(&mut self) {
 		for rn in 0..MAX_ROOM {
 			self.rooms[rn].clear();
+		}
+		for i in 0..MAX_TRAP {
+			self.traps[i].clear();
 		}
 	}
 }
@@ -211,7 +210,7 @@ pub unsafe fn make_room(rn: i64, r1: i64, r2: i64, r3: i64, level: &mut Level) {
 				} else if !top_border && !bottom_border && (left_border || right_border) {
 					VertWall as c_ushort
 				} else {
-					SpotFlag::Floor as c_ushort
+					Floor as c_ushort
 				};
 				dungeon[i as usize][j as usize] = ch;
 			}
@@ -247,9 +246,6 @@ pub unsafe fn connect_rooms(room1: usize, room2: usize, level_depth: usize, leve
 
 pub unsafe fn clear_level(level: &mut Level) {
 	level.clear();
-	for i in 0..MAX_TRAP {
-		TRAPS[i].trap_type = NoTrap;
-	}
 	for i in 0..DROWS {
 		for j in 0..DCOLS {
 			SpotFlag::set_nothing(&mut dungeon[i][j]);
