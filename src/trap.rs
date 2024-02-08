@@ -53,10 +53,8 @@ pub struct tr {
 	pub trap_col: usize,
 }
 
-pub type trap = tr;
-
 pub const MAX_TRAP: usize = 10;
-pub static mut TRAPS: [trap; MAX_TRAP] = [tr { trap_type: NoTrap, trap_row: 0, trap_col: 0 }; MAX_TRAP];
+pub static mut TRAPS: [tr; MAX_TRAP] = [tr { trap_type: NoTrap, trap_row: 0, trap_col: 0 }; MAX_TRAP];
 pub static mut trap_door: bool = false;
 pub static mut bear_trap: usize = 0;
 

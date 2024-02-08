@@ -6,6 +6,7 @@ use crate::monster;
 use crate::prelude::*;
 use crate::prelude::DoorDirection::{Left, Right};
 use crate::prelude::object_what::ObjectWhat;
+use crate::prelude::RoomType::Nothing;
 use crate::prelude::SpotFlag::{Door, Floor, Hidden, HorWall, Monster, Object, Stairs, Trap, Tunnel, VertWall};
 use crate::room::DoorDirection::{Up, Down};
 use crate::room::room_visitor::RoomVisitor;
@@ -102,6 +103,12 @@ pub struct Room {
 }
 
 impl Room {
+	pub fn clear(&mut self) {
+		self.room_type = Nothing;
+		for dn in 0..4 {
+			self.doors[dn].oth_room = None;
+		}
+	}
 	pub fn contains_spot(&self, row: i64, col: i64) -> bool {
 		let below_top_wall = row >= self.top_row;
 		let above_bottom_wall = row <= self.bottom_row;

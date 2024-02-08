@@ -99,6 +99,11 @@ impl Level {
 			}; MAX_ROOM],
 		}
 	}
+	pub fn clear(&mut self) {
+		for rn in 0..MAX_ROOM {
+			self.rooms[rn].clear();
+		}
+	}
 }
 
 pub unsafe fn make_level(level_depth: usize, level: &mut Level) {
@@ -241,12 +246,7 @@ pub unsafe fn connect_rooms(room1: usize, room2: usize, level_depth: usize, leve
 }
 
 pub unsafe fn clear_level(level: &mut Level) {
-	for i in 0..MAX_ROOM {
-		level.rooms[i].room_type = Nothing;
-		for j in 0..4 {
-			level.rooms[i].doors[j].oth_room = None;
-		}
-	}
+	level.clear();
 	for i in 0..MAX_TRAP {
 		TRAPS[i].trap_type = NoTrap;
 	}
