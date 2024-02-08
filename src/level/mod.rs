@@ -16,7 +16,6 @@ use crate::score::win;
 use crate::prelude::*;
 use crate::prelude::SpotFlag::{Floor, HorWall, Object, Stairs, Tunnel, VertWall};
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
-use crate::prelude::trap_kind::TrapKind::NoTrap;
 use crate::room::RoomType::Nothing;
 pub use spot::*;
 
@@ -81,6 +80,12 @@ pub fn shuffled_rns() -> [usize; MAX_ROOM] {
 
 pub const MAX_ROOM: usize = 9;
 pub const MAX_TRAP: usize = 10;
+pub const DCOLS: usize = 80;
+pub const DROWS: usize = 24;
+
+pub type DungeonCell = u16;
+
+pub static mut DUNGEON: [[DungeonCell; DCOLS]; DROWS] = [[0; DCOLS]; DROWS];
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
 pub struct Level {

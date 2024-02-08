@@ -330,11 +330,11 @@ pub unsafe fn get_weapon_damage(weapon: &object) -> isize {
 mod safe;
 
 pub use safe::*;
-use crate::level::{add_exp, Level, RogueDepth, SpotFlag};
+use crate::level::{add_exp, DUNGEON, Level, RogueDepth, SpotFlag};
 use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
 use crate::monster;
 use crate::monster::{MASH, mon_name};
-use crate::objects::{DUNGEON, get_armor_class, object, rogue};
+use crate::objects::{get_armor_class, object, rogue};
 use crate::play::interrupted;
 use crate::prelude::{AMULET_LEVEL, DCOLS, DROWS, MIN_ROW, weapon_kind};
 use crate::prelude::ending::Ending;

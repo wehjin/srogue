@@ -198,9 +198,6 @@ impl obj {
 pub type object = obj;
 
 pub static mut level_objects: object = empty_obj();
-pub const DCOLS: usize = 80;
-pub const DROWS: usize = 24;
-pub static mut DUNGEON: [[u16; DCOLS]; DROWS] = [[0; DCOLS]; DROWS];
 pub static mut foods: i16 = 0;
 pub static mut party_counter: usize = 0;
 pub static mut free_list: *mut object = 0 as *mut object;
