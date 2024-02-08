@@ -99,7 +99,7 @@ pub unsafe fn trap_player(row: usize, col: usize, depth: &RogueDepth, level: &Le
 	if t == NoTrap {
 		return;
 	}
-	Hidden.clear(&mut dungeon[row][col]);
+	Hidden.clear(&mut DUNGEON[row][col]);
 	if rand_percent((rogue.exp + ring_exp) as usize) {
 		message("the trap failed", 1);
 		return;
@@ -171,7 +171,7 @@ pub unsafe fn add_traps(cur_level: usize, level: &mut Level) {
 				row = get_rand((level.rooms[cur_party_room].top_row + 1) as usize, (level.rooms[cur_party_room].bottom_row - 1) as usize);
 				col = get_rand((level.rooms[cur_party_room].left_col + 1) as usize, (level.rooms[cur_party_room].right_col - 1) as usize);
 				tries += 1;
-				let try_again = (SpotFlag::is_any_set(&vec![Object, Stairs, SpotFlag::Trap, Tunnel], dungeon[row][col]) || SpotFlag::is_nothing(dungeon[row][col]))
+				let try_again = (SpotFlag::is_any_set(&vec![Object, Stairs, SpotFlag::Trap, Tunnel], DUNGEON[row][col]) || SpotFlag::is_nothing(DUNGEON[row][col]))
 					&& tries < 15;
 				if !try_again {
 					break;
@@ -192,8 +192,8 @@ pub unsafe fn add_traps(cur_level: usize, level: &mut Level) {
 			(row as usize, col as usize)
 		};
 		level.traps[i].set_spot(row, col);
-		SpotFlag::Trap.set(&mut dungeon[row][col]);
-		Hidden.set(&mut dungeon[row][col]);
+		SpotFlag::Trap.set(&mut DUNGEON[row][col]);
+		Hidden.set(&mut DUNGEON[row][col]);
 	}
 }
 
@@ -215,7 +215,7 @@ pub unsafe fn id_trap(level: &Level) {
 	let mut row = rogue.row;
 	let mut col = rogue.col;
 	get_dir_rc(dir, &mut row, &mut col, false);
-	if SpotFlag::Trap.is_set(dungeon[row as usize][col as usize]) && !Hidden.is_set(dungeon[row as usize][col as usize]) {
+	if SpotFlag::Trap.is_set(DUNGEON[row as usize][col as usize]) && !Hidden.is_set(DUNGEON[row as usize][col as usize]) {
 		let t = trap_at(row as usize, col as usize, level);
 		message(t.name(), 0);
 	} else {
@@ -227,7 +227,7 @@ pub unsafe fn id_trap(level: &Level) {
 pub unsafe fn show_traps() {
 	for i in 0..DROWS {
 		for j in 0..DCOLS {
-			if SpotFlag::Trap.is_set(dungeon[i][j]) {
+			if SpotFlag::Trap.is_set(DUNGEON[i][j]) {
 				mvaddch(i as i32, j as i32, chtype::from('^'));
 			}
 		}
@@ -245,7 +245,7 @@ pub unsafe fn search(n: usize, is_auto: bool, depth: &RogueDepth, level: &Level)
 			if is_off_screen(row, col) {
 				continue;
 			}
-			if Hidden.is_set(dungeon[row as usize][col as usize]) {
+			if Hidden.is_set(DUNGEON[row as usize][col as usize]) {
 				found += 1;
 			}
 		}
@@ -260,14 +260,14 @@ pub unsafe fn search(n: usize, is_auto: bool, depth: &RogueDepth, level: &Level)
 				if is_off_screen(row, col) {
 					continue;
 				}
-				if Hidden.is_set(dungeon[row as usize][col as usize]) {
+				if Hidden.is_set(DUNGEON[row as usize][col as usize]) {
 					if rand_percent(17 + (rogue.exp + ring_exp) as usize) {
-						Hidden.clear(&mut dungeon[row as usize][col as usize]);
+						Hidden.clear(&mut DUNGEON[row as usize][col as usize]);
 						if not_blind() && no_rogue(row, col) {
 							mvaddch(row as i32, col as i32, get_dungeon_char(row, col));
 						}
 						shown += 1;
-						if SpotFlag::Trap.is_set(dungeon[row as usize][col as usize]) {
+						if SpotFlag::Trap.is_set(DUNGEON[row as usize][col as usize]) {
 							let t = trap_at(row as usize, col as usize, level);
 							message(t.name(), 1);
 						}

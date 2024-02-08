@@ -57,12 +57,12 @@ pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64) -> Opt
 		let ocol = *col;
 		get_dir_rc(dir, row, col, false);
 		if (*row == orow && *col == ocol)
-			|| HorWall.is_set(dungeon[*row as usize][*col as usize])
-			|| VertWall.is_set(dungeon[*row as usize][*col as usize])
-			|| Nothing.is_set(dungeon[*row as usize][*col as usize]) {
+			|| HorWall.is_set(DUNGEON[*row as usize][*col as usize])
+			|| VertWall.is_set(DUNGEON[*row as usize][*col as usize])
+			|| Nothing.is_set(DUNGEON[*row as usize][*col as usize]) {
 			return None;
 		}
-		if Monster.is_set(dungeon[*row as usize][*col as usize]) {
+		if Monster.is_set(DUNGEON[*row as usize][*col as usize]) {
 			if !imitating(*row, *col) {
 				return MASH.monster_at_spot(*row, *col).map(|m| m.id());
 			}
@@ -160,11 +160,11 @@ unsafe fn tele_away(monster: &mut monster::Monster, level: &Level) {
 	};
 
 	mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.trail_char);
-	Monster.clear(&mut dungeon[monster.spot.row as usize][monster.spot.col as usize]);
+	Monster.clear(&mut DUNGEON[monster.spot.row as usize][monster.spot.col as usize]);
 
 	monster.spot.row = row;
 	monster.spot.col = col;
-	Monster.set(&mut dungeon[row as usize][col as usize]);
+	Monster.set(&mut DUNGEON[row as usize][col as usize]);
 	monster.trail_char = mvinch(row as i32, col as i32);
 
 	if detect_monster || rogue_can_see(row, col, level) {

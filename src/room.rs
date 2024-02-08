@@ -132,11 +132,11 @@ pub unsafe fn light_up_room(rn: i64, level: &Level) {
 	if blind == 0 {
 		for i in level.rooms[rn as usize].top_row..=level.rooms[rn as usize].bottom_row {
 			for j in level.rooms[rn as usize].left_col..=level.rooms[rn as usize].right_col {
-				if Monster.is_set(dungeon[i as usize][j as usize]) {
+				if Monster.is_set(DUNGEON[i as usize][j as usize]) {
 					if let Some(monster) = MASH.monster_at_spot_mut(i, j) {
-						Monster.clear(&mut dungeon[monster.spot.row as usize][monster.spot.col as usize]);
+						Monster.clear(&mut DUNGEON[monster.spot.row as usize][monster.spot.col as usize]);
 						monster.trail_char = get_dungeon_char(monster.spot.row, monster.spot.col);
-						Monster.set(&mut dungeon[monster.spot.row as usize][monster.spot.col as usize]);
+						Monster.set(&mut DUNGEON[monster.spot.row as usize][monster.spot.col as usize]);
 					}
 				}
 				mvaddch(i as i32, j as i32, get_dungeon_char(i, j));
@@ -169,12 +169,12 @@ pub unsafe fn darken_room(rn: i64, level: &Level) {
 		for j in (level.rooms[rn as usize].left_col as usize + 1)..level.rooms[rn as usize].right_col as usize {
 			if blind != 0 {
 				mvaddch(i as i32, j as i32, chtype::from(' '));
-			} else if !SpotFlag::is_any_set(&vec![Object, Stairs], dungeon[i][j])
-				&& !(detect_monster && Monster.is_set(dungeon[i][j])) {
+			} else if !SpotFlag::is_any_set(&vec![Object, Stairs], DUNGEON[i][j])
+				&& !(detect_monster && Monster.is_set(DUNGEON[i][j])) {
 				if !imitating(i as i64, j as i64) {
 					mvaddch(i as i32, j as i32, chtype::from(' '));
 				}
-				if Trap.is_set(dungeon[i][j]) && !Hidden.is_set(dungeon[i][j]) {
+				if Trap.is_set(DUNGEON[i][j]) && !Hidden.is_set(DUNGEON[i][j]) {
 					mvaddch(i as i32, j as i32, chtype::from('^'));
 				}
 			}
@@ -183,7 +183,7 @@ pub unsafe fn darken_room(rn: i64, level: &Level) {
 }
 
 pub unsafe fn get_dungeon_char(row: i64, col: i64) -> chtype {
-	let mask = dungeon[row as usize][col as usize];
+	let mask = DUNGEON[row as usize][col as usize];
 	if Monster.is_set(mask) {
 		return gmc_row_col(row, col);
 	}
@@ -215,8 +215,8 @@ pub unsafe fn get_dungeon_char(row: i64, col: i64) -> chtype {
 		}
 		if Door.is_set(mask) {
 			return if Hidden.is_set(mask) {
-				if (col > 0 && HorWall.is_set(dungeon[row as usize][col as usize - 1]))
-					|| (col < (DCOLS as i64 - 1) && HorWall.is_set(dungeon[row as usize][col as usize + 1])) {
+				if (col > 0 && HorWall.is_set(DUNGEON[row as usize][col as usize - 1]))
+					|| (col < (DCOLS as i64 - 1) && HorWall.is_set(DUNGEON[row as usize][col as usize + 1])) {
 					chtype::from('-')
 				} else {
 					chtype::from('|')
@@ -259,8 +259,8 @@ pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, spots: Vec<SpotFlag>, lev
 		c = get_rand(0, DCOLS as i64 - 1);
 		let rn = get_room_number(r, c, level);
 		let keep_looking = rn == NO_ROOM
-			|| !SpotFlag::is_any_set(&spots, dungeon[r as usize][c as usize])
-			|| SpotFlag::are_others_set(&spots, dungeon[r as usize][c as usize])
+			|| !SpotFlag::is_any_set(&spots, DUNGEON[r as usize][c as usize])
+			|| SpotFlag::are_others_set(&spots, DUNGEON[r as usize][c as usize])
 			|| !(level.rooms[rn as usize].room_type == RoomType::Room || level.rooms[rn as usize].room_type == Maze)
 			|| ((r == rogue.row) && (c == rogue.col));
 		if !keep_looking {
@@ -313,9 +313,9 @@ pub unsafe extern "C" fn party_objects(rn: usize, level_depth: usize, level: &Le
 				level.rooms[rn].left_col + 1,
 				level.rooms[rn].right_col - 1,
 			) as libc::c_short;
-			if dungeon[row as usize][col as usize] as i64
+			if DUNGEON[row as usize][col as usize] as i64
 				== 0o100 as libc::c_ushort as i64
-				|| dungeon[row as usize][col as usize] as i64
+				|| DUNGEON[row as usize][col as usize] as i64
 				== 0o200 as libc::c_ushort as i64
 			{
 				found = 1 as libc::c_char;
@@ -416,12 +416,12 @@ pub unsafe fn draw_magic_map() {
 	let mask = vec![HorWall, VertWall, Door, Tunnel, Trap, Stairs, Monster];
 	for i in 0..DROWS {
 		for j in 0..DCOLS {
-			let s = dungeon[i][j];
+			let s = DUNGEON[i][j];
 			if SpotFlag::is_any_set(&mask, s) {
 				let mut ch = mvinch(i as i32, j as i32) as u8 as char;
 				if ch == ' ' || ch.is_ascii_uppercase() || SpotFlag::is_any_set(&vec![Trap, Hidden], s) {
 					let och = ch;
-					Hidden.clear(&mut dungeon[i][j]);
+					Hidden.clear(&mut DUNGEON[i][j]);
 					if HorWall.is_set(s) {
 						ch = '-';
 					} else if VertWall.is_set(s) {
@@ -485,7 +485,7 @@ pub unsafe fn dr_course(monster: &mut monster::Monster, entering: bool, row: i64
 		let rn = rn.expect("rn");
 		for i in level.rooms[rn].top_row..=level.rooms[rn].bottom_row {
 			for j in level.rooms[rn].left_col..=level.rooms[rn].right_col {
-				if i != monster.spot.row && j != monster.spot.col && Door.is_set(dungeon[i as usize][j as usize]) {
+				if i != monster.spot.row && j != monster.spot.col && Door.is_set(DUNGEON[i as usize][j as usize]) {
 					monster.set_target_spot(i, j);
 					return;
 				}

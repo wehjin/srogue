@@ -154,7 +154,7 @@ unsafe fn steal_item(monster: &mut Monster, depth: &RogueDepth, level: &Level) {
 }
 
 unsafe fn disappear(monster: &mut Monster, level: &Level) {
-	SpotFlag::Monster.clear(&mut dungeon[monster.spot.row as usize][monster.spot.col as usize]);
+	SpotFlag::Monster.clear(&mut DUNGEON[monster.spot.row as usize][monster.spot.col as usize]);
 	if rogue_can_see(monster.spot.row, monster.spot.col, level) {
 		let dungeon_char = get_dungeon_char(monster.spot.row, monster.spot.col);
 		mvaddch(monster.spot.row as i32, monster.spot.col as i32, dungeon_char);
@@ -208,7 +208,7 @@ unsafe fn try_to_cough(row: i64, col: i64, obj: &mut obj) -> bool {
 	if row < MIN_ROW || row > (DROWS - 2) as i64 || col < 0 || col > (DCOLS - 1) as i64 {
 		return false;
 	}
-	let dungeon_cell = dungeon[row as usize][col as usize];
+	let dungeon_cell = DUNGEON[row as usize][col as usize];
 	if !SpotFlag::is_any_set(&vec![Object, Stairs, Trap], dungeon_cell)
 		&& SpotFlag::is_any_set(&vec![Tunnel, Floor, Door], dungeon_cell) {
 		place_at(obj, row, col);
@@ -231,7 +231,7 @@ pub unsafe fn seek_gold(monster: &mut Monster, depth: &RogueDepth, level: &Level
 	let rn = rn as usize;
 	for i in (level.rooms[rn].top_row + 1)..level.rooms[rn].bottom_row {
 		for j in (level.rooms[rn].left_col + 1)..level.rooms[rn].right_col {
-			if gold_at(i, j) && !SpotFlag::Monster.is_set(dungeon[i as usize][j as usize]) {
+			if gold_at(i, j) && !SpotFlag::Monster.is_set(DUNGEON[i as usize][j as usize]) {
 				monster.m_flags.can_flit = true;
 				let can_go_if_while_can_flit = mon_can_go(monster, i, j);
 				monster.m_flags.can_flit = false;
@@ -255,7 +255,7 @@ pub unsafe fn seek_gold(monster: &mut Monster, depth: &RogueDepth, level: &Level
 }
 
 unsafe fn gold_at(row: i64, col: i64) -> bool {
-	if Object.is_set(dungeon[row as usize][col as usize]) {
+	if Object.is_set(DUNGEON[row as usize][col as usize]) {
 		let obj = object_at(&mut level_objects, row, col);
 		if !obj.is_null() && (*obj).what_is == Gold {
 			return true;
@@ -283,7 +283,7 @@ pub unsafe fn check_imitator(monster: &mut Monster) -> bool {
 }
 
 pub unsafe fn imitating(row: i64, col: i64) -> bool {
-	if SpotFlag::Monster.is_set(dungeon[row as usize][col as usize]) {
+	if SpotFlag::Monster.is_set(DUNGEON[row as usize][col as usize]) {
 		if let Some(monster) = MASH.monster_at_spot(row, col) {
 			if monster.m_flags.imitates {
 				return true;

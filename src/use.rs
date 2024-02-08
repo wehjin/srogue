@@ -371,7 +371,7 @@ unsafe fn hold_monster() {
 			if is_off_screen(row, col) {
 				continue;
 			}
-			if Monster.is_set(dungeon[row as usize][col as usize]) {
+			if Monster.is_set(DUNGEON[row as usize][col as usize]) {
 				let monster = MASH.monster_at_spot_mut(row, col).expect("monster at spot");
 				monster.m_flags.asleep = true;
 				monster.m_flags.wakens = false;

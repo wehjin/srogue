@@ -32,7 +32,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth, leve
 		return MoveFailed;
 	}
 	if being_held || bear_trap > 0 {
-		if !Monster.is_set(dungeon[row as usize][col as usize]) {
+		if !Monster.is_set(DUNGEON[row as usize][col as usize]) {
 			if being_held {
 				message("you are being held", 1);
 			} else {
@@ -48,7 +48,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth, leve
 			return StoppedOnSomething;
 		}
 	}
-	if Monster.is_set(dungeon[row as usize][col as usize]) {
+	if Monster.is_set(DUNGEON[row as usize][col as usize]) {
 		rogue_hit(
 			&mut MASH.monster_at_spot_mut(row, col).expect("monster at spot"),
 			false,
@@ -57,7 +57,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth, leve
 		reg_move(depth, level);
 		return MoveFailed;
 	}
-	if Door.is_set(dungeon[row as usize][col as usize]) {
+	if Door.is_set(DUNGEON[row as usize][col as usize]) {
 		if cur_room == PASSAGE {
 			cur_room = get_room_number(row, col, level);
 			light_up_room(cur_room, level);
@@ -65,12 +65,12 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth, leve
 		} else {
 			light_passage(row, col);
 		}
-	} else if Door.is_set(dungeon[rogue.row as usize][rogue.col as usize]) && Tunnel.is_set(dungeon[row as usize][col as usize]) {
+	} else if Door.is_set(DUNGEON[rogue.row as usize][rogue.col as usize]) && Tunnel.is_set(DUNGEON[row as usize][col as usize]) {
 		light_passage(row, col);
 		wake_room(cur_room, false, rogue.row, rogue.col, level);
 		darken_room(cur_room, level);
 		cur_room = PASSAGE;
-	} else if Tunnel.is_set(dungeon[row as usize][col as usize]) {
+	} else if Tunnel.is_set(DUNGEON[row as usize][col as usize]) {
 		light_passage(row, col);
 	}
 	mvaddch(rogue.row as i32, rogue.col as i32, get_dungeon_char(rogue.row, rogue.col));
@@ -80,7 +80,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth, leve
 	}
 	rogue.row = row;
 	rogue.col = col;
-	if Object.is_set(dungeon[row as usize][col as usize]) {
+	if Object.is_set(DUNGEON[row as usize][col as usize]) {
 		if levitate != 0 && pickup {
 			return StoppedOnSomething;
 		}
@@ -103,8 +103,8 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth, leve
 		} else {
 			move_on(row, col, depth, level)
 		}
-	} else if SpotFlag::is_any_set(&vec![Door, Stairs, Trap], dungeon[row as usize][col as usize]) {
-		if levitate == 0 && Trap.is_set(dungeon[row as usize][col as usize]) {
+	} else if SpotFlag::is_any_set(&vec![Door, Stairs, Trap], DUNGEON[row as usize][col as usize]) {
+		if levitate == 0 && Trap.is_set(DUNGEON[row as usize][col as usize]) {
 			trap_player(row as usize, col as usize, depth, level);
 		}
 		reg_move(depth, level);
@@ -177,10 +177,10 @@ pub unsafe fn is_passable(row: i64, col: i64) -> bool {
 	if is_off_screen(row, col) {
 		return false;
 	}
-	if Hidden.is_set(dungeon[row as usize][col as usize]) {
-		return if Trap.is_set(dungeon[row as usize][col as usize]) { true } else { false };
+	if Hidden.is_set(DUNGEON[row as usize][col as usize]) {
+		return if Trap.is_set(DUNGEON[row as usize][col as usize]) { true } else { false };
 	}
-	return SpotFlag::is_any_set(&vec![SpotFlag::Floor, Tunnel, Door, Stairs, Trap], dungeon[row as usize][col as usize]);
+	return SpotFlag::is_any_set(&vec![SpotFlag::Floor, Tunnel, Door, Stairs, Trap], DUNGEON[row as usize][col as usize]);
 }
 
 pub unsafe fn next_to_something(drow: i64, dcol: i64) -> bool {
@@ -207,7 +207,7 @@ pub unsafe fn next_to_something(drow: i64, dcol: i64) -> bool {
 			}
 			row = rogue.row + i;
 			col = rogue.col + j;
-			let s = dungeon[row as usize][col as usize];
+			let s = DUNGEON[row as usize][col as usize];
 			if Hidden.is_set(s) {
 				continue;
 			}
@@ -246,10 +246,10 @@ pub unsafe fn next_to_something(drow: i64, dcol: i64) -> bool {
 pub unsafe fn can_move(row1: i64, col1: i64, row2: i64, col2: i64) -> bool {
 	if is_passable(row2, col2) {
 		if row1 != row2 && col1 != col2 {
-			if Door.is_set(dungeon[row1 as usize][col1 as usize]) || Door.is_set(dungeon[row2 as usize][col2 as usize]) {
+			if Door.is_set(DUNGEON[row1 as usize][col1 as usize]) || Door.is_set(DUNGEON[row2 as usize][col2 as usize]) {
 				return false;
 			}
-			if Nothing.is_set(dungeon[row1 as usize][col2 as usize]) || Nothing.is_set(dungeon[row2 as usize][col1 as usize]) {
+			if Nothing.is_set(DUNGEON[row1 as usize][col2 as usize]) || Nothing.is_set(DUNGEON[row2 as usize][col1 as usize]) {
 				return false;
 			}
 		}
@@ -402,7 +402,7 @@ pub unsafe fn reg_move(depth: &RogueDepth, level: &Level) -> bool {
 		levitate -= 1;
 		if levitate == 0 {
 			message("you float gently to the ground", 1);
-			if dungeon[rogue.row as usize][rogue.col as usize] as libc::c_int
+			if DUNGEON[rogue.row as usize][rogue.col as usize] as libc::c_int
 				& 0o400 as libc::c_int as libc::c_ushort as libc::c_int != 0
 			{
 				trap_player(rogue.row as usize, rogue.col as usize, depth, level);

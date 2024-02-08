@@ -186,7 +186,7 @@ pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: usize, depth: &
 	if monster.hp_to_kill <= 0 {
 		let row = monster.spot.row;
 		let col = monster.spot.col;
-		SpotFlag::Monster.clear(&mut dungeon[row as usize][col as usize]);
+		SpotFlag::Monster.clear(&mut DUNGEON[row as usize][col as usize]);
 		ncurses::mvaddch(row as i32, col as i32, get_dungeon_char(row, col));
 
 		FIGHT_MONSTER = None;
@@ -252,7 +252,7 @@ pub unsafe fn fight(to_the_death: bool, depth: &RogueDepth, level: &Level) {
 		one_move_rogue(ch, false, depth, level);
 		if (!to_the_death && rogue.hp_current <= possible_damage)
 			|| interrupted
-			|| !SpotFlag::Monster.is_set(dungeon[row as usize][col as usize]) {
+			|| !SpotFlag::Monster.is_set(DUNGEON[row as usize][col as usize]) {
 			FIGHT_MONSTER = None;
 		} else {
 			let monster_id = MASH.monster_at_spot(row, col).map(|m| m.id());
@@ -334,7 +334,7 @@ use crate::level::{add_exp, Level, RogueDepth, SpotFlag};
 use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
 use crate::monster;
 use crate::monster::{MASH, mon_name};
-use crate::objects::{dungeon, get_armor_class, object, rogue};
+use crate::objects::{DUNGEON, get_armor_class, object, rogue};
 use crate::play::interrupted;
 use crate::prelude::{AMULET_LEVEL, DCOLS, DROWS, MIN_ROW, weapon_kind};
 use crate::prelude::ending::Ending;

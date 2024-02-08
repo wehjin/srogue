@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::level::{cur_room, Level, party_room, RogueDepth};
 use crate::machdep::{get_current_time, RogueTime};
 use crate::monster::{Fighter, MonsterMash};
-use crate::objects::{dungeon, empty_obj, foods, id, obj, party_counter, SaveObj};
+use crate::objects::{DUNGEON, empty_obj, foods, id, obj, party_counter, SaveObj};
 use crate::prelude::{bear_trap, being_held, blind, confused, DCOLS, detect_monster, DROWS, GameState, halluc, haste_self, levitate, m_moves, see_invisible, wizard};
 use crate::save::{hunger_str, id_potions, id_rings, id_scrolls, id_wands, IS_WOOD, MASH, level_objects, rogue};
 use crate::settings;
@@ -176,7 +176,7 @@ impl SaveData {
 			level_monsters: MASH.clone(),
 			level_objects: SavePack::from_pack(&level_objects),
 			file_id,
-			dungeon: SaveDungeon::from_dungeon(&dungeon),
+			dungeon: SaveDungeon::from_dungeon(&DUNGEON),
 			foods,
 			rogue: SaveFighter::from_fighter(&rogue),
 			rogue_pack: SavePack::from_pack(&rogue.pack),
@@ -209,7 +209,7 @@ impl SaveData {
 		party_counter = self.party_counter;
 		MASH = self.level_monsters.clone();
 		self.level_objects.write_pack(&mut level_objects, false);
-		self.dungeon.load_dungeon(&mut dungeon);
+		self.dungeon.load_dungeon(&mut DUNGEON);
 		foods = self.foods;
 		rogue = self.rogue.to_fighter();
 		self.rogue_pack.write_pack(&mut rogue.pack, true);

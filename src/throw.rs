@@ -107,8 +107,8 @@ pub unsafe fn get_thrown_at_monster(obj: *mut object, dir: char, row: &mut i64, 
 	let ch = get_mask_char((*obj).what_is);
 	for mut i in 0..24 {
 		get_dir_rc(dir, row, col, false);
-		if SpotFlag::is_nothing(dungeon[*row as usize][*col as usize])
-			|| (SpotFlag::is_any_set(&vec![HorWall, VertWall, Hidden], dungeon[*row as usize][*col as usize]) && !Trap.is_set(dungeon[*row as usize][*col as usize])) {
+		if SpotFlag::is_nothing(DUNGEON[*row as usize][*col as usize])
+			|| (SpotFlag::is_any_set(&vec![HorWall, VertWall, Hidden], DUNGEON[*row as usize][*col as usize]) && !Trap.is_set(DUNGEON[*row as usize][*col as usize])) {
 			*row = orow;
 			*col = ocol;
 			return None;
@@ -117,19 +117,19 @@ pub unsafe fn get_thrown_at_monster(obj: *mut object, dir: char, row: &mut i64, 
 			mvaddch(orow as i32, ocol as i32, get_dungeon_char(orow, ocol));
 		}
 		if rogue_can_see(*row, *col, level) {
-			if !Monster.is_set(dungeon[*row as usize][*col as usize]) {
+			if !Monster.is_set(DUNGEON[*row as usize][*col as usize]) {
 				mvaddch(*row as i32, *col as i32, chtype::from(ch));
 			}
 			refresh();
 		}
 		orow = *row;
 		ocol = *col;
-		if Monster.is_set(dungeon[*row as usize][*col as usize]) {
+		if Monster.is_set(DUNGEON[*row as usize][*col as usize]) {
 			if !imitating(*row, *col) {
 				return MASH.monster_at_spot(*row, *col).map(|m| m.id());
 			}
 		}
-		if Tunnel.is_set(dungeon[*row as usize][*col as usize]) {
+		if Tunnel.is_set(DUNGEON[*row as usize][*col as usize]) {
 			i += 2;
 		}
 	}
@@ -140,14 +140,14 @@ unsafe fn flop_weapon(weapon: &mut obj, mut row: i64, mut col: i64, level: &Leve
 	let mut found = false;
 	let mut walk = RandomWalk::new(row, col);
 	for _ in 0..9 {
-		if SpotFlag::are_others_set(&vec![Floor, Tunnel, Door, Monster], dungeon[walk.row as usize][walk.col as usize]) {
+		if SpotFlag::are_others_set(&vec![Floor, Tunnel, Door, Monster], DUNGEON[walk.row as usize][walk.col as usize]) {
 			break;
 		}
 		walk.step();
 		let spot = walk.to_spot();
 		if spot.is_out_of_bounds()
-			|| SpotFlag::is_nothing(dungeon[spot.row as usize][spot.col as usize])
-			|| SpotFlag::are_others_set(&vec![Floor, Tunnel, Door, Monster], dungeon[spot.row as usize][spot.col as usize]) {
+			|| SpotFlag::is_nothing(DUNGEON[spot.row as usize][spot.col as usize])
+			|| SpotFlag::are_others_set(&vec![Floor, Tunnel, Door, Monster], DUNGEON[spot.row as usize][spot.col as usize]) {
 			continue;
 		}
 		row = spot.row;
@@ -164,8 +164,8 @@ unsafe fn flop_weapon(weapon: &mut obj, mut row: i64, mut col: i64, level: &Leve
 		(*new_weapon).ichar = 'L';
 		place_at(&mut *new_weapon, row, col);
 		if rogue_can_see(row, col, level) && (row != rogue.row || col != rogue.col) {
-			let mon = Monster.is_set(dungeon[row as usize][col as usize]);
-			Monster.clear(&mut dungeon[row as usize][col as usize]);
+			let mon = Monster.is_set(DUNGEON[row as usize][col as usize]);
+			Monster.clear(&mut DUNGEON[row as usize][col as usize]);
 			let dch = get_dungeon_char(row, col);
 			if mon {
 				let mch = mvinch(row as i32, col as i32) as u8 as char;
@@ -178,7 +178,7 @@ unsafe fn flop_weapon(weapon: &mut obj, mut row: i64, mut col: i64, level: &Leve
 			} else {
 				mvaddch(row as i32, col as i32, dch);
 			}
-			Monster.set(&mut dungeon[row as usize][col as usize]);
+			Monster.set(&mut DUNGEON[row as usize][col as usize]);
 		}
 	} else {
 		let t = weapon.quantity;

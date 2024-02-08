@@ -198,7 +198,9 @@ impl obj {
 pub type object = obj;
 
 pub static mut level_objects: object = empty_obj();
-pub static mut dungeon: [[u16; DCOLS]; DROWS] = [[0; DCOLS]; DROWS];
+pub const DCOLS: usize = 80;
+pub const DROWS: usize = 24;
+pub static mut DUNGEON: [[u16; DCOLS]; DROWS] = [[0; DCOLS]; DROWS];
 pub static mut foods: i16 = 0;
 pub static mut party_counter: usize = 0;
 pub static mut free_list: *mut object = 0 as *mut object;
@@ -772,7 +774,7 @@ pub unsafe fn put_gold(level_depth: usize, level: &Level) {
 			for _j in 0..50 {
 				let row = get_rand(level.rooms[i].top_row + 1, level.rooms[i].bottom_row - 1);
 				let col = get_rand(level.rooms[i].left_col + 1, level.rooms[i].right_col - 1);
-				if Floor.is_set(dungeon[row as usize][col as usize]) || Tunnel.is_set(dungeon[row as usize][col as usize]) {
+				if Floor.is_set(DUNGEON[row as usize][col as usize]) || Tunnel.is_set(DUNGEON[row as usize][col as usize]) {
 					plant_gold(row, col, is_maze, level_depth);
 					break;
 				}
@@ -790,7 +792,7 @@ pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: usize) {
 	if is_maze {
 		(*obj).quantity += (*obj).quantity / 2;
 	}
-	dungeon[row as usize][col as usize] |= SpotFlag::Object.code();
+	DUNGEON[row as usize][col as usize] |= SpotFlag::Object.code();
 	add_to_pack(obj, &mut level_objects, 0);
 }
 
@@ -798,7 +800,7 @@ pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: usize) {
 pub unsafe fn place_at(obj: &mut object, row: i64, col: i64) {
 	obj.row = row;
 	obj.col = col;
-	Object.set(&mut dungeon[row as usize][col as usize]);
+	Object.set(&mut DUNGEON[row as usize][col as usize]);
 	add_to_pack(obj, &mut level_objects, 0);
 }
 
@@ -1059,7 +1061,7 @@ pub unsafe fn put_stairs(level: &Level) {
 	let mut row = 0;
 	let mut col = 0;
 	gr_row_col(&mut row, &mut col, vec![Floor, Tunnel], level);
-	Stairs.set(&mut dungeon[row as usize][col as usize]);
+	Stairs.set(&mut DUNGEON[row as usize][col as usize]);
 }
 
 pub unsafe fn get_armor_class(obj: *const object) -> isize {
@@ -1107,7 +1109,7 @@ pub unsafe fn show_objects() {
 		let row = (*obj).row;
 		let col = (*obj).col;
 		let rc = get_mask_char((*obj).what_is) as chtype;
-		if Monster.is_set(dungeon[row as usize][col as usize]) {
+		if Monster.is_set(DUNGEON[row as usize][col as usize]) {
 			let monster = MASH.monster_at_spot_mut(row, col);
 			if let Some(monster) = monster {
 				monster.trail_char = rc;
