@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use TrapKind::NoTrap;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
-use crate::prelude::SpotFlag::{Floor, Hidden, Monster, Object, Stairs, Trap, Tunnel};
+use crate::prelude::SpotFlag::{Floor, Hidden, Monster, Object, Stairs, Tunnel};
 use crate::prelude::stat_const::{STAT_HP, STAT_STRENGTH};
 use crate::trap::trap_kind::TrapKind;
 use crate::trap::trap_kind::TrapKind::{BearTrap, DartTrap, RustTrap, SleepingGasTrap, TeleTrap, TrapDoor};
@@ -47,14 +47,14 @@ pub mod trap_kind {
 }
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
-pub struct tr {
+pub struct Trap {
 	pub trap_type: TrapKind,
 	pub trap_row: usize,
 	pub trap_col: usize,
 }
 
 pub const MAX_TRAP: usize = 10;
-pub static mut TRAPS: [tr; MAX_TRAP] = [tr { trap_type: NoTrap, trap_row: 0, trap_col: 0 }; MAX_TRAP];
+pub static mut TRAPS: [Trap; MAX_TRAP] = [Trap { trap_type: NoTrap, trap_row: 0, trap_col: 0 }; MAX_TRAP];
 pub static mut trap_door: bool = false;
 pub static mut bear_trap: usize = 0;
 
@@ -159,7 +159,7 @@ pub unsafe fn add_traps(cur_level: usize, level: &Level) {
 				row = get_rand((level.rooms[cur_party_room].top_row + 1) as usize, (level.rooms[cur_party_room].bottom_row - 1) as usize);
 				col = get_rand((level.rooms[cur_party_room].left_col + 1) as usize, (level.rooms[cur_party_room].right_col - 1) as usize);
 				tries += 1;
-				let try_again = (SpotFlag::is_any_set(&vec![Object, Stairs, Trap, Tunnel], dungeon[row][col]) || SpotFlag::is_nothing(dungeon[row][col]))
+				let try_again = (SpotFlag::is_any_set(&vec![Object, Stairs, SpotFlag::Trap, Tunnel], dungeon[row][col]) || SpotFlag::is_nothing(dungeon[row][col]))
 					&& tries < 15;
 				if !try_again {
 					break;
@@ -181,7 +181,7 @@ pub unsafe fn add_traps(cur_level: usize, level: &Level) {
 		};
 		TRAPS[i].trap_row = row;
 		TRAPS[i].trap_col = col;
-		Trap.set(&mut dungeon[row][col]);
+		SpotFlag::Trap.set(&mut dungeon[row][col]);
 		Hidden.set(&mut dungeon[row][col]);
 	}
 }
@@ -204,7 +204,7 @@ pub unsafe fn id_trap() {
 	let mut row = rogue.row;
 	let mut col = rogue.col;
 	get_dir_rc(dir, &mut row, &mut col, false);
-	if Trap.is_set(dungeon[row as usize][col as usize]) && !Hidden.is_set(dungeon[row as usize][col as usize]) {
+	if SpotFlag::Trap.is_set(dungeon[row as usize][col as usize]) && !Hidden.is_set(dungeon[row as usize][col as usize]) {
 		let t = trap_at(row as usize, col as usize);
 		message(t.name(), 0);
 	} else {
@@ -216,7 +216,7 @@ pub unsafe fn id_trap() {
 pub unsafe fn show_traps() {
 	for i in 0..DROWS {
 		for j in 0..DCOLS {
-			if Trap.is_set(dungeon[i][j]) {
+			if SpotFlag::Trap.is_set(dungeon[i][j]) {
 				mvaddch(i as i32, j as i32, chtype::from('^'));
 			}
 		}
@@ -256,7 +256,7 @@ pub unsafe fn search(n: usize, is_auto: bool, depth: &RogueDepth, level: &Level)
 							mvaddch(row as i32, col as i32, get_dungeon_char(row, col));
 						}
 						shown += 1;
-						if Trap.is_set(dungeon[row as usize][col as usize]) {
+						if SpotFlag::Trap.is_set(dungeon[row as usize][col as usize]) {
 							let t = trap_at(row as usize, col as usize);
 							message(t.name(), 1);
 						}

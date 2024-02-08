@@ -5,7 +5,7 @@ use crate::level::{cur_room, Level, party_room, RogueDepth};
 use crate::machdep::{get_current_time, RogueTime};
 use crate::monster::{Fighter, MonsterMash};
 use crate::objects::{dungeon, empty_obj, foods, id, obj, party_counter, SaveObj};
-use crate::prelude::{bear_trap, being_held, blind, confused, DCOLS, detect_monster, DROWS, GameState, halluc, haste_self, levitate, m_moves, see_invisible, tr, wizard};
+use crate::prelude::{bear_trap, being_held, blind, confused, DCOLS, detect_monster, DROWS, GameState, halluc, haste_self, levitate, m_moves, see_invisible, Trap, wizard};
 use crate::save::{hunger_str, id_potions, id_rings, id_scrolls, id_wands, IS_WOOD, MASH, level_objects, rogue, TRAPS};
 use crate::settings;
 use crate::settings::{login_name, score_only};
@@ -147,7 +147,7 @@ pub struct SaveData {
 	pub id_scrolls: SaveIdTable,
 	pub id_wands: SaveIdTable,
 	pub id_rings: SaveIdTable,
-	pub traps: Vec<tr>,
+	pub traps: Vec<Trap>,
 	pub is_wood: Vec<bool>,
 	pub cur_room: i64,
 	pub level: Level,
