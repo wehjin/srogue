@@ -70,29 +70,19 @@ pub mod settings;
 pub mod hunger;
 
 pub fn main() {
-	eprintln!("Start main");
 	unsafe { setuid(user().true_uid); }
 	let (mut game, mut restored) = unsafe { init() };
 	loop {
 		if !restored {
 			unsafe { clear_level(&mut game.level); }
-			eprintln!("\r\nclear_level");
 			game.depth = game.depth.descend();
-			eprintln!("\r\ndepth_descend");
 			unsafe { make_level(game.depth.cur, &mut game.level) };
-			eprintln!("\r\nmake_level");
 			unsafe { put_objects(&game.depth, &game.level); }
-			eprintln!("\r\nput_objects");
 			unsafe { put_stairs(&mut game.level); }
-			eprintln!("\r\nput_stairs");
 			unsafe { add_traps(game.depth.cur, &game.level); }
-			eprintln!("\r\nadd_traps");
 			unsafe { put_mons(game.depth.cur, &game.level); }
-			eprintln!("\r\nput_mons");
 			unsafe { put_player(party_room, &game.level); }
-			eprintln!("\r\nput_player");
 			unsafe { print_stats(STAT_ALL, game.depth.cur); }
-			eprintln!("\r\nprint_stats");
 		}
 		unsafe { play_level(&mut game); }
 		unsafe { free_stuff(&mut level_objects); }
