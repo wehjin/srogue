@@ -3,7 +3,6 @@
 use std::cmp::{Ordering};
 use std::fs::File;
 use std::io::{Read, Seek, Write};
-use std::sync::{RwLock};
 use ncurses::{clear, mv, mvaddch, mvaddstr, mvinch, refresh, standend, standout};
 use settings::{score_only, show_skull};
 use crate::prelude::*;

@@ -2,6 +2,8 @@
 
 use libc::{c_ushort};
 use ncurses::clear;
+use rand::seq::SliceRandom;
+use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 use SpotFlag::Door;
 use crate::message::{message, print_stats};
@@ -71,45 +73,22 @@ pub const LEVEL_POINTS: [isize; MAX_EXP_LEVEL] = [
 	99900000,
 ];
 
-#[derive(Copy, Clone, Serialize, Deserialize)]
-pub struct RandomRooms {
-	rooms: [usize; MAX_ROOM + 1],
-}
-
-impl RandomRooms {
-	pub fn new() -> Self {
-		RandomRooms {
-			rooms: [3, 7, 5, 2, 0, 6, 1, 4, 8, 0],
-		}
-	}
-	pub fn mix(&mut self) {
-		for _ in 0..(3 * MAX_ROOM) {
-			let (x, y) = {
-				let mut x = 0;
-				let mut y = 0;
-				while x == y {
-					x = get_rand(0, MAX_ROOM - 1);
-					y = get_rand(0, MAX_ROOM - 1);
-				}
-				(x, y)
-			};
-			self.rooms.swap(x, y);
-		}
-	}
+pub fn shuffled_rns() -> [usize; MAX_ROOM] {
+	let mut room_indices: [usize; MAX_ROOM] = [3, 7, 5, 2, 0, 6, 1, 4, 8];
+	room_indices.shuffle(&mut thread_rng());
+	room_indices
 }
 
 pub const MAX_ROOM: usize = 9;
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
 pub struct Level {
-	random_rooms: RandomRooms,
 	pub rooms: [Room; MAX_ROOM],
 }
 
 impl Level {
 	pub fn new() -> Self {
 		Level {
-			random_rooms: RandomRooms::new(),
 			rooms: [Room {
 				bottom_row: 0,
 				right_col: 0,
@@ -142,24 +121,25 @@ pub unsafe fn make_level(level_depth: usize, level: &mut Level) {
 	}
 	if !big_room {
 		add_mazes(level_depth, level);
-		level.random_rooms.mix();
+
+		let shuffled_rns = shuffled_rns();
 		for j in 0..MAX_ROOM {
-			let i = level.random_rooms.rooms[j];
-			if i < MAX_ROOM - 1 {
+			let i = shuffled_rns[j];
+			if i < (MAX_ROOM - 1) {
 				connect_rooms(i, i + 1, level_depth, level);
 			}
-			if i < MAX_ROOM - 3 {
+			if i < (MAX_ROOM - 3) {
 				connect_rooms(i, i + 3, level_depth, level);
 			}
-			if i < MAX_ROOM - 2 {
-				if level.rooms[i + 1].room_type == Nothing {
+			if i < (MAX_ROOM - 2) {
+				if level.rooms[i + 1].room_type.is_nothing() {
 					if connect_rooms(i, i + 2, level_depth, level) {
 						level.rooms[i + 1].room_type = RoomType::Cross;
 					}
 				}
 			}
-			if i < MAX_ROOM - 6 {
-				if level.rooms[i + 3].room_type == Nothing {
+			if i < (MAX_ROOM - 6) {
+				if level.rooms[i + 3].room_type.is_nothing() {
 					if connect_rooms(i, i + 6, level_depth, level) {
 						level.rooms[i + 3].room_type = RoomType::Cross;
 					}
@@ -239,38 +219,25 @@ pub unsafe fn make_room(rn: i64, r1: i64, r2: i64, r3: i64, level: &mut Level) {
 }
 
 pub unsafe fn connect_rooms(room1: usize, room2: usize, level_depth: usize, level: &mut Level) -> bool {
-	if level.rooms[room1].room_type.is_nothing() || level.rooms[room2].room_type.is_nothing() {
+	if !level.rooms[room1].room_type.is_type(&vec![RoomType::Room, RoomType::Maze])
+		|| !level.rooms[room2].room_type.is_type(&vec![RoomType::Room, RoomType::Maze]) {
 		return false;
 	}
-	let dir1 = if same_row(room1, room2) && (level.rooms[room1].left_col > level.rooms[room2].right_col) {
-		DoorDirection::Left
-	} else if same_row(room1, room2) && (level.rooms[room2].left_col > level.rooms[room1].right_col) {
-		DoorDirection::Right
-	} else if same_col(room1, room2) && (level.rooms[room1].top_row > level.rooms[room2].bottom_row) {
-		DoorDirection::Up
-	} else if same_col(room1, room2) && (level.rooms[room2].top_row > level.rooms[room1].bottom_row) {
-		DoorDirection::Down
+	if let Some(dir1) = DoorDirection::from_room_to_room(room1, room2, level) {
+		let dir2 = dir1.inverse();
+		let spot1 = put_door(&mut level.rooms[room1], dir1, level_depth);
+		let spot2 = put_door(&mut level.rooms[room2], dir2, level_depth);
+		let mut draw_again = true;
+		while draw_again {
+			draw_simple_passage(&spot1, &spot2, dir1, level_depth);
+			draw_again = rand_percent(4);
+		}
+		level.rooms[room1].doors[dir1.to_index()].set_others(room2, &spot2);
+		level.rooms[room2].doors[dir2.to_index()].set_others(room1, &spot1);
+		true
 	} else {
-		return false;
-	};
-	let dir2 = dir1.invert();
-	let spot1 = put_door(&mut level.rooms[room1], dir1, level_depth);
-	let spot2 = put_door(&mut level.rooms[room2], dir2, level_depth);
-	let mut do_draw = true;
-	while do_draw {
-		draw_simple_passage(&spot1, &spot2, dir1, level_depth);
-		do_draw = rand_percent(4);
+		false
 	}
-
-	let door1_index = dir1.to_index();
-	let door2_index = dir2.to_index();
-	level.rooms[room1].doors[door1_index].oth_room = Some(room2);
-	level.rooms[room1].doors[door1_index].oth_row = Some(spot2.row);
-	level.rooms[room1].doors[door1_index].oth_col = Some(spot2.col);
-	level.rooms[room2].doors[door2_index].oth_room = Some(room1);
-	level.rooms[room2].doors[door2_index].oth_row = Some(spot1.row);
-	level.rooms[room2].doors[door2_index].oth_col = Some(spot1.col);
-	return true;
 }
 
 pub unsafe fn clear_level(level: &mut Level) {
@@ -427,17 +394,17 @@ pub unsafe fn add_mazes(level_depth: usize, level: &mut Level) {
 }
 
 pub unsafe fn fill_out_level(level: &mut Level, level_depth: usize) {
-	level.random_rooms.mix();
+	let shuffled_rns = shuffled_rns();
 	r_de = None;
 	for i in 0..MAX_ROOM {
-		let rn = level.random_rooms.rooms[i];
-		if level.rooms[rn].room_type == RoomType::Nothing
-			|| ((level.rooms[rn].room_type == RoomType::Cross) && coin_toss()) {
+		let rn = shuffled_rns[i];
+		if level.rooms[rn].room_type.is_nothing()
+			|| (level.rooms[rn].room_type.is_cross() && coin_toss()) {
 			fill_it(rn, true, level_depth, level);
 		}
 	}
-	if let Some(rn) = r_de {
-		fill_it(rn, false, level_depth, level);
+	if let Some(deadend_rn) = r_de {
+		fill_it(deadend_rn, false, level_depth, level);
 	}
 }
 
@@ -465,7 +432,7 @@ pub unsafe fn fill_it(rn: usize, do_rec_de: bool, level_depth: usize, level: &mu
 			continue;
 		}
 		let tunnel_dir = get_tunnel_dir(rn, target_room, level);
-		let door_dir = tunnel_dir.invert();
+		let door_dir = tunnel_dir.inverse();
 		if level.rooms[target_room].doors[door_dir.to_index()].oth_room.is_some() {
 			continue;
 		}

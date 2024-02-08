@@ -20,6 +20,14 @@ pub struct dr {
 	pub door_col: i64,
 }
 
+impl dr {
+	pub fn set_others(&mut self, other_rn: usize, other_spot: &DungeonSpot) {
+		self.oth_room = Some(other_rn);
+		self.oth_row = Some(other_spot.row);
+		self.oth_col = Some(other_spot.col);
+	}
+}
+
 pub type door = dr;
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -35,13 +43,11 @@ impl RoomType {
 	pub fn is_nothing(&self) -> bool {
 		*self == RoomType::Nothing
 	}
+	pub fn is_cross(&self) -> bool {
+		*self == RoomType::Cross
+	}
 	pub fn is_type(&self, room_types: &Vec<RoomType>) -> bool {
-		for room_type in room_types {
-			if self == room_type {
-				return true;
-			}
-		}
-		return false;
+		room_types.iter().position(|rt| self == rt).is_some()
 	}
 }
 
@@ -54,6 +60,19 @@ pub enum DoorDirection {
 }
 
 impl DoorDirection {
+	pub fn from_room_to_room(start_room: usize, end_room: usize, level: &Level) -> Option<Self> {
+		if same_row(start_room, end_room) && (level.rooms[start_room].left_col > level.rooms[end_room].right_col) {
+			Some(DoorDirection::Left)
+		} else if same_row(start_room, end_room) && (level.rooms[end_room].left_col > level.rooms[start_room].right_col) {
+			Some(DoorDirection::Right)
+		} else if same_col(start_room, end_room) && (level.rooms[start_room].top_row > level.rooms[end_room].bottom_row) {
+			Some(DoorDirection::Up)
+		} else if same_col(start_room, end_room) && (level.rooms[end_room].top_row > level.rooms[start_room].bottom_row) {
+			Some(DoorDirection::Down)
+		} else {
+			None
+		}
+	}
 	pub fn to_index(&self) -> usize {
 		match self {
 			Up => 0,
@@ -62,7 +81,7 @@ impl DoorDirection {
 			Left => 3,
 		}
 	}
-	pub fn invert(&self) -> DoorDirection {
+	pub fn inverse(&self) -> DoorDirection {
 		match self {
 			Up => Down,
 			Right => Left,
