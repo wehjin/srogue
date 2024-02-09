@@ -75,7 +75,7 @@ pub fn main() {
 	loop {
 		if !restored {
 			unsafe { clear_level(&mut game.level); }
-			game.player = game.player.raise_depth();
+			game.player.descend();
 			unsafe { make_level(game.player.cur_depth, &mut game.level) };
 			unsafe { put_objects(&game.player, &mut game.level); }
 			unsafe { put_stairs(&mut game.level); }

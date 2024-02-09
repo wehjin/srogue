@@ -34,14 +34,15 @@ impl Player {
 	pub fn new() -> Self {
 		Player { cur_depth: 0, max_depth: 1 }
 	}
-	pub fn raise_depth(&self) -> Self {
+	pub fn descend(&mut self) {
 		let cur = (self.cur_depth + 1).min(LAST_DUNGEON);
 		let max = self.max_depth.max(cur);
-		Player { cur_depth: cur, max_depth: max }
+		self.cur_depth = cur;
+		self.max_depth = max;
 	}
-	pub fn lower_depth(&self) -> Self {
+	pub fn ascend(&mut self) {
 		let cur = if self.cur_depth < 3 { 1 } else { self.cur_depth - 2 };
-		Player { cur_depth: cur, max_depth: self.max_depth }
+		self.cur_depth = cur;
 	}
 }
 
@@ -649,7 +650,7 @@ pub unsafe fn check_up(game: &mut GameState) -> bool {
 	if game.player.cur_depth == 1 {
 		win(&game.player, &mut game.level);
 	} else {
-		game.player = game.player.lower_depth();
+		game.player.ascend();
 		return true;
 	}
 	return false;
