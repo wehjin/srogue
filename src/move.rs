@@ -31,7 +31,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth, leve
 	if !can_move(rogue.row, rogue.col, row, col, level) {
 		return MoveFailed;
 	}
-	if being_held || bear_trap > 0 {
+	if being_held || level.bear_trap > 0 {
 		if !level.dungeon[row as usize][col as usize].is_monster() {
 			if being_held {
 				message("you are being held", 1);
@@ -401,8 +401,8 @@ pub unsafe fn reg_move(depth: &RogueDepth, level: &mut Level) -> bool {
 			unconfuse();
 		}
 	}
-	if bear_trap != 0 {
-		bear_trap -= 1;
+	if level.bear_trap > 0 {
+		level.bear_trap -= 1;
 	}
 	if levitate != 0 {
 		levitate -= 1;

@@ -102,7 +102,7 @@ pub unsafe fn quaff(depth: &RogueDepth, level: &mut Level) {
 		PotionKind::Levitation => {
 			message("you start to float in the air", 0);
 			levitate += get_rand(15, 30);
-			bear_trap = 0;
+			level.bear_trap = 0;
 			being_held = false;
 		}
 		PotionKind::HasteSelf => {
@@ -394,7 +394,7 @@ pub unsafe fn tele(level: &mut Level) {
 	}
 	put_player(get_opt_room_number(rogue.row, rogue.col, level), level);
 	being_held = false;
-	bear_trap = 0;
+	level.bear_trap = 0;
 }
 
 pub unsafe fn hallucinate() {

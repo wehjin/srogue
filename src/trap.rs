@@ -68,7 +68,6 @@ impl Trap {
 }
 
 pub static mut trap_door: bool = false;
-pub static mut bear_trap: usize = 0;
 
 pub fn trap_message(trap: TrapKind) -> &'static str {
 	match trap {
@@ -112,7 +111,7 @@ pub unsafe fn trap_player(row: usize, col: usize, depth: &RogueDepth, level: &mu
 		}
 		BearTrap => {
 			message(trap_message(t), 1);
-			bear_trap = get_rand(4, 7);
+			level.bear_trap = get_rand(4, 7);
 		}
 		TeleTrap => {
 			mvaddch(rogue.row as i32, rogue.col as i32, chtype::from('^'));
