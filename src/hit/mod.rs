@@ -3,7 +3,6 @@
 use libc::{c_char};
 
 pub static mut FIGHT_MONSTER: Option<u64> = None;
-pub static mut detect_monster: bool = false;
 pub static mut hit_message: String = String::new();
 
 fn reduce_chance(chance: usize, reduction: isize) -> usize {

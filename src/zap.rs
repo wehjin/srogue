@@ -163,7 +163,7 @@ unsafe fn tele_away(monster: &mut Monster, level: &mut Level) {
 	level.dungeon[row as usize][col as usize].add_kind(CellKind::Monster);
 	monster.trail_char = mvinch(row as i32, col as i32);
 
-	if detect_monster || rogue_can_see(row, col, level) {
+	if level.detect_monster || rogue_can_see(row, col, level) {
 		mvaddch(row as i32, col as i32, gmc(monster, level));
 	}
 }

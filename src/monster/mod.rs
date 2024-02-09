@@ -240,45 +240,45 @@ pub unsafe fn mtry(monster: &mut Monster, row: i64, col: i64, level: &mut Level)
 }
 
 pub unsafe fn move_mon_to(monster: &mut Monster, row: i64, col: i64, level: &mut Level) {
-	level.dungeon[monster.spot.row as usize][monster.spot.col as usize].remove_kind(CellKind::Monster);
+	let (mrow, mcol) = (monster.spot.row, monster.spot.col);
+	level.dungeon[mrow as usize][mcol as usize].remove_kind(CellKind::Monster);
 	level.dungeon[row as usize][col as usize].add_kind(CellKind::Monster);
-	let c = ncurses::mvinch((monster.spot.row as usize) as i32, (monster.spot.col as usize) as i32);
-	if (c >= chtype::from('A')) && (c <= chtype::from('Z'))
-	{
-		let (mrow, mcol) = ((monster.spot.row as usize) as i32, (monster.spot.col as usize) as i32);
-		let no_detect_monster = !detect_monster;
-		if no_detect_monster {
-			ncurses::mvaddch(mrow, mcol, monster.trail_char);
+
+	let c = ncurses::mvinch(mrow as i32, mcol as i32);
+	if (c >= chtype::from('A')) && (c <= chtype::from('Z')) {
+		// Restore the screen appearance at the newly vacated spot
+		let exit_trail_char = if !level.detect_monster {
+			monster.trail_char
 		} else {
-			if rogue_can_see(mrow as i64, mcol as i64, level) {
-				ncurses::mvaddch(mrow, mcol, monster.trail_char);
+			if rogue_can_see(mrow, mcol, level) {
+				monster.trail_char
 			} else {
 				if monster.trail_char == chtype::from('.') {
 					monster.trail_char = chtype::from(' ');
 				}
-				ncurses::mvaddch(mrow, mcol, monster.trail_char);
+				monster.trail_char
 			}
-		}
+		};
+		ncurses::mvaddch(mrow as i32, mcol as i32, exit_trail_char);
 	}
+	// Set the screen appearance at the newly occupied spot
 	monster.trail_char = ncurses::mvinch(row as i32, col as i32);
-	if blind == 0 && ((detect_monster) || rogue_can_see(row, col, level)) {
-		let bypass_invisibility = (detect_monster) || (level.see_invisible) || (r_see_invisible);
-		if !monster.m_flags.invisible || bypass_invisibility {
+	if blind == 0 && (level.detect_monster || rogue_can_see(row, col, level)) {
+		if !monster.m_flags.invisible || player_defeats_invisibility(level) {
 			ncurses::mvaddch(row as i32, col as i32, gmc(monster, level));
 		}
 	}
 	if level.dungeon[row as usize][col as usize].is_door()
 		&& !in_current_room(row, col, level)
-		&& level.dungeon[monster.spot.row as usize][monster.spot.col as usize].is_floor()
+		&& level.dungeon[mrow as usize][mcol as usize].is_floor()
 		&& blind == 0 {
-		ncurses::mvaddch((monster.spot.row as usize) as i32, (monster.spot.col as usize) as i32, chtype::from(' '));
+		ncurses::mvaddch(mrow as i32, mcol as i32, chtype::from(' '));
 	}
 	if level.dungeon[row as usize][col as usize].is_door() {
 		let entering = level.dungeon[monster.spot.row as usize][monster.spot.col as usize].is_tunnel();
 		dr_course(monster, entering, row, col, level);
 	} else {
-		monster.spot.row = row;
-		monster.spot.col = col;
+		monster.spot.set(row, col);
 	}
 }
 
@@ -359,7 +359,7 @@ pub unsafe fn player_hallucinating() -> bool { halluc != 0 }
 
 pub unsafe fn player_is_blind() -> bool { blind != 0 }
 
-pub unsafe fn player_defeats_invisibility(level: &Level) -> bool { detect_monster || level.see_invisible || r_see_invisible }
+pub unsafe fn player_defeats_invisibility(level: &Level) -> bool { level.detect_monster || level.see_invisible || r_see_invisible }
 
 pub unsafe fn rogue_is_around(row: i64, col: i64) -> bool {
 	let row_diff = row - rogue.row;
@@ -398,8 +398,8 @@ pub unsafe fn put_wanderer(level_depth: usize, level: &mut Level) {
 	}
 }
 
-pub unsafe fn show_monsters() {
-	detect_monster = true;
+pub unsafe fn show_monsters(level: &mut Level) {
+	level.detect_monster = true;
 	if blind != 0 {
 		return;
 	}

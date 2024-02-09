@@ -6,7 +6,7 @@ use crate::level::constants::{DCOLS, DROWS};
 use crate::machdep::{get_current_time, RogueTime};
 use crate::monster::{Fighter, MonsterMash};
 use crate::objects::{empty_obj, foods, id, obj, party_counter, SaveObj};
-use crate::prelude::{bear_trap, being_held, blind, confused, detect_monster, GameState, halluc, haste_self, levitate, m_moves, wizard};
+use crate::prelude::{bear_trap, being_held, blind, confused, GameState, halluc, haste_self, levitate, m_moves, wizard};
 use crate::save::{hunger_str, id_potions, id_rings, id_scrolls, id_wands, IS_WOOD, MASH, level_objects, rogue};
 use crate::settings;
 use crate::settings::{login_name, score_only};
@@ -132,7 +132,6 @@ impl SaveDungeon {
 #[derive(Serialize, Deserialize)]
 pub struct SaveData {
 	pub depth: RogueDepth,
-	pub detect_monster: bool,
 	pub hunger_str: String,
 	pub login_name: String,
 	pub party_room: Option<usize>,
@@ -167,7 +166,6 @@ impl SaveData {
 	pub unsafe fn read_from_statics(file_id: i64, game: &GameState) -> Self {
 		SaveData {
 			depth: game.depth,
-			detect_monster,
 			hunger_str: hunger_str.clone(),
 			login_name: login_name().to_string(),
 			party_room,
@@ -199,7 +197,6 @@ impl SaveData {
 		}
 	}
 	pub unsafe fn write_to_statics(&self) {
-		detect_monster = self.detect_monster;
 		hunger_str = self.hunger_str.clone();
 		settings::set_login_name(&self.login_name);
 		party_room = self.party_room;

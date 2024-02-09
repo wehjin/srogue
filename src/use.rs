@@ -81,7 +81,7 @@ pub unsafe fn quaff(depth: &RogueDepth, level: &mut Level) {
 			halluc += get_rand(500, 800);
 		}
 		PotionKind::DetectMonster => {
-			show_monsters();
+			show_monsters(level);
 			if MASH.is_empty() {
 				message(strange_feeling, 0);
 			}
@@ -444,8 +444,8 @@ pub unsafe fn unblind(level: &mut Level)
 	if halluc != 0 {
 		hallucinate();
 	}
-	if detect_monster {
-		show_monsters();
+	if level.detect_monster {
+		show_monsters(level);
 	}
 }
 
@@ -475,7 +475,7 @@ unsafe fn go_blind(level: &Level) {
 	}
 	blind += get_rand(500, 800);
 
-	if detect_monster {
+	if level.detect_monster {
 		for monster in &MASH.monsters {
 			mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.trail_char);
 		}

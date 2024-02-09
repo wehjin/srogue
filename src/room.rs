@@ -208,7 +208,7 @@ pub unsafe fn darken_room(rn: i64, level: &Level) {
 			if blind != 0 {
 				mvaddch(i as i32, j as i32, chtype::from(' '));
 			} else if !level.dungeon[i][j].is_any_kind(&[CellKind::Object, CellKind::Stairs])
-				&& !(detect_monster && level.dungeon[i][j].is_monster()) {
+				&& !(level.detect_monster && level.dungeon[i][j].is_monster()) {
 				if !imitating(i as i64, j as i64, level) {
 					mvaddch(i as i32, j as i32, chtype::from(' '));
 				}

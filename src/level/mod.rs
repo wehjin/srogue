@@ -87,6 +87,7 @@ pub struct Level {
 	pub traps: [Trap; MAX_TRAP],
 	pub dungeon: [DungeonRow; DROWS],
 	pub see_invisible: bool,
+	pub detect_monster: bool,
 }
 
 impl Level {
@@ -96,6 +97,7 @@ impl Level {
 			traps: [Trap::default(); MAX_TRAP],
 			dungeon: [DungeonRow::default(); DROWS],
 			see_invisible: false,
+			detect_monster: false,
 		}
 	}
 	pub fn clear(&mut self) {
@@ -111,6 +113,7 @@ impl Level {
 			}
 		}
 		self.see_invisible = false;
+		self.detect_monster = false;
 	}
 }
 
@@ -243,7 +246,6 @@ pub unsafe fn connect_rooms(room1: usize, room2: usize, level_depth: usize, leve
 
 pub unsafe fn clear_level(level: &mut Level) {
 	level.clear();
-	detect_monster = false;
 	bear_trap = 0;
 	being_held = false;
 	party_room = None;
