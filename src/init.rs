@@ -20,7 +20,7 @@ pub const BYEBYE_STRING: &'static str = "Okay, bye bye!";
 
 pub struct GameState {
 	seed: [u8; 32],
-	pub depth: RogueDepth,
+	pub player: Player,
 	pub level: Level,
 }
 
@@ -28,7 +28,7 @@ impl GameState {
 	pub fn new() -> Self {
 		GameState {
 			seed: [1u8; 32],
-			depth: RogueDepth::new(),
+			player: Player::new(),
 			level: Level::new(),
 		}
 	}
@@ -71,7 +71,7 @@ pub unsafe fn init() -> (GameState, bool) {
 	md_heed_signals();
 
 	if score_only() {
-		put_scores(None, game.depth.max);
+		put_scores(None, game.player.max_depth);
 	}
 	game.set_seed(md_get_seed());
 	if let Some(rest_file) = rest_file() {
@@ -85,7 +85,7 @@ pub unsafe fn init() -> (GameState, bool) {
 	MASH.clear();
 	player_init();
 	party_counter = get_rand(1, 10);
-	ring_stats(false, game.depth.cur, &mut game.level);
+	ring_stats(false, game.player.cur_depth, &mut game.level);
 	return (game, false);
 }
 

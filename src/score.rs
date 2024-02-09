@@ -76,11 +76,11 @@ unsafe fn ending_string(ending: &Ending) -> String {
 	}
 }
 
-pub unsafe fn win(depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn win(player: &Player, level: &mut Level) {
 	unwield(rogue.weapon);          /* disarm and relax */
 	unwear(rogue.armor);
-	un_put_on(rogue.left_ring, depth.cur, level);
-	un_put_on(rogue.right_ring, depth.cur, level);
+	un_put_on(rogue.left_ring, player.cur_depth, level);
+	un_put_on(rogue.right_ring, player.cur_depth, level);
 
 	clear();
 	mvaddstr(10, 11, "@   @  @@@   @   @      @  @  @   @@@   @   @   @");
@@ -95,7 +95,7 @@ pub unsafe fn win(depth: &RogueDepth, level: &mut Level) {
 	message("", 0);
 	id_all();
 	sell_pack();
-	put_scores(Some(Ending::Win), depth.max);
+	put_scores(Some(Ending::Win), player.max_depth);
 }
 
 pub unsafe fn quit(from_intrpt: bool, max_level: usize) {

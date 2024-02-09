@@ -67,7 +67,7 @@ pub fn gr_monster(level_depth: usize, first_level_boost: usize, kind: Option<Mon
 	return monster;
 }
 
-pub unsafe fn mv_mons(depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn mv_mons(player: &Player, level: &mut Level) {
 	if haste_self % 2 != 0 {
 		return;
 	}
@@ -76,7 +76,7 @@ pub unsafe fn mv_mons(depth: &RogueDepth, level: &mut Level) {
 		let mut done_with_monster = false;
 		if monster.m_flags.hasted {
 			mon_disappeared = false;
-			mv_monster(&mut monster, rogue.row, rogue.col, depth, level);
+			mv_monster(&mut monster, rogue.row, rogue.col, player, level);
 			if mon_disappeared {
 				done_with_monster = true;
 			}
@@ -97,10 +97,10 @@ pub unsafe fn mv_mons(depth: &RogueDepth, level: &mut Level) {
 				&& !monster.m_flags.napping
 				&& !mon_can_go(monster, rogue.row, rogue.col, level) {
 				flew = true;
-				mv_monster(monster, rogue.row, rogue.col, depth, level);
+				mv_monster(monster, rogue.row, rogue.col, player, level);
 			}
 			if !(flew && mon_can_go(&*monster, rogue.row, rogue.col, level)) {
-				mv_monster(monster, rogue.row, rogue.col, depth, level);
+				mv_monster(monster, rogue.row, rogue.col, player, level);
 			}
 		}
 	}
@@ -153,7 +153,7 @@ pub unsafe fn gmc(monster: &Monster, level: &Level) -> chtype {
 	}
 }
 
-pub unsafe fn mv_monster(monster: &mut Monster, row: i64, col: i64, depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn mv_monster(monster: &mut Monster, row: i64, col: i64, player: &Player, level: &mut Level) {
 	if monster.m_flags.asleep {
 		if monster.m_flags.napping {
 			monster.do_nap();
@@ -182,13 +182,13 @@ pub unsafe fn mv_monster(monster: &mut Monster, row: i64, col: i64, depth: &Rogu
 		return;
 	}
 	if mon_can_go(monster, rogue.row, rogue.col, level) {
-		mon_hit(monster, None, false, depth, level);
+		mon_hit(monster, None, false, player, level);
 		return;
 	}
-	if monster.m_flags.flames && flame_broil(monster, depth, level) {
+	if monster.m_flags.flames && flame_broil(monster, player, level) {
 		return;
 	}
-	if monster.m_flags.seeks_gold && seek_gold(monster, depth, level) {
+	if monster.m_flags.seeks_gold && seek_gold(monster, player, level) {
 		return;
 	}
 
@@ -577,11 +577,11 @@ pub unsafe fn mon_sees(monster: &Monster, row: i64, col: i64, level: &Level) -> 
 	row_diff >= -1 && row_diff <= 1 && ool_diff >= -1 && ool_diff <= 1
 }
 
-pub unsafe fn mv_aquatars(depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn mv_aquatars(player: &Player, level: &mut Level) {
 	for monster in &mut MASH.monsters {
 		if monster.kind == MonsterKind::Aquator
 			&& mon_can_go(monster, rogue.row, rogue.col, level) {
-			mv_monster(monster, rogue.row, rogue.col, depth, level);
+			mv_monster(monster, rogue.row, rogue.col, player, level);
 			monster.m_flags.already_moved = true;
 		}
 	}

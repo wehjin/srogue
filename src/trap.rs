@@ -93,7 +93,7 @@ pub unsafe fn trap_at(row: usize, col: usize, level: &Level) -> TrapKind {
 	return NoTrap;
 }
 
-pub unsafe fn trap_player(row: usize, col: usize, depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn trap_player(row: usize, col: usize, player: &Player, level: &mut Level) {
 	let t = trap_at(row, col, level);
 	if t == NoTrap {
 		return;
@@ -127,18 +127,18 @@ pub unsafe fn trap_player(row: usize, col: usize, depth: &RogueDepth, level: &mu
 			if !sustain_strength && rand_percent(40) && rogue.str_current >= 3 {
 				rogue.str_current -= 1;
 			}
-			print_stats(STAT_HP | STAT_STRENGTH, depth.cur);
+			print_stats(STAT_HP | STAT_STRENGTH, player.cur_depth);
 			if rogue.hp_current <= 0 {
-				killed_by(Ending::PoisonDart, depth.max);
+				killed_by(Ending::PoisonDart, player.max_depth);
 			}
 		}
 		SleepingGasTrap => {
 			message(trap_message(t), 1);
-			take_a_nap(depth, level);
+			take_a_nap(player, level);
 		}
 		RustTrap => {
 			message(trap_message(t), 1);
-			rust(None, depth.cur);
+			rust(None, player.cur_depth);
 		}
 	}
 }
@@ -234,7 +234,7 @@ pub unsafe fn show_traps(level: &Level) {
 	}
 }
 
-pub unsafe fn search(n: usize, is_auto: bool, depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn search(n: usize, is_auto: bool, player: &Player, level: &mut Level) {
 	static mut reg_search: bool = false;
 
 	let mut found = 0;
@@ -280,7 +280,7 @@ pub unsafe fn search(n: usize, is_auto: bool, depth: &RogueDepth, level: &mut Le
 		if !is_auto {
 			reg_search = !reg_search;
 			if reg_search {
-				reg_move(depth, level);
+				reg_move(player, level);
 			}
 		}
 	}

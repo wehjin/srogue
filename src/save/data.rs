@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fs;
 use serde::{Deserialize, Serialize};
-use crate::level::{cur_room, Level, RogueDepth};
+use crate::level::{cur_room, Level, Player};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::machdep::{get_current_time, RogueTime};
 use crate::monster::{Fighter, MonsterMash};
@@ -131,7 +131,7 @@ impl SaveDungeon {
 
 #[derive(Serialize, Deserialize)]
 pub struct SaveData {
-	pub depth: RogueDepth,
+	pub player: Player,
 	pub hunger_str: String,
 	pub login_name: String,
 	pub party_counter: usize,
@@ -162,7 +162,7 @@ pub struct SaveData {
 impl SaveData {
 	pub unsafe fn read_from_statics(file_id: i64, game: &GameState) -> Self {
 		SaveData {
-			depth: game.depth,
+			player: game.player,
 			hunger_str: hunger_str.clone(),
 			login_name: login_name().to_string(),
 			party_counter,

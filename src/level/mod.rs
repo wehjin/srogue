@@ -23,25 +23,25 @@ use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
 use crate::room::RoomType::Nothing;
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
-pub struct RogueDepth {
-	pub cur: usize,
-	pub max: usize,
+pub struct Player {
+	pub cur_depth: usize,
+	pub max_depth: usize,
 }
 
 const LAST_DUNGEON: usize = 99;
 
-impl RogueDepth {
+impl Player {
 	pub fn new() -> Self {
-		RogueDepth { cur: 0, max: 1 }
+		Player { cur_depth: 0, max_depth: 1 }
 	}
-	pub fn descend(&self) -> Self {
-		let cur = (self.cur + 1).min(LAST_DUNGEON);
-		let max = self.max.max(cur);
-		RogueDepth { cur, max }
+	pub fn raise_depth(&self) -> Self {
+		let cur = (self.cur_depth + 1).min(LAST_DUNGEON);
+		let max = self.max_depth.max(cur);
+		Player { cur_depth: cur, max_depth: max }
 	}
-	pub fn ascend(&self) -> Self {
-		let cur = if self.cur < 3 { 1 } else { self.cur - 2 };
-		RogueDepth { cur, max: self.max }
+	pub fn lower_depth(&self) -> Self {
+		let cur = if self.cur_depth < 3 { 1 } else { self.cur_depth - 2 };
+		Player { cur_depth: cur, max_depth: self.max_depth }
 	}
 }
 
@@ -646,10 +646,10 @@ pub unsafe fn check_up(game: &mut GameState) -> bool {
 		}
 	}
 	new_level_message = Some("you feel a wrenching sensation in your gut".to_string());
-	if game.depth.cur == 1 {
-		win(&game.depth, &mut game.level);
+	if game.player.cur_depth == 1 {
+		win(&game.player, &mut game.level);
 	} else {
-		game.depth = game.depth.ascend();
+		game.player = game.player.lower_depth();
 		return true;
 	}
 	return false;

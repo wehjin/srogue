@@ -774,8 +774,8 @@ pub static mut id_rings: [id; RINGS] = {
 	]
 };
 
-pub unsafe fn put_objects(depth: &RogueDepth, level: &mut Level) {
-	if depth.cur < depth.max {
+pub unsafe fn put_objects(player: &Player, level: &mut Level) {
+	if player.cur_depth < player.max_depth {
 		return;
 	}
 
@@ -783,15 +783,15 @@ pub unsafe fn put_objects(depth: &RogueDepth, level: &mut Level) {
 	while rand_percent(33) {
 		n += 1;
 	}
-	if depth.cur == party_counter {
-		make_party(depth.cur, level);
-		party_counter = next_party(depth.cur);
+	if player.cur_depth == party_counter {
+		make_party(player.cur_depth, level);
+		party_counter = next_party(player.cur_depth);
 	}
 	for _i in 0..n {
-		let obj = gr_object(depth.cur);
+		let obj = gr_object(player.cur_depth);
 		rand_place(&mut *obj, level);
 	}
-	put_gold(depth.cur, level);
+	put_gold(player.cur_depth, level);
 }
 
 pub unsafe fn put_gold(level_depth: usize, level: &mut Level) {

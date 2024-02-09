@@ -9,7 +9,7 @@ use crate::settings::set_score_only;
 
 pub static mut wizard: bool = false;
 
-pub unsafe fn zapp(depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn zapp(player: &Player, level: &mut Level) {
 	let dir = get_dir_or_cancel();
 	check_message();
 	if dir == CANCEL {
@@ -41,12 +41,12 @@ pub unsafe fn zapp(depth: &RogueDepth, level: &mut Level) {
 		if let Some(monster_id) = get_zapped_monster(dir, &mut row, &mut col, level) {
 			if let Some(monster) = MASH.monster_with_id_mut(monster_id) {
 				monster.wake_up();
-				zap_monster(monster, (*wand).which_kind, depth, level);
+				zap_monster(monster, (*wand).which_kind, player, level);
 				relight(level);
 			}
 		}
 	}
-	reg_move(depth, level);
+	reg_move(player, level);
 }
 
 pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, level: &Level) -> Option<u64> {
@@ -67,7 +67,7 @@ pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, level:
 	}
 }
 
-pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, player: &Player, level: &mut Level) {
 	let row = monster.spot.row;
 	let col = monster.spot.col;
 	match WandKind::from_index(which_kind as usize) {
@@ -100,7 +100,7 @@ pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, depth: &RogueD
 			if monster.m_flags.holds {
 				level.being_held = false;
 			}
-			let mut morph_monster = gr_monster(depth.cur, 0, Some(MonsterKind::random_any()));
+			let mut morph_monster = gr_monster(player.cur_depth, 0, Some(MonsterKind::random_any()));
 			morph_monster.set_spot(row, col);
 			morph_monster.trail_char = monster.trail_char;
 			if !morph_monster.m_flags.imitates {
@@ -120,7 +120,7 @@ pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, depth: &RogueD
 			monster.nap_length = get_rand(3, 6);
 		}
 		WandKind::MagicMissile => {
-			rogue_hit(monster, true, depth, level);
+			rogue_hit(monster, true, player, level);
 		}
 		WandKind::Cancellation => {
 			if monster.m_flags.holds {

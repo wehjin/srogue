@@ -25,7 +25,7 @@ pub static mut r_see_invisible: bool = false;
 pub static mut sustain_strength: bool = false;
 pub static mut maintain_armor: bool = false;
 
-pub unsafe fn put_on_ring(depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn put_on_ring(player: &Player, level: &mut Level) {
 	if r_rings == 2 {
 		message("wearing two rings already", 0);
 		return;
@@ -68,10 +68,10 @@ pub unsafe fn put_on_ring(depth: &RogueDepth, level: &mut Level) {
 	} else {
 		do_put_on(&mut *ring, false);
 	}
-	ring_stats(true, depth.cur, level);
+	ring_stats(true, player.cur_depth, level);
 	check_message();
 	message(&get_desc(&*ring), 0);
-	reg_move(depth, level);
+	reg_move(player, level);
 }
 
 unsafe fn ask_left_or_right() -> char {
@@ -97,7 +97,7 @@ pub unsafe fn do_put_on(ring: &mut obj, on_left: bool) {
 	}
 }
 
-pub unsafe fn remove_ring(depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn remove_ring(player: &Player, level: &mut Level) {
 	let mut left = false;
 	let mut right = false;
 	if r_rings == 0 {
@@ -128,9 +128,9 @@ pub unsafe fn remove_ring(depth: &RogueDepth, level: &mut Level) {
 		if (*ring).is_cursed != 0 {
 			message(CURSE_MESSAGE, 0);
 		} else {
-			un_put_on(ring, depth.cur, level);
+			un_put_on(ring, player.cur_depth, level);
 			message(&format!("removed {}", get_desc(&*ring)), 0);
-			reg_move(depth, level);
+			reg_move(player, level);
 		}
 	}
 }

@@ -11,7 +11,7 @@ use crate::prelude::stat_const::STAT_ARMOR;
 use crate::prelude::weapon_kind::{ARROW, BOW};
 use crate::throw::Move::{Up, UpLeft, UpRight, Left, Right, Same, Down, DownLeft, DownRight};
 
-pub unsafe fn throw(depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn throw(player: &Player, level: &mut Level) {
 	let dir = get_dir_or_cancel();
 	check_message();
 	if dir == CANCEL {
@@ -37,11 +37,11 @@ pub unsafe fn throw(depth: &RogueDepth, level: &mut Level) {
 	if ((*weapon).in_use_flags & BEING_WIELDED) != 0 && (*weapon).quantity <= 1 {
 		unwield(rogue.weapon);
 	} else if ((*weapon).in_use_flags & BEING_WORN) != 0 {
-		mv_aquatars(depth, level);
+		mv_aquatars(player, level);
 		unwear(rogue.armor);
-		print_stats(STAT_ARMOR, depth.cur);
+		print_stats(STAT_ARMOR, player.cur_depth);
 	} else if ((*weapon).in_use_flags & ON_EITHER_HAND) != 0 {
-		un_put_on(weapon, depth.cur, level);
+		un_put_on(weapon, player.cur_depth, level);
 	}
 	let monster_id = get_thrown_at_monster(weapon, dir, &mut row, &mut col, level);
 	mvaddch(rogue.row as i32, rogue.col as i32, chtype::from(rogue.fchar));
@@ -54,16 +54,16 @@ pub unsafe fn throw(depth: &RogueDepth, level: &mut Level) {
 		let monster = MASH.monster_with_id_mut(monster_id).expect("monster with id");
 		monster.wake_up();
 		clear_gold_seeker(&mut *monster);
-		if !throw_at_monster(&mut *monster, &mut *weapon, depth, level) {
+		if !throw_at_monster(&mut *monster, &mut *weapon, player, level) {
 			flop_weapon(&mut *weapon, row, col, level);
 		}
 	} else {
 		flop_weapon(&mut *weapon, row, col, level);
 	}
-	vanish(&mut *weapon, true, &mut rogue.pack, depth, level);
+	vanish(&mut *weapon, true, &mut rogue.pack, player, level);
 }
 
-unsafe fn throw_at_monster(monster: &mut Monster, weapon: &mut obj, depth: &RogueDepth, level: &mut Level) -> bool {
+unsafe fn throw_at_monster(monster: &mut Monster, weapon: &mut obj, player: &Player, level: &mut Level) -> bool {
 	{
 		let mut hit_chance = get_hit_chance(weapon);
 		if weapon.which_kind == ARROW && rogue_weapon_is_bow() {
@@ -84,7 +84,7 @@ unsafe fn throw_at_monster(monster: &mut Monster, weapon: &mut obj, depth: &Rogu
 		hit_message += "hit  ";
 	}
 	if weapon.what_is == Wand && rand_percent(75) {
-		zap_monster(monster, weapon.which_kind, depth, level);
+		zap_monster(monster, weapon.which_kind, player, level);
 	} else {
 		let mut damage = get_weapon_damage(weapon);
 		if weapon.which_kind == ARROW && rogue_weapon_is_bow() {
@@ -93,7 +93,7 @@ unsafe fn throw_at_monster(monster: &mut Monster, weapon: &mut obj, depth: &Rogu
 		} else if weapon.is_wielded_throwing_weapon() {
 			damage = (damage * 3) / 2;
 		}
-		mon_damage(monster, damage, depth, level);
+		mon_damage(monster, damage, player, level);
 	}
 	return true;
 }

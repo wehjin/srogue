@@ -20,7 +20,7 @@ pub static mut haste_self: usize = 0;
 pub static mut extra_hp: isize = 0;
 pub static strange_feeling: &'static str = "you have a strange feeling for a moment, then it passes";
 
-pub unsafe fn quaff(depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn quaff(player: &Player, level: &mut Level) {
 	let ch = pack_letter("quaff what?", Potions);
 	if ch == CANCEL {
 		return;
@@ -71,7 +71,7 @@ pub unsafe fn quaff(depth: &RogueDepth, level: &mut Level) {
 		}
 		PotionKind::RaiseLevel => {
 			rogue.exp_points = LEVEL_POINTS[(rogue.exp - 1) as usize];
-			add_exp(1, true, depth.cur);
+			add_exp(1, true, player.cur_depth);
 		}
 		PotionKind::Blindness => {
 			go_blind(level);
@@ -121,14 +121,14 @@ pub unsafe fn quaff(depth: &RogueDepth, level: &mut Level) {
 			relight(level);
 		}
 	}
-	print_stats(STAT_STRENGTH | STAT_HP, depth.cur);
+	print_stats(STAT_STRENGTH | STAT_HP, player.cur_depth);
 	if id_potions[potion_kind.to_index()].id_status != Called {
 		id_potions[potion_kind.to_index()].id_status = Identified;
 	}
-	vanish(&mut *obj, true, &mut rogue.pack, depth, level);
+	vanish(&mut *obj, true, &mut rogue.pack, player, level);
 }
 
-pub unsafe fn read_scroll(depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn read_scroll(player: &Player, level: &mut Level) {
 	if blind != 0 {
 		message("You can't see to read the scroll.", 0);
 		return;
@@ -182,7 +182,7 @@ pub unsafe fn read_scroll(depth: &RogueDepth, level: &mut Level) {
 				message(&format!("your armor glows {}for a moment", get_ench_color(), ), 0);
 				(*rogue.armor).d_enchant += 1;
 				(*rogue.armor).is_cursed = 0;
-				print_stats(STAT_ARMOR, depth.cur);
+				print_stats(STAT_ARMOR, player.cur_depth);
 			} else {
 				message("your skin crawls", 0);
 			}
@@ -198,7 +198,7 @@ pub unsafe fn read_scroll(depth: &RogueDepth, level: &mut Level) {
 		}
 		ScrollKind::Sleep => {
 			message("you fall asleep", 0);
-			take_a_nap(depth, level);
+			take_a_nap(player, level);
 		}
 		ScrollKind::ProtectArmor => {
 			if !rogue.armor.is_null() {
@@ -218,7 +218,7 @@ pub unsafe fn read_scroll(depth: &RogueDepth, level: &mut Level) {
 			uncurse_all();
 		}
 		ScrollKind::CreateMonster => {
-			create_monster(depth.cur, level);
+			create_monster(player.cur_depth, level);
 		}
 		ScrollKind::AggravateMonster => {
 			aggravate(level);
@@ -231,10 +231,10 @@ pub unsafe fn read_scroll(depth: &RogueDepth, level: &mut Level) {
 	if id_scrolls[scroll_kind.to_index()].id_status != Called {
 		id_scrolls[scroll_kind.to_index()].id_status = Identified;
 	}
-	vanish(&mut *obj, scroll_kind != ScrollKind::Sleep, &mut rogue.pack, depth, level);
+	vanish(&mut *obj, scroll_kind != ScrollKind::Sleep, &mut rogue.pack, player, level);
 }
 
-pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj, depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj, player: &Player, level: &mut Level) {
 	/* vanish() does NOT handle a quiver of weapons with more than one
 	   arrow (or whatever) in the quiver.  It will only decrement the count.
 	*/
@@ -246,13 +246,13 @@ pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj, depth
 		} else if ((*obj).in_use_flags & BEING_WORN) != 0 {
 			unwear(obj);
 		} else if ((*obj).in_use_flags & ON_EITHER_HAND) != 0 {
-			un_put_on(obj, depth.cur, level);
+			un_put_on(obj, player.cur_depth, level);
 		}
 		take_from_pack(obj, pack);
 		free_object(obj);
 	}
 	if do_regular_move {
-		reg_move(depth, level);
+		reg_move(player, level);
 	}
 }
 
@@ -324,7 +324,7 @@ unsafe fn idntfy() {
 }
 
 
-pub unsafe fn eat(depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn eat(player: &Player, level: &mut Level) {
 	let ch = pack_letter("eat what?", Foods);
 	if ch == CANCEL {
 		return;
@@ -349,15 +349,15 @@ pub unsafe fn eat(depth: &RogueDepth, level: &mut Level) {
 		get_rand(900, 1100)
 	} else {
 		message("yuk, that food tasted awful", 0);
-		add_exp(2, true, depth.cur);
+		add_exp(2, true, player.cur_depth);
 		get_rand(700, 900)
 	};
 	rogue.moves_left /= 3;
 	rogue.moves_left += moves;
 	hunger_str.clear();
-	print_stats(STAT_HUNGER, depth.cur);
+	print_stats(STAT_HUNGER, player.cur_depth);
 
-	vanish(&mut *obj, true, &mut rogue.pack, depth, level);
+	vanish(&mut *obj, true, &mut rogue.pack, player, level);
 }
 
 unsafe fn hold_monster(level: &Level) {
@@ -458,12 +458,12 @@ pub unsafe fn relight(level: &mut Level) {
 	mvaddch(rogue.row as i32, rogue.col as i32, chtype::from(rogue.fchar));
 }
 
-pub unsafe fn take_a_nap(depth: &RogueDepth, level: &mut Level) {
+pub unsafe fn take_a_nap(player: &Player, level: &mut Level) {
 	let mut i = get_rand(2, 5);
 	md_sleep(1);
 	while i > 0 {
 		i -= 1;
-		mv_mons(depth, level);
+		mv_mons(player, level);
 	}
 	md_sleep(1);
 	message(YOU_CAN_MOVE_AGAIN, 0);

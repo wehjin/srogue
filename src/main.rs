@@ -75,14 +75,14 @@ pub fn main() {
 	loop {
 		if !restored {
 			unsafe { clear_level(&mut game.level); }
-			game.depth = game.depth.descend();
-			unsafe { make_level(game.depth.cur, &mut game.level) };
-			unsafe { put_objects(&game.depth, &mut game.level); }
+			game.player = game.player.raise_depth();
+			unsafe { make_level(game.player.cur_depth, &mut game.level) };
+			unsafe { put_objects(&game.player, &mut game.level); }
 			unsafe { put_stairs(&mut game.level); }
-			unsafe { add_traps(game.depth.cur, &mut game.level); }
-			unsafe { put_mons(game.depth.cur, &mut game.level); }
+			unsafe { add_traps(game.player.cur_depth, &mut game.level); }
+			unsafe { put_mons(game.player.cur_depth, &mut game.level); }
 			unsafe { put_player(game.level.party_room, &mut game.level); }
-			unsafe { print_stats(STAT_ALL, game.depth.cur); }
+			unsafe { print_stats(STAT_ALL, game.player.cur_depth); }
 		}
 		unsafe { play_level(&mut game); }
 		unsafe { free_stuff(&mut level_objects); }
