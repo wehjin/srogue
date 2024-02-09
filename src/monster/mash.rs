@@ -131,7 +131,7 @@ impl Monster {
 			stationary_damage: 0,
 			hp_to_kill: kind.hp_to_kill(),
 			killed: false,
-			drop_percent: 0,
+			drop_percent: kind.drop_percent(),
 		}
 	}
 	pub fn do_nap(&mut self) {
