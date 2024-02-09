@@ -89,6 +89,7 @@ pub struct Level {
 	pub see_invisible: bool,
 	pub detect_monster: bool,
 	pub bear_trap: usize,
+	pub being_held: bool,
 }
 
 impl Level {
@@ -100,6 +101,7 @@ impl Level {
 			see_invisible: false,
 			detect_monster: false,
 			bear_trap: 0,
+			being_held: false,
 		}
 	}
 	pub fn clear(&mut self) {
@@ -117,6 +119,7 @@ impl Level {
 		self.see_invisible = false;
 		self.detect_monster = false;
 		self.bear_trap = 0;
+		self.being_held = false;
 	}
 }
 
@@ -249,7 +252,6 @@ pub unsafe fn connect_rooms(room1: usize, room2: usize, level_depth: usize, leve
 
 pub unsafe fn clear_level(level: &mut Level) {
 	level.clear();
-	being_held = false;
 	party_room = None;
 	rogue.col = -1;
 	rogue.row = -1;

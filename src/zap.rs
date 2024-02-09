@@ -98,7 +98,7 @@ pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, depth: &RogueD
 		}
 		WandKind::Polymorph => unsafe {
 			if monster.m_flags.holds {
-				being_held = false;
+				level.being_held = false;
 			}
 			let mut morph_monster = gr_monster(depth.cur, 0, Some(MonsterKind::random_any()));
 			morph_monster.set_spot(row, col);
@@ -124,7 +124,7 @@ pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, depth: &RogueD
 		}
 		WandKind::Cancellation => {
 			if monster.m_flags.holds {
-				being_held = false;
+				level.being_held = false;
 			}
 			if monster.m_flags.steals_item {
 				monster.drop_percent = 0;
@@ -147,7 +147,7 @@ pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, depth: &RogueD
 
 unsafe fn tele_away(monster: &mut Monster, level: &mut Level) {
 	if monster.m_flags.holds {
-		being_held = false;
+		level.being_held = false;
 	}
 	let (row, col) = {
 		let mut row = 0;

@@ -12,7 +12,6 @@ use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD, STAT_HP, STAT_STRENGTH};
 
 pub static mut less_hp: isize = 0;
 pub static FLAME_NAME: &'static str = "flame";
-pub static mut being_held: bool = false;
 
 pub unsafe fn special_hit(monster: &mut Monster, depth: &RogueDepth, level: &mut Level) {
 	if monster.m_flags.confused && rand_percent(66) {
@@ -22,7 +21,7 @@ pub unsafe fn special_hit(monster: &mut Monster, depth: &RogueDepth, level: &mut
 		rust(Some(monster), depth.cur);
 	}
 	if monster.m_flags.holds && levitate == 0 {
-		being_held = true;
+		level.being_held = true;
 	}
 	if monster.m_flags.freezes {
 		freeze(monster, depth, level);

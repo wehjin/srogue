@@ -6,7 +6,7 @@ use crate::level::constants::{DCOLS, DROWS};
 use crate::machdep::{get_current_time, RogueTime};
 use crate::monster::{Fighter, MonsterMash};
 use crate::objects::{empty_obj, foods, id, obj, party_counter, SaveObj};
-use crate::prelude::{being_held, blind, confused, GameState, halluc, haste_self, levitate, m_moves, wizard};
+use crate::prelude::{blind, confused, GameState, halluc, haste_self, levitate, m_moves, wizard};
 use crate::save::{hunger_str, id_potions, id_rings, id_scrolls, id_wands, IS_WOOD, MASH, level_objects, rogue};
 use crate::settings;
 use crate::settings::{login_name, score_only};
@@ -149,7 +149,6 @@ pub struct SaveData {
 	pub is_wood: Vec<bool>,
 	pub cur_room: i64,
 	pub level: Level,
-	pub being_held: bool,
 	pub halluc: usize,
 	pub blind: usize,
 	pub confused: usize,
@@ -182,7 +181,6 @@ impl SaveData {
 			is_wood: IS_WOOD.to_vec(),
 			cur_room,
 			level: game.level.clone(),
-			being_held,
 			halluc,
 			blind,
 			confused,
@@ -210,7 +208,6 @@ impl SaveData {
 		load_array(&mut id_rings, &self.id_rings.ids);
 		load_array(&mut IS_WOOD, &self.is_wood);
 		cur_room = self.cur_room;
-		being_held = self.being_held;
 		halluc = self.halluc;
 		blind = self.blind;
 		confused = self.confused;

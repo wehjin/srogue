@@ -196,7 +196,7 @@ pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: usize, depth: &
 		hit_message.clear();
 		add_exp(monster.kill_exp(), true, depth.cur);
 		if monster.m_flags.holds {
-			being_held = false;
+			level.being_held = false;
 		}
 		MASH.remove_monster(monster.id());
 		return false;
@@ -345,5 +345,5 @@ use crate::random::rand_percent;
 use crate::ring::{add_strength, r_rings, ring_exp};
 use crate::room::get_dungeon_char;
 use crate::score::killed_by;
-use crate::spec_hit::{being_held, clear_gold_seeker, check_imitator, cough_up, special_hit};
+use crate::spec_hit::{clear_gold_seeker, check_imitator, cough_up, special_hit};
 use crate::zap::wizard;
