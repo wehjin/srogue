@@ -1,10 +1,17 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-use std::ops::{Index, IndexMut};
 use ncurses::clear;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
+
+pub mod constants;
+mod cells;
+mod dungeon;
+
+pub use cells::*;
+pub use dungeon::*;
+use crate::level::constants::{DCOLS, DROWS, MAX_ROOM, MAX_TRAP};
 use crate::message::{message, print_stats};
 use crate::monster::wake_room;
 use crate::objects::put_amulet;
@@ -15,9 +22,6 @@ use crate::score::win;
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
 use crate::room::RoomType::Nothing;
-pub use spot::*;
-
-mod spot;
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
 pub struct RogueDepth {
@@ -74,130 +78,6 @@ pub fn shuffled_rns() -> [usize; MAX_ROOM] {
 	let mut room_indices: [usize; MAX_ROOM] = [3, 7, 5, 2, 0, 6, 1, 4, 8];
 	room_indices.shuffle(&mut thread_rng());
 	room_indices
-}
-
-pub const MAX_ROOM: usize = 9;
-pub const MAX_TRAP: usize = 10;
-pub const DCOLS: usize = 80;
-pub const DROWS: usize = 24;
-
-#[derive(Copy, Clone, Serialize, Deserialize, Default)]
-pub struct DungeonCell(u16);
-
-impl DungeonCell {
-	pub fn set_nothing(&mut self) {
-		self.0 = 0;
-	}
-	pub fn set_only_kind(&mut self, kind: CellKind) {
-		self.0 = Self::flag_for_kind(kind).as_u16();
-	}
-	pub fn add_kind(&mut self, kind: CellKind) {
-		self.0 |= Self::flag_for_kind(kind).as_u16();
-	}
-	pub fn remove_kind(&mut self, kind: CellKind) {
-		self.0 &= !Self::flag_for_kind(kind).as_u16();
-	}
-
-	pub fn add_hidden(&mut self) {
-		self.add_kind(CellKind::Hidden);
-	}
-	pub fn is_nothing(&self) -> bool {
-		self.0 == 0
-	}
-	pub fn is_door(&self) -> bool { self.is_kind(CellKind::Door) }
-	pub fn is_floor(&self) -> bool { self.is_kind(CellKind::Floor) }
-	pub fn is_tunnel(&self) -> bool { self.is_kind(CellKind::Tunnel) }
-	pub fn is_monster(&self) -> bool { self.is_kind(CellKind::Monster) }
-	pub fn is_stairs(&self) -> bool { self.is_kind(CellKind::Stairs) }
-	pub fn is_hidden(&self) -> bool { self.is_kind(CellKind::Hidden) }
-	pub fn is_trap(&self) -> bool { self.is_kind(CellKind::Trap) }
-	pub fn is_object(&self) -> bool { self.is_kind(CellKind::Object) }
-	pub fn is_kind(&self, kind: CellKind) -> bool {
-		let flag = Self::flag_for_kind(kind).as_u16();
-		(self.0 & flag) != 0
-	}
-	pub fn is_only_kind(&self, kind: CellKind) -> bool {
-		self.0 == Self::flag_for_kind(kind).as_u16()
-	}
-	pub fn is_not_kind(&self, kind: CellKind) -> bool {
-		!self.is_kind(kind)
-	}
-	pub fn is_any_kind(&self, kinds: &[CellKind]) -> bool {
-		kinds.iter().position(|kind| self.is_kind(*kind)).is_some()
-	}
-	pub fn is_other_kind(&self, kinds: &[CellKind]) -> bool {
-		let mask = kinds.iter().fold(0u16, |all, next| {
-			all | Self::flag_for_kind(*next).as_u16()
-		});
-		(self.0 & !mask) != 0
-	}
-	fn flag_for_kind(kind: CellKind) -> SpotFlag {
-		match kind {
-			CellKind::HorizontalWall => SpotFlag::HorWall,
-			CellKind::VerticalWall => SpotFlag::VertWall,
-			CellKind::Floor => SpotFlag::Floor,
-			CellKind::Door => SpotFlag::Door,
-			CellKind::Tunnel => SpotFlag::Tunnel,
-			CellKind::Stairs => SpotFlag::Stairs,
-			CellKind::Monster => SpotFlag::Monster,
-			CellKind::Hidden => SpotFlag::Hidden,
-			CellKind::Object => SpotFlag::Object,
-			CellKind::Trap => SpotFlag::Trap,
-		}
-	}
-}
-
-#[derive(Copy, Clone, Eq, PartialEq)]
-pub enum CellKind {
-	HorizontalWall,
-	VerticalWall,
-	Floor,
-	Door,
-	Tunnel,
-	Stairs,
-	Monster,
-	Hidden,
-	Object,
-	Trap,
-}
-
-const SERIALIZE_MAX: usize = 32;
-
-#[derive(Copy, Clone, Serialize, Deserialize, Default)]
-pub struct DungeonRow {
-	cols0_32: [DungeonCell; SERIALIZE_MAX],
-	cols32_64: [DungeonCell; SERIALIZE_MAX],
-	cols64_DCOLS: [DungeonCell; DCOLS % SERIALIZE_MAX],
-}
-
-impl Index<usize> for DungeonRow {
-	type Output = DungeonCell;
-	fn index(&self, index: usize) -> &Self::Output {
-		match index / SERIALIZE_MAX {
-			0 => &self.cols0_32[index % SERIALIZE_MAX],
-			1 => &self.cols32_64[index % SERIALIZE_MAX],
-			2 => &self.cols64_DCOLS[index % SERIALIZE_MAX],
-			_ => unimplemented!("DROWS greater that 96")
-		}
-	}
-}
-
-impl IndexMut<usize> for DungeonRow {
-	fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-		match index / SERIALIZE_MAX {
-			0 => &mut self.cols0_32[index % SERIALIZE_MAX],
-			1 => &mut self.cols32_64[index % SERIALIZE_MAX],
-			2 => &mut self.cols64_DCOLS[index % SERIALIZE_MAX],
-			_ => unimplemented!("DROWS greater that 96")
-		}
-	}
-}
-
-#[derive(Copy, Clone, Serialize, Deserialize)]
-pub struct Level {
-	pub rooms: [Room; MAX_ROOM],
-	pub traps: [Trap; MAX_TRAP],
-	pub dungeon: [DungeonRow; DROWS],
 }
 
 impl Level {

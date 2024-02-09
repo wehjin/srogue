@@ -3,6 +3,7 @@
 use ncurses::{chtype, mvaddch, refresh};
 use MoveResult::MoveFailed;
 use crate::hunger::HUNGRY;
+use crate::level::constants::{DCOLS, DROWS};
 use crate::odds::R_TELE_PERCENT;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;

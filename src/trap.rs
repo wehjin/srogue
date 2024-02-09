@@ -3,6 +3,7 @@
 use ncurses::{chtype, mvaddch};
 use serde::{Deserialize, Serialize};
 use TrapKind::NoTrap;
+use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_STRENGTH};

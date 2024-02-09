@@ -5,6 +5,7 @@ use std::string::ToString;
 use ncurses::{chtype, mvaddch, mvinch};
 use serde::{Deserialize, Serialize};
 use ObjectWhat::{Armor, Potion, Scroll, Weapon};
+use crate::level::constants::MAX_ROOM;
 use crate::odds::GOLD_PERCENT;
 use crate::prelude::*;
 use crate::prelude::armor_kind::{ARMORS, PLATE, SPLINT};

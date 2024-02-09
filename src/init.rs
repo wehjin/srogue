@@ -5,6 +5,7 @@ use std::io::Write;
 use libc::{c_short};
 use settings::nick_name;
 use crate::{console, settings};
+use crate::level::constants::DROWS;
 use crate::prelude::*;
 use crate::prelude::armor_kind::RINGMAIL;
 use crate::prelude::object_what::ObjectWhat::{Armor, Weapon};

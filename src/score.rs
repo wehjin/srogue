@@ -7,6 +7,7 @@ use ncurses::{clear, mv, mvaddch, mvaddstr, mvinch, refresh, standend, standout}
 use settings::{score_only, show_skull};
 use crate::prelude::*;
 use crate::{settings, turn_into_games, turn_into_user};
+use crate::level::constants::{DCOLS, DROWS};
 use crate::objects::IdStatus::Identified;
 use crate::prelude::armor_kind::ARMORS;
 use crate::prelude::ending::Ending;

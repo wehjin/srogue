@@ -15,6 +15,7 @@ pub use flags::MonsterFlags;
 pub use kind::*;
 pub use mash::*;
 use crate::{odds};
+use crate::level::constants::{DCOLS, DROWS};
 use crate::prelude::object_what::ObjectWhat::Scroll;
 use crate::prelude::scroll_kind::ScrollKind;
 use crate::prelude::scroll_kind::ScrollKind::ScareMonster;

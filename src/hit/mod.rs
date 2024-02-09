@@ -331,12 +331,13 @@ mod safe;
 
 pub use safe::*;
 use crate::level::{add_exp, Level, RogueDepth};
+use crate::level::constants::{DCOLS, DROWS};
 use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
 use crate::monster;
 use crate::monster::{MASH, mon_name};
 use crate::objects::{get_armor_class, object, rogue};
 use crate::play::interrupted;
-use crate::prelude::{AMULET_LEVEL, CellKind, DCOLS, DROWS, MIN_ROW, weapon_kind};
+use crate::prelude::{AMULET_LEVEL, CellKind, MIN_ROW, weapon_kind};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::stat_const::STAT_HP;

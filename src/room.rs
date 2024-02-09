@@ -3,6 +3,7 @@
 use std::ops::{RangeInclusive};
 use ncurses::{addch, chtype, mvaddch, mvinch};
 use serde::{Deserialize, Serialize};
+use crate::level::constants::{DCOLS, DROWS, MAX_ROOM};
 use crate::prelude::*;
 use crate::prelude::DoorDirection::{Left, Right};
 use crate::prelude::object_what::ObjectWhat;
@@ -360,7 +361,8 @@ pub fn get_opt_room_number(row: i64, col: i64, level: &Level) -> Option<usize> {
 }
 
 mod room_visitor {
-	use crate::room::{MAX_ROOM, Room, RoomType};
+	use crate::level::constants::MAX_ROOM;
+	use crate::room::{Room, RoomType};
 
 	pub struct Unvisited {
 		starting_room: Option<usize>,

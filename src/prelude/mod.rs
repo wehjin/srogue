@@ -7,6 +7,7 @@ pub use crate::hit::*;
 pub use crate::init::*;
 pub use crate::instruct::*;
 pub use crate::inventory::*;
+use crate::level::constants::{DCOLS, DROWS};
 pub use crate::machdep::*;
 pub use crate::r#move::*;
 pub use crate::objects::*;
