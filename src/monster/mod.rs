@@ -322,7 +322,11 @@ pub unsafe fn mon_can_go(monster: &Monster, row: i64, col: i64, level: &Level) -
 
 pub unsafe fn wake_room(rn: i64, entering: bool, row: i64, col: i64, level: &Level) {
 	let wake_percent = {
-		let wake_percent = if Some(rn as usize) == party_room { odds::PARTY_WAKE_PERCENT } else { odds::WAKE_PERCENT };
+		let wake_percent = if Some(rn as usize) == level.party_room {
+			odds::PARTY_WAKE_PERCENT
+		} else {
+			odds::WAKE_PERCENT
+		};
 		if stealthy > 0 {
 			wake_percent / (odds::STEALTH_FACTOR + stealthy as usize)
 		} else {

@@ -161,8 +161,8 @@ pub unsafe fn add_traps(cur_level: usize, level: &mut Level) {
 	}
 	for i in 0..n {
 		level.traps[i].trap_type = TrapKind::random();
-		let (row, col) = if i == 0 && party_room.is_some() {
-			let cur_party_room = party_room.expect("party room is some");
+		let (row, col) = if i == 0 && level.party_room.is_some() {
+			let cur_party_room = level.party_room.expect("some party room");
 			let mut row: usize;
 			let mut col: usize;
 			let mut tries = 0;

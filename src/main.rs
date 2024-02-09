@@ -81,7 +81,7 @@ pub fn main() {
 			unsafe { put_stairs(&mut game.level); }
 			unsafe { add_traps(game.depth.cur, &mut game.level); }
 			unsafe { put_mons(game.depth.cur, &mut game.level); }
-			unsafe { put_player(party_room, &mut game.level); }
+			unsafe { put_player(game.level.party_room, &mut game.level); }
 			unsafe { print_stats(STAT_ALL, game.depth.cur); }
 		}
 		unsafe { play_level(&mut game); }

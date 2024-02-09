@@ -1093,11 +1093,11 @@ pub unsafe fn free_object(obj: *mut object) {
 }
 
 pub unsafe fn make_party(level_depth: usize, level: &mut Level) {
-	party_room = Some(gr_room(level));
-	let cur_party_room = party_room.expect("some party room");
-	let n = if rand_percent(99) { party_objects(cur_party_room, level_depth, level) } else { 11 };
+	let party_room = gr_room(level);
+	level.party_room = Some(party_room);
+	let n = if rand_percent(99) { party_objects(party_room, level_depth, level) } else { 11 };
 	if rand_percent(99) {
-		party_monsters(cur_party_room, n, level_depth, level);
+		party_monsters(party_room, n, level_depth, level);
 	}
 }
 

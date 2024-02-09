@@ -48,7 +48,6 @@ impl RogueDepth {
 
 pub static mut cur_room: i64 = 0;
 pub static mut new_level_message: Option<String> = None;
-pub static mut party_room: Option<usize> = None;
 pub static mut r_de: Option<usize> = None;
 pub const LEVEL_POINTS: [isize; MAX_EXP_LEVEL] = [
 	10,
@@ -90,6 +89,7 @@ pub struct Level {
 	pub detect_monster: bool,
 	pub bear_trap: usize,
 	pub being_held: bool,
+	pub party_room: Option<usize>,
 }
 
 impl Level {
@@ -102,6 +102,7 @@ impl Level {
 			detect_monster: false,
 			bear_trap: 0,
 			being_held: false,
+			party_room: None,
 		}
 	}
 	pub fn clear(&mut self) {
@@ -120,6 +121,7 @@ impl Level {
 		self.detect_monster = false;
 		self.bear_trap = 0;
 		self.being_held = false;
+		self.party_room = None;
 	}
 }
 
@@ -252,7 +254,6 @@ pub unsafe fn connect_rooms(room1: usize, room2: usize, level_depth: usize, leve
 
 pub unsafe fn clear_level(level: &mut Level) {
 	level.clear();
-	party_room = None;
 	rogue.col = -1;
 	rogue.row = -1;
 	clear();

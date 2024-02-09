@@ -145,6 +145,7 @@ pub unsafe fn to_hit(obj: *const object) -> usize {
 	let damage = if (*obj).what_is == Weapon {
 		weapon_kind::damage((*obj).which_kind)
 	} else {
+		//TODO
 		unimplemented!("not a weapon!")
 	};
 	let hits = DamageStat::parse_first(damage).hits;

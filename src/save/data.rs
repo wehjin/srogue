@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fs;
 use serde::{Deserialize, Serialize};
-use crate::level::{cur_room, Level, party_room, RogueDepth};
+use crate::level::{cur_room, Level, RogueDepth};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::machdep::{get_current_time, RogueTime};
 use crate::monster::{Fighter, MonsterMash};
@@ -134,7 +134,6 @@ pub struct SaveData {
 	pub depth: RogueDepth,
 	pub hunger_str: String,
 	pub login_name: String,
-	pub party_room: Option<usize>,
 	pub party_counter: usize,
 	pub level_monsters: MonsterMash,
 	pub level_objects: SavePack,
@@ -166,7 +165,6 @@ impl SaveData {
 			depth: game.depth,
 			hunger_str: hunger_str.clone(),
 			login_name: login_name().to_string(),
-			party_room,
 			party_counter,
 			level_monsters: MASH.clone(),
 			level_objects: SavePack::from_pack(&level_objects),
@@ -195,7 +193,6 @@ impl SaveData {
 	pub unsafe fn write_to_statics(&self) {
 		hunger_str = self.hunger_str.clone();
 		settings::set_login_name(&self.login_name);
-		party_room = self.party_room;
 		party_counter = self.party_counter;
 		MASH = self.level_monsters.clone();
 		self.level_objects.write_pack(&mut level_objects, false);
