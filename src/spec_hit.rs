@@ -7,14 +7,13 @@ use crate::prelude::armor_kind::LEATHER;
 use crate::prelude::ending::Ending;
 use crate::prelude::item_usage::BEING_USED;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
-use crate::prelude::SpotFlag::{Door, Floor, Object, Stairs, Trap, Tunnel};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD, STAT_HP, STAT_STRENGTH};
 
 pub static mut less_hp: isize = 0;
 pub static FLAME_NAME: &'static str = "flame";
 pub static mut being_held: bool = false;
 
-pub unsafe fn special_hit(monster: &mut Monster, depth: &RogueDepth, level: &Level) {
+pub unsafe fn special_hit(monster: &mut Monster, depth: &RogueDepth, level: &mut Level) {
 	if monster.m_flags.confused && rand_percent(66) {
 		return;
 	}
@@ -61,7 +60,7 @@ pub unsafe fn rust(monster: Option<&mut Monster>, level_depth: usize) {
 	}
 }
 
-unsafe fn freeze(monster: &mut Monster, depth: &RogueDepth, level: &Level) {
+unsafe fn freeze(monster: &mut Monster, depth: &RogueDepth, level: &mut Level) {
 	if rand_percent(12) {
 		return;
 	}
@@ -89,7 +88,7 @@ unsafe fn freeze(monster: &mut Monster, depth: &RogueDepth, level: &Level) {
 	}
 }
 
-unsafe fn steal_gold(monster: &mut Monster, level_depth: usize, level: &Level) {
+unsafe fn steal_gold(monster: &mut Monster, level_depth: usize, level: &mut Level) {
 	if rogue.gold <= 0 || rand_percent(10) {
 		return;
 	}
@@ -101,7 +100,7 @@ unsafe fn steal_gold(monster: &mut Monster, level_depth: usize, level: &Level) {
 	disappear(monster, level);
 }
 
-unsafe fn steal_item(monster: &mut Monster, depth: &RogueDepth, level: &Level) {
+unsafe fn steal_item(monster: &mut Monster, depth: &RogueDepth, level: &mut Level) {
 	if rand_percent(15) {
 		return;
 	}
@@ -153,10 +152,10 @@ unsafe fn steal_item(monster: &mut Monster, depth: &RogueDepth, level: &Level) {
 	disappear(monster, level);
 }
 
-unsafe fn disappear(monster: &mut Monster, level: &Level) {
-	SpotFlag::Monster.clear(&mut DUNGEON[monster.spot.row as usize][monster.spot.col as usize]);
+unsafe fn disappear(monster: &mut Monster, level: &mut Level) {
+	level.dungeon[monster.spot.row as usize][monster.spot.col as usize].remove_kind(CellKind::Monster);
 	if rogue_can_see(monster.spot.row, monster.spot.col, level) {
-		let dungeon_char = get_dungeon_char(monster.spot.row, monster.spot.col);
+		let dungeon_char = get_dungeon_char(monster.spot.row, monster.spot.col, level);
 		mvaddch(monster.spot.row as i32, monster.spot.col as i32, dungeon_char);
 	}
 	MASH.remove_monster(monster.id());
@@ -164,7 +163,7 @@ unsafe fn disappear(monster: &mut Monster, level: &Level) {
 }
 
 
-pub unsafe fn cough_up(monster: &mut Monster, depth: &RogueDepth) {
+pub unsafe fn cough_up(monster: &mut Monster, depth: &RogueDepth, level: &mut Level) {
 	if depth.cur < depth.max {
 		return;
 	}
@@ -184,19 +183,19 @@ pub unsafe fn cough_up(monster: &mut Monster, depth: &RogueDepth) {
 	for n in 0..=5 {
 		for i in -n..=n {
 			let cough_col = col + i;
-			if try_to_cough(row + n, cough_col, &mut *obj) {
+			if try_to_cough(row + n, cough_col, &mut *obj, level) {
 				return;
 			}
-			if try_to_cough(row - n, cough_col, &mut *obj) {
+			if try_to_cough(row - n, cough_col, &mut *obj, level) {
 				return;
 			}
 		}
 		for i in -n..=n {
 			let cough_row = row + i;
-			if try_to_cough(cough_row, col - n, &mut *obj) {
+			if try_to_cough(cough_row, col - n, &mut *obj, level) {
 				return;
 			}
-			if try_to_cough(cough_row, col + n, &mut *obj) {
+			if try_to_cough(cough_row, col + n, &mut *obj, level) {
 				return;
 			}
 		}
@@ -204,25 +203,24 @@ pub unsafe fn cough_up(monster: &mut Monster, depth: &RogueDepth) {
 	free_object(obj);
 }
 
-unsafe fn try_to_cough(row: i64, col: i64, obj: &mut obj) -> bool {
+unsafe fn try_to_cough(row: i64, col: i64, obj: &mut obj, level: &mut Level) -> bool {
 	if row < MIN_ROW || row > (DROWS - 2) as i64 || col < 0 || col > (DCOLS - 1) as i64 {
 		return false;
 	}
-	let dungeon_cell = DUNGEON[row as usize][col as usize];
-	if !SpotFlag::is_any_set(&vec![Object, Stairs, Trap], dungeon_cell)
-		&& SpotFlag::is_any_set(&vec![Tunnel, Floor, Door], dungeon_cell) {
-		place_at(obj, row, col);
-		let no_rogue = row != rogue.row || col != rogue.col;
-		let no_monster = !SpotFlag::Monster.is_set(dungeon_cell);
-		if no_rogue && no_monster {
-			mvaddch(row as i32, col as i32, get_dungeon_char(row, col));
+	let dungeon_cell = level.dungeon[row as usize][col as usize];
+	if !dungeon_cell.is_any_kind(&[CellKind::Object, CellKind::Stairs, CellKind::Trap])
+		&& dungeon_cell.is_any_kind(&[CellKind::Tunnel, CellKind::Floor, CellKind::Door]) {
+		place_at(obj, row, col, level);
+		if (row != rogue.row || col != rogue.col)
+			&& !dungeon_cell.is_monster() {
+			mvaddch(row as i32, col as i32, get_dungeon_char(row, col, level));
 		}
 		return true;
 	}
 	return false;
 }
 
-pub unsafe fn seek_gold(monster: &mut Monster, depth: &RogueDepth, level: &Level) -> bool {
+pub unsafe fn seek_gold(monster: &mut Monster, depth: &RogueDepth, level: &mut Level) -> bool {
 	let rn = get_room_number(monster.spot.row, monster.spot.col, level);
 	if rn < 0 {
 		return false;
@@ -231,9 +229,9 @@ pub unsafe fn seek_gold(monster: &mut Monster, depth: &RogueDepth, level: &Level
 	let rn = rn as usize;
 	for i in (level.rooms[rn].top_row + 1)..level.rooms[rn].bottom_row {
 		for j in (level.rooms[rn].left_col + 1)..level.rooms[rn].right_col {
-			if gold_at(i, j) && !SpotFlag::Monster.is_set(DUNGEON[i as usize][j as usize]) {
+			if gold_at(i, j, level) && !level.dungeon[i as usize][j as usize].is_monster() {
 				monster.m_flags.can_flit = true;
-				let can_go_if_while_can_flit = mon_can_go(monster, i, j);
+				let can_go_if_while_can_flit = mon_can_go(monster, i, j, level);
 				monster.m_flags.can_flit = false;
 				if can_go_if_while_can_flit {
 					move_mon_to(monster, i, j, level);
@@ -254,8 +252,8 @@ pub unsafe fn seek_gold(monster: &mut Monster, depth: &RogueDepth, level: &Level
 	return false;
 }
 
-unsafe fn gold_at(row: i64, col: i64) -> bool {
-	if Object.is_set(DUNGEON[row as usize][col as usize]) {
+unsafe fn gold_at(row: i64, col: i64, level: &Level) -> bool {
+	if level.dungeon[row as usize][col as usize].is_object() {
 		let obj = object_at(&mut level_objects, row, col);
 		if !obj.is_null() && (*obj).what_is == Gold {
 			return true;
@@ -268,11 +266,11 @@ pub fn clear_gold_seeker(monster: &mut Monster) {
 	monster.m_flags.seeks_gold = false;
 }
 
-pub unsafe fn check_imitator(monster: &mut Monster) -> bool {
+pub unsafe fn check_imitator(monster: &mut Monster, level: &Level) -> bool {
 	if monster.m_flags.imitates {
 		monster.wake_up();
 		if blind == 0 {
-			mvaddch(monster.spot.row as i32, monster.spot.col as i32, get_dungeon_char(monster.spot.row, monster.spot.col));
+			mvaddch(monster.spot.row as i32, monster.spot.col as i32, get_dungeon_char(monster.spot.row, monster.spot.col, level));
 			check_message();
 			let msg = format!("wait, that's a {}!", mon_name(monster));
 			message(&msg, 1);
@@ -282,8 +280,8 @@ pub unsafe fn check_imitator(monster: &mut Monster) -> bool {
 	return false;
 }
 
-pub unsafe fn imitating(row: i64, col: i64) -> bool {
-	if SpotFlag::Monster.is_set(DUNGEON[row as usize][col as usize]) {
+pub unsafe fn imitating(row: i64, col: i64, level: &Level) -> bool {
+	if level.dungeon[row as usize][col as usize].is_monster() {
 		if let Some(monster) = MASH.monster_at_spot(row, col) {
 			if monster.m_flags.imitates {
 				return true;
@@ -375,7 +373,7 @@ pub unsafe fn m_confuse(monster: &mut Monster, level: &Level) -> bool {
 	return false;
 }
 
-pub unsafe fn flame_broil(monster: &mut Monster, depth: &RogueDepth, level: &Level) -> bool {
+pub unsafe fn flame_broil(monster: &mut Monster, depth: &RogueDepth, level: &mut Level) -> bool {
 	if !mon_sees(monster, rogue.row, rogue.col, level) || coin_toss() {
 		return false;
 	}
@@ -411,7 +409,7 @@ pub unsafe fn flame_broil(monster: &mut Monster, depth: &RogueDepth, level: &Lev
 		col = monster.spot.col;
 		get_closer(&mut row, &mut col, rogue.row, rogue.col);
 		loop {
-			mvaddch(row as i32, col as i32, get_dungeon_char(row, col));
+			mvaddch(row as i32, col as i32, get_dungeon_char(row, col, level));
 			refresh();
 			get_closer(&mut row, &mut col, rogue.row, rogue.col);
 			let stay_looping = row != rogue.row || col != rogue.col;

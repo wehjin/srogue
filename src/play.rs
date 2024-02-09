@@ -40,46 +40,46 @@ pub unsafe fn play_level(game: &mut GameState) {
 				Instructions();
 			}
 			'.' => {
-				rest(if count > 0 { count } else { 1 } as c_int, &game.depth, &game.level);
+				rest(if count > 0 { count } else { 1 } as c_int, &game.depth, &mut game.level);
 			}
 			's' => {
-				search(if count > 0 { count } else { 1 } as usize, false, &game.depth, &game.level);
+				search(if count > 0 { count } else { 1 } as usize, false, &game.depth, &mut game.level);
 			}
 			'i' => {
 				inventory(&mut rogue.pack, AllObjects);
 			}
 			'f' => {
-				fight(false, &game.depth, &game.level);
+				fight(false, &game.depth, &mut game.level);
 			}
 			'F' => {
-				fight(true, &game.depth, &game.level);
+				fight(true, &game.depth, &mut game.level);
 			}
 			'h' | 'j' | 'k' | 'l' | 'y' | 'u' | 'n' | 'b' => {
-				one_move_rogue(ch, true, &game.depth, &game.level);
+				one_move_rogue(ch, true, &game.depth, &mut game.level);
 			}
 			'H' | 'J' | 'K' | 'L' | 'B' | 'Y' | 'U' | 'N' | '\x08' | '\x0a' | '\x0b' | '\x0c' | '\x19' | '\x15' | '\x0e' | '\x02' => {
-				multiple_move_rogue(ch as i64, &game.depth, &game.level);
+				multiple_move_rogue(ch as i64, &game.depth, &mut game.level);
 			}
 			'e' => {
-				eat(&game.depth, &game.level);
+				eat(&game.depth, &mut game.level);
 			}
 			'q' => {
-				quaff(&game.depth, &game.level);
+				quaff(&game.depth, &mut game.level);
 			}
 			'r' => {
-				read_scroll(&game.depth, &game.level);
+				read_scroll(&game.depth, &mut game.level);
 			}
 			'm' => {
-				move_onto(&game.depth, &game.level);
+				move_onto(&game.depth, &mut game.level);
 			}
 			'd' => {
-				drop_0(&game.depth, &game.level);
+				drop_0(&game.depth, &mut game.level);
 			}
 			'P' => {
-				put_on_ring(&game.depth, &game.level);
+				put_on_ring(&game.depth, &mut game.level);
 			}
 			'R' => {
-				remove_ring(&game.depth, &game.level);
+				remove_ring(&game.depth, &mut game.level);
 			}
 			'\x10' => {
 				remessage();
@@ -88,7 +88,7 @@ pub unsafe fn play_level(game: &mut GameState) {
 				wizardize();
 			}
 			'>' => {
-				if drop_check() {
+				if drop_check(&game.level) {
 					return;
 				}
 			}
@@ -110,22 +110,22 @@ pub unsafe fn play_level(game: &mut GameState) {
 				single_inv(None);
 			}
 			'T' => {
-				take_off(&game.depth, &game.level);
+				take_off(&game.depth, &mut game.level);
 			}
 			'W' => {
-				wear(&game.depth, &game.level);
+				wear(&game.depth, &mut game.level);
 			}
 			'w' => {
-				wield(&game.depth, &game.level);
+				wield(&game.depth, &mut game.level);
 			}
 			'c' => {
 				call_it();
 			}
 			'z' => {
-				zapp(&game.depth, &game.level);
+				zapp(&game.depth, &mut game.level);
 			}
 			't' => {
-				throw(&game.depth, &game.level);
+				throw(&game.depth, &mut game.level);
 			}
 			'v' => {
 				message("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims", 0);
@@ -160,21 +160,21 @@ pub unsafe fn play_level(game: &mut GameState) {
 			}
 			'\x13' => {
 				if wizard {
-					draw_magic_map();
+					draw_magic_map(&mut game.level);
 				} else {
 					message(unknown_command, 0);
 				}
 			}
 			'\x14' => {
 				if wizard {
-					show_traps();
+					show_traps(&game.level);
 				} else {
 					message(unknown_command, 0);
 				}
 			}
 			'\x0f' => {
 				if wizard {
-					show_objects();
+					show_objects(&game.level);
 				} else {
 					message(unknown_command, 0);
 				}
@@ -200,7 +200,7 @@ pub unsafe fn play_level(game: &mut GameState) {
 				save_game(game);
 			}
 			',' => {
-				kick_into_pack(&game.depth, &game.level);
+				kick_into_pack(&game.depth, &mut game.level);
 			}
 			_ => {
 				message(unknown_command, 0);

@@ -17,7 +17,6 @@ use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::prelude::ring_kind::RINGS;
 use crate::prelude::scroll_kind::ScrollKind::{AggravateMonster, CreateMonster, EnchArmor, EnchWeapon, HoldMonster, Identify, MagicMapping, ProtectArmor, RemoveCurse, ScareMonster, Sleep, Teleport};
 use crate::prelude::scroll_kind::SCROLLS;
-use crate::prelude::SpotFlag::{Floor, Monster, Object, Stairs, Tunnel};
 use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, MAX_WAND};
 use crate::prelude::weapon_kind::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
 use crate::settings::fruit;
@@ -740,7 +739,7 @@ pub static mut id_rings: [id; RINGS] = {
 	]
 };
 
-pub unsafe fn put_objects(depth: &RogueDepth, level: &Level) {
+pub unsafe fn put_objects(depth: &RogueDepth, level: &mut Level) {
 	if depth.cur < depth.max {
 		return;
 	}
@@ -760,7 +759,7 @@ pub unsafe fn put_objects(depth: &RogueDepth, level: &Level) {
 	put_gold(depth.cur, level);
 }
 
-pub unsafe fn put_gold(level_depth: usize, level: &Level) {
+pub unsafe fn put_gold(level_depth: usize, level: &mut Level) {
 	for i in 0..MAX_ROOM {
 		let is_maze = level.rooms[i].room_type == RoomType::Maze;
 		let is_room = level.rooms[i].room_type == RoomType::Room;
@@ -771,8 +770,9 @@ pub unsafe fn put_gold(level_depth: usize, level: &Level) {
 			for _j in 0..50 {
 				let row = get_rand(level.rooms[i].top_row + 1, level.rooms[i].bottom_row - 1);
 				let col = get_rand(level.rooms[i].left_col + 1, level.rooms[i].right_col - 1);
-				if Floor.is_set(DUNGEON[row as usize][col as usize]) || Tunnel.is_set(DUNGEON[row as usize][col as usize]) {
-					plant_gold(row, col, is_maze, level_depth);
+				if level.dungeon[row as usize][col as usize].is_only_kind(CellKind::Floor)
+					|| level.dungeon[row as usize][col as usize].is_only_kind(CellKind::Tunnel) {
+					plant_gold(row, col, is_maze, level_depth, level);
 					break;
 				}
 			}
@@ -780,7 +780,7 @@ pub unsafe fn put_gold(level_depth: usize, level: &Level) {
 	}
 }
 
-pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: usize) {
+pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: usize, level: &mut Level) {
 	let obj = alloc_object();
 	(*obj).row = row;
 	(*obj).col = col;
@@ -789,15 +789,15 @@ pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: usize) {
 	if is_maze {
 		(*obj).quantity += (*obj).quantity / 2;
 	}
-	DUNGEON[row as usize][col as usize] |= SpotFlag::Object.code();
+	level.dungeon[row as usize][col as usize].add_kind(CellKind::Object);
 	add_to_pack(obj, &mut level_objects, 0);
 }
 
 
-pub unsafe fn place_at(obj: &mut object, row: i64, col: i64) {
+pub unsafe fn place_at(obj: &mut object, row: i64, col: i64, level: &mut Level) {
 	obj.row = row;
 	obj.col = col;
-	Object.set(&mut DUNGEON[row as usize][col as usize]);
+	level.dungeon[row as usize][col as usize].add_kind(CellKind::Object);
 	add_to_pack(obj, &mut level_objects, 0);
 }
 
@@ -1054,11 +1054,11 @@ pub fn get_food(obj: &mut obj, force_ration: bool) {
 	}
 }
 
-pub unsafe fn put_stairs(level: &Level) {
+pub unsafe fn put_stairs(level: &mut Level) {
 	let mut row = 0;
 	let mut col = 0;
-	gr_row_col(&mut row, &mut col, vec![Floor, Tunnel], level);
-	Stairs.set(&mut DUNGEON[row as usize][col as usize]);
+	gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel], level);
+	level.dungeon[row as usize][col as usize].add_kind(CellKind::Stairs);
 }
 
 pub unsafe fn get_armor_class(obj: *const object) -> isize {
@@ -1091,7 +1091,7 @@ pub unsafe fn free_object(obj: *mut object) {
 	free_list = obj;
 }
 
-pub unsafe fn make_party(level_depth: usize, level: &Level) {
+pub unsafe fn make_party(level_depth: usize, level: &mut Level) {
 	party_room = Some(gr_room(level));
 	let cur_party_room = party_room.expect("some party room");
 	let n = if rand_percent(99) { party_objects(cur_party_room, level_depth, level) } else { 11 };
@@ -1100,13 +1100,13 @@ pub unsafe fn make_party(level_depth: usize, level: &Level) {
 	}
 }
 
-pub unsafe fn show_objects() {
+pub unsafe fn show_objects(level: &Level) {
 	let mut obj = level_objects.next_object;
 	while !obj.is_null() {
 		let row = (*obj).row;
 		let col = (*obj).col;
 		let rc = get_mask_char((*obj).what_is) as chtype;
-		if Monster.is_set(DUNGEON[row as usize][col as usize]) {
+		if level.dungeon[row as usize][col as usize].is_monster() {
 			let monster = MASH.monster_at_spot_mut(row, col);
 			if let Some(monster) = monster {
 				monster.trail_char = rc;
@@ -1125,17 +1125,17 @@ pub unsafe fn show_objects() {
 	}
 }
 
-pub unsafe fn put_amulet(level: &Level) {
+pub unsafe fn put_amulet(level: &mut Level) {
 	let mut obj = alloc_object();
 	(*obj).what_is = Amulet;
 	rand_place(&mut *obj, level);
 }
 
-pub unsafe fn rand_place(obj: &mut obj, level: &Level) {
+pub unsafe fn rand_place(obj: &mut obj, level: &mut Level) {
 	let mut row = 0;
 	let mut col = 0;
-	gr_row_col(&mut row, &mut col, vec![Floor, Tunnel], level);
-	place_at(obj, row, col);
+	gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel], level);
+	place_at(obj, row, col, level);
 }
 
 pub unsafe fn new_object_for_wizard() {

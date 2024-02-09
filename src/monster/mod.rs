@@ -14,12 +14,10 @@ use crate::prelude::*;
 pub use flags::MonsterFlags;
 pub use kind::*;
 pub use mash::*;
-use SpotFlag::{Door};
 use crate::{odds};
 use crate::prelude::object_what::ObjectWhat::Scroll;
 use crate::prelude::scroll_kind::ScrollKind;
 use crate::prelude::scroll_kind::ScrollKind::ScareMonster;
-use crate::prelude::SpotFlag::{Floor, Object, Stairs, Tunnel};
 use crate::room::RoomType::Maze;
 
 #[derive(Clone)]
@@ -44,13 +42,13 @@ pub struct Fighter {
 
 pub static mut mon_disappeared: bool = false;
 
-pub unsafe fn put_mons(level_depth: usize, level: &Level) {
+pub unsafe fn put_mons(level_depth: usize, level: &mut Level) {
 	for _ in 0..get_rand(4, 6) {
 		let mut monster = gr_monster(level_depth, 0, None);
 		if monster.m_flags.wanders && coin_toss() {
 			monster.wake_up();
 		}
-		let DungeonSpot { row, col } = random_spot_with_flag(vec![Floor, Tunnel, Stairs, Object], level);
+		let DungeonSpot { row, col } = random_spot_with_flag(&[CellKind::Floor, CellKind::Tunnel, CellKind::Stairs, CellKind::Object], level);
 		put_m_at(row, col, monster, level);
 	}
 }
@@ -68,7 +66,7 @@ pub fn gr_monster(level_depth: usize, first_level_boost: usize, kind: Option<Mon
 	return monster;
 }
 
-pub unsafe fn mv_mons(depth: &RogueDepth, level: &Level) {
+pub unsafe fn mv_mons(depth: &RogueDepth, level: &mut Level) {
 	if haste_self % 2 != 0 {
 		return;
 	}
@@ -96,18 +94,18 @@ pub unsafe fn mv_mons(depth: &RogueDepth, level: &Level) {
 			let mut flew = false;
 			if monster.m_flags.flies
 				&& !monster.m_flags.napping
-				&& !mon_can_go(monster, rogue.row, rogue.col) {
+				&& !mon_can_go(monster, rogue.row, rogue.col, level) {
 				flew = true;
 				mv_monster(monster, rogue.row, rogue.col, depth, level);
 			}
-			if !(flew && mon_can_go(&*monster, rogue.row, rogue.col)) {
+			if !(flew && mon_can_go(&*monster, rogue.row, rogue.col, level)) {
 				mv_monster(monster, rogue.row, rogue.col, depth, level);
 			}
 		}
 	}
 }
 
-pub unsafe fn party_monsters(rn: usize, n: i64, level_depth: usize, level: &Level) {
+pub unsafe fn party_monsters(rn: usize, n: usize, level_depth: usize, level: &mut Level) {
 	let first_level_shift = level_depth % 3;
 	let n = n + n;
 	for _i in 0..n {
@@ -118,8 +116,8 @@ pub unsafe fn party_monsters(rn: usize, n: i64, level_depth: usize, level: &Leve
 		for _j in 0..250 {
 			let row = get_rand(level.rooms[rn].top_row + 1, level.rooms[rn].bottom_row - 1);
 			let col = get_rand(level.rooms[rn].left_col + 1, level.rooms[rn].right_col - 1);
-			let dungeon_spot = DUNGEON[row as usize][col as usize];
-			if !SpotFlag::Monster.is_set(dungeon_spot) && SpotFlag::is_any_set(&vec![Floor, Tunnel], dungeon_spot) {
+			let dungeon_spot = level.dungeon[row as usize][col as usize];
+			if !dungeon_spot.is_kind(CellKind::Monster) && dungeon_spot.is_any_kind(&[CellKind::Floor, CellKind::Tunnel]) {
 				found = Some((row, col));
 				break;
 			}
@@ -154,7 +152,7 @@ pub unsafe fn gmc(monster: &Monster) -> chtype {
 	}
 }
 
-pub unsafe fn mv_monster(monster: &mut Monster, row: i64, col: i64, depth: &RogueDepth, level: &Level) {
+pub unsafe fn mv_monster(monster: &mut Monster, row: i64, col: i64, depth: &RogueDepth, level: &mut Level) {
 	if monster.m_flags.asleep {
 		if monster.m_flags.napping {
 			monster.do_nap();
@@ -173,7 +171,7 @@ pub unsafe fn mv_monster(monster: &mut Monster, row: i64, col: i64, depth: &Rogu
 	if monster.m_flags.flits && flit(monster, level) {
 		return;
 	}
-	if monster.m_flags.stationary && !mon_can_go(monster, rogue.row, rogue.col) {
+	if monster.m_flags.stationary && !mon_can_go(monster, rogue.row, rogue.col, level) {
 		return;
 	}
 	if monster.m_flags.freezing_rogue {
@@ -182,7 +180,7 @@ pub unsafe fn mv_monster(monster: &mut Monster, row: i64, col: i64, depth: &Rogu
 	if monster.m_flags.confuses && m_confuse(monster, level) {
 		return;
 	}
-	if mon_can_go(monster, rogue.row, rogue.col) {
+	if mon_can_go(monster, rogue.row, rogue.col, level) {
 		mon_hit(monster, None, false, depth, level);
 		return;
 	}
@@ -196,11 +194,11 @@ pub unsafe fn mv_monster(monster: &mut Monster, row: i64, col: i64, depth: &Rogu
 	monster.clear_target_spot_if_reached();
 	let target_spot = monster.target_spot_or(DungeonSpot { row, col });
 	let row = monster.spot.next_closest_row(target_spot.row);
-	if Door.is_set(DUNGEON[row as usize][monster.spot.col as usize]) && mtry(monster, row, monster.spot.col, level) {
+	if level.dungeon[row as usize][monster.spot.col as usize].is_door() && mtry(monster, row, monster.spot.col, level) {
 		return;
 	}
 	let col = monster.spot.next_closest_col(target_spot.col);
-	if Door.is_set(DUNGEON[monster.spot.row as usize][col as usize]) && mtry(monster, monster.spot.row, col, level) {
+	if level.dungeon[monster.spot.row as usize][col as usize].is_door() && mtry(monster, monster.spot.row, col, level) {
 		return;
 	}
 	if mtry(monster, row, col, level) {
@@ -232,17 +230,17 @@ pub unsafe fn mv_monster(monster: &mut Monster, row: i64, col: i64, depth: &Rogu
 	}
 }
 
-pub unsafe fn mtry(monster: &mut Monster, row: i64, col: i64, level: &Level) -> bool {
-	if mon_can_go(monster, row, col) {
+pub unsafe fn mtry(monster: &mut Monster, row: i64, col: i64, level: &mut Level) -> bool {
+	if mon_can_go(monster, row, col, level) {
 		move_mon_to(monster, row, col, level);
 		return true;
 	}
 	return false;
 }
 
-pub unsafe fn move_mon_to(monster: &mut Monster, row: i64, col: i64, level: &Level) {
-	SpotFlag::Monster.clear(&mut DUNGEON[monster.spot.row as usize][monster.spot.col as usize]);
-	SpotFlag::Monster.set(&mut DUNGEON[row as usize][col as usize]);
+pub unsafe fn move_mon_to(monster: &mut Monster, row: i64, col: i64, level: &mut Level) {
+	level.dungeon[monster.spot.row as usize][monster.spot.col as usize].remove_kind(CellKind::Monster);
+	level.dungeon[row as usize][col as usize].add_kind(CellKind::Monster);
 	let c = ncurses::mvinch((monster.spot.row as usize) as i32, (monster.spot.col as usize) as i32);
 	if (c >= chtype::from('A')) && (c <= chtype::from('Z'))
 	{
@@ -268,14 +266,14 @@ pub unsafe fn move_mon_to(monster: &mut Monster, row: i64, col: i64, level: &Lev
 			ncurses::mvaddch(row as i32, col as i32, gmc(monster));
 		}
 	}
-	if Door.is_set(DUNGEON[row as usize][col as usize])
+	if level.dungeon[row as usize][col as usize].is_door()
 		&& !in_current_room(row, col, level)
-		&& Floor.is_only(DUNGEON[monster.spot.row as usize][monster.spot.col as usize])
+		&& level.dungeon[monster.spot.row as usize][monster.spot.col as usize].is_floor()
 		&& blind == 0 {
 		ncurses::mvaddch((monster.spot.row as usize) as i32, (monster.spot.col as usize) as i32, chtype::from(' '));
 	}
-	if Door.is_set(DUNGEON[row as usize][col as usize]) {
-		let entering = Tunnel.is_set(DUNGEON[monster.spot.row as usize][monster.spot.col as usize]);
+	if level.dungeon[row as usize][col as usize].is_door() {
+		let entering = level.dungeon[monster.spot.row as usize][monster.spot.col as usize].is_tunnel();
 		dr_course(monster, entering, row, col, level);
 	} else {
 		monster.spot.row = row;
@@ -283,7 +281,7 @@ pub unsafe fn move_mon_to(monster: &mut Monster, row: i64, col: i64, level: &Lev
 	}
 }
 
-pub unsafe fn mon_can_go(monster: &Monster, row: i64, col: i64) -> bool {
+pub unsafe fn mon_can_go(monster: &Monster, row: i64, col: i64, level: &Level) -> bool {
 	let dr = monster.spot.row as isize - row as isize;        /* check if move distance > 1 */
 	if (dr >= 2) || (dr <= -2) {
 		return false;
@@ -292,14 +290,15 @@ pub unsafe fn mon_can_go(monster: &Monster, row: i64, col: i64) -> bool {
 	if (dc >= 2) || (dc <= -2) {
 		return false;
 	}
-	if SpotFlag::Nothing.is_set(DUNGEON[monster.spot.row as usize][col as usize]) || SpotFlag::Nothing.is_set(DUNGEON[row as usize][monster.spot.col as usize]) {
+	if level.dungeon[monster.spot.row as usize][col as usize].is_nothing()
+		|| level.dungeon[row as usize][monster.spot.col as usize].is_nothing() {
 		return false;
 	}
-	if !is_passable(row, col) || SpotFlag::Monster.is_set(DUNGEON[row as usize][col as usize]) {
+	if !is_passable(row, col, level) || level.dungeon[row as usize][col as usize].is_monster() {
 		return false;
 	}
 	if (monster.spot.row != row) && (monster.spot.col != col)
-		&& (Door.is_set(DUNGEON[row as usize][col as usize]) || Door.is_set(DUNGEON[monster.spot.row as usize][monster.spot.col as usize])) {
+		&& (level.dungeon[row as usize][col as usize].is_door() || level.dungeon[monster.spot.row as usize][monster.spot.col as usize].is_door()) {
 		return false;
 	}
 	if monster.target_spot.is_none()
@@ -311,7 +310,7 @@ pub unsafe fn mon_can_go(monster: &Monster, row: i64, col: i64) -> bool {
 		if (monster.spot.col < rogue.col) && (col < monster.spot.col) { return false; }
 		if (monster.spot.col > rogue.col) && (col > monster.spot.col) { return false; }
 	}
-	if Object.is_set(DUNGEON[row as usize][col as usize]) {
+	if level.dungeon[row as usize][col as usize].is_object() {
 		let obj = object_at(&level_objects, row, col);
 		if (*obj).what_is == Scroll && ScrollKind::from_index((*obj).which_kind as usize) == ScareMonster {
 			return false;
@@ -362,9 +361,9 @@ pub unsafe fn player_is_blind() -> bool { blind != 0 }
 pub unsafe fn player_defeats_invisibility() -> bool { detect_monster || see_invisible || r_see_invisible }
 
 pub unsafe fn rogue_is_around(row: i64, col: i64) -> bool {
-	let rdif = row - rogue.row;
-	let cdif = col - rogue.col;
-	(rdif >= -1) && (rdif <= 1) && (cdif >= -1) && (cdif <= 1)
+	let row_diff = row - rogue.row;
+	let col_diff = col - rogue.col;
+	(row_diff >= -1) && (row_diff <= 1) && (col_diff >= -1) && (col_diff <= 1)
 }
 
 fn random_wanderer(level_depth: usize) -> Option<Monster> {
@@ -381,7 +380,7 @@ unsafe fn random_spot_for_wanderer(level: &Level) -> Option<DungeonSpot> {
 	let mut row = 0;
 	let mut col = 0;
 	for _ in 0..25 {
-		gr_row_col(&mut row, &mut col, vec![Floor, Tunnel, Stairs, Object], level);
+		gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel, CellKind::Stairs, CellKind::Object], level);
 		if !rogue_can_see(row, col, level) {
 			return Some(DungeonSpot { row, col });
 		}
@@ -389,7 +388,7 @@ unsafe fn random_spot_for_wanderer(level: &Level) -> Option<DungeonSpot> {
 	None
 }
 
-pub unsafe fn put_wanderer(level_depth: usize, level: &Level) {
+pub unsafe fn put_wanderer(level_depth: usize, level: &mut Level) {
 	if let Some(mut monster) = random_wanderer(level_depth) {
 		monster.wake_up();
 		if let Some(spot) = random_spot_for_wanderer(level) {
@@ -412,25 +411,25 @@ pub unsafe fn show_monsters() {
 	}
 }
 
-unsafe fn random_spot_for_monster(start_row: i64, start_col: i64) -> Option<DungeonSpot> {
+unsafe fn random_spot_for_monster(start_row: i64, start_col: i64, level: &Level) -> Option<DungeonSpot> {
 	let mut walk = RandomWalk::new(start_row, start_col);
 	for _ in 0..9 {
 		walk.step();
-		let spot = walk.to_spot();
+		let spot = walk.spot();
 		if spot.is_at(start_row, start_col) || spot.is_out_of_bounds() {
 			continue;
 		}
-		let spot_flags = DUNGEON[spot.row as usize][spot.col as usize];
-		if !SpotFlag::Monster.is_set(spot_flags)
-			&& SpotFlag::is_any_set(&vec![Floor, Tunnel, Stairs, Door], spot_flags) {
-			return Some(spot);
+		const GOOD_CELL_KINDS_FOR_MONSTER: [CellKind; 4] = [CellKind::Floor, CellKind::Tunnel, CellKind::Stairs, CellKind::Door];
+		if !level.dungeon[spot.row as usize][spot.col as usize].is_monster()
+			&& level.dungeon[spot.row as usize][spot.col as usize].is_any_kind(&GOOD_CELL_KINDS_FOR_MONSTER) {
+			return Some(spot.clone());
 		}
 	}
 	None
 }
 
-pub unsafe fn create_monster(level_depth: usize, level: &Level) {
-	if let Some(found) = random_spot_for_monster(rogue.row, rogue.col) {
+pub unsafe fn create_monster(level_depth: usize, level: &mut Level) {
+	if let Some(found) = random_spot_for_monster(rogue.row, rogue.col, level) {
 		let mut monster = gr_monster(level_depth, 0, None);
 		put_m_at(found.row, found.col, monster, level);
 
@@ -444,9 +443,9 @@ pub unsafe fn create_monster(level_depth: usize, level: &Level) {
 	}
 }
 
-pub unsafe fn put_m_at(row: i64, col: i64, mut monster: Monster, level: &Level) {
+pub unsafe fn put_m_at(row: i64, col: i64, mut monster: Monster, level: &mut Level) {
 	monster.set_spot(row, col);
-	SpotFlag::Monster.set(&mut DUNGEON[row as usize][col as usize]);
+	level.dungeon[row as usize][col as usize].add_kind(CellKind::Monster);
 	monster.trail_char = ncurses::mvinch(row as i32, col as i32);
 	MASH.add_monster(monster);
 	if let Some(monster) = MASH.monster_at_spot_mut(row, col) {
@@ -464,14 +463,14 @@ unsafe fn is_very_close(row: i64, col: i64) -> bool {
 }
 
 unsafe fn not_in_maze(level: &Level) -> bool {
-	level.rooms[cur_room as usize].room_type != RoomType::Maze
+	level.rooms[cur_room as usize].room_type != Maze
 }
 
 unsafe fn in_current_room(row: i64, col: i64, level: &Level) -> bool {
 	get_room_number(row, col, level) == cur_room
 }
 
-pub unsafe fn move_confused(monster: &mut Monster, level: &Level) -> bool {
+pub unsafe fn move_confused(monster: &mut Monster, level: &mut Level) -> bool {
 	if !monster.m_flags.asleep {
 		monster.decrement_moves_confused();
 		if monster.m_flags.stationary {
@@ -482,7 +481,7 @@ pub unsafe fn move_confused(monster: &mut Monster, level: &Level) -> bool {
 			let mut walk = RandomWalk::new(monster.spot.row, monster.spot.col);
 			for _ in 0..9 {
 				walk.step();
-				let spot = walk.to_spot();
+				let spot = walk.spot();
 				if spot.is_at(rogue.row, rogue.col) {
 					return false;
 				}
@@ -495,7 +494,7 @@ pub unsafe fn move_confused(monster: &mut Monster, level: &Level) -> bool {
 	false
 }
 
-pub unsafe fn flit(monster: &mut Monster, level: &Level) -> bool {
+pub unsafe fn flit(monster: &mut Monster, level: &mut Level) -> bool {
 	if !rand_percent(odds::FLIT_PERCENT) {
 		return false;
 	}
@@ -505,7 +504,7 @@ pub unsafe fn flit(monster: &mut Monster, level: &Level) -> bool {
 	let mut walk = RandomWalk::new(monster.spot.row, monster.spot.col);
 	for _ in 0..9 {
 		walk.step();
-		let spot = walk.to_spot();
+		let spot = walk.spot();
 		if spot.is_at(rogue.row, rogue.col) {
 			continue;
 		}
@@ -537,11 +536,12 @@ pub unsafe fn aim_monster(monster: &mut Monster, level: &Level) {
 	}
 }
 
-pub unsafe fn no_spot_for_monster(rn: usize, level: &Level) -> bool {
+pub fn no_spot_for_monster(rn: usize, level: &Level) -> bool {
 	let room = &level.rooms[rn];
-	for i in (room.top_row + 1)..room.bottom_row {
-		for j in (room.left_col + 1)..room.right_col {
-			if !SpotFlag::Monster.is_set(DUNGEON[i as usize][j as usize]) {
+	let floor_bounds = room.to_floor_bounds();
+	for row in floor_bounds.rows() {
+		for col in floor_bounds.cols() {
+			if !level.dungeon[row as usize][col as usize].is_monster() {
 				// Found a spot for the monster
 				return false;
 			}
@@ -572,10 +572,10 @@ pub unsafe fn mon_sees(monster: &Monster, row: i64, col: i64, level: &Level) -> 
 	row_diff >= -1 && row_diff <= 1 && ool_diff >= -1 && ool_diff <= 1
 }
 
-pub unsafe fn mv_aquatars(depth: &RogueDepth, level: &Level) {
+pub unsafe fn mv_aquatars(depth: &RogueDepth, level: &mut Level) {
 	for monster in &mut MASH.monsters {
 		if monster.kind == MonsterKind::Aquator
-			&& mon_can_go(monster, rogue.row, rogue.col) {
+			&& mon_can_go(monster, rogue.row, rogue.col, level) {
 			mv_monster(monster, rogue.row, rogue.col, depth, level);
 			monster.m_flags.already_moved = true;
 		}

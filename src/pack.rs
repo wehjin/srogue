@@ -13,7 +13,6 @@ use crate::prelude::object_what::{PackFilter};
 use crate::prelude::object_what::ObjectWhat::{Armor, Food, Gold, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
 use crate::prelude::scroll_kind::ScrollKind::ScareMonster;
-use crate::prelude::SpotFlag::{Object, Stairs, Trap};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD};
 use crate::prelude::weapon_kind::{ARROW, DAGGER, DART, SHURIKEN};
 
@@ -51,14 +50,14 @@ pub unsafe fn take_from_pack(obj: *mut object, mut pack: *mut object) {
 	(*pack).next_object = (*(*pack).next_object).next_object;
 }
 
-pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short, depth: &RogueDepth, level: &Level) -> *mut object {
+pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short, depth: &RogueDepth, level: &mut Level) -> *mut object {
 	let obj = object_at(&level_objects, row, col);
 	*status = 1;
 	if (*obj).what_is == Scroll
 		&& ScareMonster.is_kind((*obj).which_kind)
 		&& (*obj).picked_up != 0 {
 		message("the scroll turns to dust as you pick it up", 0);
-		DUNGEON[row as usize][col as usize] = DUNGEON[row as usize][col as usize] & !Object.code();
+		level.dungeon[row as usize][col as usize].remove_kind(CellKind::Object);
 		vanish(&mut *obj, false, &mut level_objects, depth, level);
 		*status = 0;
 		if id_scrolls[ScareMonster.to_index()].id_status == Unidentified {
@@ -68,7 +67,7 @@ pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short, depth: &Rogu
 	}
 	if (*obj).what_is == Gold {
 		rogue.gold += (*obj).quantity as usize;
-		DUNGEON[row as usize][col as usize] = DUNGEON[row as usize][col as usize] & !Object.code();
+		level.dungeon[row as usize][col as usize].remove_kind(CellKind::Object);
 		take_from_pack(obj, &mut level_objects);
 		print_stats(STAT_GOLD, depth.cur);
 		return obj;
@@ -77,7 +76,7 @@ pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short, depth: &Rogu
 		message("pack too full", 1);
 		return 0 as *mut object;
 	}
-	DUNGEON[row as usize][col as usize] = DUNGEON[row as usize][col as usize] & !Object.code();
+	level.dungeon[row as usize][col as usize].remove_kind(CellKind::Object);
 	take_from_pack(obj, &mut level_objects);
 
 	let obj = add_to_pack(obj, &mut rogue.pack, 1);
@@ -85,8 +84,8 @@ pub unsafe fn pick_up(row: i64, col: i64, mut status: *mut c_short, depth: &Rogu
 	return obj;
 }
 
-pub unsafe fn drop_0(depth: &RogueDepth, level: &Level) {
-	if SpotFlag::is_any_set(&vec![Object, Stairs, Trap], DUNGEON[rogue.row as usize][rogue.col as usize]) {
+pub unsafe fn drop_0(depth: &RogueDepth, level: &mut Level) {
+	if level.dungeon[rogue.row as usize][rogue.col as usize].is_any_kind(&[CellKind::Object, CellKind::Stairs, CellKind::Trap]) {
 		message("there's already something there", 0);
 		return;
 	}
@@ -137,7 +136,7 @@ pub unsafe fn drop_0(depth: &RogueDepth, level: &Level) {
 		(*obj).ichar = 'L';
 		take_from_pack(obj, &mut rogue.pack);
 	}
-	place_at(&mut *obj, rogue.row, rogue.col);
+	place_at(&mut *obj, rogue.row, rogue.col, level);
 	message(&format!("dropped {}", get_desc(&*obj)), 0);
 	reg_move(depth, level);
 }
@@ -227,7 +226,7 @@ pub unsafe fn pack_letter(prompt: &str, filter: PackFilter) -> char {
 	}
 }
 
-pub unsafe fn take_off(depth: &RogueDepth, level: &Level) {
+pub unsafe fn take_off(depth: &RogueDepth, level: &mut Level) {
 	if !rogue.armor.is_null() {
 		if (*rogue.armor).is_cursed != 0 {
 			message(CURSE_MESSAGE, 0);
@@ -244,7 +243,7 @@ pub unsafe fn take_off(depth: &RogueDepth, level: &Level) {
 	}
 }
 
-pub unsafe fn wear(depth: &RogueDepth, level: &Level) {
+pub unsafe fn wear(depth: &RogueDepth, level: &mut Level) {
 	if !rogue.armor.is_null() {
 		message("your already wearing some", 0);
 		return;
@@ -283,7 +282,7 @@ pub unsafe fn unwear(obj: *mut object) {
 }
 
 
-pub unsafe fn wield(depth: &RogueDepth, level: &Level) {
+pub unsafe fn wield(depth: &RogueDepth, level: &mut Level) {
 	if !rogue.weapon.is_null() && (*rogue.weapon).is_cursed != 0 {
 		message(CURSE_MESSAGE, 0);
 		return;
@@ -409,8 +408,8 @@ pub unsafe fn has_amulet() -> bool {
 	mask_pack(&rogue.pack, Amulets)
 }
 
-pub unsafe fn kick_into_pack(depth: &RogueDepth, level: &Level) {
-	if Object.is_set(DUNGEON[rogue.row as usize][rogue.col as usize]) {
+pub unsafe fn kick_into_pack(depth: &RogueDepth, level: &mut Level) {
+	if !level.dungeon[rogue.row as usize][rogue.col as usize].is_object() {
 		message("nothing here", 0);
 	} else {
 		let mut status = 0;

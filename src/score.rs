@@ -75,7 +75,7 @@ unsafe fn ending_string(ending: &Ending) -> String {
 	}
 }
 
-pub unsafe fn win(depth: &RogueDepth, level: &Level) {
+pub unsafe fn win(depth: &RogueDepth, level: &mut Level) {
 	unwield(rogue.weapon);          /* disarm and relax */
 	unwear(rogue.armor);
 	un_put_on(rogue.left_ring, depth.cur, level);

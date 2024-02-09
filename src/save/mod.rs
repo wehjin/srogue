@@ -116,7 +116,7 @@ pub unsafe fn restore(file_path: &str, game: &mut GameState) {
 	}
 
 	msg_cleared = false;
-	ring_stats(false, game.depth.cur, &game.level);
+	ring_stats(false, game.depth.cur, &mut game.level);
 }
 
 fn has_been_touched(saved_time: &RogueTime, mod_time: &RogueTime) -> bool {

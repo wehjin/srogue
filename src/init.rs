@@ -84,7 +84,7 @@ pub unsafe fn init() -> (GameState, bool) {
 	MASH.clear();
 	player_init();
 	party_counter = get_rand(1, 10);
-	ring_stats(false, game.depth.cur, &game.level);
+	ring_stats(false, game.depth.cur, &mut game.level);
 	return (game, false);
 }
 

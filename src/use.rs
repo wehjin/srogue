@@ -9,7 +9,6 @@ use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll,
 use crate::prelude::object_what::PackFilter::{AllObjects, Foods, Potions, Scrolls};
 use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::prelude::scroll_kind::{ScrollKind};
-use crate::prelude::SpotFlag::Monster;
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_HP, STAT_HUNGER, STAT_STRENGTH};
 use crate::settings::fruit;
 
@@ -22,7 +21,7 @@ pub static mut see_invisible: bool = false;
 pub static mut extra_hp: isize = 0;
 pub static strange_feeling: &'static str = "you have a strange feeling for a moment, then it passes";
 
-pub unsafe fn quaff(depth: &RogueDepth, level: &Level) {
+pub unsafe fn quaff(depth: &RogueDepth, level: &mut Level) {
 	let ch = pack_letter("quaff what?", Potions);
 	if ch == CANCEL {
 		return;
@@ -91,7 +90,7 @@ pub unsafe fn quaff(depth: &RogueDepth, level: &Level) {
 		PotionKind::DetectObjects => {
 			if !level_objects.next_object.is_null() {
 				if blind == 0 {
-					show_objects();
+					show_objects(level);
 				}
 			} else {
 				message(strange_feeling, 0);
@@ -130,7 +129,7 @@ pub unsafe fn quaff(depth: &RogueDepth, level: &Level) {
 	vanish(&mut *obj, true, &mut rogue.pack, depth, level);
 }
 
-pub unsafe fn read_scroll(depth: &RogueDepth, level: &Level) {
+pub unsafe fn read_scroll(depth: &RogueDepth, level: &mut Level) {
 	if blind != 0 {
 		message("You can't see to read the scroll.", 0);
 		return;
@@ -157,7 +156,7 @@ pub unsafe fn read_scroll(depth: &RogueDepth, level: &Level) {
 			message("you hear a maniacal laughter in the distance", 0);
 		}
 		ScrollKind::HoldMonster => {
-			hold_monster();
+			hold_monster(level);
 		}
 		ScrollKind::EnchWeapon => {
 			if !rogue.weapon.is_null() {
@@ -227,7 +226,7 @@ pub unsafe fn read_scroll(depth: &RogueDepth, level: &Level) {
 		}
 		ScrollKind::MagicMapping => {
 			message("this scroll seems to have a map on it", 0);
-			draw_magic_map();
+			draw_magic_map(level);
 		}
 	}
 	if id_scrolls[scroll_kind.to_index()].id_status != Called {
@@ -236,7 +235,7 @@ pub unsafe fn read_scroll(depth: &RogueDepth, level: &Level) {
 	vanish(&mut *obj, scroll_kind != ScrollKind::Sleep, &mut rogue.pack, depth, level);
 }
 
-pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj, depth: &RogueDepth, level: &Level) {
+pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj, depth: &RogueDepth, level: &mut Level) {
 	/* vanish() does NOT handle a quiver of weapons with more than one
 	   arrow (or whatever) in the quiver.  It will only decrement the count.
 	*/
@@ -258,7 +257,7 @@ pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj, depth
 	}
 }
 
-unsafe fn potion_heal(extra: bool, level: &Level) {
+unsafe fn potion_heal(extra: bool, level: &mut Level) {
 	rogue.hp_current += rogue.exp;
 
 	let mut ratio = rogue.hp_current as f32 / rogue.hp_max as f32;
@@ -326,7 +325,7 @@ unsafe fn idntfy() {
 }
 
 
-pub unsafe fn eat(depth: &RogueDepth, level: &Level) {
+pub unsafe fn eat(depth: &RogueDepth, level: &mut Level) {
 	let ch = pack_letter("eat what?", Foods);
 	if ch == CANCEL {
 		return;
@@ -362,7 +361,7 @@ pub unsafe fn eat(depth: &RogueDepth, level: &Level) {
 	vanish(&mut *obj, true, &mut rogue.pack, depth, level);
 }
 
-unsafe fn hold_monster() {
+unsafe fn hold_monster(level: &Level) {
 	let mut mcount = 0;
 	for i in -2..=2 {
 		for j in -2..=2 {
@@ -371,7 +370,7 @@ unsafe fn hold_monster() {
 			if is_off_screen(row, col) {
 				continue;
 			}
-			if Monster.is_set(DUNGEON[row as usize][col as usize]) {
+			if level.dungeon[row as usize][col as usize].is_monster() {
 				let monster = MASH.monster_at_spot_mut(row, col).expect("monster at spot");
 				monster.m_flags.asleep = true;
 				monster.m_flags.wakens = false;
@@ -388,8 +387,8 @@ unsafe fn hold_monster() {
 	}
 }
 
-pub unsafe fn tele(level: &Level) {
-	mvaddch(rogue.row as i32, rogue.col as i32, get_dungeon_char(rogue.row, rogue.col));
+pub unsafe fn tele(level: &mut Level) {
+	mvaddch(rogue.row as i32, rogue.col as i32, get_dungeon_char(rogue.row, rogue.col, level));
 
 	if cur_room >= 0 {
 		darken_room(cur_room, level);
@@ -432,13 +431,13 @@ pub fn is_monster_char(ch: chtype) -> bool {
 	}
 }
 
-pub unsafe fn unhallucinate(level: &Level) {
+pub unsafe fn unhallucinate(level: &mut Level) {
 	halluc = 0;
 	relight(level);
 	message("everything looks SO boring now", 1);
 }
 
-pub unsafe fn unblind(level: &Level)
+pub unsafe fn unblind(level: &mut Level)
 {
 	blind = 0;
 	message("the veil of darkness lifts", 1);
@@ -451,16 +450,16 @@ pub unsafe fn unblind(level: &Level)
 	}
 }
 
-pub unsafe fn relight(level: &Level) {
+pub unsafe fn relight(level: &mut Level) {
 	if cur_room == PASSAGE {
-		light_passage(rogue.row, rogue.col);
+		light_passage(rogue.row, rogue.col, level);
 	} else {
 		light_up_room(cur_room, level);
 	}
 	mvaddch(rogue.row as i32, rogue.col as i32, chtype::from(rogue.fchar));
 }
 
-pub unsafe fn take_a_nap(depth: &RogueDepth, level: &Level) {
+pub unsafe fn take_a_nap(depth: &RogueDepth, level: &mut Level) {
 	let mut i = get_rand(2, 5);
 	md_sleep(1);
 	while i > 0 {

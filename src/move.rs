@@ -7,7 +7,6 @@ use crate::odds::R_TELE_PERCENT;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Gold;
-use crate::prelude::SpotFlag::{Door, Hidden, Monster, Nothing, Object, Stairs, Trap, Tunnel};
 use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
 use crate::settings::jump;
@@ -23,16 +22,16 @@ pub enum MoveResult {
 }
 
 
-pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth, level: &Level) -> MoveResult {
+pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth, level: &mut Level) -> MoveResult {
 	let dirch = if confused != 0 { Move::random8().to_char() } else { dirch };
 	let mut row = rogue.row;
 	let mut col = rogue.col;
 	get_dir_rc(dirch, &mut row, &mut col, true);
-	if !can_move(rogue.row, rogue.col, row, col) {
+	if !can_move(rogue.row, rogue.col, row, col, level) {
 		return MoveFailed;
 	}
 	if being_held || bear_trap > 0 {
-		if !Monster.is_set(DUNGEON[row as usize][col as usize]) {
+		if !level.dungeon[row as usize][col as usize].is_monster() {
 			if being_held {
 				message("you are being held", 1);
 			} else {
@@ -48,39 +47,40 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth, leve
 			return StoppedOnSomething;
 		}
 	}
-	if Monster.is_set(DUNGEON[row as usize][col as usize]) {
+	if level.dungeon[row as usize][col as usize].is_monster() {
 		rogue_hit(
 			&mut MASH.monster_at_spot_mut(row, col).expect("monster at spot"),
 			false,
 			depth,
+			level,
 		);
 		reg_move(depth, level);
 		return MoveFailed;
 	}
-	if Door.is_set(DUNGEON[row as usize][col as usize]) {
+	if level.dungeon[row as usize][col as usize].is_door() {
 		if cur_room == PASSAGE {
 			cur_room = get_room_number(row, col, level);
 			light_up_room(cur_room, level);
 			wake_room(cur_room, true, row, col, level);
 		} else {
-			light_passage(row, col);
+			light_passage(row, col, level);
 		}
-	} else if Door.is_set(DUNGEON[rogue.row as usize][rogue.col as usize]) && Tunnel.is_set(DUNGEON[row as usize][col as usize]) {
-		light_passage(row, col);
+	} else if level.dungeon[rogue.row as usize][rogue.col as usize].is_door() && level.dungeon[row as usize][col as usize].is_tunnel() {
+		light_passage(row, col, level);
 		wake_room(cur_room, false, rogue.row, rogue.col, level);
 		darken_room(cur_room, level);
 		cur_room = PASSAGE;
-	} else if Tunnel.is_set(DUNGEON[row as usize][col as usize]) {
-		light_passage(row, col);
+	} else if level.dungeon[row as usize][col as usize].is_tunnel() {
+		light_passage(row, col, level);
 	}
-	mvaddch(rogue.row as i32, rogue.col as i32, get_dungeon_char(rogue.row, rogue.col));
+	mvaddch(rogue.row as i32, rogue.col as i32, get_dungeon_char(rogue.row, rogue.col, level));
 	mvaddch(row as i32, col as i32, chtype::from(rogue.fchar));
 	if !jump() {
 		refresh();
 	}
 	rogue.row = row;
 	rogue.col = col;
-	if Object.is_set(DUNGEON[row as usize][col as usize]) {
+	if level.dungeon[row as usize][col as usize].is_object() {
 		if levitate != 0 && pickup {
 			return StoppedOnSomething;
 		}
@@ -103,8 +103,8 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth, leve
 		} else {
 			move_on(row, col, depth, level)
 		}
-	} else if SpotFlag::is_any_set(&vec![Door, Stairs, Trap], DUNGEON[row as usize][col as usize]) {
-		if levitate == 0 && Trap.is_set(DUNGEON[row as usize][col as usize]) {
+	} else if level.dungeon[row as usize][col as usize].is_any_kind(&[CellKind::Door, CellKind::Stairs, CellKind::Trap]) {
+		if levitate == 0 && level.dungeon[row as usize][col as usize].is_trap() {
 			trap_player(row as usize, col as usize, depth, level);
 		}
 		reg_move(depth, level);
@@ -114,19 +114,19 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, depth: &RogueDepth, leve
 	}
 }
 
-unsafe fn move_on(row: i64, col: i64, depth: &RogueDepth, level: &Level) -> MoveResult {
+unsafe fn move_on(row: i64, col: i64, depth: &RogueDepth, level: &mut Level) -> MoveResult {
 	let obj = object_at(&level_objects, row, col);
 	let desc = format!("moved onto {}", get_desc(&*obj));
 	return not_in_pack(&desc, depth, level);
 }
 
-unsafe fn not_in_pack(desc: &str, depth: &RogueDepth, level: &Level) -> MoveResult {
+unsafe fn not_in_pack(desc: &str, depth: &RogueDepth, level: &mut Level) -> MoveResult {
 	message(desc, 1);
 	reg_move(depth, level);
 	return StoppedOnSomething;
 }
 
-unsafe fn mved(depth: &RogueDepth, level: &Level) -> MoveResult {
+unsafe fn mved(depth: &RogueDepth, level: &mut Level) -> MoveResult {
 	if reg_move(depth, level) {
 		/* fainted from hunger */
 		StoppedOnSomething
@@ -144,7 +144,7 @@ const NAK: char = '\x15';
 const SO: char = '\x0e';
 const STX: char = '\x02';
 
-pub unsafe fn multiple_move_rogue(dirch: i64, depth: &RogueDepth, level: &Level) {
+pub unsafe fn multiple_move_rogue(dirch: i64, depth: &RogueDepth, level: &mut Level) {
 	let dirch = dirch as u8 as char;
 	match dirch {
 		BS | LF | VT | FF | EM | NAK | SO | STX => loop {
@@ -154,7 +154,7 @@ pub unsafe fn multiple_move_rogue(dirch: i64, depth: &RogueDepth, level: &Level)
 			if m == MoveFailed || m == StoppedOnSomething || interrupted {
 				break;
 			}
-			if next_to_something(row, col) {
+			if next_to_something(row, col, level) {
 				break;
 			}
 		},
@@ -173,17 +173,20 @@ pub unsafe fn multiple_move_rogue(dirch: i64, depth: &RogueDepth, level: &Level)
 	}
 }
 
-pub unsafe fn is_passable(row: i64, col: i64) -> bool {
+pub fn is_passable(row: i64, col: i64, level: &Level) -> bool {
 	if is_off_screen(row, col) {
-		return false;
+		false
+	} else {
+		if level.dungeon[row as usize][col as usize].is_hidden() {
+			level.dungeon[row as usize][col as usize].is_trap()
+		} else {
+			let PASSABLE_CELL_KINDS = [CellKind::Floor, CellKind::Tunnel, CellKind::Door, CellKind::Stairs, CellKind::Trap];
+			level.dungeon[row as usize][col as usize].is_any_kind(&PASSABLE_CELL_KINDS)
+		}
 	}
-	if Hidden.is_set(DUNGEON[row as usize][col as usize]) {
-		return if Trap.is_set(DUNGEON[row as usize][col as usize]) { true } else { false };
-	}
-	return SpotFlag::is_any_set(&vec![SpotFlag::Floor, Tunnel, Door, Stairs, Trap], DUNGEON[row as usize][col as usize]);
 }
 
-pub unsafe fn next_to_something(drow: i64, dcol: i64) -> bool {
+pub unsafe fn next_to_something(drow: i64, dcol: i64, level: &Level) -> bool {
 	if confused != 0 {
 		return true;
 	}
@@ -207,21 +210,21 @@ pub unsafe fn next_to_something(drow: i64, dcol: i64) -> bool {
 			}
 			row = rogue.row + i;
 			col = rogue.col + j;
-			let s = DUNGEON[row as usize][col as usize];
-			if Hidden.is_set(s) {
+			let s = level.dungeon[row as usize][col as usize];
+			if s.is_hidden() {
 				continue;
 			}
 			/* If the rogue used to be right, up, left, down, or right of
 			 * row,col, and now isn't, then don't stop */
-			if SpotFlag::is_any_set(&vec![Monster, Object, Stairs], s) {
+			if s.is_any_kind(&[CellKind::Monster, CellKind::Object, CellKind::Stairs]) {
 				if ((row == drow) || (col == dcol)) &&
 					(!((row == rogue.row) || (col == rogue.col))) {
 					continue;
 				}
 				return true;
 			}
-			if Trap.is_set(s) {
-				if !Hidden.is_set(s) {
+			if s.is_trap() {
+				if !s.is_hidden() {
 					if ((row == drow) || (col == dcol)) &&
 						(!((row == rogue.row) || (col == rogue.col))) {
 						continue;
@@ -229,13 +232,13 @@ pub unsafe fn next_to_something(drow: i64, dcol: i64) -> bool {
 					return true;
 				}
 			}
-			if (((i - j) == 1) || ((i - j) == -1)) && (Tunnel.is_set(s)) {
+			if (((i - j) == 1) || ((i - j) == -1)) && s.is_tunnel() {
 				pass_count += 1;
 				if pass_count > 1 {
 					return true;
 				}
 			}
-			if (Door.is_set(s)) && ((i == 0) || (j == 0)) {
+			if s.is_door() && ((i == 0) || (j == 0)) {
 				return true;
 			}
 		}
@@ -243,23 +246,25 @@ pub unsafe fn next_to_something(drow: i64, dcol: i64) -> bool {
 	return false;
 }
 
-pub unsafe fn can_move(row1: i64, col1: i64, row2: i64, col2: i64) -> bool {
-	if is_passable(row2, col2) {
+pub fn can_move(row1: i64, col1: i64, row2: i64, col2: i64, level: &Level) -> bool {
+	if !is_passable(row2, col2, level) {
+		false
+	} else {
 		if row1 != row2 && col1 != col2 {
-			if Door.is_set(DUNGEON[row1 as usize][col1 as usize]) || Door.is_set(DUNGEON[row2 as usize][col2 as usize]) {
+			if level.dungeon[row1 as usize][col1 as usize].is_door()
+				|| level.dungeon[row2 as usize][col2 as usize].is_door() {
 				return false;
 			}
-			if Nothing.is_set(DUNGEON[row1 as usize][col2 as usize]) || Nothing.is_set(DUNGEON[row2 as usize][col1 as usize]) {
+			if level.dungeon[row1 as usize][col2 as usize].is_nothing()
+				|| level.dungeon[row2 as usize][col1 as usize].is_nothing() {
 				return false;
 			}
 		}
 		true
-	} else {
-		false
 	}
 }
 
-pub unsafe fn move_onto(depth: &RogueDepth, level: &Level) {
+pub unsafe fn move_onto(depth: &RogueDepth, level: &mut Level) {
 	let ch = get_dir_or_cancel();
 	check_message();
 	if ch != CANCEL {
@@ -290,7 +295,7 @@ pub unsafe fn is_direction(c: char) -> bool {
 		|| c == CANCEL
 }
 
-pub unsafe fn check_hunger(mut messages_only: libc::c_char, depth: &RogueDepth, level: &Level) -> bool {
+pub unsafe fn check_hunger(mut messages_only: libc::c_char, depth: &RogueDepth, level: &mut Level) -> bool {
 	let mut i: libc::c_short = 0;
 	let mut n: libc::c_short = 0;
 	let mut fainted: bool = false;
@@ -363,7 +368,7 @@ pub unsafe fn check_hunger(mut messages_only: libc::c_char, depth: &RogueDepth, 
 	return fainted;
 }
 
-pub unsafe fn reg_move(depth: &RogueDepth, level: &Level) -> bool {
+pub unsafe fn reg_move(depth: &RogueDepth, level: &mut Level) -> bool {
 	let fainted = if rogue.moves_left <= HUNGRY || depth.cur >= depth.max {
 		check_hunger(0, depth, level)
 	} else {
@@ -402,9 +407,7 @@ pub unsafe fn reg_move(depth: &RogueDepth, level: &Level) -> bool {
 		levitate -= 1;
 		if levitate == 0 {
 			message("you float gently to the ground", 1);
-			if DUNGEON[rogue.row as usize][rogue.col as usize] as libc::c_int
-				& 0o400 as libc::c_int as libc::c_ushort as libc::c_int != 0
-			{
+			if level.dungeon[rogue.row as usize][rogue.col as usize].is_trap() {
 				trap_player(rogue.row as usize, rogue.col as usize, depth, level);
 			}
 		}
@@ -422,7 +425,7 @@ pub unsafe fn reg_move(depth: &RogueDepth, level: &Level) -> bool {
 	return fainted;
 }
 
-pub unsafe fn rest(count: libc::c_int, depth: &RogueDepth, level: &Level) {
+pub unsafe fn rest(count: libc::c_int, depth: &RogueDepth, level: &mut Level) {
 	interrupted = false;
 	for _i in 0..count {
 		if interrupted {

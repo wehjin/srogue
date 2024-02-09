@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fs;
 use serde::{Deserialize, Serialize};
-use crate::level::{cur_room, DUNGEON, Level, party_room, RogueDepth};
+use crate::level::{cur_room, Level, party_room, RogueDepth};
 use crate::machdep::{get_current_time, RogueTime};
 use crate::monster::{Fighter, MonsterMash};
 use crate::objects::{empty_obj, foods, id, obj, party_counter, SaveObj};
@@ -139,7 +139,6 @@ pub struct SaveData {
 	pub level_monsters: MonsterMash,
 	pub level_objects: SavePack,
 	pub file_id: i64,
-	pub dungeon: SaveDungeon,
 	pub foods: i16,
 	pub rogue: SaveFighter,
 	pub rogue_pack: SavePack,
@@ -176,7 +175,6 @@ impl SaveData {
 			level_monsters: MASH.clone(),
 			level_objects: SavePack::from_pack(&level_objects),
 			file_id,
-			dungeon: SaveDungeon::from_dungeon(&DUNGEON),
 			foods,
 			rogue: SaveFighter::from_fighter(&rogue),
 			rogue_pack: SavePack::from_pack(&rogue.pack),
@@ -209,7 +207,6 @@ impl SaveData {
 		party_counter = self.party_counter;
 		MASH = self.level_monsters.clone();
 		self.level_objects.write_pack(&mut level_objects, false);
-		self.dungeon.load_dungeon(&mut DUNGEON);
 		foods = self.foods;
 		rogue = self.rogue.to_fighter();
 		self.rogue_pack.write_pack(&mut rogue.pack, true);

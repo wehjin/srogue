@@ -1,17 +1,15 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
 use ncurses::{mvaddch, mvinch};
-use crate::monster;
 use crate::prelude::*;
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Wands;
-use crate::prelude::SpotFlag::{Floor, HorWall, Monster, Nothing, Object, Stairs, Tunnel, VertWall};
 use crate::prelude::wand_kind::WandKind;
 use crate::settings::set_score_only;
 
 pub static mut wizard: bool = false;
 
-pub unsafe fn zapp(depth: &RogueDepth, level: &Level) {
+pub unsafe fn zapp(depth: &RogueDepth, level: &mut Level) {
 	let dir = get_dir_or_cancel();
 	check_message();
 	if dir == CANCEL {
@@ -40,7 +38,7 @@ pub unsafe fn zapp(depth: &RogueDepth, level: &Level) {
 		(*wand).class -= 1;
 		let mut row = rogue.row;
 		let mut col = rogue.col;
-		if let Some(monster_id) = get_zapped_monster(dir, &mut row, &mut col) {
+		if let Some(monster_id) = get_zapped_monster(dir, &mut row, &mut col, level) {
 			if let Some(monster) = MASH.monster_with_id_mut(monster_id) {
 				monster.wake_up();
 				zap_monster(monster, (*wand).which_kind, depth, level);
@@ -51,26 +49,25 @@ pub unsafe fn zapp(depth: &RogueDepth, level: &Level) {
 	reg_move(depth, level);
 }
 
-pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64) -> Option<u64> {
+pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, level: &Level) -> Option<u64> {
 	loop {
 		let orow = *row;
 		let ocol = *col;
 		get_dir_rc(dir, row, col, false);
 		if (*row == orow && *col == ocol)
-			|| HorWall.is_set(DUNGEON[*row as usize][*col as usize])
-			|| VertWall.is_set(DUNGEON[*row as usize][*col as usize])
-			|| Nothing.is_set(DUNGEON[*row as usize][*col as usize]) {
+			|| level.dungeon[*row as usize][*col as usize].is_any_kind(&[CellKind::HorizontalWall, CellKind::VerticalWall])
+			|| level.dungeon[*row as usize][*col as usize].is_nothing() {
 			return None;
 		}
-		if Monster.is_set(DUNGEON[*row as usize][*col as usize]) {
-			if !imitating(*row, *col) {
+		if level.dungeon[*row as usize][*col as usize].is_monster() {
+			if !imitating(*row, *col, level) {
 				return MASH.monster_at_spot(*row, *col).map(|m| m.id());
 			}
 		}
 	}
 }
 
-pub unsafe fn zap_monster(monster: &mut monster::Monster, which_kind: u16, depth: &RogueDepth, level: &Level) {
+pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, depth: &RogueDepth, level: &mut Level) {
 	let row = monster.spot.row;
 	let col = monster.spot.col;
 	match WandKind::from_index(which_kind as usize) {
@@ -123,7 +120,7 @@ pub unsafe fn zap_monster(monster: &mut monster::Monster, which_kind: u16, depth
 			monster.nap_length = get_rand(3, 6);
 		}
 		WandKind::MagicMissile => {
-			rogue_hit(monster, true, depth);
+			rogue_hit(monster, true, depth, level);
 		}
 		WandKind::Cancellation => {
 			if monster.m_flags.holds {
@@ -148,23 +145,22 @@ pub unsafe fn zap_monster(monster: &mut monster::Monster, which_kind: u16, depth
 	}
 }
 
-unsafe fn tele_away(monster: &mut monster::Monster, level: &Level) {
+unsafe fn tele_away(monster: &mut Monster, level: &mut Level) {
 	if monster.m_flags.holds {
 		being_held = false;
 	}
 	let (row, col) = {
 		let mut row = 0;
 		let mut col = 0;
-		gr_row_col(&mut row, &mut col, vec![Floor, Tunnel, Stairs, Object], level);
+		gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel, CellKind::Stairs, CellKind::Object], level);
 		(row, col)
 	};
 
 	mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.trail_char);
-	Monster.clear(&mut DUNGEON[monster.spot.row as usize][monster.spot.col as usize]);
-
+	level.dungeon[monster.spot.row as usize][monster.spot.col as usize].remove_kind(CellKind::Monster);
 	monster.spot.row = row;
 	monster.spot.col = col;
-	Monster.set(&mut DUNGEON[row as usize][col as usize]);
+	level.dungeon[row as usize][col as usize].add_kind(CellKind::Monster);
 	monster.trail_char = mvinch(row as i32, col as i32);
 
 	if detect_monster || rogue_can_see(row, col, level) {

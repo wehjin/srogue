@@ -25,7 +25,7 @@ pub static mut r_see_invisible: bool = false;
 pub static mut sustain_strength: bool = false;
 pub static mut maintain_armor: bool = false;
 
-pub unsafe fn put_on_ring(depth: &RogueDepth, level: &Level) {
+pub unsafe fn put_on_ring(depth: &RogueDepth, level: &mut Level) {
 	if r_rings == 2 {
 		message("wearing two rings already", 0);
 		return;
@@ -97,7 +97,7 @@ pub unsafe fn do_put_on(ring: &mut obj, on_left: bool) {
 	}
 }
 
-pub unsafe fn remove_ring(depth: &RogueDepth, level: &Level) {
+pub unsafe fn remove_ring(depth: &RogueDepth, level: &mut Level) {
 	let mut left = false;
 	let mut right = false;
 	if r_rings == 0 {
@@ -135,7 +135,7 @@ pub unsafe fn remove_ring(depth: &RogueDepth, level: &Level) {
 	}
 }
 
-pub unsafe fn un_put_on(ring: *mut obj, level_depth: usize, level: &Level) {
+pub unsafe fn un_put_on(ring: *mut obj, level_depth: usize, level: &mut Level) {
 	if !ring.is_null() && ((*ring).in_use_flags & ON_LEFT_HAND != 0) {
 		(*ring).in_use_flags &= !ON_LEFT_HAND;
 		rogue.left_ring = 0 as *mut object;
@@ -204,7 +204,7 @@ impl RingHand {
 	pub const ALL: &'static [RingHand; 2] = &[RingHand::Left, RingHand::Right];
 }
 
-pub unsafe fn ring_stats(print: bool, level_depth: usize, level: &Level) {
+pub unsafe fn ring_stats(print: bool, level_depth: usize, level: &mut Level) {
 	r_rings = 0;
 	e_rings = 0;
 	r_teleport = false;

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use crate::prelude::DungeonCell;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub enum SpotFlag {
@@ -16,50 +16,13 @@ pub enum SpotFlag {
 }
 
 impl SpotFlag {
-	pub fn union(flags: &Vec<SpotFlag>) -> u16 {
-		flags.iter().fold(0, |it, more| it & more.code())
-	}
-	pub fn is_any_set(flags: &Vec<SpotFlag>, value: u16) -> bool {
-		for flag in flags {
-			if flag.is_set(value) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	pub fn is_nothing(value: u16) -> bool {
-		value == 0
-	}
-	pub fn set_nothing(value: &mut u16) {
-		*value = 0;
-	}
-	pub fn are_others_set(flags: &Vec<SpotFlag>, value: u16) -> bool {
-		let all = vec![crate::prelude::SpotFlag::Object, crate::prelude::SpotFlag::Monster, crate::prelude::SpotFlag::Stairs, crate::prelude::SpotFlag::HorWall, crate::prelude::SpotFlag::VertWall, crate::prelude::SpotFlag::Door, crate::prelude::SpotFlag::Floor, crate::prelude::SpotFlag::Tunnel, crate::prelude::SpotFlag::Trap, crate::prelude::SpotFlag::Hidden];
-		let all_set = all.into_iter().collect::<HashSet<_>>();
-		let exclude_set = flags.iter().cloned().collect::<HashSet<_>>();
-		let difference_set = all_set.difference(&exclude_set).cloned().collect::<Vec<_>>();
-		SpotFlag::is_any_set(&difference_set, value)
-	}
-
 	pub fn is_set(&self, value: u16) -> bool {
 		match self {
 			SpotFlag::Nothing => value == 0,
-			_ => (value & self.code()) != 0,
+			_ => (value & self.as_u16()) != 0,
 		}
 	}
-	pub fn is_only(&self, value: u16) -> bool {
-		value == self.code()
-	}
-	pub fn clear(&self, value: &mut u16) {
-		let code = self.code();
-		*value &= !code;
-	}
-	pub fn set(&self, value: &mut u16) {
-		let code = self.code();
-		*value |= code;
-	}
-	pub fn code(&self) -> u16 {
+	pub fn as_u16(&self) -> u16 {
 		match self {
 			SpotFlag::Nothing => 0o0,
 			SpotFlag::Object => 0o1,

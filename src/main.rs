@@ -77,11 +77,11 @@ pub fn main() {
 			unsafe { clear_level(&mut game.level); }
 			game.depth = game.depth.descend();
 			unsafe { make_level(game.depth.cur, &mut game.level) };
-			unsafe { put_objects(&game.depth, &game.level); }
+			unsafe { put_objects(&game.depth, &mut game.level); }
 			unsafe { put_stairs(&mut game.level); }
 			unsafe { add_traps(game.depth.cur, &mut game.level); }
-			unsafe { put_mons(game.depth.cur, &game.level); }
-			unsafe { put_player(party_room, &game.level); }
+			unsafe { put_mons(game.depth.cur, &mut game.level); }
+			unsafe { put_player(party_room, &mut game.level); }
 			unsafe { print_stats(STAT_ALL, game.depth.cur); }
 		}
 		unsafe { play_level(&mut game); }
