@@ -119,7 +119,8 @@ pub unsafe fn trap_player(row: usize, col: usize, depth: &RogueDepth, level: &mu
 		}
 		DartTrap => {
 			message(trap_message(t), 1);
-			rogue.hp_current -= get_damage("1d6", DamageEffect::Roll);
+			const DART_DAMAGE: DamageStat = DamageStat { hits: 1, damage: 6 };
+			rogue.hp_current -= get_damage(&[DART_DAMAGE], DamageEffect::Roll);
 			if rogue.hp_current <= 0 {
 				rogue.hp_current = 0;
 			}

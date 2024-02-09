@@ -1,6 +1,7 @@
 use ncurses::chtype;
 use rand::{RngCore, thread_rng};
 use serde::{Deserialize, Serialize};
+use crate::hit::DamageStat;
 use crate::level::Level;
 use crate::monster::{MonsterFlags, MonsterKind};
 use crate::prelude::{DungeonSpot};
@@ -175,7 +176,9 @@ impl Monster {
 	pub fn id(&self) -> u64 { self.id }
 	pub fn kill_exp(&self) -> isize { self.kind.kill_exp() }
 	pub fn m_hit_chance(&self) -> usize { self.kind.m_hit_chance() }
-	pub fn m_damage(&self) -> &'static str { self.kind.damage() }
+	pub fn m_damage(&self) -> &'static [DamageStat] {
+		self.kind.damage()
+	}
 	pub fn wanders_or_wakens(&self) -> bool { self.m_flags.wakens || self.m_flags.wanders }
 	pub fn is_invisible(&self) -> bool { self.m_flags.invisible }
 	pub fn name(&self) -> &'static str { self.kind.name() }

@@ -213,7 +213,7 @@ pub unsafe fn get_title(obj: &object) -> &str {
 	} else {
 		match obj.what_is {
 			Armor => ArmorKind::from_index(obj.which_kind as usize).title(),
-			Weapon => WeaponKind::from_index(obj.which_kind as usize).title(),
+			Weapon => WeaponKind::from(obj.which_kind).title(),
 			Potion => PotionKind::from_index(obj.which_kind as usize).title(),
 			_ => "",
 		}

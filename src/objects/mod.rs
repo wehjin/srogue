@@ -10,7 +10,7 @@ use crate::odds::GOLD_PERCENT;
 use crate::prelude::*;
 use crate::prelude::armor_kind::{ARMORS, PLATE, SPLINT};
 use crate::prelude::food_kind::{FRUIT, RATION};
-use crate::prelude::item_usage::{being_wielded, being_worn, NOT_USED, on_either_hand, on_left_hand};
+use crate::prelude::item_usage::{being_wielded, BEING_WIELDED, being_worn, NOT_USED, on_either_hand, on_left_hand};
 use crate::prelude::object_what::{ObjectWhat};
 use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
 use crate::prelude::potion_kind::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
@@ -19,7 +19,7 @@ use crate::prelude::ring_kind::RINGS;
 use crate::prelude::scroll_kind::ScrollKind::{AggravateMonster, CreateMonster, EnchArmor, EnchWeapon, HoldMonster, Identify, MagicMapping, ProtectArmor, RemoveCurse, ScareMonster, Sleep, Teleport};
 use crate::prelude::scroll_kind::SCROLLS;
 use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, MAX_WAND};
-use crate::prelude::weapon_kind::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
+use crate::prelude::weapon_kind::{ARROW, DAGGER, DART, SHURIKEN, WeaponKind, WEAPONS};
 use crate::settings::fruit;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -192,6 +192,40 @@ impl obj {
 	}
 	pub fn set_next_monster(&mut self, value: *mut obj) {
 		self.next_object = value;
+	}
+	pub fn is_wielded_throwing_weapon(&self) -> bool {
+		self.is_wielded() && self.is_throwing_weapon()
+	}
+	pub fn is_throwing_weapon(&self) -> bool {
+		if let Some(kind) = self.weapon_kind() {
+			kind.is_throwing_weapon()
+		} else {
+			false
+		}
+	}
+	pub fn is_wielded(&self) -> bool {
+		(self.in_use_flags & BEING_WIELDED) != 0
+	}
+	pub fn weapon_kind(&self) -> Option<WeaponKind> {
+		if self.what_is == Weapon {
+			Some(WeaponKind::from(self.which_kind))
+		} else {
+			None
+		}
+	}
+
+	pub fn base_damage(&self) -> DamageStat {
+		if let Some(kind) = self.weapon_kind() {
+			kind.damage()
+		} else {
+			DamageStat { hits: 1, damage: 1 }
+		}
+	}
+	pub fn enhanced_damage(&self) -> DamageStat {
+		let DamageStat { hits, damage } = self.base_damage();
+		let hits = hits + self.hit_enchant as usize;
+		let damage = damage + self.d_enchant as usize;
+		DamageStat { hits, damage }
 	}
 }
 
@@ -1007,10 +1041,6 @@ pub fn gr_weapon(obj: &mut obj, assign_wk: bool) {
 			}
 		}
 	}
-}
-
-pub fn weapon_damage(weapon: &obj) -> &'static str {
-	weapon_kind::damage(weapon.which_kind)
 }
 
 pub fn gr_armor(obj: &mut obj) {

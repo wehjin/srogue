@@ -94,7 +94,7 @@ pub unsafe fn rogue_hit(monster: &mut monster::Monster, force_hit: bool, depth: 
 	} else {
 		let damage = get_weapon_damage(&*rogue.weapon);
 		let damage = if wizard { damage * 3 } else { damage };
-		if mon_damage(monster, damage as usize, depth, level) {
+		if mon_damage(monster, damage, depth, level) {
 			if FIGHT_MONSTER.is_none() {
 				hit_message = "you hit  ".to_string();
 			}
@@ -112,6 +112,22 @@ pub unsafe fn rogue_damage(d: isize, monster: &monster::Monster, depth: &RogueDe
 	}
 	rogue.hp_current -= d;
 	print_stats(STAT_HP, depth.cur);
+}
+
+
+pub fn get_damage(damage_stats: &[DamageStat], effect: DamageEffect) -> isize {
+	let mut total = 0;
+	for stat in damage_stats {
+		total += stat.roll_damage(effect);
+	}
+	return total as isize;
+}
+
+pub fn get_w_damage(obj: &object) -> isize {
+	if obj.what_is != Weapon {
+		return -1;
+	}
+	get_damage(&[obj.enhanced_damage()], DamageEffect::Roll)
 }
 
 pub unsafe fn get_number(s: *const c_char) -> usize {
@@ -138,18 +154,10 @@ pub fn lget_number(s: &[u8]) -> u64 {
 	return total;
 }
 
-pub unsafe fn to_hit(obj: *const object) -> usize {
-	if obj.is_null() {
-		return 1;
+impl obj {
+	pub fn to_hit(&self) -> usize {
+		self.enhanced_damage().hits
 	}
-	let damage = if (*obj).what_is == Weapon {
-		weapon_kind::damage((*obj).which_kind)
-	} else {
-		//TODO
-		unimplemented!("not a weapon!")
-	};
-	let hits = DamageStat::parse_first(damage).hits;
-	return hits + (*obj).hit_enchant as usize;
 }
 
 #[no_mangle]
@@ -181,8 +189,8 @@ pub unsafe extern "C" fn damage_for_strength() -> i64 {
 	return 8i64;
 }
 
-pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: usize, depth: &RogueDepth, level: &mut Level) -> bool {
-	monster.hp_to_kill -= damage as isize;
+pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: isize, depth: &RogueDepth, level: &mut Level) -> bool {
+	monster.hp_to_kill -= damage;
 	if monster.hp_to_kill <= 0 {
 		let row = monster.spot.row;
 		let col = monster.spot.col;
@@ -315,29 +323,29 @@ pub fn get_dir_rc(dir: char, row: &mut i64, col: &mut i64, allow_off_screen: boo
 
 pub unsafe fn get_hit_chance(weapon: &object) -> usize {
 	let mut hit_chance = 40isize;
-	hit_chance += 3 * to_hit(weapon) as isize;
+	hit_chance += 3 * weapon.to_hit() as isize;
 	hit_chance += ((2 * rogue.exp) + (2 * ring_exp)) - r_rings;
 	hit_chance as usize
 }
 
 pub unsafe fn get_weapon_damage(weapon: &object) -> isize {
-	let mut damage = get_w_damage(weapon).expect("damage");
+	let mut damage = get_w_damage(weapon);
 	damage += damage_for_strength() as isize;
 	damage += (((rogue.exp + ring_exp) - r_rings) + 1) / 2;
 	damage
 }
 
-mod safe;
+mod damage_stat;
 
-pub use safe::*;
+pub use damage_stat::*;
 use crate::level::{add_exp, Level, RogueDepth};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
 use crate::monster;
 use crate::monster::{MASH, mon_name};
-use crate::objects::{get_armor_class, object, rogue};
+use crate::objects::{get_armor_class, obj, object, rogue};
 use crate::play::interrupted;
-use crate::prelude::{AMULET_LEVEL, CellKind, MIN_ROW, weapon_kind};
+use crate::prelude::{AMULET_LEVEL, CellKind, MIN_ROW};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::stat_const::STAT_HP;

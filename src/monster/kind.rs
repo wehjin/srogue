@@ -1,5 +1,6 @@
 use ncurses::chtype;
 use serde::{Deserialize, Serialize};
+use crate::hit::DamageStat;
 use crate::monster::{MonsterFlags};
 use crate::objects::{obj, object};
 use crate::prelude::{get_rand};
@@ -57,8 +58,35 @@ impl MonsterKind {
 			}
 		}
 	}
-	pub fn damage(&self) -> &'static str {
-		MON_DAMAGE[self.index()]
+	pub fn damage(&self) -> &'static [DamageStat] {
+		match self {
+			MonsterKind::Aquator => &[DamageStat { hits: 0, damage: 0 }],
+			MonsterKind::Bat => &[DamageStat { hits: 1, damage: 3 }],
+			MonsterKind::Centaur => &[DamageStat { hits: 3, damage: 3 }, DamageStat { hits: 2, damage: 5 }],
+			MonsterKind::Dragon => &[DamageStat { hits: 4, damage: 6 }, DamageStat { hits: 4, damage: 9 }],
+			MonsterKind::Emu => &[DamageStat { hits: 1, damage: 3 }],
+			MonsterKind::FlyTrap => &[DamageStat { hits: 5, damage: 5 }],
+			MonsterKind::Griffin => &[DamageStat { hits: 5, damage: 5 }, DamageStat { hits: 5, damage: 5 }],
+			MonsterKind::Hobgoblin => &[DamageStat { hits: 1, damage: 3 }, DamageStat { hits: 1, damage: 2 }],
+			MonsterKind::IceMonster => &[DamageStat { hits: 0, damage: 0 }],
+			MonsterKind::Jabberwock => &[DamageStat { hits: 3, damage: 10 }, DamageStat { hits: 4, damage: 5 }],
+			MonsterKind::Kestrel => &[DamageStat { hits: 1, damage: 4 }],
+			MonsterKind::Leprechaun => &[DamageStat { hits: 0, damage: 0 }],
+			MonsterKind::Medusa => &[DamageStat { hits: 4, damage: 4 }, DamageStat { hits: 3, damage: 7 }],
+			MonsterKind::Nymph => &[DamageStat { hits: 0, damage: 0 }],
+			MonsterKind::Orc => &[DamageStat { hits: 1, damage: 6 }],
+			MonsterKind::Phantom => &[DamageStat { hits: 5, damage: 4 }],
+			MonsterKind::Quagga => &[DamageStat { hits: 3, damage: 5 }],
+			MonsterKind::Rattlesnake => &[DamageStat { hits: 2, damage: 5 }],
+			MonsterKind::Snake => &[DamageStat { hits: 1, damage: 3 }],
+			MonsterKind::Troll => &[DamageStat { hits: 4, damage: 6 }, DamageStat { hits: 1, damage: 4 }],
+			MonsterKind::Unicorn => &[DamageStat { hits: 4, damage: 10 }],
+			MonsterKind::Vampire => &[DamageStat { hits: 1, damage: 14 }, DamageStat { hits: 1, damage: 4 }],
+			MonsterKind::Wraith => &[DamageStat { hits: 2, damage: 8 }],
+			MonsterKind::Xeroc => &[DamageStat { hits: 4, damage: 6 }],
+			MonsterKind::Yeti => &[DamageStat { hits: 3, damage: 6 }],
+			MonsterKind::Zombie => &[DamageStat { hits: 1, damage: 7 }],
+		}
 	}
 	pub fn hp_to_kill(&self) -> isize {
 		MONSTER_TABLE[self.index()].quantity as isize
@@ -848,8 +876,3 @@ const MONSTER_TABLE: [object; 26] = [
 ];
 
 pub const MONSTERS: usize = 26;
-const MON_DAMAGE: [&'static str; MONSTERS] = [
-	"0d0", "1d3", "3d3/2d5", "4d6/4d9", "1d3", "5d5", "5d5/5d5", "1d3/1d2", "0d0", "3d10/4d5", "1d4", "0d0", "4d4/3d7",
-	"0d0", "1d6", "5d4", "3d5", "2d5", "1d3", "4d6/1d4", "4d10", "1d14/1d4", "2d8", "4d6", "3d6", "1d7",
-];
-

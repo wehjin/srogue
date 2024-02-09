@@ -8,7 +8,7 @@ use crate::prelude::item_usage::{BEING_USED, BEING_WIELDED, BEING_WORN, NOT_USED
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Weapons;
 use crate::prelude::stat_const::STAT_ARMOR;
-use crate::prelude::weapon_kind::{ARROW, BOW, DAGGER, DART, SHURIKEN};
+use crate::prelude::weapon_kind::{ARROW, BOW};
 use crate::throw::Move::{Up, UpLeft, UpRight, Left, Right, Same, Down, DownLeft, DownRight};
 
 pub unsafe fn throw(depth: &RogueDepth, level: &mut Level) {
@@ -64,32 +64,36 @@ pub unsafe fn throw(depth: &RogueDepth, level: &mut Level) {
 }
 
 unsafe fn throw_at_monster(monster: &mut Monster, weapon: &mut obj, depth: &RogueDepth, level: &mut Level) -> bool {
-	let mut hit_chance = get_hit_chance(weapon);
-	let mut damage = get_weapon_damage(weapon);
-	if weapon.which_kind == ARROW && rogue_weapon_is_bow() {
-		damage += get_weapon_damage(&*rogue.weapon);
-		damage = (damage * 2) / 3;
-		hit_chance += hit_chance / 3;
-	} else if (weapon.in_use_flags & BEING_WIELDED) != 0
-		&& (weapon.which_kind == DAGGER || weapon.which_kind == SHURIKEN || weapon.which_kind == DART) {
-		damage = (damage * 3) / 2;
-		hit_chance += hit_chance / 3;
-	}
+	{
+		let mut hit_chance = get_hit_chance(weapon);
+		if weapon.which_kind == ARROW && rogue_weapon_is_bow() {
+			hit_chance += hit_chance / 3;
+		} else if weapon.is_wielded_throwing_weapon() {
+			hit_chance += hit_chance / 3;
+		}
 
-	let t = weapon.quantity;
-	weapon.quantity = 1;
-	hit_message = format!("the {}", name_of(weapon));
-	weapon.quantity = t;
+		let t = weapon.quantity;
+		weapon.quantity = 1;
+		hit_message = format!("the {}", name_of(weapon));
+		weapon.quantity = t;
 
-	if !rand_percent(hit_chance) {
-		hit_message += "misses  ";
-		return false;
+		if !rand_percent(hit_chance) {
+			hit_message += "misses  ";
+			return false;
+		}
+		hit_message += "hit  ";
 	}
-	hit_message += "hit  ";
 	if weapon.what_is == Wand && rand_percent(75) {
 		zap_monster(monster, weapon.which_kind, depth, level);
 	} else {
-		mon_damage(monster, damage as usize, depth, level);
+		let mut damage = get_weapon_damage(weapon);
+		if weapon.which_kind == ARROW && rogue_weapon_is_bow() {
+			damage += get_weapon_damage(&*rogue.weapon);
+			damage = (damage * 2) / 3;
+		} else if weapon.is_wielded_throwing_weapon() {
+			damage = (damage * 3) / 2;
+		}
+		mon_damage(monster, damage, depth, level);
 	}
 	return true;
 }
