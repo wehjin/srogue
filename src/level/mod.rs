@@ -1,6 +1,5 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-use ncurses::clear;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
@@ -256,7 +255,7 @@ pub unsafe fn clear_level(level: &mut Level) {
 	level.clear();
 	rogue.col = -1;
 	rogue.row = -1;
-	clear();
+	ncurses::clear();
 }
 
 pub unsafe fn put_door(rn: usize, door_dir: DoorDirection, level_depth: usize, level: &mut Level) -> DungeonSpot {

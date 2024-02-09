@@ -10,7 +10,7 @@ use crate::odds::GOLD_PERCENT;
 use crate::prelude::*;
 use crate::prelude::armor_kind::{ARMORS, PLATE, SPLINT};
 use crate::prelude::food_kind::{FRUIT, RATION};
-use crate::prelude::item_usage::{being_wielded, being_worn, on_either_hand, on_left_hand};
+use crate::prelude::item_usage::{being_wielded, being_worn, NOT_USED, on_either_hand, on_left_hand};
 use crate::prelude::object_what::{ObjectWhat};
 use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
 use crate::prelude::potion_kind::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
@@ -1082,7 +1082,7 @@ pub unsafe fn alloc_object() -> *mut object {
 	(*obj).ichar = 'L';
 	(*obj).is_cursed = 0;
 	(*obj).picked_up = (*obj).is_cursed;
-	(*obj).in_use_flags = 0;
+	(*obj).in_use_flags = NOT_USED;
 	(*obj).identified = false;
 	return obj;
 }
