@@ -223,7 +223,7 @@ pub unsafe fn darken_room(rn: i64, level: &Level) {
 pub unsafe fn get_dungeon_char(row: i64, col: i64, level: &Level) -> chtype {
 	let mask = level.dungeon[row as usize][col as usize];
 	if mask.is_monster() {
-		return gmc_row_col(row, col);
+		return gmc_row_col(row, col, level);
 	}
 	if mask.is_object() {
 		let obj = object_at(&level_objects, row, col);

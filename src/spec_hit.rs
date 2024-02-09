@@ -28,7 +28,7 @@ pub unsafe fn special_hit(monster: &mut Monster, depth: &RogueDepth, level: &mut
 		freeze(monster, depth, level);
 	}
 	if monster.m_flags.stings {
-		sting(monster, depth.cur);
+		sting(monster, depth.cur, level);
 	}
 	if monster.m_flags.drains_life {
 		drain_life(depth.cur);
@@ -273,7 +273,7 @@ pub unsafe fn check_imitator(monster: &mut Monster, level: &Level) -> bool {
 		if blind == 0 {
 			mvaddch(monster.spot.row as i32, monster.spot.col as i32, get_dungeon_char(monster.spot.row, monster.spot.col, level));
 			check_message();
-			let msg = format!("wait, that's a {}!", mon_name(monster));
+			let msg = format!("wait, that's a {}!", mon_name(monster, level));
 			message(&msg, 1);
 		}
 		return true;
@@ -292,7 +292,7 @@ pub unsafe fn imitating(row: i64, col: i64, level: &Level) -> bool {
 	return false;
 }
 
-unsafe fn sting(monster: &Monster, level_depth: usize) {
+unsafe fn sting(monster: &Monster, level_depth: usize, level: &Level) {
 	if rogue.str_current <= 3 || sustain_strength {
 		return;
 	}
@@ -304,7 +304,7 @@ unsafe fn sting(monster: &Monster, level_depth: usize) {
 		sting_chance -= 6 * ((rogue.exp + ring_exp) - 8);
 	}
 	if rand_percent(sting_chance as usize) {
-		message(&format!("the {}'s bite has weakened you", mon_name(monster)), 0);
+		message(&format!("the {}'s bite has weakened you", mon_name(monster, level)), 0);
 		rogue.str_current -= 1;
 		print_stats(STAT_STRENGTH, level_depth);
 	}
@@ -366,7 +366,7 @@ pub unsafe fn m_confuse(monster: &mut Monster, level: &Level) -> bool {
 	}
 	if rand_percent(55) {
 		monster.m_flags.confuses = false;
-		let msg = format!("the gaze of the {} has confused you", mon_name(monster));
+		let msg = format!("the gaze of the {} has confused you", mon_name(monster, level));
 		message(&msg, 1);
 		confuse();
 		return true;

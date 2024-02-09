@@ -17,7 +17,6 @@ pub static mut blind: usize = 0;
 pub static mut confused: usize = 0;
 pub static mut levitate: usize = 0;
 pub static mut haste_self: usize = 0;
-pub static mut see_invisible: bool = false;
 pub static mut extra_hp: isize = 0;
 pub static strange_feeling: &'static str = "you have a strange feeling for a moment, then it passes";
 
@@ -118,7 +117,7 @@ pub unsafe fn quaff(depth: &RogueDepth, level: &mut Level) {
 			if blind != 0 {
 				unblind(level);
 			}
-			see_invisible = true;
+			level.see_invisible = true;
 			relight(level);
 		}
 	}

@@ -34,7 +34,7 @@ pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame
 		hit_chance = reduce_chance(hit_chance, rogue.exp + ring_exp - r_rings);
 	}
 
-	let base_monster_name = mon_name(&*monster);
+	let base_monster_name = mon_name(&*monster, level);
 	let monster_name = if let Some(name) = other { name } else { &base_monster_name };
 	if !rand_percent(hit_chance) {
 		if FIGHT_MONSTER.is_none() {
@@ -191,7 +191,7 @@ pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: usize, depth: &
 
 		FIGHT_MONSTER = None;
 		cough_up(monster, depth, level);
-		let mn = mon_name(monster);
+		let mn = mon_name(monster, level);
 		hit_message = format!("{}defeated the {}", hit_message, mn);
 		message(&hit_message, 1);
 		hit_message.clear();

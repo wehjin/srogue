@@ -1,9 +1,7 @@
 use std::ops::{Index, IndexMut};
 use serde::{Deserialize, Serialize};
-use crate::level::constants::{DCOLS, DROWS, MAX_ROOM, MAX_TRAP};
+use crate::level::constants::{DCOLS};
 use crate::level::DungeonCell;
-use crate::room::Room;
-use crate::trap::Trap;
 
 const SERIALIZE_MAX: usize = 32;
 
@@ -35,11 +33,4 @@ impl IndexMut<usize> for DungeonRow {
 			_ => unimplemented!("DROWS greater that 96")
 		}
 	}
-}
-
-#[derive(Copy, Clone, Serialize, Deserialize)]
-pub struct Level {
-	pub rooms: [Room; MAX_ROOM],
-	pub traps: [Trap; MAX_TRAP],
-	pub dungeon: [DungeonRow; DROWS],
 }

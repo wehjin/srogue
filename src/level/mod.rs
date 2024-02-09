@@ -80,12 +80,22 @@ pub fn shuffled_rns() -> [usize; MAX_ROOM] {
 	room_indices
 }
 
+
+#[derive(Copy, Clone, Serialize, Deserialize)]
+pub struct Level {
+	pub rooms: [Room; MAX_ROOM],
+	pub traps: [Trap; MAX_TRAP],
+	pub dungeon: [DungeonRow; DROWS],
+	pub see_invisible: bool,
+}
+
 impl Level {
 	pub fn new() -> Self {
 		Level {
 			rooms: [Room::default(); MAX_ROOM],
 			traps: [Trap::default(); MAX_TRAP],
 			dungeon: [DungeonRow::default(); DROWS],
+			see_invisible: false,
 		}
 	}
 	pub fn clear(&mut self) {
@@ -100,6 +110,7 @@ impl Level {
 				self.dungeon[row][col].set_nothing();
 			}
 		}
+		self.see_invisible = false;
 	}
 }
 
@@ -232,8 +243,6 @@ pub unsafe fn connect_rooms(room1: usize, room2: usize, level_depth: usize, leve
 
 pub unsafe fn clear_level(level: &mut Level) {
 	level.clear();
-
-	see_invisible = false;
 	detect_monster = false;
 	bear_trap = 0;
 	being_held = false;

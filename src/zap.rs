@@ -164,7 +164,7 @@ unsafe fn tele_away(monster: &mut Monster, level: &mut Level) {
 	monster.trail_char = mvinch(row as i32, col as i32);
 
 	if detect_monster || rogue_can_see(row, col, level) {
-		mvaddch(row as i32, col as i32, gmc(monster));
+		mvaddch(row as i32, col as i32, gmc(monster, level));
 	}
 }
 

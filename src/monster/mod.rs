@@ -133,17 +133,17 @@ pub unsafe fn party_monsters(rn: usize, n: usize, level_depth: usize, level: &mu
 	}
 }
 
-pub unsafe fn gmc_row_col(row: i64, col: i64) -> chtype {
+pub unsafe fn gmc_row_col(row: i64, col: i64, level: &Level) -> chtype {
 	let monster = MASH.monster_at_spot(row, col);
 	if let Some(monster) = monster {
-		gmc(monster)
+		gmc(monster, level)
 	} else {
 		ncurses::chtype::from('&')
 	}
 }
 
-pub unsafe fn gmc(monster: &Monster) -> chtype {
-	if (monster.is_invisible() && !player_defeats_invisibility())
+pub unsafe fn gmc(monster: &Monster, level: &Level) -> chtype {
+	if (monster.is_invisible() && !player_defeats_invisibility(level))
 		|| (blind != 0) {
 		monster.trail_char
 	} else if monster.m_flags.imitates {
@@ -262,9 +262,9 @@ pub unsafe fn move_mon_to(monster: &mut Monster, row: i64, col: i64, level: &mut
 	}
 	monster.trail_char = ncurses::mvinch(row as i32, col as i32);
 	if blind == 0 && ((detect_monster) || rogue_can_see(row, col, level)) {
-		let bypass_invisibility = (detect_monster) || (see_invisible) || (r_see_invisible);
+		let bypass_invisibility = (detect_monster) || (level.see_invisible) || (r_see_invisible);
 		if !monster.m_flags.invisible || bypass_invisibility {
-			ncurses::mvaddch(row as i32, col as i32, gmc(monster));
+			ncurses::mvaddch(row as i32, col as i32, gmc(monster, level));
 		}
 	}
 	if level.dungeon[row as usize][col as usize].is_door()
@@ -345,8 +345,8 @@ pub unsafe fn wake_room(rn: i64, entering: bool, row: i64, col: i64, level: &Lev
 	}
 }
 
-pub unsafe fn mon_name(monster: &Monster) -> &'static str {
-	if player_is_blind() || (monster.m_flags.invisible && !player_defeats_invisibility()) {
+pub unsafe fn mon_name(monster: &Monster, level: &Level) -> &'static str {
+	if player_is_blind() || (monster.m_flags.invisible && !player_defeats_invisibility(level)) {
 		"something"
 	} else if player_hallucinating() {
 		MonsterKind::random_name()
@@ -359,7 +359,7 @@ pub unsafe fn player_hallucinating() -> bool { halluc != 0 }
 
 pub unsafe fn player_is_blind() -> bool { blind != 0 }
 
-pub unsafe fn player_defeats_invisibility() -> bool { detect_monster || see_invisible || r_see_invisible }
+pub unsafe fn player_defeats_invisibility(level: &Level) -> bool { detect_monster || level.see_invisible || r_see_invisible }
 
 pub unsafe fn rogue_is_around(row: i64, col: i64) -> bool {
 	let row_diff = row - rogue.row;
@@ -435,7 +435,7 @@ pub unsafe fn create_monster(level_depth: usize, level: &mut Level) {
 		put_m_at(found.row, found.col, monster, level);
 
 		let monster = MASH.monster_at_spot_mut(found.row, found.col).expect("created is in monster in mash");
-		ncurses::mvaddch(found.row as i32, found.col as i32, gmc(monster));
+		ncurses::mvaddch(found.row as i32, found.col as i32, gmc(monster, level));
 		if monster.wanders_or_wakens() {
 			monster.wake_up();
 		}

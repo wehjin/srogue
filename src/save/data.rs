@@ -6,7 +6,7 @@ use crate::level::constants::{DCOLS, DROWS};
 use crate::machdep::{get_current_time, RogueTime};
 use crate::monster::{Fighter, MonsterMash};
 use crate::objects::{empty_obj, foods, id, obj, party_counter, SaveObj};
-use crate::prelude::{bear_trap, being_held, blind, confused, detect_monster, GameState, halluc, haste_self, levitate, m_moves, see_invisible, wizard};
+use crate::prelude::{bear_trap, being_held, blind, confused, detect_monster, GameState, halluc, haste_self, levitate, m_moves, wizard};
 use crate::save::{hunger_str, id_potions, id_rings, id_scrolls, id_wands, IS_WOOD, MASH, level_objects, rogue};
 use crate::settings;
 use crate::settings::{login_name, score_only};
@@ -157,7 +157,6 @@ pub struct SaveData {
 	pub confused: usize,
 	pub levitate: usize,
 	pub haste_self: usize,
-	pub see_invisible: bool,
 	pub wizard: bool,
 	pub score_only: bool,
 	pub m_moves: i16,
@@ -193,7 +192,6 @@ impl SaveData {
 			confused,
 			levitate,
 			haste_self,
-			see_invisible,
 			wizard,
 			score_only: score_only(),
 			m_moves,
@@ -224,7 +222,6 @@ impl SaveData {
 		confused = self.confused;
 		levitate = self.levitate;
 		haste_self = self.haste_self;
-		see_invisible = self.see_invisible;
 		wizard = self.wizard;
 		settings::set_score_only(self.score_only);
 		m_moves = self.m_moves;
