@@ -307,7 +307,7 @@ pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, kinds: &[CellKind], playe
 	*col = c;
 }
 
-pub unsafe fn gr_room(level: &Level) -> usize {
+pub fn gr_room(level: &Level) -> usize {
 	loop {
 		let i = get_rand(0, MAX_ROOM - 1);
 		if level.rooms[i].room_type == RoomType::Room || level.rooms[i].room_type == Maze {

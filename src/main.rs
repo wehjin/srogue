@@ -80,7 +80,7 @@ pub fn main() {
 			clear_level(&mut game.player, &mut game.level);
 			game.player.descend();
 			unsafe { make_level(&game.player, &mut game.level) };
-			unsafe { put_objects(&game.player, &mut game.level); }
+			unsafe { put_objects(&mut game.player, &mut game.level); }
 			unsafe { put_stairs(&mut game.player, &mut game.level); }
 			unsafe { add_traps(&game.player, &mut game.level); }
 			unsafe { put_mons(&game.player, &mut game.level); }

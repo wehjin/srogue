@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::level::{cur_room, Level};
 use crate::machdep::{get_current_time, RogueTime};
 use crate::monster::{MonsterMash};
-use crate::objects::{foods, id, party_counter};
+use crate::objects::{foods, id};
 use crate::player::Player;
 use crate::prelude::{blind, confused, GameState, halluc, haste_self, levitate, m_moves, ObjectPack, wizard};
 use crate::save::{hunger_str, id_potions, id_rings, id_scrolls, id_wands, IS_WOOD, MASH, level_objects};
@@ -22,7 +22,6 @@ pub struct SaveData {
 	pub player: Player,
 	pub hunger_str: String,
 	pub login_name: String,
-	pub party_counter: usize,
 	pub level_monsters: MonsterMash,
 	pub level_objects: ObjectPack,
 	pub file_id: i64,
@@ -51,7 +50,6 @@ impl SaveData {
 			player: game.player.clone(),
 			hunger_str: hunger_str.clone(),
 			login_name: login_name().to_string(),
-			party_counter,
 			level_monsters: MASH.clone(),
 			level_objects: level_objects.clone(),
 			file_id,
@@ -77,7 +75,6 @@ impl SaveData {
 	pub unsafe fn write_to_statics(&self) {
 		hunger_str = self.hunger_str.clone();
 		settings::set_login_name(&self.login_name);
-		party_counter = self.party_counter;
 		MASH = self.level_monsters.clone();
 		level_objects = self.level_objects.clone();
 		foods = self.foods;

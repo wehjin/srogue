@@ -155,7 +155,6 @@ pub type object = obj;
 
 pub static mut level_objects: ObjectPack = ObjectPack::new();
 pub static mut foods: i16 = 0;
-pub static mut party_counter: usize = 0;
 pub static mut id_potions: [id; POTIONS] = {
 	[
 		{
@@ -615,7 +614,7 @@ pub static mut id_rings: [id; RINGS] = {
 	]
 };
 
-pub unsafe fn put_objects(player: &Player, level: &mut Level) {
+pub unsafe fn put_objects(player: &mut Player, level: &mut Level) {
 	if player.cur_depth < player.max_depth {
 		return;
 	}
@@ -624,9 +623,9 @@ pub unsafe fn put_objects(player: &Player, level: &mut Level) {
 	while rand_percent(33) {
 		n += 1;
 	}
-	if player.cur_depth == party_counter {
+	if player.cur_depth == player.party_counter {
 		make_party(player.cur_depth, level);
-		party_counter = next_party(player.cur_depth);
+		player.party_counter = next_party(player.cur_depth);
 	}
 	for _i in 0..n {
 		let obj = gr_object(player.cur_depth);

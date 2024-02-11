@@ -85,7 +85,6 @@ pub unsafe fn init() -> (GameState, bool) {
 	level_objects.clear();
 	MASH.clear();
 	player_init(&mut game.player);
-	party_counter = get_rand(1, 10);
 	ring_stats(false, &mut game.player, &mut game.level);
 	return (game, false);
 }
@@ -141,6 +140,7 @@ fn player_init(player: &mut Player) {
 		obj.identified = true;
 		player.combine_or_add_item_to_pack(obj);
 	}
+	player.party_counter = get_rand(1, 10);
 }
 
 pub unsafe fn clean_up(estr: &str) {

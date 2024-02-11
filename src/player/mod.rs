@@ -18,6 +18,7 @@ pub struct Player {
 	pub cur_depth: usize,
 	pub max_depth: usize,
 	pub rogue: Fighter,
+	pub party_counter: usize,
 }
 
 impl Player {
@@ -169,6 +170,7 @@ impl Player {
 				fchar: '@',
 				moves_left: 1250,
 			},
+			party_counter: 0,
 		}
 	}
 }

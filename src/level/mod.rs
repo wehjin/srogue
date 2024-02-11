@@ -112,7 +112,7 @@ pub unsafe fn make_level(player: &Player, level: &mut Level) {
 		5 => (2, 5, 8),
 		_ => unreachable!("0 <= rand <= 5")
 	};
-	let big_room = player.cur_depth == party_counter && rand_percent(1);
+	let big_room = player.cur_depth == player.party_counter && rand_percent(1);
 	if big_room {
 		make_room(10, 0, 0, 0, level);
 	} else {
