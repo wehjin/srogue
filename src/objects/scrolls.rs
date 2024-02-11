@@ -1,6 +1,6 @@
 use crate::objects::obj;
 use crate::prelude::object_what::ObjectWhat;
-use crate::prelude::scroll_kind::ScrollKind;
+use crate::scrolls::ScrollKind;
 
 impl obj {
 	pub fn scroll_kind(&self) -> Option<ScrollKind> {

@@ -1,5 +1,6 @@
 use crate::armors::ArmorKind;
 use crate::objects::{obj};
+use crate::scrolls::ScrollKind;
 use crate::weapons::WeaponKind;
 
 use crate::zap::wand_kind::WandKind;
@@ -26,6 +27,30 @@ impl obj {
 		let mut value = self.wand_kind().expect("wand kind").sale_value();
 		value *= (self.class as i16) + 1;
 		value
+	}
+	pub fn scroll_value(&self) -> i16 {
+		let mut value = self.scroll_kind().expect("scroll kind").sale_value();
+		value *= self.quantity;
+		value
+	}
+}
+
+impl Sellable for ScrollKind {
+	fn sale_value(&self) -> i16 {
+		match self {
+			ScrollKind::ProtectArmor => 505,
+			ScrollKind::HoldMonster => 200,
+			ScrollKind::EnchWeapon => 235,
+			ScrollKind::EnchArmor => 235,
+			ScrollKind::Identify => 175,
+			ScrollKind::Teleport => 190,
+			ScrollKind::Sleep => 25,
+			ScrollKind::ScareMonster => 610,
+			ScrollKind::RemoveCurse => 210,
+			ScrollKind::CreateMonster => 100,
+			ScrollKind::AggravateMonster => 25,
+			ScrollKind::MagicMapping => 180,
+		}
 	}
 }
 

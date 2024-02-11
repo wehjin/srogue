@@ -19,8 +19,8 @@ use crate::{odds};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::Scroll;
-use crate::prelude::scroll_kind::ScrollKind;
-use crate::prelude::scroll_kind::ScrollKind::ScareMonster;
+use crate::scrolls::ScrollKind;
+use crate::scrolls::ScrollKind::ScareMonster;
 use crate::room::RoomType::Maze;
 
 #[derive(Clone, Serialize, Deserialize)]

@@ -8,8 +8,8 @@ use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::{AllObjects, Foods, Potions, Scrolls};
 use crate::prelude::potion_kind::{PotionKind, POTIONS};
-use crate::prelude::scroll_kind::{ScrollKind};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_HP, STAT_HUNGER, STAT_STRENGTH};
+use crate::scrolls::ScrollKind;
 use crate::settings::fruit;
 
 pub static mut halluc: usize = 0;

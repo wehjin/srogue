@@ -32,6 +32,7 @@ mod zap;
 mod prelude;
 mod weapons;
 mod armors;
+mod scrolls;
 
 use libc::{setuid, perror, geteuid, getuid, uid_t};
 use crate::prelude::stat_const::STAT_ALL;

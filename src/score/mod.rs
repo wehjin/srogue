@@ -14,7 +14,7 @@ use crate::armors::constants::ARMORS;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::potion_kind::POTIONS;
-use crate::prelude::scroll_kind::SCROLLS;
+use crate::scrolls::constants::SCROLLS;
 use crate::zap::constants::MAX_WAND;
 use crate::settings::{login_name, nick_name};
 use crate::weapons::constants::{WEAPONS};
@@ -325,9 +325,7 @@ unsafe fn get_value(obj: &obj) -> usize {
 		ObjectWhat::Weapon => obj.weapon_value(),
 		ObjectWhat::Armor => obj.armor_value(),
 		ObjectWhat::Wand => obj.wand_value(),
-		ObjectWhat::Scroll => {
-			id_scrolls[wc as usize].value * obj.quantity
-		}
+		ObjectWhat::Scroll => obj.scroll_value(),
 		ObjectWhat::Potion => {
 			id_potions[wc as usize].value * obj.quantity
 		}

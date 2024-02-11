@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
-use crate::prelude::scroll_kind::ScrollKind::{AggravateMonster, CreateMonster, EnchArmor, EnchWeapon, HoldMonster, Identify, MagicMapping, ProtectArmor, RemoveCurse, ScareMonster, Sleep, Teleport};
+use crate::scrolls::constants::SCROLLS;
+use crate::scrolls::ScrollKind::{AggravateMonster, CreateMonster, EnchArmor, EnchWeapon, HoldMonster, Identify, MagicMapping, ProtectArmor, RemoveCurse, ScareMonster, Sleep, Teleport};
 
-pub const SCROLLS: usize = 12;
+pub(crate) mod constants;
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ScrollKind {

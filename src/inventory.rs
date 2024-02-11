@@ -16,7 +16,8 @@ use crate::prelude::object_what::ObjectWhat::{Amulet, Armor, Food, Gold, Potion,
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::prelude::ring_kind::{ADD_STRENGTH, DEXTERITY, RingKind, RINGS};
-use crate::prelude::scroll_kind::{ScrollKind, SCROLLS};
+use crate::scrolls::ScrollKind;
+use crate::scrolls::constants::SCROLLS;
 use crate::zap::wand_kind::WandKind;
 use crate::weapons::WeaponKind;
 use crate::zap::constants::MAX_WAND;

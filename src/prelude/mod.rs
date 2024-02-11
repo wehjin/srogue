@@ -179,8 +179,6 @@ pub mod object_what {
 	const ALL_OBJECTS: u16 = 0o777;
 }
 
-pub mod scroll_kind;
-
 pub mod food_kind {
 	pub const RATION: u16 = 0;
 	pub const FRUIT: u16 = 1;
