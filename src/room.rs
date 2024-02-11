@@ -4,6 +4,7 @@ use std::ops::{RangeInclusive};
 use ncurses::{addch, chtype, mvaddch, mvinch};
 use serde::{Deserialize, Serialize};
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM};
+use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::DoorDirection::{Left, Right};
 use crate::prelude::object_what::ObjectWhat;
@@ -166,7 +167,7 @@ impl Room {
 	}
 }
 
-pub unsafe fn light_up_room(rn: i64, level: &mut Level) {
+pub unsafe fn light_up_room(rn: i64, player: &Player, level: &mut Level) {
 	if blind == 0 {
 		for i in level.rooms[rn as usize].top_row..=level.rooms[rn as usize].bottom_row {
 			for j in level.rooms[rn as usize].left_col..=level.rooms[rn as usize].right_col {
@@ -180,7 +181,7 @@ pub unsafe fn light_up_room(rn: i64, level: &mut Level) {
 				mvaddch(i as i32, j as i32, get_dungeon_char(i, j, level));
 			}
 		}
-		mvaddch(rogue.row as i32, rogue.col as i32, rogue.fchar as chtype);
+		mvaddch(player.rogue.row as i32, player.rogue.col as i32, player.rogue.fchar as chtype);
 	}
 }
 
@@ -226,8 +227,8 @@ pub unsafe fn get_dungeon_char(row: i64, col: i64, level: &Level) -> chtype {
 		return gmc_row_col(row, col, level);
 	}
 	if mask.is_object() {
-		let obj = object_at(&level_objects, row, col);
-		return get_mask_char((*obj).what_is) as chtype;
+		let obj = level_objects.find_object_at(row, col).expect("obj at row,col in level object");
+		return get_mask_char(obj.what_is) as chtype;
 	}
 	let CHAR_CELL_KINDS = [CellKind::Tunnel, CellKind::Stairs, CellKind::HorizontalWall, CellKind::VerticalWall, CellKind::Floor, CellKind::Door];
 	if mask.is_any_kind(&CHAR_CELL_KINDS) {
@@ -279,14 +280,14 @@ pub fn get_mask_char(mask: ObjectWhat) -> char {
 	}
 }
 
-pub unsafe fn random_spot_with_flag(flags: &[CellKind], level: &Level) -> DungeonSpot {
+pub unsafe fn random_spot_with_flag(flags: &[CellKind], player: &Player, level: &Level) -> DungeonSpot {
 	let mut row: i64 = 0;
 	let mut col: i64 = 0;
-	gr_row_col(&mut row, &mut col, flags, level);
+	gr_row_col(&mut row, &mut col, flags, player, level);
 	DungeonSpot { row, col }
 }
 
-pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, kinds: &[CellKind], level: &Level) {
+pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, kinds: &[CellKind], player: &Player, level: &Level) {
 	let mut r = 0;
 	let mut c = 0;
 	loop {
@@ -297,7 +298,7 @@ pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, kinds: &[CellKind], level
 			|| !level.dungeon[r as usize][c as usize].is_any_kind(kinds)
 			|| level.dungeon[r as usize][c as usize].is_other_kind(&kinds)
 			|| !(level.rooms[rn as usize].room_type == RoomType::Room || level.rooms[rn as usize].room_type == Maze)
-			|| ((r == rogue.row) && (c == rogue.col));
+			|| ((r == player.rogue.row) && (c == player.rogue.col));
 		if !keep_looking {
 			break;
 		}
@@ -335,7 +336,7 @@ pub unsafe fn party_objects(rn: usize, level_depth: usize, level: &mut Level) ->
 		}
 		if let Some(found) = found {
 			let obj = gr_object(level_depth);
-			place_at(&mut *obj, found.row, found.col, level);
+			place_at(obj, found.row, found.col, level);
 			number_found += 1;
 		}
 	}
@@ -466,10 +467,10 @@ pub unsafe fn draw_magic_map(level: &mut Level) {
 	}
 }
 
-pub unsafe fn dr_course(monster: &mut Monster, entering: bool, row: i64, col: i64, level: &Level) {
+pub unsafe fn dr_course(monster: &mut Monster, entering: bool, row: i64, col: i64, player: &Player, level: &Level) {
 	monster.spot.row = row;
 	monster.spot.col = col;
-	if mon_sees(monster, rogue.row, rogue.col, level) {
+	if mon_sees(monster, player.rogue.row, player.rogue.col, level) {
 		monster.clear_target_spot();
 		return;
 	}

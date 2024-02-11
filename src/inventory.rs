@@ -4,6 +4,7 @@ use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::message;
 use crate::pack::wait_for_ack;
+use crate::player::Player;
 use crate::random::get_rand;
 
 use crate::prelude::*;
@@ -116,25 +117,20 @@ fn random_syllable() -> &'static str {
 	SYLLABLES[get_rand(1, MAX_SYLLABLE - 1)]
 }
 
-pub unsafe fn inventory(pack: &object, filter: PackFilter) {
-	let mut obj = pack.next_object;
-	if obj.is_null() {
+pub unsafe fn inventory(pack: &ObjectPack, filter: PackFilter) {
+	if pack.is_empty() {
 		message("your pack is empty", 0);
 		return;
 	}
 	let item_lines = {
 		let mut item_lines = Vec::new();
-		while !obj.is_null() {
-			{
-				let obj = &*obj;
-				let what = obj.what_is;
-				if filter.includes(what) {
-					let close_char = if what == Armor && obj.is_protected != 0 { '}' } else { ')' };
-					let line = format!(" {}{} {}", obj.ichar, close_char, get_desc(obj));
-					item_lines.push(line);
-				}
+		for obj in pack.objects() {
+			let what = obj.what_is;
+			if filter.includes(what) {
+				let close_char = if what == Armor && obj.is_protected != 0 { '}' } else { ')' };
+				let line = format!(" {}{} {}", obj.ichar, close_char, get_obj_desc(obj));
+				item_lines.push(line);
 			}
-			obj = (*obj).next_object;
 		}
 		{
 			let prompt_line = " --press space to continue--";
@@ -249,7 +245,7 @@ unsafe fn get_identified(obj: &object) -> String {
 			let more_info = if wizard || obj.identified { format!("[{}]", obj.class) } else { "".to_string() };
 			format!("{}{}{}{}", get_quantity(obj), name_of(obj), get_id_real(obj), more_info)
 		}
-		Armor => format!("{}{} {}[{}]", if obj.d_enchant >= 0 { "+" } else { "" }, obj.d_enchant, get_title(obj), get_armor_class(obj)),
+		Armor => format!("{}{} {}[{}]", if obj.d_enchant >= 0 { "+" } else { "" }, obj.d_enchant, get_title(obj), get_armor_class(Some(obj))),
 		Weapon => format!("{}{}{},{}{} {}",
 		                  get_quantity(obj),
 		                  if obj.hit_enchant >= 0 { "+" } else { "" }, obj.hit_enchant,
@@ -293,7 +289,12 @@ unsafe fn get_unidentified(obj: &object) -> String {
 	}
 }
 
-pub unsafe fn get_desc(obj: &object) -> String {
+pub unsafe fn get_inv_obj_desc(obj: &obj) -> String {
+	let obj_desc = get_obj_desc(&obj);
+	format!("{}({})", obj_desc, obj.ichar)
+}
+
+pub unsafe fn get_obj_desc(obj: &object) -> String {
 	let what_is = obj.what_is;
 	if what_is == Amulet {
 		return "the amulet of Yendor ".to_string();
@@ -380,23 +381,21 @@ fn take_unused<const N: usize>(used: &mut [bool; N]) -> usize {
 	j
 }
 
-pub unsafe fn single_inv(ichar: Option<char>) {
+pub unsafe fn single_inv(ichar: Option<char>, player: &mut Player) {
 	let ch = if let Some(ichar) = ichar {
 		ichar
 	} else {
-		pack_letter("inventory what?", AllObjects)
+		pack_letter("inventory what?", AllObjects, player)
 	};
 	if ch == CANCEL {
 		return;
 	}
-
-	let obj = get_letter_object(ch);
-	if obj.is_null() {
-		message("no such item.", 0);
+	if let Some(obj) = player.object_with_letter(ch) {
+		let separator = if obj.what_is == Armor && obj.is_protected != 0 { '}' } else { ')' };
+		let msg = format!("{}{} {}", ch, separator, get_obj_desc(obj));
+		message(&msg, 0);
 	} else {
-		let closing_symbol = if (*obj).what_is == Armor && (*obj).is_protected != 0 { '}' } else { ')' };
-		let desc = format!("{}{} {}", ch, closing_symbol, get_desc(&*obj));
-		message(&desc, 0);
+		message("no such item.", 0);
 	}
 }
 
@@ -412,16 +411,18 @@ pub unsafe fn get_id_table(obj: &object) -> &'static mut [id] {
 	}
 }
 
-pub unsafe fn inv_armor_weapon(is_weapon: bool) {
-	if is_weapon != false {
-		if !rogue.weapon.is_null() {
-			single_inv(Some((*rogue.weapon).ichar));
+pub unsafe fn inv_armor_weapon(is_weapon: bool, player: &mut Player) {
+	if is_weapon {
+		if let Some(weapon) = player.weapon() {
+			single_inv(Some(weapon.ichar), player);
 		} else {
 			message("not wielding anything", 0);
 		}
-	} else if !rogue.armor.is_null() {
-		single_inv(Some((*rogue.armor).ichar));
 	} else {
-		message("not wearing anything", 0);
+		if let Some(armor) = player.armor() {
+			single_inv(Some(armor.ichar), player);
+		} else {
+			message("not wearing anything", 0);
+		}
 	}
 }

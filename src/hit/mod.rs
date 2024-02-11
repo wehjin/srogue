@@ -10,7 +10,7 @@ fn reduce_chance(chance: usize, reduction: isize) -> usize {
 	if chance <= reduction { 0 } else { chance - reduction }
 }
 
-pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame: bool, player: &Player, level: &mut Level) {
+pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame: bool, player: &mut Player, level: &mut Level) {
 	if let Some(monster_id) = FIGHT_MONSTER {
 		if monster.id() == monster_id {
 			FIGHT_MONSTER = None;
@@ -20,7 +20,7 @@ pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame
 	let mut hit_chance: usize = if player.cur_depth >= (AMULET_LEVEL * 2) {
 		100
 	} else {
-		reduce_chance(monster.m_hit_chance(), 2 * rogue.exp + 2 * ring_exp - r_rings)
+		reduce_chance(monster.m_hit_chance(), 2 * player.rogue.exp + 2 * ring_exp - r_rings)
 	};
 	if wizard {
 		hit_chance /= 2;
@@ -30,7 +30,7 @@ pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame
 	}
 
 	if other.is_some() {
-		hit_chance = reduce_chance(hit_chance, rogue.exp + ring_exp - r_rings);
+		hit_chance = reduce_chance(hit_chance, player.rogue.exp + ring_exp - r_rings);
 	}
 
 	let base_monster_name = mon_name(&*monster, level);
@@ -51,7 +51,7 @@ pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame
 	let mut damage: isize = if !monster.m_flags.stationary {
 		let mut damage = get_damage(monster.m_damage(), DamageEffect::Roll);
 		if other.is_some() && flame {
-			damage -= get_armor_class(&*rogue.armor);
+			damage -= get_armor_class(player.armor());
 			if damage < 0 {
 				damage = 1;
 			}
@@ -59,7 +59,7 @@ pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame
 		let minus: isize = if player.cur_depth >= AMULET_LEVEL * 2 {
 			(player.cur_depth - AMULET_LEVEL * 2) as isize * -1
 		} else {
-			let mut minus = get_armor_class(&*rogue.armor) * 3;
+			let mut minus = get_armor_class(player.armor()) * 3;
 			minus = (minus as f64 / 100.0 * damage as f64) as isize;
 			minus
 		};
@@ -81,18 +81,20 @@ pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame
 	}
 }
 
-pub unsafe fn rogue_hit(monster: &mut monster::Monster, force_hit: bool, player: &Player, level: &mut Level) {
+pub unsafe fn rogue_hit(monster: &mut monster::Monster, force_hit: bool, player: &mut Player, level: &mut Level) {
 	if check_imitator(monster, level) {
 		return;
 	}
-	let hit_chance = if force_hit { 100 } else { get_hit_chance(&mut *rogue.weapon) };
+	let hit_chance = if force_hit { 100 } else { get_hit_chance_player(player.weapon(), player) };
 	let hit_chance = if wizard { hit_chance * 2 } else { hit_chance };
 	if !rand_percent(hit_chance) {
 		if FIGHT_MONSTER.is_none() {
 			hit_message = "you miss  ".to_string();
 		}
 	} else {
-		let damage = get_weapon_damage(&*rogue.weapon);
+		let player_exp = player.exp();
+		let player_str = player.cur_strength();
+		let damage = get_weapon_damage(player.weapon(), player_str, player_exp);
 		let damage = if wizard { damage * 3 } else { damage };
 		if mon_damage(monster, damage, player, level) {
 			if FIGHT_MONSTER.is_none() {
@@ -104,14 +106,14 @@ pub unsafe fn rogue_hit(monster: &mut monster::Monster, force_hit: bool, player:
 	monster.wake_up();
 }
 
-pub unsafe fn rogue_damage(d: isize, monster: &monster::Monster, player: &Player) {
-	if d >= rogue.hp_current {
-		rogue.hp_current = 0;
-		print_stats(STAT_HP, player.cur_depth);
-		killed_by(Ending::Monster(monster), player.max_depth);
+pub unsafe fn rogue_damage(d: isize, monster: &monster::Monster, player: &mut Player) {
+	if d >= player.rogue.hp_current {
+		player.rogue.hp_current = 0;
+		print_stats(STAT_HP, player);
+		killed_by(Ending::Monster(monster), player);
 	}
-	rogue.hp_current -= d;
-	print_stats(STAT_HP, player.cur_depth);
+	player.rogue.hp_current -= d;
+	print_stats(STAT_HP, player);
 }
 
 
@@ -123,11 +125,13 @@ pub fn get_damage(damage_stats: &[DamageStat], effect: DamageEffect) -> isize {
 	return total as isize;
 }
 
-pub fn get_w_damage(obj: &object) -> isize {
-	if obj.what_is != Weapon {
-		return -1;
+pub fn get_w_damage(obj: Option<&object>) -> isize {
+	if let Some(obj) = obj {
+		if obj.what_is == Weapon {
+			return get_damage(&[obj.enhanced_damage()], DamageEffect::Roll);
+		}
 	}
-	get_damage(&[obj.enhanced_damage()], DamageEffect::Roll)
+	-1
 }
 
 pub unsafe fn get_number(s: *const c_char) -> usize {
@@ -144,26 +148,10 @@ pub unsafe fn get_number(s: *const c_char) -> usize {
 	return total;
 }
 
-pub fn lget_number(s: &[u8]) -> u64 {
-	let mut total: u64 = 0;
-	let mut i: usize = 0;
-	while s[i] >= '0' as u8 && s[i] <= '9' as u8 {
-		total = 10 * total + (s[i] - '0' as u8) as u64;
-		i += 1;
-	}
-	return total;
-}
-
-impl obj {
-	pub fn to_hit(&self) -> usize {
-		self.enhanced_damage().hits
-	}
-}
-
 #[no_mangle]
-pub unsafe extern "C" fn damage_for_strength() -> i64 {
+pub unsafe extern "C" fn damage_for_strength(player_strength: isize) -> i64 {
 	let mut strength: libc::c_short = 0;
-	strength = (rogue.str_current as i64 + add_strength as i64)
+	strength = (player_strength as i64 + add_strength as i64)
 		as libc::c_short;
 	if strength as i64 <= 6i64 {
 		return strength as i64 - 5i64;
@@ -189,7 +177,7 @@ pub unsafe extern "C" fn damage_for_strength() -> i64 {
 	return 8i64;
 }
 
-pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: isize, player: &Player, level: &mut Level) -> bool {
+pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: isize, player: &mut Player, level: &mut Level) -> bool {
 	monster.hp_to_kill -= damage;
 	if monster.hp_to_kill <= 0 {
 		let row = monster.spot.row;
@@ -203,7 +191,7 @@ pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: isize, player: 
 		hit_message = format!("{}defeated the {}", hit_message, mn);
 		message(&hit_message, 1);
 		hit_message.clear();
-		add_exp(monster.kill_exp(), true, player.cur_depth);
+		add_exp(monster.kill_exp(), true, player);
 		if monster.m_flags.holds {
 			level.being_held = false;
 		}
@@ -213,7 +201,7 @@ pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: isize, player: 
 	return true;
 }
 
-pub unsafe fn fight(to_the_death: bool, player: &Player, level: &mut Level) {
+pub unsafe fn fight(to_the_death: bool, player: &mut Player, level: &mut Level) {
 	let mut first_miss: bool = true;
 	let mut ch: char = 0 as char;
 	loop {
@@ -231,13 +219,13 @@ pub unsafe fn fight(to_the_death: bool, player: &Player, level: &mut Level) {
 	if ch == CANCEL {
 		return;
 	}
-	let mut row = rogue.row;
-	let mut col = rogue.col;
+	let mut row = player.rogue.row;
+	let mut col = player.rogue.col;
 	get_dir_rc(ch, &mut row, &mut col, false);
 	let c = ncurses::mvinch(row as i32, col as i32);
 	{
 		let not_a_monster = (c as i64) < 'A' as i64 || c as i64 > 'Z' as i64;
-		let cannot_move = !can_move(rogue.row, rogue.col, row, col, level);
+		let cannot_move = !can_move(player.rogue.row, player.rogue.col, row, col, level);
 		if not_a_monster || cannot_move {
 			message("I see no monster there", 0);
 			return;
@@ -258,7 +246,7 @@ pub unsafe fn fight(to_the_death: bool, player: &Player, level: &mut Level) {
 	};
 	while FIGHT_MONSTER.is_some() {
 		one_move_rogue(ch, false, player, level);
-		if (!to_the_death && rogue.hp_current <= possible_damage)
+		if (!to_the_death && player.rogue.hp_current <= possible_damage)
 			|| interrupted
 			|| !level.dungeon[row as usize][col as usize].is_monster() {
 			FIGHT_MONSTER = None;
@@ -321,30 +309,44 @@ pub fn get_dir_rc(dir: char, row: &mut i64, col: &mut i64, allow_off_screen: boo
 	}
 }
 
-pub unsafe fn get_hit_chance(weapon: &object) -> usize {
+pub unsafe fn get_hit_chance_player(weapon: Option<&object>, player: &Player) -> usize {
+	let player_exp = player.exp();
+	get_hit_chance(weapon, player_exp)
+}
+
+pub unsafe fn get_hit_chance(obj: Option<&object>, player_exp: isize) -> usize {
 	let mut hit_chance = 40isize;
-	hit_chance += 3 * weapon.to_hit() as isize;
-	hit_chance += ((2 * rogue.exp) + (2 * ring_exp)) - r_rings;
+	hit_chance += 3 * to_hit(obj) as isize;
+	hit_chance += ((2 * player_exp) + (2 * ring_exp)) - r_rings;
 	hit_chance as usize
 }
 
-pub unsafe fn get_weapon_damage(weapon: &object) -> isize {
+fn to_hit(obj: Option<&object>) -> usize {
+	if let Some(obj) = obj {
+		obj.enhanced_damage().hits
+	} else {
+		1
+	}
+}
+
+pub unsafe fn get_weapon_damage(weapon: Option<&object>, strength: isize, exp: isize) -> isize {
 	let mut damage = get_w_damage(weapon);
-	damage += damage_for_strength() as isize;
-	damage += (((rogue.exp + ring_exp) - r_rings) + 1) / 2;
+	damage += damage_for_strength(strength) as isize;
+	damage += (((exp + ring_exp) - r_rings) + 1) / 2;
 	damage
 }
 
 mod damage_stat;
 
 pub use damage_stat::*;
-use crate::level::{add_exp, Level, Player};
+use crate::level::{add_exp, Level};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
 use crate::monster;
 use crate::monster::{MASH, mon_name};
-use crate::objects::{get_armor_class, obj, object, rogue};
+use crate::objects::{get_armor_class, object};
 use crate::play::interrupted;
+use crate::player::Player;
 use crate::prelude::{AMULET_LEVEL, CellKind, MIN_ROW};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;

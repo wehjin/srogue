@@ -25,6 +25,9 @@ pub enum WeaponKind {
 }
 
 impl WeaponKind {
+	pub fn is_arrow_or_throwing_weapon(&self) -> bool {
+		*self == Arrow || self.is_throwing_weapon()
+	}
 	pub fn is_throwing_weapon(&self) -> bool {
 		match self {
 			Dart => true,

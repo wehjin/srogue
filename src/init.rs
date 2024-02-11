@@ -6,6 +6,7 @@ use libc::{c_short};
 use settings::nick_name;
 use crate::{console, settings};
 use crate::level::constants::DROWS;
+use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::armor_kind::RINGMAIL;
 use crate::prelude::object_what::ObjectWhat::{Armor, Weapon};
@@ -15,7 +16,7 @@ use crate::settings::{rest_file, score_only};
 pub static mut cant_int: bool = false;
 pub static mut did_int: bool = false;
 pub static mut save_is_interactive: bool = true;
-pub const ERROR_FILE: &'static str = "rogue.esave";
+pub const ERROR_FILE: &'static str = "player.rogue.esave";
 pub const BYEBYE_STRING: &'static str = "Okay, bye bye!";
 
 pub struct GameState {
@@ -71,7 +72,7 @@ pub unsafe fn init() -> (GameState, bool) {
 	md_heed_signals();
 
 	if score_only() {
-		put_scores(None, game.player.max_depth);
+		put_scores(None, &game.player);
 	}
 	game.set_seed(md_get_seed());
 	if let Some(rest_file) = rest_file() {
@@ -81,67 +82,65 @@ pub unsafe fn init() -> (GameState, bool) {
 	mix_colors();
 	get_wand_and_ring_materials();
 	make_scroll_titles();
-	level_objects.next_object = 0 as *mut obj;
+	level_objects.clear();
 	MASH.clear();
-	player_init();
+	player_init(&mut game.player);
 	party_counter = get_rand(1, 10);
-	ring_stats(false, game.player.cur_depth, &mut game.level);
+	ring_stats(false, &mut game.player, &mut game.level);
 	return (game, false);
 }
 
-unsafe fn player_init() {
-	rogue.pack.next_object = 0 as *mut obj;
-
-	let mut obj = alloc_object();
-	get_food(&mut *obj, true);
-	add_to_pack(obj, &mut rogue.pack, 1);
-
-	let obj = alloc_object();           /* initial armor */
+fn player_init(player: &mut Player) {
+	player.rogue.pack.clear();
+	// Food
 	{
-		let obj: &mut obj = &mut *obj;
+		let mut obj = alloc_object();
+		get_food(&mut obj, true);
+		player.combine_or_add_item_to_pack(obj);
+	}
+	// Armor
+	{
+		let mut obj = alloc_object();
 		obj.what_is = Armor;
 		obj.which_kind = RINGMAIL;
 		obj.class = RINGMAIL as isize + 2;
 		obj.is_protected = 0;
 		obj.d_enchant = 1;
+		let added = player.combine_or_add_item_to_pack(obj);
+		do_wear(added, player);
 	}
-	add_to_pack(obj, &mut rogue.pack, 1);
-	do_wear(&mut *obj);
-
-	let obj = alloc_object();           /* initial weapons */
+	// Mace
 	{
-		let obj: &mut obj = &mut *obj;
+		let mut obj = alloc_object();
 		obj.what_is = Weapon;
 		obj.which_kind = MACE;
 		obj.hit_enchant = 1;
 		obj.d_enchant = 1;
 		obj.identified = true;
+		let added = player.combine_or_add_item_to_pack(obj);
+		do_wield(added, player);
 	}
-	add_to_pack(obj, &mut rogue.pack, 1);
-	do_wield(&mut *obj);
-
-	let obj = alloc_object();
+	// Bow
 	{
-		let obj: &mut obj = &mut *obj;
+		let mut obj = alloc_object();
 		obj.what_is = Weapon;
 		obj.which_kind = BOW;
 		obj.hit_enchant = 1;
 		obj.d_enchant = 0;
 		obj.identified = true;
+		player.combine_or_add_item_to_pack(obj);
 	}
-	add_to_pack(obj, &mut rogue.pack, 1);
-
-	let obj = alloc_object();
+	// Arrows
 	{
-		let obj: &mut obj = &mut *obj;
+		let mut obj = alloc_object();
 		obj.what_is = Weapon;
 		obj.which_kind = ARROW;
 		obj.quantity = get_rand(25, 35) as c_short;
 		obj.hit_enchant = 0;
 		obj.d_enchant = 0;
 		obj.identified = true;
+		player.combine_or_add_item_to_pack(obj);
 	}
-	add_to_pack(obj, &mut rogue.pack, 1);
 }
 
 pub unsafe fn clean_up(estr: &str) {
@@ -158,10 +157,10 @@ pub unsafe fn clean_up(estr: &str) {
 }
 
 
-pub unsafe fn byebye(ask_quit: bool, max_level: usize) {
+pub unsafe fn byebye(ask_quit: bool, player: &mut Player) {
 	md_ignore_signals();
 	if ask_quit {
-		quit(true, max_level);
+		quit(true, player);
 	} else {
 		clean_up(BYEBYE_STRING);
 	}

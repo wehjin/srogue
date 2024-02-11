@@ -15,36 +15,13 @@ use crate::message::{message, print_stats};
 use crate::monster::wake_room;
 use crate::objects::put_amulet;
 use crate::pack::has_amulet;
+use crate::player::Player;
 use crate::random::{get_rand, rand_percent};
 use crate::room::{gr_row_col, is_all_connected, light_passage, light_up_room};
 use crate::score::win;
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
 use crate::room::RoomType::Nothing;
-
-#[derive(Copy, Clone, Serialize, Deserialize)]
-pub struct Player {
-	pub cur_depth: usize,
-	pub max_depth: usize,
-}
-
-const LAST_DUNGEON: usize = 99;
-
-impl Player {
-	pub fn new() -> Self {
-		Player { cur_depth: 0, max_depth: 1 }
-	}
-	pub fn descend(&mut self) {
-		let cur = (self.cur_depth + 1).min(LAST_DUNGEON);
-		let max = self.max_depth.max(cur);
-		self.cur_depth = cur;
-		self.max_depth = max;
-	}
-	pub fn ascend(&mut self) {
-		let cur = if self.cur_depth < 3 { 1 } else { self.cur_depth - 2 };
-		self.cur_depth = cur;
-	}
-}
 
 pub static mut cur_room: i64 = 0;
 pub static mut new_level_message: Option<String> = None;
@@ -125,7 +102,7 @@ impl Level {
 	}
 }
 
-pub unsafe fn make_level(level_depth: usize, level: &mut Level) {
+pub unsafe fn make_level(player: &Player, level: &mut Level) {
 	let (must_exist1, must_exist2, must_exist3) = match get_rand(0, 5) {
 		0 => (0, 1, 2),
 		1 => (3, 4, 5),
@@ -135,7 +112,7 @@ pub unsafe fn make_level(level_depth: usize, level: &mut Level) {
 		5 => (2, 5, 8),
 		_ => unreachable!("0 <= rand <= 5")
 	};
-	let big_room = level_depth == party_counter && rand_percent(1);
+	let big_room = player.cur_depth == party_counter && rand_percent(1);
 	if big_room {
 		make_room(10, 0, 0, 0, level);
 	} else {
@@ -144,27 +121,27 @@ pub unsafe fn make_level(level_depth: usize, level: &mut Level) {
 		}
 	}
 	if !big_room {
-		add_mazes(level_depth, level);
+		add_mazes(player.cur_depth, level);
 
 		let shuffled_rns = shuffled_rns();
 		for j in 0..MAX_ROOM {
 			let i = shuffled_rns[j];
 			if i < (MAX_ROOM - 1) {
-				connect_rooms(i, i + 1, level_depth, level);
+				connect_rooms(i, i + 1, player.cur_depth, level);
 			}
 			if i < (MAX_ROOM - 3) {
-				connect_rooms(i, i + 3, level_depth, level);
+				connect_rooms(i, i + 3, player.cur_depth, level);
 			}
 			if i < (MAX_ROOM - 2) {
 				if level.rooms[i + 1].room_type.is_nothing() {
-					if connect_rooms(i, i + 2, level_depth, level) {
+					if connect_rooms(i, i + 2, player.cur_depth, level) {
 						level.rooms[i + 1].room_type = RoomType::Cross;
 					}
 				}
 			}
 			if i < (MAX_ROOM - 6) {
 				if level.rooms[i + 3].room_type.is_nothing() {
-					if connect_rooms(i, i + 6, level_depth, level) {
+					if connect_rooms(i, i + 6, player.cur_depth, level) {
 						level.rooms[i + 3].room_type = RoomType::Cross;
 					}
 				}
@@ -172,10 +149,10 @@ pub unsafe fn make_level(level_depth: usize, level: &mut Level) {
 			if is_all_connected(&level.rooms) {
 				break;
 			}
-			fill_out_level(level, level_depth);
+			fill_out_level(level, player.cur_depth);
 		}
-		if !has_amulet() && level_depth >= AMULET_LEVEL {
-			put_amulet(level);
+		if !has_amulet(player) && player.cur_depth >= AMULET_LEVEL {
+			put_amulet(player, level);
 		}
 	}
 }
@@ -252,10 +229,9 @@ pub unsafe fn connect_rooms(room1: usize, room2: usize, level_depth: usize, leve
 	}
 }
 
-pub unsafe fn clear_level(level: &mut Level) {
+pub unsafe fn clear_level(player: &mut Player, level: &mut Level) {
 	level.clear();
-	rogue.col = -1;
-	rogue.row = -1;
+	player.reset_spot();
 	ncurses::clear();
 }
 
@@ -587,7 +563,7 @@ pub unsafe fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: 
 	}
 }
 
-pub unsafe fn put_player(nr: Option<usize>, level: &mut Level) {
+pub unsafe fn put_player(nr: Option<usize>, player: &mut Player, level: &mut Level) {
 	let mut row: i64 = 0;
 	let mut col: i64 = 0;
 	let mut rn = nr;
@@ -595,36 +571,36 @@ pub unsafe fn put_player(nr: Option<usize>, level: &mut Level) {
 		if rn != nr {
 			break;
 		}
-		gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel, CellKind::Object, CellKind::Stairs], level);
+		gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel, CellKind::Object, CellKind::Stairs], player, level);
 		rn = get_opt_room_number(row, col, level);
 	}
 	let rn = rn.expect("room number to put player") as i64;
-	rogue.row = row;
-	rogue.col = col;
-	cur_room = if level.dungeon[rogue.row as usize][rogue.col as usize].is_kind(CellKind::Tunnel) {
+	player.rogue.row = row;
+	player.rogue.col = col;
+	cur_room = if level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_kind(CellKind::Tunnel) {
 		PASSAGE
 	} else {
 		rn
 	};
 	if cur_room != PASSAGE {
-		light_up_room(cur_room, level);
+		light_up_room(cur_room, player, level);
 	} else {
-		light_passage(rogue.row, rogue.col, level);
+		light_passage(player.rogue.row, player.rogue.col, level);
 	}
-	let rn = get_room_number(rogue.row, rogue.col, level);
-	wake_room(rn, true, rogue.row, rogue.col, level);
+	let rn = get_room_number(player.rogue.row, player.rogue.col, level);
+	wake_room(rn, true, player.rogue.row, player.rogue.col, level);
 	if let Some(msg) = &new_level_message {
 		message(msg, 0);
 		new_level_message = None;
 	}
-	ncurses::mvaddch(rogue.row as i32, rogue.col as i32, rogue.fchar as ncurses::chtype);
+	ncurses::mvaddch(player.rogue.row as i32, player.rogue.col as i32, player.rogue.fchar as ncurses::chtype);
 }
 
-pub unsafe fn drop_check(level: &Level) -> bool {
+pub unsafe fn drop_check(player: &Player, level: &Level) -> bool {
 	if wizard {
 		return true;
 	}
-	if level.dungeon[rogue.row as usize][rogue.col as usize].is_kind(CellKind::Stairs) {
+	if level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_kind(CellKind::Stairs) {
 		if levitate != 0 {
 			message("you're floating in the air!", 0);
 			return false;
@@ -637,18 +613,18 @@ pub unsafe fn drop_check(level: &Level) -> bool {
 
 pub unsafe fn check_up(game: &mut GameState) -> bool {
 	if !wizard {
-		if !game.level.dungeon[rogue.row as usize][rogue.col as usize].is_kind(CellKind::Stairs) {
+		if !game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_kind(CellKind::Stairs) {
 			message("I see no way up", 0);
 			return false;
 		}
-		if !has_amulet() {
+		if !has_amulet(&game.player) {
 			message("Your way is magically blocked", 0);
 			return false;
 		}
 	}
 	new_level_message = Some("you feel a wrenching sensation in your gut".to_string());
 	if game.player.cur_depth == 1 {
-		win(&game.player, &mut game.level);
+		win(&mut game.player, &mut game.level);
 	} else {
 		game.player.ascend();
 		return true;
@@ -656,27 +632,27 @@ pub unsafe fn check_up(game: &mut GameState) -> bool {
 	return false;
 }
 
-pub unsafe fn add_exp(e: isize, promotion: bool, level_depth: usize) {
-	rogue.exp_points += e;
+pub unsafe fn add_exp(e: isize, promotion: bool, player: &mut Player) {
+	player.rogue.exp_points += e;
 
-	if rogue.exp_points >= LEVEL_POINTS[(rogue.exp - 1) as usize] {
-		let new_exp = get_exp_level(rogue.exp_points);
-		if rogue.exp_points > MAX_EXP {
-			rogue.exp_points = MAX_EXP + 1;
+	if player.rogue.exp_points >= LEVEL_POINTS[(player.rogue.exp - 1) as usize] {
+		let new_exp = get_exp_level(player.rogue.exp_points);
+		if player.rogue.exp_points > MAX_EXP {
+			player.rogue.exp_points = MAX_EXP + 1;
 		}
-		for i in (rogue.exp + 1)..=new_exp {
+		for i in (player.rogue.exp + 1)..=new_exp {
 			let msg = format!("welcome to level {}", i);
 			message(&msg, 0);
 			if promotion {
 				let hp = hp_raise();
-				rogue.hp_current += hp;
-				rogue.hp_max += hp;
+				player.rogue.hp_current += hp;
+				player.rogue.hp_max += hp;
 			}
-			rogue.exp = i;
-			print_stats(STAT_HP | STAT_EXP, level_depth);
+			player.rogue.exp = i;
+			print_stats(STAT_HP | STAT_EXP, player);
 		}
 	} else {
-		print_stats(STAT_EXP, level_depth);
+		print_stats(STAT_EXP, player);
 	}
 }
 
@@ -698,12 +674,12 @@ pub unsafe fn hp_raise() -> isize {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn show_average_hp() {
-	let (real_average, effective_average) = if rogue.exp == 1 {
+pub unsafe extern "C" fn show_average_hp(player: &Player) {
+	let (real_average, effective_average) = if player.rogue.exp == 1 {
 		(0.0, 0.0)
 	} else {
-		let real = (rogue.hp_max - extra_hp - INIT_HP + less_hp) as f32 / (rogue.exp - 1) as f32;
-		let average = (rogue.hp_max - INIT_HP) as f32 / (rogue.exp - 1) as f32;
+		let real = (player.rogue.hp_max - extra_hp - INIT_HP + less_hp) as f32 / (player.rogue.exp - 1) as f32;
+		let average = (player.rogue.hp_max - INIT_HP) as f32 / (player.rogue.exp - 1) as f32;
 		(real, average)
 	};
 	let msg = format!("R-Hp: {:.2}, E-Hp: {:.2} (!: {}, V: {})", real_average, effective_average, extra_hp, less_hp);

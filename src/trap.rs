@@ -4,6 +4,7 @@ use ncurses::{chtype, mvaddch};
 use serde::{Deserialize, Serialize};
 use TrapKind::NoTrap;
 use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
+use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_STRENGTH};
@@ -93,13 +94,13 @@ pub unsafe fn trap_at(row: usize, col: usize, level: &Level) -> TrapKind {
 	return NoTrap;
 }
 
-pub unsafe fn trap_player(row: usize, col: usize, player: &Player, level: &mut Level) {
+pub unsafe fn trap_player(row: usize, col: usize, player: &mut Player, level: &mut Level) {
 	let t = trap_at(row, col, level);
 	if t == NoTrap {
 		return;
 	}
 	level.dungeon[row][col].remove_kind(CellKind::Hidden);
-	if rand_percent((rogue.exp + ring_exp) as usize) {
+	if rand_percent((player.rogue.exp + ring_exp) as usize) {
 		message("the trap failed", 1);
 		return;
 	}
@@ -114,22 +115,22 @@ pub unsafe fn trap_player(row: usize, col: usize, player: &Player, level: &mut L
 			level.bear_trap = get_rand(4, 7);
 		}
 		TeleTrap => {
-			mvaddch(rogue.row as i32, rogue.col as i32, chtype::from('^'));
-			tele(level);
+			mvaddch(player.rogue.row as i32, player.rogue.col as i32, chtype::from('^'));
+			tele(player, level);
 		}
 		DartTrap => {
 			message(trap_message(t), 1);
 			const DART_DAMAGE: DamageStat = DamageStat { hits: 1, damage: 6 };
-			rogue.hp_current -= get_damage(&[DART_DAMAGE], DamageEffect::Roll);
-			if rogue.hp_current <= 0 {
-				rogue.hp_current = 0;
+			player.rogue.hp_current -= get_damage(&[DART_DAMAGE], DamageEffect::Roll);
+			if player.rogue.hp_current <= 0 {
+				player.rogue.hp_current = 0;
 			}
-			if !sustain_strength && rand_percent(40) && rogue.str_current >= 3 {
-				rogue.str_current -= 1;
+			if !sustain_strength && rand_percent(40) && player.rogue.str_current >= 3 {
+				player.rogue.str_current -= 1;
 			}
-			print_stats(STAT_HP | STAT_STRENGTH, player.cur_depth);
-			if rogue.hp_current <= 0 {
-				killed_by(Ending::PoisonDart, player.max_depth);
+			print_stats(STAT_HP | STAT_STRENGTH, player);
+			if player.rogue.hp_current <= 0 {
+				killed_by(Ending::PoisonDart, player);
 			}
 		}
 		SleepingGasTrap => {
@@ -138,13 +139,14 @@ pub unsafe fn trap_player(row: usize, col: usize, player: &Player, level: &mut L
 		}
 		RustTrap => {
 			message(trap_message(t), 1);
-			rust(None, player.cur_depth);
+			rust(None, player);
 		}
 	}
 }
 
-pub unsafe fn add_traps(cur_level: usize, level: &mut Level) {
+pub unsafe fn add_traps(player: &Player, level: &mut Level) {
 	let n: usize;
+	let cur_level = player.cur_depth;
 	if cur_level <= 2 {
 		n = 0;
 	} else if cur_level <= 7 {
@@ -180,10 +182,10 @@ pub unsafe fn add_traps(cur_level: usize, level: &mut Level) {
 			if tries < 15 {
 				(row, col)
 			} else {
-				random_spot_with_floor_or_monster(level)
+				random_spot_with_floor_or_monster(player, level)
 			}
 		} else {
-			random_spot_with_floor_or_monster(level)
+			random_spot_with_floor_or_monster(player, level)
 		};
 		level.traps[i].set_spot(row, col);
 		level.dungeon[row][col].add_kind(CellKind::Trap);
@@ -191,14 +193,14 @@ pub unsafe fn add_traps(cur_level: usize, level: &mut Level) {
 	}
 }
 
-unsafe fn random_spot_with_floor_or_monster(level: &mut Level) -> (usize, usize) {
+unsafe fn random_spot_with_floor_or_monster(player: &Player, level: &mut Level) -> (usize, usize) {
 	let mut row = 0;
 	let mut col = 0;
-	gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Monster], level);
+	gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Monster], player, level);
 	(row as usize, col as usize)
 }
 
-pub unsafe fn id_trap(level: &Level) {
+pub unsafe fn id_trap(player: &Player, level: &Level) {
 	message("direction? ", 0);
 	let mut dir: char;
 	loop {
@@ -213,8 +215,8 @@ pub unsafe fn id_trap(level: &Level) {
 		return;
 	}
 
-	let mut row = rogue.row;
-	let mut col = rogue.col;
+	let mut row = player.rogue.row;
+	let mut col = player.rogue.col;
 	get_dir_rc(dir, &mut row, &mut col, false);
 	if level.dungeon[row as usize][col as usize].is_trap() && !level.dungeon[row as usize][col as usize].is_hidden() {
 		message(trap_at(row as usize, col as usize, level).name(), 0);
@@ -234,14 +236,14 @@ pub unsafe fn show_traps(level: &Level) {
 	}
 }
 
-pub unsafe fn search(n: usize, is_auto: bool, player: &Player, level: &mut Level) {
+pub unsafe fn search(n: usize, is_auto: bool, player: &mut Player, level: &mut Level) {
 	static mut reg_search: bool = false;
 
 	let mut found = 0;
 	for i in -1..=1 {
 		for j in -1..=1 {
-			let row = rogue.row + i;
-			let col = rogue.col + j;
+			let row = player.rogue.row + i;
+			let col = player.rogue.col + j;
 			if is_off_screen(row, col) {
 				continue;
 			}
@@ -255,15 +257,15 @@ pub unsafe fn search(n: usize, is_auto: bool, player: &Player, level: &mut Level
 	for _s in 0..n {
 		for i in -1..=1 {
 			for j in -1..=1 {
-				let row = rogue.row + i;
-				let col = rogue.col + j;
+				let row = player.rogue.row + i;
+				let col = player.rogue.col + j;
 				if is_off_screen(row, col) {
 					continue;
 				}
 				if level.dungeon[row as usize][col as usize].is_hidden() {
-					if rand_percent(17 + (rogue.exp + ring_exp) as usize) {
+					if rand_percent(17 + (player.rogue.exp + ring_exp) as usize) {
 						level.dungeon[row as usize][col as usize].remove_kind(CellKind::Hidden);
-						if not_blind() && no_rogue(row, col) {
+						if not_blind() && no_rogue(row, col, player) {
 							mvaddch(row as i32, col as i32, get_dungeon_char(row, col, level));
 						}
 						shown += 1;
@@ -286,9 +288,8 @@ pub unsafe fn search(n: usize, is_auto: bool, player: &Player, level: &mut Level
 	}
 }
 
-pub unsafe fn no_rogue(row: i64, col: i64) -> bool {
-	let no_rogue = row != rogue.row || col != rogue.col;
-	no_rogue
+pub fn no_rogue(row: i64, col: i64, player: &Player) -> bool {
+	!player.is_at(row, col)
 }
 
 pub unsafe fn not_blind() -> bool {

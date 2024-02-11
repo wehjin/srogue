@@ -1,13 +1,13 @@
 use std::error::Error;
 use std::fs;
 use serde::{Deserialize, Serialize};
-use crate::level::{cur_room, Level, Player};
-use crate::level::constants::{DCOLS, DROWS};
+use crate::level::{cur_room, Level};
 use crate::machdep::{get_current_time, RogueTime};
-use crate::monster::{Fighter, MonsterMash};
-use crate::objects::{empty_obj, foods, id, obj, party_counter, SaveObj};
-use crate::prelude::{blind, confused, GameState, halluc, haste_self, levitate, m_moves, wizard};
-use crate::save::{hunger_str, id_potions, id_rings, id_scrolls, id_wands, IS_WOOD, MASH, level_objects, rogue};
+use crate::monster::{MonsterMash};
+use crate::objects::{foods, id, party_counter};
+use crate::player::Player;
+use crate::prelude::{blind, confused, GameState, halluc, haste_self, levitate, m_moves, ObjectPack, wizard};
+use crate::save::{hunger_str, id_potions, id_rings, id_scrolls, id_wands, IS_WOOD, MASH, level_objects};
 use crate::settings;
 use crate::settings::{login_name, score_only};
 
@@ -17,118 +17,6 @@ pub fn from_file(path: &str) -> Result<SaveData, Box<dyn Error>> {
 	Ok(data)
 }
 
-
-#[derive(Serialize, Deserialize)]
-pub struct SavePack {
-	pub save_objs: Vec<SaveObj>,
-}
-
-impl SavePack {
-	pub unsafe fn from_pack(pack: *const obj) -> SavePack {
-		let mut save_objs = Vec::new();
-		loop {
-			let pack = (*pack).next_object;
-			if pack.is_null() {
-				break;
-			}
-			let obj = SaveObj::from_obj(&*pack);
-			save_objs.push(obj);
-		}
-		SavePack { save_objs }
-	}
-	pub unsafe fn write_pack(&self, pack: &mut obj, is_rogue: bool) {
-		let mut tail = pack as *mut obj;
-		for save_obj in &self.save_objs {
-			let new_obj = save_obj.to_obj(is_rogue);
-			(*tail).next_object = new_obj;
-			tail = new_obj;
-		}
-	}
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct SaveFighter {
-	pub hp_current: isize,
-	pub hp_max: isize,
-	pub str_current: isize,
-	pub str_max: isize,
-	pub gold: usize,
-	pub exp: isize,
-	pub exp_points: isize,
-	pub row: i64,
-	pub col: i64,
-	pub fchar: char,
-	pub moves_left: usize,
-}
-
-impl SaveFighter {
-	pub fn from_fighter(fighter: &Fighter) -> Self {
-		SaveFighter {
-			hp_current: fighter.hp_current,
-			hp_max: fighter.hp_max,
-			str_current: fighter.str_current,
-			str_max: fighter.str_max,
-			gold: fighter.gold,
-			exp: fighter.exp,
-			exp_points: fighter.exp_points,
-			row: fighter.row,
-			col: fighter.col,
-			fchar: fighter.fchar,
-			moves_left: fighter.moves_left,
-		}
-	}
-
-	pub fn to_fighter(&self) -> Fighter {
-		Fighter {
-			armor: 0 as *mut obj,
-			weapon: 0 as *mut obj,
-			left_ring: 0 as *mut obj,
-			right_ring: 0 as *mut obj,
-			hp_current: self.hp_current,
-			hp_max: self.hp_max,
-			str_current: self.str_current,
-			str_max: self.str_max,
-			pack: empty_obj(),
-			gold: self.gold,
-			exp: self.exp,
-			exp_points: self.exp_points,
-			row: self.row,
-			col: self.col,
-			fchar: self.fchar,
-			moves_left: self.moves_left,
-		}
-	}
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct SaveDungeon {
-	pub cells: Vec<Vec<u16>>,
-}
-
-impl SaveDungeon {
-	unsafe fn from_dungeon(cells: &[[u16; DCOLS]; DROWS]) -> SaveDungeon {
-		let mut rows = Vec::new();
-		for row in 0..DROWS {
-			let mut cols = Vec::new();
-			for col in 0..DCOLS {
-				cols.push(cells[row][col]);
-			}
-			rows.push(cols);
-		}
-		// Don't know why, but C code also saves and restores screen chars. Let's not
-		// do that for now.
-		SaveDungeon { cells: rows }
-	}
-
-	fn load_dungeon(&self, cells: &mut [[u16; DCOLS]; DROWS]) {
-		for row in 0..DROWS {
-			for col in 0..DCOLS {
-				cells[row][col] = self.cells[row][col].clone();
-			}
-		}
-	}
-}
-
 #[derive(Serialize, Deserialize)]
 pub struct SaveData {
 	pub player: Player,
@@ -136,11 +24,9 @@ pub struct SaveData {
 	pub login_name: String,
 	pub party_counter: usize,
 	pub level_monsters: MonsterMash,
-	pub level_objects: SavePack,
+	pub level_objects: ObjectPack,
 	pub file_id: i64,
 	pub foods: i16,
-	pub rogue: SaveFighter,
-	pub rogue_pack: SavePack,
 	pub id_potions: SaveIdTable,
 	pub id_scrolls: SaveIdTable,
 	pub id_wands: SaveIdTable,
@@ -162,16 +48,14 @@ pub struct SaveData {
 impl SaveData {
 	pub unsafe fn read_from_statics(file_id: i64, game: &GameState) -> Self {
 		SaveData {
-			player: game.player,
+			player: game.player.clone(),
 			hunger_str: hunger_str.clone(),
 			login_name: login_name().to_string(),
 			party_counter,
 			level_monsters: MASH.clone(),
-			level_objects: SavePack::from_pack(&level_objects),
+			level_objects: level_objects.clone(),
 			file_id,
 			foods,
-			rogue: SaveFighter::from_fighter(&rogue),
-			rogue_pack: SavePack::from_pack(&rogue.pack),
 			id_potions: SaveIdTable::from_array(&id_potions),
 			id_scrolls: SaveIdTable::from_array(&id_scrolls),
 			id_wands: SaveIdTable::from_array(&id_wands),
@@ -195,10 +79,8 @@ impl SaveData {
 		settings::set_login_name(&self.login_name);
 		party_counter = self.party_counter;
 		MASH = self.level_monsters.clone();
-		self.level_objects.write_pack(&mut level_objects, false);
+		level_objects = self.level_objects.clone();
 		foods = self.foods;
-		rogue = self.rogue.to_fighter();
-		self.rogue_pack.write_pack(&mut rogue.pack, true);
 		load_array(&mut id_potions, &self.id_potions.ids);
 		load_array(&mut id_scrolls, &self.id_scrolls.ids);
 		load_array(&mut id_wands, &self.id_wands.ids);

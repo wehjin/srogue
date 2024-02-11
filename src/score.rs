@@ -3,12 +3,13 @@
 use std::cmp::{Ordering};
 use std::fs::File;
 use std::io::{Read, Seek, Write};
-use ncurses::{clear, mv, mvaddch, mvaddstr, mvinch, refresh, standend, standout};
+use ncurses::{mv, mvaddch, mvaddstr, mvinch, refresh, standend, standout};
 use settings::{score_only, show_skull};
 use crate::prelude::*;
 use crate::{settings, turn_into_games, turn_into_user};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::objects::IdStatus::Identified;
+use crate::player::Player;
 use crate::prelude::armor_kind::ARMORS;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat;
@@ -18,19 +19,19 @@ use crate::prelude::wand_kind::MAX_WAND;
 use crate::prelude::weapon_kind::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
 use crate::settings::{login_name, nick_name};
 
-pub const SCORE_FILE: &'static str = "/usr/games/rogue.scores";
+pub const SCORE_FILE: &'static str = "/usr/games/player.rogue.scores";
 
-pub unsafe fn killed_by(ending: Ending, max_level: usize) {
+pub unsafe fn killed_by(ending: Ending, player: &mut Player) {
 	md_ignore_signals();
 	if !ending.is_quit() {
-		rogue.gold = ((rogue.gold as f64 * 9.0) / 10.0) as usize;
+		player.rogue.gold = ((player.rogue.gold as f64 * 9.0) / 10.0) as usize;
 	}
 
 	let mut how_ended = ending_string(&ending);
-	how_ended += &format!(" with {} gold", rogue.gold);
+	how_ended += &format!(" with {} gold", player.rogue.gold);
 
 	if ending.is_monster() && show_skull() {
-		clear();
+		ncurses::clear();
 		mvaddstr(4, 32, "__---------__");
 		mvaddstr(5, 30, "_~             ~_");
 		mvaddstr(6, 29, "/                 \\");
@@ -58,7 +59,7 @@ pub unsafe fn killed_by(ending: Ending, max_level: usize) {
 		message(&how_ended, 0);
 	}
 	message("", 0);
-	put_scores(Some(ending), max_level);
+	put_scores(Some(ending), player);
 }
 
 unsafe fn ending_string(ending: &Ending) -> String {
@@ -76,13 +77,13 @@ unsafe fn ending_string(ending: &Ending) -> String {
 	}
 }
 
-pub unsafe fn win(player: &Player, level: &mut Level) {
-	unwield(rogue.weapon);          /* disarm and relax */
-	unwear(rogue.armor);
-	un_put_on(rogue.left_ring, player.cur_depth, level);
-	un_put_on(rogue.right_ring, player.cur_depth, level);
-
-	clear();
+pub unsafe fn win(player: &mut Player, level: &mut Level) {
+	unwield(player);          /* disarm and relax */
+	unwear(player);
+	for hand in PlayerHand::ALL_HANDS {
+		un_put_hand(hand, player, level);
+	}
+	ncurses::clear();
 	mvaddstr(10, 11, "@   @  @@@   @   @      @  @  @   @@@   @   @   @");
 	mvaddstr(11, 11, " @ @  @   @  @   @      @  @  @  @   @  @@  @   @");
 	mvaddstr(12, 11, "  @   @   @  @   @      @  @  @  @   @  @ @ @   @");
@@ -94,19 +95,19 @@ pub unsafe fn win(player: &Player, level: &mut Level) {
 	message("", 0);
 	message("", 0);
 	id_all();
-	sell_pack();
-	put_scores(Some(Ending::Win), player.max_depth);
+	sell_pack(player);
+	put_scores(Some(Ending::Win), player);
 }
 
-pub unsafe fn quit(from_intrpt: bool, max_level: usize) {
+pub unsafe fn quit(from_intrpt: bool, player: &mut Player) {
 	md_ignore_signals();
 	let mut orow = 0;
 	let mut ocol = 0;
 	let mut mc = false;
 	let mut buf = [0; 128];
 	if from_intrpt {
-		orow = rogue.row;
-		ocol = rogue.col;
+		orow = player.rogue.row;
+		ocol = player.rogue.col;
 		mc = msg_cleared;
 		for i in 0..DCOLS {
 			buf[i] = mvinch(0, i as i32);
@@ -131,10 +132,10 @@ pub unsafe fn quit(from_intrpt: bool, max_level: usize) {
 		clean_up(BYEBYE_STRING);
 	}
 	check_message();
-	killed_by(Ending::Quit, max_level);
+	killed_by(Ending::Quit, player);
 }
 
-pub unsafe fn put_scores(ending: Option<Ending>, max_level: usize) {
+pub unsafe fn put_scores(ending: Option<Ending>, player: &Player) {
 	turn_into_games();
 	let mut file = File::options().read(true).write(true).open(SCORE_FILE).unwrap_or_else(|_| {
 		File::options().write(true).open(SCORE_FILE).unwrap_or_else(|_| {
@@ -169,7 +170,7 @@ pub unsafe fn put_scores(ending: Option<Ending>, max_level: usize) {
 			let name_in_score = &scores[i][START_OF_NAME..];
 			if name_cmp(name_in_score, &login_name()) == Ordering::Equal {
 				if let Some(gold_in_score) = gold_in_score(&scores[i]) {
-					if rogue.gold < gold_in_score {
+					if player.rogue.gold < gold_in_score {
 						score_only = true;
 					} else {
 						found_player = Some(i);
@@ -191,7 +192,7 @@ pub unsafe fn put_scores(ending: Option<Ending>, max_level: usize) {
 		let ne = scores.len().min(n_names.len()).min(10);
 		for i in 0..ne {
 			if let Some(gold_in_score) = gold_in_score(&scores[i]) {
-				if rogue.gold >= gold_in_score {
+				if player.rogue.gold >= gold_in_score {
 					rank = i;
 					break;
 				}
@@ -210,12 +211,12 @@ pub unsafe fn put_scores(ending: Option<Ending>, max_level: usize) {
 				None => "".to_string(),
 				Some(name) => name.to_string(),
 			};
-			insert_score(&mut scores, &mut n_names, &name, rank, ne, ending.expect("ending"), max_level);
+			insert_score(&mut scores, &mut n_names, &name, rank, ne, ending.expect("ending"), player);
 		}
 		file.rewind().expect("rewind file");
 	}
 
-	clear();
+	ncurses::clear();
 	mvaddstr(3, 30, "Top  Ten  Rogueists");
 	mvaddstr(8, 0, "Rank   Score   Name");
 
@@ -251,11 +252,19 @@ fn gold_in_score(score: &str) -> Option<usize> {
 	trimmed.parse::<usize>().ok()
 }
 
-unsafe fn insert_score(scores: &mut Vec<String>, n_names: &mut Vec<String>, n_name: &str, rank: usize, n: usize, ending: Ending, max_level: usize) {
-	let mut buf = format!("{:2}    {:6}   {}: ", rank + 1, rogue.gold, login_name());
+unsafe fn insert_score(
+	scores: &mut Vec<String>,
+	n_names: &mut Vec<String>,
+	n_name: &str,
+	rank: usize,
+	n: usize,
+	ending: Ending,
+	player: &Player,
+) {
+	let mut buf = format!("{:2}    {:6}   {}: ", rank + 1, player.rogue.gold, login_name());
 	buf += &ending_string(&ending);
-	buf += &format!(" on level {} ", max_level);
-	if (!ending.is_win()) && has_amulet() {
+	buf += &format!(" on level {} ", player.max_depth);
+	if (!ending.is_win()) && has_amulet(player) {
 		buf += "with amulet";
 	}
 	insert_to_limit(scores, &buf, rank, n);
@@ -281,29 +290,28 @@ pub fn is_vowel(ch: char) -> bool {
 	}
 }
 
-pub unsafe fn sell_pack()
+pub unsafe fn sell_pack(player: &mut Player)
 {
-	let mut row: usize = 2;
-	let mut obj = rogue.pack.next_object;
-	clear();
+	ncurses::clear();
 	mvaddstr(1, 0, "Value      Item");
-	while !obj.is_null() {
-		if (*obj).what_is != ObjectWhat::Food {
-			(*obj).identified = true;
-			let val = get_value(&*obj);
-			rogue.gold += val;
-
+	let mut row: usize = 2;
+	for id in player.object_ids() {
+		if player.object_what(id) != ObjectWhat::Food {
+			let obj = player.object_mut(id).expect("obj in player");
+			obj.identified = true;
+			let obj_value = get_value(obj);
+			let obj_desc = get_obj_desc(obj);
+			player.rogue.gold += obj_value;
 			if row < DROWS {
-				let msg = format!("{:5}      {}", val, get_desc(&*obj));
+				let msg = format!("{:5}      {}", obj_value, obj_desc);
 				mvaddstr(row as i32, 0, &msg);
 				row += 1;
 			}
 		}
-		obj = (*obj).next_object;
 	}
 	refresh();
-	if rogue.gold > MAX_GOLD {
-		rogue.gold = MAX_GOLD;
+	if player.rogue.gold > MAX_GOLD {
+		player.rogue.gold = MAX_GOLD;
 	}
 	message("", 0);
 }

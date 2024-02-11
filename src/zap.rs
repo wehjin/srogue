@@ -1,6 +1,7 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
 use ncurses::{mvaddch, mvinch};
+use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Wands;
@@ -9,44 +10,46 @@ use crate::settings::set_score_only;
 
 pub static mut wizard: bool = false;
 
-pub unsafe fn zapp(player: &Player, level: &mut Level) {
+pub unsafe fn zapp(player: &mut Player, level: &mut Level) {
 	let dir = get_dir_or_cancel();
 	check_message();
 	if dir == CANCEL {
 		return;
 	}
-
-	let wch = pack_letter("zap with what?", Wands);
-	if wch == CANCEL {
+	let ch = pack_letter("zap with what?", Wands, player);
+	if ch == CANCEL {
 		return;
 	}
+
 	check_message();
-
-	let wand = get_letter_object(wch);
-	if wand.is_null() {
-		message("no such item.", 0);
-		return;
-	}
-	if (*wand).what_is != Wand {
-		message("you can't zap with that", 0);
-		return;
-	}
-
-	if (*wand).class <= 0 {
-		message("nothing happens", 0);
-	} else {
-		(*wand).class -= 1;
-		let mut row = rogue.row;
-		let mut col = rogue.col;
-		if let Some(monster_id) = get_zapped_monster(dir, &mut row, &mut col, level) {
-			if let Some(monster) = MASH.monster_with_id_mut(monster_id) {
-				monster.wake_up();
-				zap_monster(monster, (*wand).which_kind, player, level);
-				relight(level);
+	match player.object_id_with_letter(ch) {
+		None => {
+			message("no such item.", 0);
+			return;
+		}
+		Some(obj_id) => {
+			if player.object_what(obj_id) != Wand {
+				message("you can't zap with that", 0);
+				return;
 			}
+			if player.expect_object(obj_id).class <= 0 {
+				message("nothing happens", 0);
+			} else {
+				player.expect_object_mut(obj_id).class -= 1;
+				let mut row = player.rogue.row;
+				let mut col = player.rogue.col;
+				if let Some(monster_id) = get_zapped_monster(dir, &mut row, &mut col, level) {
+					if let Some(monster) = MASH.monster_with_id_mut(monster_id) {
+						let obj_kind = player.object_kind(obj_id);
+						monster.wake_up();
+						zap_monster(monster, obj_kind, player, level);
+						relight(player, level);
+					}
+				}
+			}
+			reg_move(player, level);
 		}
 	}
-	reg_move(player, level);
 }
 
 pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, level: &Level) -> Option<u64> {
@@ -67,7 +70,7 @@ pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, level:
 	}
 }
 
-pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, player: &Player, level: &mut Level) {
+pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, player: &mut Player, level: &mut Level) {
 	let row = monster.spot.row;
 	let col = monster.spot.col;
 	match WandKind::from_index(which_kind as usize) {
@@ -87,7 +90,7 @@ pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, player: &Playe
 			}
 		}
 		WandKind::TeleAway => {
-			tele_away(monster, level);
+			tele_away(monster, player, level);
 		}
 		WandKind::ConfuseMonster => {
 			monster.m_flags.confused = true;
@@ -145,14 +148,14 @@ pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, player: &Playe
 	}
 }
 
-unsafe fn tele_away(monster: &mut Monster, level: &mut Level) {
+unsafe fn tele_away(monster: &mut Monster, player: &Player, level: &mut Level) {
 	if monster.m_flags.holds {
 		level.being_held = false;
 	}
 	let (row, col) = {
 		let mut row = 0;
 		let mut col = 0;
-		gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel, CellKind::Stairs, CellKind::Object], level);
+		gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel, CellKind::Stairs, CellKind::Object], player, level);
 		(row, col)
 	};
 
@@ -163,7 +166,7 @@ unsafe fn tele_away(monster: &mut Monster, level: &mut Level) {
 	level.dungeon[row as usize][col as usize].add_kind(CellKind::Monster);
 	monster.trail_char = mvinch(row as i32, col as i32);
 
-	if level.detect_monster || rogue_can_see(row, col, level) {
+	if level.detect_monster || rogue_can_see(row, col, player, level) {
 		mvaddch(row as i32, col as i32, gmc(monster, level));
 	}
 }

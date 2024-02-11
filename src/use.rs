@@ -2,9 +2,9 @@
 
 use ncurses::{addch, chtype, mvaddch, mvinch};
 use crate::objects::IdStatus::{Called, Identified};
+use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::food_kind::{FRUIT, RATION};
-use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_EITHER_HAND};
 use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::{AllObjects, Foods, Potions, Scrolls};
 use crate::prelude::potion_kind::{PotionKind, POTIONS};
@@ -20,254 +20,262 @@ pub static mut haste_self: usize = 0;
 pub static mut extra_hp: isize = 0;
 pub static strange_feeling: &'static str = "you have a strange feeling for a moment, then it passes";
 
-pub unsafe fn quaff(player: &Player, level: &mut Level) {
-	let ch = pack_letter("quaff what?", Potions);
+pub unsafe fn quaff(player: &mut Player, level: &mut Level) {
+	let ch = pack_letter("quaff what?", Potions, player);
 	if ch == CANCEL {
 		return;
 	}
-
-	let obj = get_letter_object(ch);
-	if obj.is_null() {
-		message("no such item.", 0);
-		return;
-	}
-	if (*obj).what_is != Potion {
-		message("you can't drink that", 0);
-		return;
-	}
-
-	let potion_kind = PotionKind::from_index((*obj).which_kind as usize);
-	match potion_kind {
-		PotionKind::IncreaseStrength => {
-			message("you feel stronger now, what bulging muscles!", 0);
-			rogue.str_current += 1;
-			if rogue.str_current > rogue.str_max {
-				rogue.str_max = rogue.str_current;
-			}
+	match player.object_id_with_letter(ch) {
+		None => {
+			message("no such item.", 0);
+			return;
 		}
-		PotionKind::RestoreStrength => {
-			rogue.str_current = rogue.str_max;
-			message("this tastes great, you feel warm all over", 0);
-		}
-		PotionKind::Healing => {
-			message("you begin to feel better", 0);
-			potion_heal(false, level);
-		}
-		PotionKind::ExtraHealing => {
-			message("you begin to feel much better", 0);
-			potion_heal(true, level);
-		}
-		PotionKind::Poison => {
-			if !sustain_strength {
-				rogue.str_current -= get_rand(1, 3);
-				if rogue.str_current < 1 {
-					rogue.str_current = 1;
+		Some(obj_id) => {
+			match player.expect_object(obj_id).potion_kind() {
+				None => {
+					message("you can't drink that", 0);
+					return;
+				}
+				Some(potion_kind) => {
+					match potion_kind {
+						PotionKind::IncreaseStrength => {
+							message("you feel stronger now, what bulging muscles!", 0);
+							player.rogue.str_current += 1;
+							if player.rogue.str_current > player.rogue.str_max {
+								player.rogue.str_max = player.rogue.str_current;
+							}
+						}
+						PotionKind::RestoreStrength => {
+							player.rogue.str_current = player.rogue.str_max;
+							message("this tastes great, you feel warm all over", 0);
+						}
+						PotionKind::Healing => {
+							message("you begin to feel better", 0);
+							potion_heal(false, player, level);
+						}
+						PotionKind::ExtraHealing => {
+							message("you begin to feel much better", 0);
+							potion_heal(true, player, level);
+						}
+						PotionKind::Poison => {
+							if !sustain_strength {
+								player.rogue.str_current -= get_rand(1, 3);
+								if player.rogue.str_current < 1 {
+									player.rogue.str_current = 1;
+								}
+							}
+							message("you feel very sick now", 0);
+							if halluc != 0 {
+								unhallucinate(player, level);
+							}
+						}
+						PotionKind::RaiseLevel => {
+							player.rogue.exp_points = LEVEL_POINTS[(player.rogue.exp - 1) as usize];
+							add_exp(1, true, player);
+						}
+						PotionKind::Blindness => {
+							go_blind(player, level);
+						}
+						PotionKind::Hallucination => {
+							message("oh wow, everything seems so cosmic", 0);
+							halluc += get_rand(500, 800);
+						}
+						PotionKind::DetectMonster => {
+							show_monsters(level);
+							if MASH.is_empty() {
+								message(strange_feeling, 0);
+							}
+						}
+						PotionKind::DetectObjects => {
+							if level_objects.is_empty() {
+								message(strange_feeling, 0);
+							} else {
+								if blind == 0 {
+									show_objects(player, level);
+								}
+							}
+						}
+						PotionKind::Confusion => {
+							message(if halluc != 0 { "what a trippy feeling" } else { "you feel confused" }, 0);
+							confuse();
+						}
+						PotionKind::Levitation => {
+							message("you start to float in the air", 0);
+							levitate += get_rand(15, 30);
+							level.bear_trap = 0;
+							level.being_held = false;
+						}
+						PotionKind::HasteSelf => {
+							message("you feel yourself moving much faster", 0);
+							haste_self += get_rand(11, 21);
+							if haste_self % 2 == 0 {
+								haste_self += 1;
+							}
+						}
+						PotionKind::SeeInvisible => {
+							message(&format!("hmm, this potion tastes like {}juice", fruit()), 0);
+							if blind != 0 {
+								unblind(player, level);
+							}
+							level.see_invisible = true;
+							relight(player, level);
+						}
+					}
+					print_stats(STAT_STRENGTH | STAT_HP, player);
+					if id_potions[potion_kind.to_index()].id_status != Called {
+						id_potions[potion_kind.to_index()].id_status = Identified;
+					}
+					vanish(obj_id, true, player, level);
 				}
 			}
-			message("you feel very sick now", 0);
-			if halluc != 0 {
-				unhallucinate(level);
-			}
-		}
-		PotionKind::RaiseLevel => {
-			rogue.exp_points = LEVEL_POINTS[(rogue.exp - 1) as usize];
-			add_exp(1, true, player.cur_depth);
-		}
-		PotionKind::Blindness => {
-			go_blind(level);
-		}
-		PotionKind::Hallucination => {
-			message("oh wow, everything seems so cosmic", 0);
-			halluc += get_rand(500, 800);
-		}
-		PotionKind::DetectMonster => {
-			show_monsters(level);
-			if MASH.is_empty() {
-				message(strange_feeling, 0);
-			}
-		}
-		PotionKind::DetectObjects => {
-			if !level_objects.next_object.is_null() {
-				if blind == 0 {
-					show_objects(level);
-				}
-			} else {
-				message(strange_feeling, 0);
-			}
-		}
-		PotionKind::Confusion => {
-			message(if halluc != 0 { "what a trippy feeling" } else { "you feel confused" }, 0);
-			confuse();
-		}
-		PotionKind::Levitation => {
-			message("you start to float in the air", 0);
-			levitate += get_rand(15, 30);
-			level.bear_trap = 0;
-			level.being_held = false;
-		}
-		PotionKind::HasteSelf => {
-			message("you feel yourself moving much faster", 0);
-			haste_self += get_rand(11, 21);
-			if haste_self % 2 == 0 {
-				haste_self += 1;
-			}
-		}
-		PotionKind::SeeInvisible => {
-			message(&format!("hmm, this potion tastes like {}juice", fruit()), 0);
-			if blind != 0 {
-				unblind(level);
-			}
-			level.see_invisible = true;
-			relight(level);
 		}
 	}
-	print_stats(STAT_STRENGTH | STAT_HP, player.cur_depth);
-	if id_potions[potion_kind.to_index()].id_status != Called {
-		id_potions[potion_kind.to_index()].id_status = Identified;
-	}
-	vanish(&mut *obj, true, &mut rogue.pack, player, level);
 }
 
-pub unsafe fn read_scroll(player: &Player, level: &mut Level) {
+pub unsafe fn read_scroll(player: &mut Player, level: &mut Level) {
 	if blind != 0 {
 		message("You can't see to read the scroll.", 0);
 		return;
 	}
 
-	let ch = pack_letter("read what?", Scrolls);
+	let ch = pack_letter("read what?", Scrolls, player);
 	if ch == CANCEL {
 		return;
 	}
-
-	let obj = get_letter_object(ch);
-	if obj.is_null() {
-		message("no such item.", 0);
-		return;
-	}
-	if (*obj).what_is != Scroll {
-		message("you can't read that", 0);
-		return;
-	}
-
-	let scroll_kind = ScrollKind::from_index((*obj).which_kind as usize);
-	match scroll_kind {
-		ScrollKind::ScareMonster => {
-			message("you hear a maniacal laughter in the distance", 0);
+	match player.object_id_with_letter(ch) {
+		None => {
+			message("no such item.", 0);
+			return;
 		}
-		ScrollKind::HoldMonster => {
-			hold_monster(level);
-		}
-		ScrollKind::EnchWeapon => {
-			if !rogue.weapon.is_null() {
-				if (*rogue.weapon).what_is == Weapon {
-					message(&format!(
-						"your {}glow{} {}for a moment",
-						name_of(&*rogue.weapon),
-						if (*rogue.weapon).quantity <= 1 { "s" } else { "" },
-						get_ench_color()
-					), 0);
-					if coin_toss() {
-						(*rogue.weapon).hit_enchant += 1;
-					} else {
-						(*rogue.weapon).d_enchant += 1;
-					}
+		Some(obj_id) => {
+			match player.expect_object(obj_id).scroll_kind() {
+				None => {
+					message("you can't read that", 0);
+					return;
 				}
-				(*rogue.weapon).is_cursed = 0;
-			} else {
-				message("your hands tingle", 0);
+				Some(scroll_kind) => {
+					match scroll_kind {
+						ScrollKind::ScareMonster => {
+							message("you hear a maniacal laughter in the distance", 0);
+						}
+						ScrollKind::HoldMonster => {
+							hold_monster(player, level);
+						}
+						ScrollKind::EnchWeapon => {
+							if let Some(weapon) = player.weapon_mut() {
+								let weapon_name = name_of(weapon);
+								let plural_char = if weapon.quantity <= 1 { "s" } else { "" };
+								let glow_color = get_ench_color();
+								let msg = format!("your {}glow{} {}for a moment", weapon_name, plural_char, glow_color);
+								message(&msg, 0);
+								if coin_toss() {
+									weapon.hit_enchant += 1;
+								} else {
+									weapon.d_enchant += 1;
+								}
+								weapon.is_cursed = 0;
+							} else {
+								message("your hands tingle", 0);
+							}
+						}
+						ScrollKind::EnchArmor => {
+							if let Some(armor) = player.armor_mut() {
+								let msg = format!("your armor glows {}for a moment", get_ench_color());
+								message(&msg, 0);
+								armor.d_enchant += 1;
+								armor.is_cursed = 0;
+								print_stats(STAT_ARMOR, player);
+							} else {
+								message("your skin crawls", 0);
+							}
+						}
+						ScrollKind::Identify => {
+							message("this is a scroll of identify", 0);
+							let obj = player.expect_object_mut(obj_id);
+							obj.identified = true;
+							id_scrolls[obj.which_kind as usize].id_status = Identified;
+							idntfy(player);
+						}
+						ScrollKind::Teleport => {
+							tele(player, level);
+						}
+						ScrollKind::Sleep => {
+							message("you fall asleep", 0);
+							take_a_nap(player, level);
+						}
+						ScrollKind::ProtectArmor => {
+							if let Some(armor) = player.armor_mut() {
+								message("your armor is covered by a shimmering gold shield", 0);
+								armor.is_protected = 1;
+								armor.is_cursed = 0;
+							} else {
+								message("your acne seems to have disappeared", 0);
+							}
+						}
+						ScrollKind::RemoveCurse => {
+							let msg = if !player_hallucinating() {
+								"you feel as though someone is watching over you"
+							} else {
+								"you feel in touch with the universal oneness"
+							};
+							message(msg, 0);
+							uncurse_all(player);
+						}
+						ScrollKind::CreateMonster => {
+							create_monster(player, level);
+						}
+						ScrollKind::AggravateMonster => {
+							aggravate(player, level);
+						}
+						ScrollKind::MagicMapping => {
+							message("this scroll seems to have a map on it", 0);
+							draw_magic_map(level);
+						}
+					}
+					if id_scrolls[scroll_kind.to_index()].id_status != Called {
+						id_scrolls[scroll_kind.to_index()].id_status = Identified;
+					}
+					vanish(obj_id, scroll_kind != ScrollKind::Sleep, player, level);
+				}
 			}
-		}
-		ScrollKind::EnchArmor => {
-			if !rogue.armor.is_null() {
-				message(&format!("your armor glows {}for a moment", get_ench_color(), ), 0);
-				(*rogue.armor).d_enchant += 1;
-				(*rogue.armor).is_cursed = 0;
-				print_stats(STAT_ARMOR, player.cur_depth);
-			} else {
-				message("your skin crawls", 0);
-			}
-		}
-		ScrollKind::Identify => {
-			message("this is a scroll of identify", 0);
-			(*obj).identified = true;
-			id_scrolls[(*obj).which_kind as usize].id_status = Identified;
-			idntfy();
-		}
-		ScrollKind::Teleport => {
-			tele(level);
-		}
-		ScrollKind::Sleep => {
-			message("you fall asleep", 0);
-			take_a_nap(player, level);
-		}
-		ScrollKind::ProtectArmor => {
-			if !rogue.armor.is_null() {
-				message("your armor is covered by a shimmering gold shield", 0);
-				(*rogue.armor).is_protected = 1;
-				(*rogue.armor).is_cursed = 0;
-			} else {
-				message("your acne seems to have disappeared", 0);
-			}
-		}
-		ScrollKind::RemoveCurse => {
-			message(if !player_hallucinating() {
-				"you feel as though someone is watching over you"
-			} else {
-				"you feel in touch with the universal oneness"
-			}, 0);
-			uncurse_all();
-		}
-		ScrollKind::CreateMonster => {
-			create_monster(player.cur_depth, level);
-		}
-		ScrollKind::AggravateMonster => {
-			aggravate(level);
-		}
-		ScrollKind::MagicMapping => {
-			message("this scroll seems to have a map on it", 0);
-			draw_magic_map(level);
 		}
 	}
-	if id_scrolls[scroll_kind.to_index()].id_status != Called {
-		id_scrolls[scroll_kind.to_index()].id_status = Identified;
-	}
-	vanish(&mut *obj, scroll_kind != ScrollKind::Sleep, &mut rogue.pack, player, level);
 }
 
-pub unsafe fn vanish(obj: &mut obj, do_regular_move: bool, pack: &mut obj, player: &Player, level: &mut Level) {
+pub unsafe fn vanish(obj_id: ObjectId, do_regular_move: bool, player: &mut Player, level: &mut Level) {
 	/* vanish() does NOT handle a quiver of weapons with more than one
 	   arrow (or whatever) in the quiver.  It will only decrement the count.
 	*/
-	if (*obj).quantity > 1 {
-		(*obj).quantity -= 1;
+	let obj = player.object_mut(obj_id).expect("obj in player");
+	if obj.quantity > 1 {
+		obj.quantity -= 1;
 	} else {
-		if ((*obj).in_use_flags & BEING_WIELDED) != 0 {
-			unwield(obj);
-		} else if ((*obj).in_use_flags & BEING_WORN) != 0 {
-			unwear(obj);
-		} else if ((*obj).in_use_flags & ON_EITHER_HAND) != 0 {
-			un_put_on(obj, player.cur_depth, level);
+		if obj.is_being_wielded() {
+			unwield(player);
+		} else if obj.is_being_worn() {
+			unwear(player);
+		} else if let Some(hand) = player.ring_hand(obj_id) {
+			un_put_hand(hand, player, level);
 		}
-		take_from_pack(obj, pack);
-		free_object(obj);
+		take_from_pack(obj_id, &mut player.rogue.pack);
 	}
 	if do_regular_move {
 		reg_move(player, level);
 	}
 }
 
-unsafe fn potion_heal(extra: bool, level: &mut Level) {
-	rogue.hp_current += rogue.exp;
+unsafe fn potion_heal(extra: bool, player: &mut Player, level: &mut Level) {
+	player.rogue.hp_current += player.rogue.exp;
 
-	let mut ratio = rogue.hp_current as f32 / rogue.hp_max as f32;
+	let mut ratio = player.rogue.hp_current as f32 / player.rogue.hp_max as f32;
 	if ratio >= 1.00 {
-		rogue.hp_max += if extra { 2 } else { 1 };
+		player.rogue.hp_max += if extra { 2 } else { 1 };
 		extra_hp += if extra { 2 } else { 1 };
-		rogue.hp_current = rogue.hp_max;
+		player.rogue.hp_current = player.rogue.hp_max;
 	} else if ratio >= 0.90 {
-		rogue.hp_max += if extra { 1 } else { 0 };
+		player.rogue.hp_max += if extra { 1 } else { 0 };
 		extra_hp += if extra { 1 } else { 0 };
-		rogue.hp_current = rogue.hp_max;
+		player.rogue.hp_current = player.rogue.hp_max;
 	} else {
 		if ratio < 0.33 {
 			ratio = 0.33;
@@ -275,14 +283,14 @@ unsafe fn potion_heal(extra: bool, level: &mut Level) {
 		if extra {
 			ratio += ratio;
 		}
-		let add = ratio * (rogue.hp_max - rogue.hp_current) as f32;
-		rogue.hp_current += add as isize;
-		if rogue.hp_current > rogue.hp_max {
-			rogue.hp_current = rogue.hp_max;
+		let add = ratio * (player.rogue.hp_max - player.rogue.hp_current) as f32;
+		player.rogue.hp_current += add as isize;
+		if player.rogue.hp_current > player.rogue.hp_max {
+			player.rogue.hp_current = player.rogue.hp_max;
 		}
 	}
 	if blind != 0 {
-		unblind(level);
+		unblind(player, level);
 	}
 	if confused != 0 && extra {
 		unconfuse();
@@ -290,82 +298,86 @@ unsafe fn potion_heal(extra: bool, level: &mut Level) {
 		confused = (confused / 2) + 1;
 	}
 	if halluc != 0 && extra {
-		unhallucinate(level);
+		unhallucinate(player, level);
 	} else if halluc != 0 {
 		halluc = (halluc / 2) + 1;
 	}
 }
 
-unsafe fn idntfy() {
+unsafe fn idntfy(player: &mut Player) {
 	loop {
-		let ch = pack_letter("what would you like to identify?", AllObjects);
+		let ch = pack_letter("what would you like to identify?", AllObjects, player);
 		if ch == CANCEL {
 			return;
 		}
-
-		let obj = get_letter_object(ch);
-		if obj.is_null() {
-			message("no such item, try again", 0);
-			message("", 0);
-			check_message();
-			continue;
-		}
-
-		(*obj).identified = true;
-		match (*obj).what_is {
-			Scroll | Potion | Weapon | Armor | Wand | Ring => {
-				let id_table = get_id_table(&*obj);
-				id_table[(*obj).which_kind as usize].id_status = Identified;
+		match player.object_with_letter_mut(ch) {
+			None => {
+				message("no such item, try again", 0);
+				message("", 0);
+				check_message();
+				continue;
 			}
-			_ => {}
+			Some(obj) => {
+				obj.identified = true;
+				match obj.what_is {
+					Scroll | Potion | Weapon | Armor | Wand | Ring => {
+						let id_table = get_id_table(obj);
+						id_table[obj.which_kind as usize].id_status = Identified;
+					}
+					_ => {}
+				}
+				let obj_desc = get_obj_desc(obj);
+				message(&obj_desc, 0);
+			}
 		}
-		message(&get_desc(&*obj), 0);
 	}
 }
 
 
-pub unsafe fn eat(player: &Player, level: &mut Level) {
-	let ch = pack_letter("eat what?", Foods);
+pub unsafe fn eat(player: &mut Player, level: &mut Level) {
+	let ch = pack_letter("eat what?", Foods, player);
 	if ch == CANCEL {
 		return;
 	}
-
-	let obj = get_letter_object(ch);
-	if obj.is_null() {
-		message("no such item.", 0);
-		return;
-	}
-	if (*obj).what_is != Food {
-		message("you can't eat that", 0);
-		return;
-	}
-
-	let moves = if (*obj).which_kind == FRUIT || rand_percent(60) {
-		if (*obj).which_kind == RATION {
-			message("yum, that tasted good", 0);
-		} else {
-			message(&format!("my, that was a yummy {}", &fruit()), 0);
+	match player.object_id_with_letter(ch) {
+		None => {
+			message("no such item.", 0);
+			return;
 		}
-		get_rand(900, 1100)
-	} else {
-		message("yuk, that food tasted awful", 0);
-		add_exp(2, true, player.cur_depth);
-		get_rand(700, 900)
-	};
-	rogue.moves_left /= 3;
-	rogue.moves_left += moves;
-	hunger_str.clear();
-	print_stats(STAT_HUNGER, player.cur_depth);
-
-	vanish(&mut *obj, true, &mut rogue.pack, player, level);
+		Some(obj_id) => {
+			if player.object_what(obj_id) != Food {
+				message("you can't eat that", 0);
+				return;
+			}
+			let kind = player.object_kind(obj_id);
+			let moves = if kind == FRUIT || rand_percent(60) {
+				let msg = if kind == RATION {
+					"yum, that tasted good".to_string()
+				} else {
+					format!("my, that was a yummy {}", &fruit())
+				};
+				message(&msg, 0);
+				get_rand(900, 1100)
+			} else {
+				message("yuk, that food tasted awful", 0);
+				add_exp(2, true, player);
+				get_rand(700, 900)
+			};
+			player.rogue.moves_left /= 3;
+			player.rogue.moves_left += moves;
+			hunger_str.clear();
+			print_stats(STAT_HUNGER, player);
+			vanish(obj_id, true, player, level);
+		}
+	}
 }
 
-unsafe fn hold_monster(level: &Level) {
+unsafe fn hold_monster(player: &Player, level: &Level) {
 	let mut mcount = 0;
 	for i in -2..=2 {
 		for j in -2..=2 {
-			let row = rogue.row + i;
-			let col = rogue.col + j;
+			let row = player.rogue.row + i;
+			let col = player.rogue.col + j;
 			if is_off_screen(row, col) {
 				continue;
 			}
@@ -386,25 +398,25 @@ unsafe fn hold_monster(level: &Level) {
 	}
 }
 
-pub unsafe fn tele(level: &mut Level) {
-	mvaddch(rogue.row as i32, rogue.col as i32, get_dungeon_char(rogue.row, rogue.col, level));
+pub unsafe fn tele(player: &mut Player, level: &mut Level) {
+	mvaddch(player.rogue.row as i32, player.rogue.col as i32, get_dungeon_char(player.rogue.row, player.rogue.col, level));
 
 	if cur_room >= 0 {
 		darken_room(cur_room, level);
 	}
-	put_player(get_opt_room_number(rogue.row, rogue.col, level), level);
+	put_player(get_opt_room_number(player.rogue.row, player.rogue.col, level), player, level);
 	level.being_held = false;
 	level.bear_trap = 0;
 }
 
-pub unsafe fn hallucinate() {
+pub unsafe fn hallucinate(player: &Player) {
 	if blind != 0 {
 		return;
 	}
-	let mut obj = level_objects.next_object;
-	while !obj.is_null() {
-		let ch = mvinch((*obj).row as i32, (*obj).col as i32);
-		if !is_monster_char(ch) && no_rogue((*obj).row, (*obj).col) {
+
+	for obj in level_objects.objects() {
+		let ch = mvinch(obj.row as i32, obj.col as i32);
+		if !is_monster_char(ch) && no_rogue(obj.row, obj.col, player) {
 			let should_overdraw = match ch as u8 as char {
 				' ' | '.' | '#' | '+' => false,
 				_ => true
@@ -413,7 +425,6 @@ pub unsafe fn hallucinate() {
 				addch(gr_obj_char() as chtype);
 			}
 		}
-		obj = (*obj).next_object;
 	}
 	for monster in &MASH.monsters {
 		let ch = mvinch(monster.spot.row as i32, monster.spot.col as i32);
@@ -430,35 +441,35 @@ pub fn is_monster_char(ch: chtype) -> bool {
 	}
 }
 
-pub unsafe fn unhallucinate(level: &mut Level) {
+pub unsafe fn unhallucinate(player: &Player, level: &mut Level) {
 	halluc = 0;
-	relight(level);
+	relight(player, level);
 	message("everything looks SO boring now", 1);
 }
 
-pub unsafe fn unblind(level: &mut Level)
+pub unsafe fn unblind(player: &Player, level: &mut Level)
 {
 	blind = 0;
 	message("the veil of darkness lifts", 1);
-	relight(level);
+	relight(player, level);
 	if halluc != 0 {
-		hallucinate();
+		hallucinate(player);
 	}
 	if level.detect_monster {
 		show_monsters(level);
 	}
 }
 
-pub unsafe fn relight(level: &mut Level) {
+pub unsafe fn relight(player: &Player, level: &mut Level) {
 	if cur_room == PASSAGE {
-		light_passage(rogue.row, rogue.col, level);
+		light_passage(player.rogue.row, player.rogue.col, level);
 	} else {
-		light_up_room(cur_room, level);
+		light_up_room(cur_room, player, level);
 	}
-	mvaddch(rogue.row as i32, rogue.col as i32, chtype::from(rogue.fchar));
+	mvaddch(player.rogue.row as i32, player.rogue.col as i32, chtype::from(player.rogue.fchar));
 }
 
-pub unsafe fn take_a_nap(player: &Player, level: &mut Level) {
+pub unsafe fn take_a_nap(player: &mut Player, level: &mut Level) {
 	let mut i = get_rand(2, 5);
 	md_sleep(1);
 	while i > 0 {
@@ -469,7 +480,7 @@ pub unsafe fn take_a_nap(player: &Player, level: &mut Level) {
 	message(YOU_CAN_MOVE_AGAIN, 0);
 }
 
-unsafe fn go_blind(level: &Level) {
+unsafe fn go_blind(player: &Player, level: &Level) {
 	if blind == 0 {
 		message("a cloak of darkness falls around you", 0);
 	}
@@ -487,7 +498,7 @@ unsafe fn go_blind(level: &Level) {
 			}
 		}
 	}
-	mvaddch(rogue.row as i32, rogue.col as i32, chtype::from(rogue.fchar));
+	mvaddch(player.rogue.row as i32, player.rogue.col as i32, chtype::from(player.rogue.fchar));
 }
 
 pub unsafe fn get_ench_color() -> &'static str {
@@ -507,10 +518,9 @@ pub unsafe fn unconfuse() {
 	message(&msg, 1);
 }
 
-unsafe fn uncurse_all() {
-	let mut obj = rogue.pack.next_object;
-	while !obj.is_null() {
-		(*obj).is_cursed = 0;
-		obj = (*obj).next_object;
+fn uncurse_all(player: &mut Player) {
+	for obj_id in player.object_ids() {
+		let obj = player.expect_object_mut(obj_id);
+		obj.is_cursed = 0;
 	}
 }

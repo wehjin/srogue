@@ -3,6 +3,7 @@
 use libc::{c_int};
 use ncurses::{addch, chtype, clrtoeol, curscr, mvaddstr, wrefresh};
 use crate::level::constants::DROWS;
+use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_EXP, STAT_GOLD, STAT_HP, STAT_HUNGER, STAT_LABEL, STAT_LEVEL, STAT_STRENGTH};
 
@@ -131,7 +132,7 @@ pub fn rgetchar() -> char {
 	}
 }
 
-pub unsafe fn print_stats(stat_mask: usize, cur_level: usize) {
+pub unsafe fn print_stats(stat_mask: usize, player: &mut Player) {
 	const STATS_ROW: i32 = DROWS as i32 - 1;
 	let label = if stat_mask & STAT_LABEL != 0 { true } else { false };
 
@@ -139,30 +140,28 @@ pub unsafe fn print_stats(stat_mask: usize, cur_level: usize) {
 		if label {
 			mvaddstr(STATS_ROW, 0, "Level: ");
 		}
-		let s = format!("{}", cur_level);
+		let s = format!("{}", player.cur_depth);
 		mvaddstr(STATS_ROW, 7, &s);
 		pad(&s, 2);
 	}
 	if stat_mask & STAT_GOLD != 0 {
 		if label {
-			if rogue.gold > MAX_GOLD {
-				rogue.gold = MAX_GOLD;
-			}
+			player.maintain_max_gold();
 			mvaddstr(STATS_ROW, 10, "Gold: ");
 		}
-		let s = format!("{}", rogue.gold);
+		let s = format!("{}", player.gold());
 		mvaddstr(STATS_ROW, 16, &s);
 		pad(&s, 6);
 	}
 	if stat_mask & STAT_HP != 0 {
 		if label {
 			mvaddstr(STATS_ROW, 23, "Hp: ");
-			if rogue.hp_max > 800 {
-				rogue.hp_current -= rogue.hp_max - 800;
-				rogue.hp_max = 800;
+			if player.rogue.hp_max > 800 {
+				player.rogue.hp_current -= player.rogue.hp_max - 800;
+				player.rogue.hp_max = 800;
 			}
 		}
-		let s = format!("{}({})", rogue.hp_current, rogue.hp_max);
+		let s = format!("{}({})", player.rogue.hp_current, player.rogue.hp_max);
 		mvaddstr(STATS_ROW, 27, &s);
 		pad(&s, 8);
 	}
@@ -170,11 +169,11 @@ pub unsafe fn print_stats(stat_mask: usize, cur_level: usize) {
 		if label {
 			mvaddstr(STATS_ROW, 36, "Str: ");
 		}
-		if rogue.str_max > MAX_STRENGTH {
-			rogue.str_current -= rogue.str_max - MAX_STRENGTH;
-			rogue.str_max = MAX_STRENGTH;
+		if player.rogue.str_max > MAX_STRENGTH {
+			player.rogue.str_current -= player.rogue.str_max - MAX_STRENGTH;
+			player.rogue.str_max = MAX_STRENGTH;
 		}
-		let s = format!("{}({})", rogue.str_current + add_strength, rogue.str_max);
+		let s = format!("{}({})", player.rogue.str_current + add_strength, player.rogue.str_max);
 		mvaddstr(STATS_ROW, 41, &s);
 		pad(&s, 6);
 	}
@@ -182,10 +181,8 @@ pub unsafe fn print_stats(stat_mask: usize, cur_level: usize) {
 		if label {
 			mvaddstr(STATS_ROW, 48, "Arm: ");
 		}
-		if !rogue.armor.is_null() && (*rogue.armor).d_enchant > MAX_ARMOR {
-			(*rogue.armor).d_enchant = MAX_ARMOR;
-		}
-		let s = format!("{}", get_armor_class(&*rogue.armor));
+		player.maintain_armor_max_enchant();
+		let s = format!("{}", get_armor_class(player.armor()));
 		mvaddstr(STATS_ROW, 53, &s);
 		pad(&s, 2);
 	}
@@ -194,7 +191,7 @@ pub unsafe fn print_stats(stat_mask: usize, cur_level: usize) {
 			mvaddstr(STATS_ROW, 56, "Exp: ");
 		}
 		/*  Max exp taken care of in add_exp() */
-		let s = format!("{}/{}", rogue.exp, rogue.exp_points);
+		let s = format!("{}/{}", player.rogue.exp, player.rogue.exp_points);
 		mvaddstr(STATS_ROW, 61, &s);
 		pad(&s, 11);
 	}
@@ -219,7 +216,7 @@ pub fn save_screen() {
 	// boolean found_non_blank;
 	//
 	//
-	// if ((fp = fopen("rogue.screen", "w")) != NULL) {
+	// if ((fp = fopen("player.rogue.screen", "w")) != NULL) {
 	// 	for (i = 0; i < DROWS; i++) {
 	// 		found_non_blank = 0;
 	// 		for (j = (DCOLS - 1); j >= 0; j--) {

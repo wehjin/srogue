@@ -1,5 +1,10 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
+mod object_id;
+mod object_pack;
+mod potions;
+mod scrolls;
+
 use std::clone::Clone;
 use std::string::ToString;
 use ncurses::{chtype, mvaddch, mvinch};
@@ -10,7 +15,7 @@ use crate::odds::GOLD_PERCENT;
 use crate::prelude::*;
 use crate::prelude::armor_kind::{ARMORS, PLATE, SPLINT};
 use crate::prelude::food_kind::{FRUIT, RATION};
-use crate::prelude::item_usage::{being_wielded, BEING_WIELDED, being_worn, NOT_USED, on_either_hand, on_left_hand};
+use crate::prelude::item_usage::{BEING_USED, BEING_WIELDED, BEING_WORN, NOT_USED, ON_EITHER_HAND, ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::{ObjectWhat};
 use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
 use crate::prelude::potion_kind::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
@@ -20,7 +25,11 @@ use crate::prelude::scroll_kind::ScrollKind::{AggravateMonster, CreateMonster, E
 use crate::prelude::scroll_kind::SCROLLS;
 use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, MAX_WAND};
 use crate::prelude::weapon_kind::{ARROW, DAGGER, DART, SHURIKEN, WeaponKind, WEAPONS};
+pub use object_id::*;
 use crate::settings::fruit;
+pub use object_pack::*;
+use crate::player::Player;
+
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct id {
@@ -36,8 +45,11 @@ pub enum IdStatus {
 	Called,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct SaveObj {
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct
+obj {
+	id: ObjectId,
 	pub quantity: i16,
 	pub ichar: char,
 	pub kill_exp: isize,
@@ -61,106 +73,9 @@ pub struct SaveObj {
 	pub in_use_flags: u16,
 }
 
-impl SaveObj {
-	pub unsafe fn option_save_obj(obj: *const object) -> Option<SaveObj> {
-		if obj.is_null() {
-			None
-		} else {
-			Some(Self::from_obj(&*obj))
-		}
-	}
-	pub unsafe fn to_obj(&self, is_rogue: bool) -> *mut obj {
-		let heap_obj = alloc_object();
-		*heap_obj = obj {
-			quantity: self.quantity,
-			ichar: self.ichar,
-			kill_exp: self.kill_exp,
-			is_protected: self.is_protected,
-			is_cursed: self.is_cursed,
-			class: self.class,
-			identified: self.identified,
-			which_kind: self.which_kind,
-			o_row: self.o_row,
-			o_col: self.o_col,
-			o: self.o,
-			row: self.row,
-			col: self.col,
-			d_enchant: self.d_enchant,
-			quiver: self.quiver,
-			trow: self.trow,
-			tcol: self.tcol,
-			hit_enchant: self.hit_enchant,
-			what_is: self.what_is,
-			picked_up: self.picked_up,
-			in_use_flags: self.in_use_flags,
-			next_object: 0 as *mut obj,
-		};
-		if is_rogue {
-			if being_worn(&*heap_obj) {
-				do_wear(&mut *heap_obj);
-			} else if being_wielded(&*heap_obj) {
-				do_wield(&mut *heap_obj);
-			} else if on_either_hand(&*heap_obj) {
-				do_put_on(&mut *heap_obj, on_left_hand(&*heap_obj));
-			}
-		}
-		heap_obj
-	}
-	pub fn from_obj(obj: &obj) -> Self {
-		Self {
-			quantity: obj.quantity,
-			ichar: obj.ichar,
-			kill_exp: obj.kill_exp,
-			is_protected: obj.is_protected,
-			is_cursed: obj.is_cursed,
-			class: obj.class,
-			identified: obj.identified,
-			which_kind: obj.which_kind,
-			o_row: obj.o_row,
-			o_col: obj.o_col,
-			o: obj.o,
-			row: obj.row,
-			col: obj.col,
-			d_enchant: obj.d_enchant,
-			quiver: obj.quiver,
-			trow: obj.trow,
-			tcol: obj.tcol,
-			hit_enchant: obj.hit_enchant,
-			what_is: obj.what_is,
-			picked_up: obj.picked_up,
-			in_use_flags: obj.in_use_flags,
-		}
-	}
-}
-
-#[derive(Clone)]
-pub struct obj {
-	pub quantity: i16,
-	pub ichar: char,
-	pub kill_exp: isize,
-	pub is_protected: i16,
-	pub is_cursed: i16,
-	pub class: isize,
-	pub identified: bool,
-	pub which_kind: u16,
-	pub o_row: i64,
-	pub o_col: i64,
-	pub o: i16,
-	pub row: i64,
-	pub col: i64,
-	pub d_enchant: isize,
-	pub quiver: i16,
-	pub trow: i64,
-	pub tcol: i64,
-	pub hit_enchant: i16,
-	pub what_is: ObjectWhat,
-	pub picked_up: i16,
-	pub in_use_flags: u16,
-	pub next_object: *mut obj,
-}
-
-pub const fn empty_obj() -> obj {
+pub fn empty_obj() -> obj {
 	obj {
+		id: ObjectId::random(),
 		quantity: 0,
 		ichar: '\x00',
 		kill_exp: 0,
@@ -182,16 +97,34 @@ pub const fn empty_obj() -> obj {
 		what_is: ObjectWhat::None,
 		picked_up: 0,
 		in_use_flags: 0,
-		next_object: 0 as *mut obj,
 	}
 }
 
 impl obj {
-	pub fn next_monster(&self) -> *mut obj {
-		self.next_object
+	pub fn clone_with_new_id(&self) -> Self {
+		let mut new = self.clone();
+		new.id = ObjectId::random();
+		new
 	}
-	pub fn set_next_monster(&mut self, value: *mut obj) {
-		self.next_object = value;
+	pub unsafe fn to_name_with_new_quantity(&self, quantity: i16) -> String {
+		let mut temp_obj = self.clone();
+		temp_obj.quantity = quantity;
+		name_of(&temp_obj)
+	}
+	pub fn can_join_existing_pack_object(&self, existing_pack_obj: &Self) -> bool {
+		self.is_same_kind(existing_pack_obj) &&
+			(!self.is_weapon() || (self.is_arrow_or_throwing_weapon() && self.quiver == existing_pack_obj.quiver))
+	}
+	pub fn is_same_kind(&self, other: &Self) -> bool { self.what_is == other.what_is && self.which_kind == other.which_kind }
+	pub fn is_cursed(&self) -> bool { self.is_cursed != 0 }
+	pub fn is_being_used(&self) -> bool { self.in_use_flags & BEING_USED != 0 }
+	pub fn is_being_wielded(&self) -> bool { self.in_use_flags & BEING_WIELDED != 0 }
+	pub fn is_being_worn(&self) -> bool { self.in_use_flags & BEING_WORN != 0 }
+	pub fn is_on_either_hand(&self) -> bool { self.in_use_flags & ON_EITHER_HAND != 0 }
+	pub fn is_on_left_hand(&self) -> bool { self.in_use_flags & ON_LEFT_HAND != 0 }
+	pub fn is_on_right_hand(&self) -> bool { self.in_use_flags & ON_RIGHT_HAND != 0 }
+	pub fn is_at(&self, row: i64, col: i64) -> bool {
+		self.row == row && self.col == col
 	}
 	pub fn is_wielded_throwing_weapon(&self) -> bool {
 		self.is_wielded() && self.is_throwing_weapon()
@@ -203,6 +136,14 @@ impl obj {
 			false
 		}
 	}
+	pub fn is_arrow_or_throwing_weapon(&self) -> bool {
+		if let Some(kind) = self.weapon_kind() {
+			kind.is_arrow_or_throwing_weapon()
+		} else {
+			false
+		}
+	}
+	pub fn is_weapon(&self) -> bool { self.weapon_kind().is_some() }
 	pub fn is_wielded(&self) -> bool {
 		(self.in_use_flags & BEING_WIELDED) != 0
 	}
@@ -213,7 +154,13 @@ impl obj {
 			None
 		}
 	}
-
+	pub fn gold_quantity(&self) -> Option<usize> {
+		if self.what_is == Gold {
+			Some(self.quantity as usize)
+		} else {
+			None
+		}
+	}
 	pub fn base_damage(&self) -> DamageStat {
 		if let Some(kind) = self.weapon_kind() {
 			kind.damage()
@@ -227,32 +174,15 @@ impl obj {
 		let damage = damage + self.d_enchant as usize;
 		DamageStat { hits, damage }
 	}
+	pub fn id(&self) -> ObjectId { self.id }
 }
 
 pub type object = obj;
 
-pub static mut level_objects: object = empty_obj();
+pub static mut level_objects: ObjectPack = ObjectPack::new();
 pub static mut foods: i16 = 0;
 pub static mut party_counter: usize = 0;
 pub static mut free_list: *mut object = 0 as *mut object;
-pub static mut rogue: Fighter = Fighter {
-	armor: 0 as *mut object,
-	weapon: 0 as *mut object,
-	left_ring: 0 as *mut object,
-	right_ring: 0 as *mut object,
-	hp_current: 12,
-	hp_max: 12,
-	str_current: 16,
-	str_max: 16,
-	pack: empty_obj(),
-	gold: 0,
-	exp: 1,
-	exp_points: 0,
-	row: 0,
-	col: 0,
-	fchar: '@',
-	moves_left: 1250,
-};
 pub static mut id_potions: [id; POTIONS] = {
 	[
 		{
@@ -788,8 +718,8 @@ pub unsafe fn put_objects(player: &Player, level: &mut Level) {
 		party_counter = next_party(player.cur_depth);
 	}
 	for _i in 0..n {
-		let obj = gr_object(player.cur_depth);
-		rand_place(&mut *obj, level);
+		let mut obj = gr_object(player.cur_depth);
+		rand_place(obj, player, level);
 	}
 	put_gold(player.cur_depth, level);
 }
@@ -816,48 +746,52 @@ pub unsafe fn put_gold(level_depth: usize, level: &mut Level) {
 }
 
 pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: usize, level: &mut Level) {
-	let obj = alloc_object();
-	(*obj).row = row;
-	(*obj).col = col;
-	(*obj).what_is = Gold;
-	(*obj).quantity = get_rand((2 * cur_level) as i16, (16 * cur_level) as i16);
+	let mut obj = alloc_object();
+	obj.row = row;
+	obj.col = col;
+	obj.what_is = Gold;
+	obj.quantity = get_rand((2 * cur_level) as i16, (16 * cur_level) as i16);
 	if is_maze {
-		(*obj).quantity += (*obj).quantity / 2;
+		obj.quantity += obj.quantity / 2;
 	}
 	level.dungeon[row as usize][col as usize].add_kind(CellKind::Object);
-	add_to_pack(obj, &mut level_objects, 0);
+	level_objects.add(obj);
 }
 
 
-pub unsafe fn place_at(obj: &mut object, row: i64, col: i64, level: &mut Level) {
+pub unsafe fn place_at(mut obj: object, row: i64, col: i64, level: &mut Level) {
 	obj.row = row;
 	obj.col = col;
 	level.dungeon[row as usize][col as usize].add_kind(CellKind::Object);
-	add_to_pack(obj, &mut level_objects, 0);
+	level_objects.add(obj);
 }
 
-pub unsafe fn object_at(pack: &object, row: i64, col: i64) -> *mut object {
-	let mut obj = pack.next_object;
-	while !obj.is_null() && ((*obj).row != row || (*obj).col != col) {
-		obj = (*obj).next_object;
+impl Player {
+	pub fn object_id_with_letter(&self, ch: char) -> Option<ObjectId> {
+		self.obj_id_if(|obj| obj.ichar == ch)
 	}
-	obj
 }
 
-pub unsafe fn get_letter_object(ch: char) -> *mut object {
-	let mut obj: *mut object = 0 as *mut object;
-	obj = rogue.pack.next_object;
-	while !obj.is_null() && (*obj).ichar != ch {
-		obj = (*obj).next_object;
+impl Player {
+	pub fn object_what(&self, obj_id: ObjectId) -> ObjectWhat {
+		if let Some(obj) = self.object(obj_id) { obj.what_is } else { ObjectWhat::None }
 	}
-	return obj;
-}
+	pub fn object_kind(&self, obj_id: ObjectId) -> u16 {
+		if let Some(obj) = self.object(obj_id) { obj.which_kind } else { 0 }
+	}
+	pub fn check_object(&self, obj_id: ObjectId, f: impl Fn(&obj) -> bool) -> bool {
+		self.pack().check_object(obj_id, f)
+	}
+	pub fn obj_id_if(&self, f: impl Fn(&obj) -> bool) -> Option<ObjectId> {
+		self.pack().find_id(f)
+	}
+	pub fn pack(&self) -> &ObjectPack { &self.rogue.pack }
 
-pub unsafe fn free_stuff(mut obj_list: *mut object) {
-	while !(*obj_list).next_object.is_null() {
-		let obj = (*obj_list).next_object;
-		(*obj_list).next_object = (*(*obj_list).next_object).next_object;
-		free_object(obj);
+	pub fn object_with_letter(&self, ch: char) -> Option<&obj> {
+		self.find_pack_obj(|obj| obj.ichar == ch)
+	}
+	pub fn object_with_letter_mut(&mut self, ch: char) -> Option<&mut obj> {
+		self.find_pack_obj_mut(|obj| obj.ichar == ch)
 	}
 }
 
@@ -881,39 +815,39 @@ pub unsafe fn name_of(obj: &object) -> String {
 	}
 }
 
-pub unsafe fn gr_object(cur_level: usize) -> *mut object {
+pub unsafe fn gr_object(cur_level: usize) -> object {
 	let mut obj = alloc_object();
 	if foods < (cur_level / 2) as i16 {
-		(*obj).what_is = Food;
+		obj.what_is = Food;
 		foods += 1;
 	} else {
-		(*obj).what_is = gr_what_is();
+		obj.what_is = gr_what_is();
 	}
-	match (*obj).what_is {
+	match obj.what_is {
 		Scroll => {
-			gr_scroll(&mut *obj);
+			gr_scroll(&mut obj);
 		}
 		Potion => {
-			gr_potion(&mut *obj);
+			gr_potion(&mut obj);
 		}
 		Weapon => {
-			gr_weapon(&mut *obj, true);
+			gr_weapon(&mut obj, true);
 		}
 		Armor => {
-			gr_armor(&mut *obj);
+			gr_armor(&mut obj);
 		}
 		Wand => {
-			gr_wand(&mut *obj);
+			gr_wand(&mut obj);
 		}
 		Food => {
-			get_food(&mut *obj, false);
+			get_food(&mut obj, false);
 		}
 		Ring => {
-			gr_ring(&mut *obj, true);
+			gr_ring(&mut obj, true);
 		}
 		_ => {}
 	}
-	return obj;
+	obj
 }
 
 
@@ -1085,41 +1019,28 @@ pub fn get_food(obj: &mut obj, force_ration: bool) {
 	}
 }
 
-pub unsafe fn put_stairs(level: &mut Level) {
+pub unsafe fn put_stairs(player: &Player, level: &mut Level) {
 	let mut row = 0;
 	let mut col = 0;
-	gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel], level);
+	gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel], player, level);
 	level.dungeon[row as usize][col as usize].add_kind(CellKind::Stairs);
 }
 
-pub unsafe fn get_armor_class(obj: *const object) -> isize {
-	(*obj).class + (*obj).d_enchant
+pub fn get_armor_class(obj: Option<&obj>) -> isize {
+	if let Some(armor) = obj {
+		armor.class + armor.d_enchant
+	} else { 0 }
 }
 
-pub unsafe fn alloc_object() -> *mut object {
-	let mut obj: *mut object = 0 as *mut object;
-	if !free_list.is_null() {
-		obj = free_list;
-		free_list = (*free_list).next_object;
-	} else {
-		obj = md_malloc(core::mem::size_of::<object>() as i64) as *mut object;
-		if obj.is_null() {
-			message("cannot allocate object, saving game", 0);
-			save_into_file(ERROR_FILE, unimplemented!("Acquire game state or move error handling to higher level"));
-		}
-	}
-	(*obj).quantity = 1;
-	(*obj).ichar = 'L';
-	(*obj).is_cursed = 0;
-	(*obj).picked_up = (*obj).is_cursed;
-	(*obj).in_use_flags = NOT_USED;
-	(*obj).identified = false;
+pub fn alloc_object() -> object {
+	let mut obj = empty_obj();
+	obj.quantity = 1;
+	obj.ichar = 'L';
+	obj.is_cursed = 0;
+	obj.picked_up = 0;
+	obj.in_use_flags = NOT_USED;
+	obj.identified = false;
 	return obj;
-}
-
-pub unsafe fn free_object(obj: *mut object) {
-	(*obj).next_object = free_list;
-	free_list = obj;
 }
 
 pub unsafe fn make_party(level_depth: usize, level: &mut Level) {
@@ -1131,9 +1052,8 @@ pub unsafe fn make_party(level_depth: usize, level: &mut Level) {
 	}
 }
 
-pub unsafe fn show_objects(level: &Level) {
-	let mut obj = level_objects.next_object;
-	while !obj.is_null() {
+pub unsafe fn show_objects(player: &Player, level: &Level) {
+	for obj in level_objects.objects() {
 		let row = (*obj).row;
 		let col = (*obj).col;
 		let rc = get_mask_char((*obj).what_is) as chtype;
@@ -1144,10 +1064,9 @@ pub unsafe fn show_objects(level: &Level) {
 			}
 		}
 		let mc = mvinch(row as i32, col as i32);
-		if (mc < 'A' as chtype || mc > 'Z' as chtype) && (row != rogue.row || col != rogue.col) {
+		if (mc < 'A' as chtype || mc > 'Z' as chtype) && (row != player.rogue.row || col != player.rogue.col) {
 			mvaddch(row as i32, col as i32, rc);
 		}
-		obj = (*obj).next_object;
 	}
 	for monster in &MASH.monsters {
 		if monster.m_flags.imitates {
@@ -1156,21 +1075,21 @@ pub unsafe fn show_objects(level: &Level) {
 	}
 }
 
-pub unsafe fn put_amulet(level: &mut Level) {
+pub unsafe fn put_amulet(player: &Player, level: &mut Level) {
 	let mut obj = alloc_object();
-	(*obj).what_is = Amulet;
-	rand_place(&mut *obj, level);
+	obj.what_is = Amulet;
+	rand_place(obj, player, level);
 }
 
-pub unsafe fn rand_place(obj: &mut obj, level: &mut Level) {
+pub unsafe fn rand_place(obj: obj, player: &Player, level: &mut Level) {
 	let mut row = 0;
 	let mut col = 0;
-	gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel], level);
+	gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel], player, level);
 	place_at(obj, row, col, level);
 }
 
-pub unsafe fn new_object_for_wizard() {
-	if pack_count(0 as *mut object) >= MAX_PACK_COUNT {
+pub unsafe fn new_object_for_wizard(player: &mut Player) {
+	if player.pack_weight_with_new_object(None) >= MAX_PACK_COUNT {
 		message("pack full", 0);
 		return;
 	}
@@ -1195,55 +1114,54 @@ pub unsafe fn new_object_for_wizard() {
 	if ch == CANCEL {
 		return;
 	}
-	let obj = alloc_object();
+	let mut obj = alloc_object();
 	let max_kind = match ch {
 		'!' => {
-			(*obj).what_is = Potion;
+			obj.what_is = Potion;
 			Some(POTIONS - 1)
 		}
 		'?' => {
-			(*obj).what_is = Scroll;
+			obj.what_is = Scroll;
 			Some(SCROLLS - 1)
 		}
 		',' => {
-			(*obj).what_is = Amulet;
+			obj.what_is = Amulet;
 			None
 		}
 		':' => {
-			get_food(&mut *obj, false);
+			get_food(&mut obj, false);
 			None
 		}
 		')' => {
-			gr_weapon(&mut *obj, false);
+			gr_weapon(&mut obj, false);
 			Some(WEAPONS - 1)
 		}
 		']' => {
-			gr_armor(&mut *obj);
+			gr_armor(&mut obj);
 			Some(ARMORS - 1)
 		}
 		'/' => {
-			gr_wand(&mut *obj);
+			gr_wand(&mut obj);
 			Some(MAX_WAND - 1)
 		}
 		'=' => {
-			(*obj).what_is = Ring;
+			obj.what_is = Ring;
 			Some(RINGS - 1)
 		}
 		_ => None
 	};
 	if let Some(max_kind) = max_kind {
 		if let Some(kind) = get_kind(max_kind) {
-			(*obj).which_kind = kind as u16;
-			if (*obj).what_is == Ring {
-				gr_ring(&mut *obj, false);
+			obj.which_kind = kind as u16;
+			if obj.what_is == Ring {
+				gr_ring(&mut obj, false);
 			}
 		} else {
-			free_object(obj);
 			return;
 		}
 	}
-	message(&get_desc(&*obj), 0);
-	add_to_pack(obj, &mut rogue.pack, 1);
+	message(&get_obj_desc(&obj), 0);
+	player.combine_or_add_item_to_pack(obj);
 }
 
 unsafe fn get_kind(max_kind: usize) -> Option<usize> {

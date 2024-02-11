@@ -27,7 +27,7 @@ pub unsafe fn play_level(game: &mut GameState) {
 				trap_door = false;
 				return;
 			}
-			mv(rogue.row as i32, rogue.col as i32);
+			mv(game.player.rogue.row as i32, game.player.rogue.col as i32);
 			refresh();
 			let ch = rgetchar();
 			check_message();
@@ -40,46 +40,46 @@ pub unsafe fn play_level(game: &mut GameState) {
 				Instructions();
 			}
 			'.' => {
-				rest(if count > 0 { count } else { 1 } as c_int, &game.player, &mut game.level);
+				rest(if count > 0 { count } else { 1 } as c_int, &mut game.player, &mut game.level);
 			}
 			's' => {
-				search(if count > 0 { count } else { 1 } as usize, false, &game.player, &mut game.level);
+				search(if count > 0 { count } else { 1 } as usize, false, &mut game.player, &mut game.level);
 			}
 			'i' => {
-				inventory(&mut rogue.pack, AllObjects);
+				inventory(&mut game.player.rogue.pack, AllObjects);
 			}
 			'f' => {
-				fight(false, &game.player, &mut game.level);
+				fight(false, &mut game.player, &mut game.level);
 			}
 			'F' => {
-				fight(true, &game.player, &mut game.level);
+				fight(true, &mut game.player, &mut game.level);
 			}
 			'h' | 'j' | 'k' | 'l' | 'y' | 'u' | 'n' | 'b' => {
-				one_move_rogue(ch, true, &game.player, &mut game.level);
+				one_move_rogue(ch, true, &mut game.player, &mut game.level);
 			}
 			'H' | 'J' | 'K' | 'L' | 'B' | 'Y' | 'U' | 'N' | '\x08' | '\x0a' | '\x0b' | '\x0c' | '\x19' | '\x15' | '\x0e' | '\x02' => {
-				multiple_move_rogue(ch as i64, &game.player, &mut game.level);
+				multiple_move_rogue(ch as i64, &mut game.player, &mut game.level);
 			}
 			'e' => {
-				eat(&game.player, &mut game.level);
+				eat(&mut game.player, &mut game.level);
 			}
 			'q' => {
-				quaff(&game.player, &mut game.level);
+				quaff(&mut game.player, &mut game.level);
 			}
 			'r' => {
-				read_scroll(&game.player, &mut game.level);
+				read_scroll(&mut game.player, &mut game.level);
 			}
 			'm' => {
-				move_onto(&game.player, &mut game.level);
+				move_onto(&mut game.player, &mut game.level);
 			}
 			'd' => {
-				drop_0(&game.player, &mut game.level);
+				drop_0(&mut game.player, &mut game.level);
 			}
 			'P' => {
-				put_on_ring(&game.player, &mut game.level);
+				put_on_ring(&mut game.player, &mut game.level);
 			}
 			'R' => {
-				remove_ring(&game.player, &mut game.level);
+				remove_ring(&mut game.player, &mut game.level);
 			}
 			'\x10' => {
 				remessage();
@@ -88,7 +88,7 @@ pub unsafe fn play_level(game: &mut GameState) {
 				wizardize();
 			}
 			'>' => {
-				if drop_check(&game.level) {
+				if drop_check(&game.player, &game.level) {
 					return;
 				}
 			}
@@ -98,43 +98,43 @@ pub unsafe fn play_level(game: &mut GameState) {
 				}
 			}
 			')' | ']' => {
-				inv_armor_weapon(ch == ')');
+				inv_armor_weapon(ch == ')', &mut game.player);
 			}
 			'=' => {
-				inv_rings();
+				inv_rings(&game.player);
 			}
 			'^' => {
-				id_trap(&game.level);
+				id_trap(&game.player, &game.level);
 			}
 			'I' => {
-				single_inv(None);
+				single_inv(None, &mut game.player);
 			}
 			'T' => {
-				take_off(&game.player, &mut game.level);
+				take_off(&mut game.player, &mut game.level);
 			}
 			'W' => {
-				wear(&game.player, &mut game.level);
+				wear(&mut game.player, &mut game.level);
 			}
 			'w' => {
-				wield(&game.player, &mut game.level);
+				wield(&mut game.player, &mut game.level);
 			}
 			'c' => {
-				call_it();
+				call_it(&game.player);
 			}
 			'z' => {
-				zapp(&game.player, &mut game.level);
+				zapp(&mut game.player, &mut game.level);
 			}
 			't' => {
-				throw(&game.player, &mut game.level);
+				throw(&mut game.player, &mut game.level);
 			}
 			'v' => {
 				message("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims", 0);
 			}
 			'Q' => {
-				quit(false, game.player.max_depth);
+				quit(false, &mut game.player);
 			}
 			'0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
-				mv(rogue.row as i32, rogue.col as i32);
+				mv(game.player.rogue.row as i32, game.player.rogue.col as i32);
 				refresh();
 				let mut count_ch = ch;
 				loop {
@@ -174,17 +174,17 @@ pub unsafe fn play_level(game: &mut GameState) {
 			}
 			'\x0f' => {
 				if wizard {
-					show_objects(&game.level);
+					show_objects(&game.player, &game.level);
 				} else {
 					message(unknown_command, 0);
 				}
 			}
 			'\x01' => {
-				show_average_hp();
+				show_average_hp(&game.player);
 			}
 			'\x03' => {
 				if wizard {
-					new_object_for_wizard();
+					new_object_for_wizard(&mut game.player);
 				} else {
 					message(unknown_command, 0);
 				}
@@ -200,7 +200,7 @@ pub unsafe fn play_level(game: &mut GameState) {
 				save_game(game);
 			}
 			',' => {
-				kick_into_pack(&game.player, &mut game.level);
+				kick_into_pack(&mut game.player, &mut game.level);
 			}
 			_ => {
 				message(unknown_command, 0);

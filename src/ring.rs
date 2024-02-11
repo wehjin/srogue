@@ -1,5 +1,7 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
+use crate::player::{Player};
+use crate::player::rings::HandUsage;
 use crate::prelude::*;
 use crate::prelude::item_usage::{ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat::Ring;
@@ -9,7 +11,6 @@ use crate::prelude::stat_const::STAT_STRENGTH;
 
 
 pub static left_or_right: &'static str = "left or right hand?";
-pub static no_ring: &'static str = "there's no ring on that hand";
 #[no_mangle]
 pub static mut stealthy: libc::c_short = 0;
 pub static mut r_rings: isize = 0;
@@ -25,53 +26,66 @@ pub static mut r_see_invisible: bool = false;
 pub static mut sustain_strength: bool = false;
 pub static mut maintain_armor: bool = false;
 
-pub unsafe fn put_on_ring(player: &Player, level: &mut Level) {
-	if r_rings == 2 {
+pub unsafe fn put_on_ring(player: &mut Player, level: &mut Level) {
+	if player.hand_usage() == HandUsage::Both {
 		message("wearing two rings already", 0);
 		return;
 	}
-	let ch = pack_letter("put on what?", Rings);
+	let ch = pack_letter("put on what?", Rings, player);
 	if ch == CANCEL {
 		return;
 	}
-	let ring = get_letter_object(ch);
-	if ring.is_null() {
-		message("no such item.", 0);
-		return;
+	match player.object_id_with_letter(ch) {
+		None => {
+			message("no such item.", 0);
+			return;
+		}
+		Some(obj_id) => {
+			if player.object_what(obj_id) != Ring {
+				message("that's not a ring", 0);
+				return;
+			}
+			let ring_id = obj_id;
+			if player.check_object(ring_id, obj::is_on_either_hand) {
+				message("that ring is already being worn", 0);
+				return;
+			}
+			let hand = match player.hand_usage() {
+				HandUsage::None => match ask_ring_hand() {
+					None => {
+						check_message();
+						return;
+					}
+					Some(ring_hand) => ring_hand,
+				},
+				HandUsage::Left => PlayerHand::Right,
+				HandUsage::Right => PlayerHand::Left,
+				HandUsage::Both => unreachable!("both hands checked at top of put_on_ring")
+			};
+			if !player.hand_is_free(hand) {
+				check_message();
+				message("there's already a ring on that hand", 0);
+				return;
+			}
+			player.put_ring(ring_id, hand);
+			ring_stats(true, player, level);
+			check_message();
+			{
+				let ring = player.object(ring_id).expect("ring in pack");
+				let msg = get_obj_desc(ring);
+				message(&msg, 0);
+			}
+			reg_move(player, level);
+		}
 	}
-	if (*ring).what_is != Ring {
-		message("that's not a ring", 0);
-		return;
+}
+
+unsafe fn ask_ring_hand() -> Option<PlayerHand> {
+	match ask_left_or_right() {
+		'l' => Some(PlayerHand::Left),
+		'r' => Some(PlayerHand::Right),
+		_ => None,
 	}
-	if (*ring).in_use_flags & (ON_LEFT_HAND | ON_RIGHT_HAND) != 0 {
-		message("that ring is already being worn", 0);
-		return;
-	}
-	let mut ch = char::default();
-	if r_rings == 1 {
-		ch = if !rogue.left_ring.is_null() { 'r' } else { 'l' };
-	} else {
-		ch = ask_left_or_right();
-	}
-	if ch != 'l' && ch != 'r' {
-		check_message();
-		return;
-	}
-	if ch == 'l' && !rogue.left_ring.is_null() || ch == 'r' && !rogue.right_ring.is_null()
-	{
-		check_message();
-		message("there's already a ring on that hand", 0);
-		return;
-	}
-	if ch == 'l' {
-		do_put_on(&mut *ring, true);
-	} else {
-		do_put_on(&mut *ring, false);
-	}
-	ring_stats(true, player.cur_depth, level);
-	check_message();
-	message(&get_desc(&*ring), 0);
-	reg_move(player, level);
 }
 
 unsafe fn ask_left_or_right() -> char {
@@ -87,63 +101,44 @@ unsafe fn ask_left_or_right() -> char {
 	ch
 }
 
-pub unsafe fn do_put_on(ring: &mut obj, on_left: bool) {
-	if on_left {
-		ring.in_use_flags |= ON_LEFT_HAND;
-		rogue.left_ring = ring;
-	} else {
-		ring.in_use_flags |= ON_RIGHT_HAND;
-		rogue.right_ring = ring;
-	}
-}
-
-pub unsafe fn remove_ring(player: &Player, level: &mut Level) {
-	let mut left = false;
-	let mut right = false;
-	if r_rings == 0 {
-		inv_rings();
-	} else if !rogue.left_ring.is_null() && rogue.right_ring.is_null() {
-		left = true;
-	} else if rogue.left_ring.is_null() && !rogue.right_ring.is_null() {
-		right = true;
-	} else {
-		let ch = ask_left_or_right();
-		left = ch == 'l';
-		right = ch == 'r';
-		check_message();
-	}
-	if left || right {
-		let mut ring: *mut obj = 0 as *mut obj;
-		if left {
-			if !rogue.left_ring.is_null() {
-				ring = rogue.left_ring;
-			} else {
-				message(no_ring, 0);
+pub unsafe fn remove_ring(player: &mut Player, level: &mut Level) {
+	let hand = match player.hand_usage() {
+		HandUsage::None => {
+			inv_rings(player);
+			return;
+		}
+		HandUsage::Left => PlayerHand::Left,
+		HandUsage::Right => PlayerHand::Right,
+		HandUsage::Both => {
+			let asked = ask_ring_hand();
+			check_message();
+			match asked {
+				None => { return; }
+				Some(hand) => hand
 			}
-		} else if !rogue.right_ring.is_null() {
-			ring = rogue.right_ring;
-		} else {
-			message(no_ring, 0);
 		}
-		if (*ring).is_cursed != 0 {
-			message(CURSE_MESSAGE, 0);
-		} else {
-			un_put_on(ring, player.cur_depth, level);
-			message(&format!("removed {}", get_desc(&*ring)), 0);
-			reg_move(player, level);
-		}
+	};
+	if player.ring_id(hand).is_none() {
+		message("there's no ring on that hand", 0);
+		return;
 	}
+	if player.check_ring(hand, obj::is_cursed) {
+		message(CURSE_MESSAGE, 0);
+		return;
+	}
+	let removed_id = un_put_hand(hand, player, level).expect("some removed_id");
+	{
+		let removed_obj = player.object(removed_id).expect("some removed_obj");
+		let msg = format!("removed {}", get_obj_desc(removed_obj));
+		message(&msg, 0);
+	}
+	reg_move(player, level);
 }
 
-pub unsafe fn un_put_on(ring: *mut obj, level_depth: usize, level: &mut Level) {
-	if !ring.is_null() && ((*ring).in_use_flags & ON_LEFT_HAND != 0) {
-		(*ring).in_use_flags &= !ON_LEFT_HAND;
-		rogue.left_ring = 0 as *mut object;
-	} else if !ring.is_null() && ((*ring).in_use_flags & ON_RIGHT_HAND != 0) {
-		(*ring).in_use_flags &= !ON_RIGHT_HAND;
-		rogue.right_ring = 0 as *mut object;
-	}
-	ring_stats(true, level_depth, level);
+pub unsafe fn un_put_hand(hand: PlayerHand, player: &mut Player, level: &mut Level) -> Option<ObjectId> {
+	let un_put_id = player.un_put_ring(hand);
+	ring_stats(true, player, level);
+	un_put_id
 }
 
 pub fn gr_ring(ring: &mut object, assign_wk: bool) {
@@ -172,15 +167,15 @@ pub fn gr_ring(ring: &mut object, assign_wk: bool) {
 	}
 }
 
-pub unsafe fn inv_rings() {
+pub unsafe fn inv_rings(player: &Player) {
 	if r_rings == 0 {
 		message("not wearing any rings", 0);
 	} else {
-		if !rogue.left_ring.is_null() {
-			message(&get_desc(&*rogue.left_ring), 0);
-		}
-		if !rogue.right_ring.is_null() {
-			message(&get_desc(&*rogue.right_ring), 0);
+		for ring_hand in PlayerHand::ALL_HANDS {
+			if let Some(ring) = player.ring(ring_hand) {
+				let msg = get_obj_desc(ring);
+				message(&msg, 0);
+			}
 		}
 	}
 	if wizard {
@@ -194,17 +189,26 @@ pub unsafe fn inv_rings() {
 	}
 }
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum PlayerHand { Left, Right }
 
-enum RingHand {
-	Left,
-	Right,
+impl PlayerHand {
+	pub fn use_flag(&self) -> u16 {
+		match self {
+			PlayerHand::Left => ON_LEFT_HAND,
+			PlayerHand::Right => ON_RIGHT_HAND,
+		}
+	}
+	pub fn invert(&self) -> Self {
+		match self {
+			PlayerHand::Left => PlayerHand::Right,
+			PlayerHand::Right => PlayerHand::Left
+		}
+	}
+	pub const ALL_HANDS: [PlayerHand; 2] = [PlayerHand::Left, PlayerHand::Right];
 }
 
-impl RingHand {
-	pub const ALL: &'static [RingHand; 2] = &[RingHand::Left, RingHand::Right];
-}
-
-pub unsafe fn ring_stats(print: bool, level_depth: usize, level: &mut Level) {
+pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 	r_rings = 0;
 	e_rings = 0;
 	r_teleport = false;
@@ -216,33 +220,32 @@ pub unsafe fn ring_stats(print: bool, level_depth: usize, level: &mut Level) {
 	maintain_armor = false;
 	auto_search = 0;
 
-	for ring_hand in RingHand::ALL {
-		let ring = match ring_hand {
-			RingHand::Left => rogue.left_ring,
-			RingHand::Right => rogue.right_ring,
-		};
-		if ring.is_null() {
-			continue;
-		}
-		let ring = &*ring;
-		r_rings += 1;
-		e_rings += 1;
-		match RingKind::from_index((*ring).which_kind as usize) {
-			RingKind::Stealth => { stealthy += 1; }
-			RingKind::RTeleport => { r_teleport = true; }
-			RingKind::Regeneration => { regeneration += 1; }
-			RingKind::SlowDigest => { e_rings -= 2; }
-			RingKind::AddStrength => { add_strength += ring.class; }
-			RingKind::SustainStrength => { sustain_strength = true; }
-			RingKind::Dexterity => { ring_exp += ring.class; }
-			RingKind::Adornment => {}
-			RingKind::RSeeInvisible => { r_see_invisible = true; }
-			RingKind::MaintainArmor => { maintain_armor = true; }
-			RingKind::Searching => { auto_search += 2; }
+	for ring_hand in PlayerHand::ALL_HANDS {
+		match player.ring(ring_hand) {
+			None => {
+				continue;
+			}
+			Some(ring) => {
+				r_rings += 1;
+				e_rings += 1;
+				match RingKind::from_index(ring.which_kind as usize) {
+					RingKind::Stealth => { stealthy += 1; }
+					RingKind::RTeleport => { r_teleport = true; }
+					RingKind::Regeneration => { regeneration += 1; }
+					RingKind::SlowDigest => { e_rings -= 2; }
+					RingKind::AddStrength => { add_strength += ring.class; }
+					RingKind::SustainStrength => { sustain_strength = true; }
+					RingKind::Dexterity => { ring_exp += ring.class; }
+					RingKind::Adornment => {}
+					RingKind::RSeeInvisible => { r_see_invisible = true; }
+					RingKind::MaintainArmor => { maintain_armor = true; }
+					RingKind::Searching => { auto_search += 2; }
+				}
+			}
 		}
 	}
 	if print {
-		print_stats(STAT_STRENGTH, level_depth);
-		relight(level);
+		print_stats(STAT_STRENGTH, player);
+		relight(player, level);
 	}
 }

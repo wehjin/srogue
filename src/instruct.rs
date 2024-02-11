@@ -5,7 +5,7 @@ use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::prelude::*;
 
-static INSTRUCTIONS_FILE: &'static str = "/usr/games/rogue.instr";
+static INSTRUCTIONS_FILE: &'static str = "/usr/games/player.rogue.instr";
 
 #[no_mangle]
 pub unsafe extern "C" fn Instructions() {

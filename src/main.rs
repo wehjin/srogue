@@ -18,6 +18,7 @@ mod r#move;
 mod objects;
 mod pack;
 mod play;
+mod player;
 mod random;
 mod ring;
 mod room;
@@ -28,7 +29,6 @@ mod throw;
 mod trap;
 mod r#use;
 mod zap;
-
 mod prelude;
 
 use libc::{setuid, perror, geteuid, getuid, uid_t};
@@ -74,18 +74,18 @@ pub fn main() {
 	let (mut game, mut restored) = unsafe { init() };
 	loop {
 		if !restored {
-			unsafe { clear_level(&mut game.level); }
+			unsafe { clear_level(&mut game.player, &mut game.level); }
 			game.player.descend();
-			unsafe { make_level(game.player.cur_depth, &mut game.level) };
+			unsafe { make_level(&game.player, &mut game.level) };
 			unsafe { put_objects(&game.player, &mut game.level); }
-			unsafe { put_stairs(&mut game.level); }
-			unsafe { add_traps(game.player.cur_depth, &mut game.level); }
-			unsafe { put_mons(game.player.cur_depth, &mut game.level); }
-			unsafe { put_player(game.level.party_room, &mut game.level); }
-			unsafe { print_stats(STAT_ALL, game.player.cur_depth); }
+			unsafe { put_stairs(&mut game.player, &mut game.level); }
+			unsafe { add_traps(&game.player, &mut game.level); }
+			unsafe { put_mons(&game.player, &mut game.level); }
+			unsafe { put_player(game.level.party_room, &mut game.player, &mut game.level); }
+			unsafe { print_stats(STAT_ALL, &mut game.player); }
 		}
 		unsafe { play_level(&mut game); }
-		unsafe { free_stuff(&mut level_objects); }
+		unsafe { level_objects.clear(); }
 		unsafe { MASH.clear(); }
 		restored = false;
 	}
