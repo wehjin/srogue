@@ -28,7 +28,8 @@ pub use object_id::*;
 use crate::settings::fruit;
 pub use object_pack::*;
 use crate::player::Player;
-use crate::weapons::{ARROW, DAGGER, DART, SHURIKEN, WeaponKind, WEAPONS};
+use crate::weapons::{WeaponKind};
+use crate::weapons::constants::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
 
 
 #[derive(Clone, Serialize, Deserialize)]

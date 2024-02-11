@@ -1,0 +1,9 @@
+pub const BOW: u16 = 0;
+pub const DART: u16 = 1;
+pub const ARROW: u16 = 2;
+pub const DAGGER: u16 = 3;
+pub const SHURIKEN: u16 = 4;
+pub const MACE: u16 = 5;
+pub const LONG_SWORD: u16 = 6;
+pub const TWO_HANDED_SWORD: u16 = 7;
+pub const WEAPONS: usize = 8;

@@ -17,7 +17,7 @@ use crate::prelude::potion_kind::POTIONS;
 use crate::prelude::scroll_kind::SCROLLS;
 use crate::prelude::wand_kind::MAX_WAND;
 use crate::settings::{login_name, nick_name};
-use crate::weapons::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
+use crate::weapons::constants::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
 
 pub const SCORE_FILE: &'static str = "/usr/games/player.rogue.scores";
 
