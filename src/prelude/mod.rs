@@ -53,7 +53,6 @@ pub const MAX_HP: isize = 800;
 pub const MAX_STRENGTH: isize = 99;
 pub const LAST_DUNGEON: usize = 99;
 pub const INIT_HP: isize = 12;
-pub const PARTY_TIME: usize = 10;   /* one party somewhere in each 10 level span */
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
 pub struct DungeonSpot {

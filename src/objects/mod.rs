@@ -1101,10 +1101,11 @@ unsafe fn get_kind(max_kind: usize) -> Option<usize> {
 	good_kind
 }
 
-pub unsafe fn next_party(cur_level: usize) -> usize {
+fn next_party(cur_level: usize) -> usize {
+	const PARTY_TIME: usize = 10;   /* one party somewhere in each 10 level span */
 	let mut n = cur_level;
 	while (n % PARTY_TIME) > 0 {
 		n += 1;
 	}
-	return get_rand(n + 1, n + PARTY_TIME);
+	get_rand(n + 1, n + PARTY_TIME)
 }
