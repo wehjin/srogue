@@ -229,7 +229,7 @@ pub unsafe fn connect_rooms(room1: usize, room2: usize, level_depth: usize, leve
 	}
 }
 
-pub unsafe fn clear_level(player: &mut Player, level: &mut Level) {
+pub fn clear_level(player: &mut Player, level: &mut Level) {
 	level.clear();
 	player.reset_spot();
 	ncurses::clear();
