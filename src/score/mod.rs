@@ -10,7 +10,7 @@ use crate::{settings, turn_into_games, turn_into_user};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::objects::IdStatus::Identified;
 use crate::player::Player;
-use crate::prelude::armor_kind::ARMORS;
+use crate::armors::constants::ARMORS;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::potion_kind::POTIONS;

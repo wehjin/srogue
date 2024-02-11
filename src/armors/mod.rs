@@ -1,14 +1,8 @@
 use serde::{Deserialize, Serialize};
-use crate::prelude::armor_kind::ArmorKind::{Banded, Chain, Leather, Plate, Ringmail, Scale, Splint};
+use crate::armors::ArmorKind::{Banded, Chain, Leather, Plate, Ringmail, Scale, Splint};
+use crate::armors::constants::ARMORS;
 
-pub const LEATHER: u16 = 0;
-pub const RINGMAIL: u16 = 1;
-pub const SCALE: u16 = 2;
-pub const CHAIN: u16 = 3;
-pub const BANDED: u16 = 4;
-pub const SPLINT: u16 = 5;
-pub const PLATE: u16 = 6;
-pub const ARMORS: usize = 7;
+pub(crate) mod constants;
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ArmorKind {

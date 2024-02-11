@@ -14,10 +14,9 @@ use ObjectWhat::{Armor, Potion, Scroll, Weapon};
 use crate::level::constants::MAX_ROOM;
 use crate::odds::GOLD_PERCENT;
 use crate::prelude::*;
-use crate::prelude::armor_kind::{ARMORS, PLATE, SPLINT};
 use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::item_usage::{BEING_USED, BEING_WIELDED, BEING_WORN, NOT_USED, ON_EITHER_HAND, ON_LEFT_HAND, ON_RIGHT_HAND};
-use crate::prelude::object_what::{ObjectWhat};
+use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
 use crate::prelude::potion_kind::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
 use crate::prelude::potion_kind::{PotionKind, POTIONS};
@@ -28,8 +27,9 @@ use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, MAX_WAND};
 pub use object_id::*;
 use crate::settings::fruit;
 pub use object_pack::*;
+use crate::armors::constants::{ARMORS, PLATE, SPLINT};
 use crate::player::Player;
-use crate::weapons::{WeaponKind};
+use crate::weapons::WeaponKind;
 use crate::weapons::constants::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
 
 

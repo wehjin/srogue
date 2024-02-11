@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::monster::Fighter;
 use crate::objects::{obj, object, ObjectId, ObjectPack};
 use crate::pack::{check_duplicate, next_avail_ichar};
-use crate::prelude::armor_kind::ArmorKind;
+use crate::armors::ArmorKind;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::{DungeonSpot, LAST_DUNGEON, MAX_ARMOR, MAX_GOLD};
 use crate::prelude::object_what::ObjectWhat;

@@ -1,11 +1,11 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
 
 use ncurses::{chtype, mvaddch, refresh, standend, standout};
+use crate::armors::ArmorKind;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::monster::Monster;
 use crate::player::Player;
 use crate::prelude::*;
-use crate::prelude::armor_kind::{ArmorKind};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD, STAT_HP, STAT_STRENGTH};

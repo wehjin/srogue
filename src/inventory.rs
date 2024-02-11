@@ -8,7 +8,7 @@ use crate::player::Player;
 use crate::random::get_rand;
 
 use crate::prelude::*;
-use crate::prelude::armor_kind::ArmorKind;
+use crate::armors::ArmorKind;
 use crate::prelude::food_kind::RATION;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::{PackFilter};

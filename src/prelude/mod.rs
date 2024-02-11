@@ -188,7 +188,6 @@ pub mod food_kind {
 	pub const FRUIT: u16 = 1;
 }
 
-pub mod armor_kind;
 pub mod potion_kind;
 pub mod ring_kind;
 

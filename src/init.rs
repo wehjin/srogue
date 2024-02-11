@@ -8,7 +8,7 @@ use crate::{console, settings};
 use crate::level::constants::DROWS;
 use crate::player::Player;
 use crate::prelude::*;
-use crate::prelude::armor_kind::RINGMAIL;
+use crate::armors::constants::RINGMAIL;
 use crate::prelude::object_what::ObjectWhat::{Armor, Weapon};
 use crate::settings::{rest_file, score_only};
 use crate::weapons::constants::{ARROW, BOW, MACE};

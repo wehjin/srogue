@@ -31,6 +31,7 @@ mod r#use;
 mod zap;
 mod prelude;
 mod weapons;
+mod armors;
 
 use libc::{setuid, perror, geteuid, getuid, uid_t};
 use crate::prelude::stat_const::STAT_ALL;
