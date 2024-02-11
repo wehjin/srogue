@@ -10,8 +10,8 @@ use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::armor_kind::RINGMAIL;
 use crate::prelude::object_what::ObjectWhat::{Armor, Weapon};
-use crate::prelude::weapon_kind::{ARROW, BOW, MACE};
 use crate::settings::{rest_file, score_only};
+use crate::weapons::{ARROW, BOW, MACE};
 
 pub static mut cant_int: bool = false;
 pub static mut did_int: bool = false;

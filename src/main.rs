@@ -30,6 +30,7 @@ mod trap;
 mod r#use;
 mod zap;
 mod prelude;
+mod weapons;
 
 use libc::{setuid, perror, geteuid, getuid, uid_t};
 use crate::prelude::stat_const::STAT_ALL;

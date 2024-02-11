@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::hit::DamageStat;
-use crate::prelude::weapon_kind::WeaponKind::{Arrow, Bow, Dagger, Dart, LongSword, Mace, Shuriken, TwoHandedSword};
+use crate::weapons::WeaponKind::{Arrow, Bow, Dagger, Dart, LongSword, Mace, Shuriken, TwoHandedSword};
 
 pub const BOW: u16 = 0;
 pub const DART: u16 = 1;

@@ -10,8 +10,8 @@ use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Weapons;
 use crate::prelude::stat_const::STAT_ARMOR;
-use crate::prelude::weapon_kind::{ARROW, WeaponKind};
 use crate::throw::Move::{Up, UpLeft, UpRight, Left, Right, Same, Down, DownLeft, DownRight};
+use crate::weapons::{ARROW, WeaponKind};
 
 pub unsafe fn throw(player: &mut Player, level: &mut Level) {
 	let dir = get_dir_or_cancel();

@@ -18,7 +18,7 @@ use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::prelude::ring_kind::{ADD_STRENGTH, DEXTERITY, RingKind, RINGS};
 use crate::prelude::scroll_kind::{ScrollKind, SCROLLS};
 use crate::prelude::wand_kind::{WandKind, MAX_WAND};
-use crate::prelude::weapon_kind::WeaponKind;
+use crate::weapons::WeaponKind;
 
 pub static mut IS_WOOD: [bool; MAX_WAND] = [false; MAX_WAND];
 const WAND_MATERIALS: [&'static str; MAX_WAND_MATERIAL] = [

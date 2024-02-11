@@ -24,11 +24,11 @@ use crate::prelude::ring_kind::RINGS;
 use crate::prelude::scroll_kind::ScrollKind::{AggravateMonster, CreateMonster, EnchArmor, EnchWeapon, HoldMonster, Identify, MagicMapping, ProtectArmor, RemoveCurse, ScareMonster, Sleep, Teleport};
 use crate::prelude::scroll_kind::SCROLLS;
 use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, MAX_WAND};
-use crate::prelude::weapon_kind::{ARROW, DAGGER, DART, SHURIKEN, WeaponKind, WEAPONS};
 pub use object_id::*;
 use crate::settings::fruit;
 pub use object_pack::*;
 use crate::player::Player;
+use crate::weapons::{ARROW, DAGGER, DART, SHURIKEN, WeaponKind, WEAPONS};
 
 
 #[derive(Clone, Serialize, Deserialize)]

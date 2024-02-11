@@ -14,7 +14,7 @@ use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll,
 use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
 use crate::prelude::scroll_kind::ScrollKind::ScareMonster;
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD};
-use crate::prelude::weapon_kind::{WeaponKind};
+use crate::weapons::WeaponKind;
 
 pub static CURSE_MESSAGE: &'static str = "you can't, it appears to be cursed";
 pub const MAX_PACK_COUNT: usize = 24;

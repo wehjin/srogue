@@ -7,7 +7,7 @@ use crate::prelude::armor_kind::ArmorKind;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::{DungeonSpot, LAST_DUNGEON, MAX_ARMOR, MAX_GOLD};
 use crate::prelude::object_what::ObjectWhat;
-use crate::prelude::weapon_kind::WeaponKind;
+use crate::weapons::WeaponKind;
 
 pub(crate) mod rings;
 pub(crate) mod objects;
