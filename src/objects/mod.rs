@@ -156,7 +156,6 @@ pub type object = obj;
 pub static mut level_objects: ObjectPack = ObjectPack::new();
 pub static mut foods: i16 = 0;
 pub static mut party_counter: usize = 0;
-pub static mut free_list: *mut object = 0 as *mut object;
 pub static mut id_potions: [id; POTIONS] = {
 	[
 		{
