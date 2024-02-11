@@ -13,7 +13,7 @@ use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
 use crate::settings::jump;
 
 pub static mut m_moves: i16 = 0;
-pub static YOU_CAN_MOVE_AGAIN: &'static str = "you can move again";
+pub const YOU_CAN_MOVE_AGAIN: &'static str = "you can move again";
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum MoveResult {

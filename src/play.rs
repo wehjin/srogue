@@ -8,8 +8,7 @@ use crate::prelude::object_what::PackFilter::AllObjects;
 
 pub static mut interrupted: bool = false;
 
-pub static unknown_command: &'static str = "unknown command";
-
+pub const UNKNOWN_COMMAND: &'static str = "unknown command";
 
 pub unsafe fn play_level(game: &mut GameState) {
 	let mut count = 0;
@@ -19,9 +18,9 @@ pub unsafe fn play_level(game: &mut GameState) {
 			deck_ch
 		} else {
 			interrupted = false;
-			if !hit_message.is_empty() {
-				message(&hit_message, 1);
-				hit_message.clear();
+			if !HIT_MESSAGE.is_empty() {
+				message(&HIT_MESSAGE, 1);
+				HIT_MESSAGE.clear();
 			}
 			if trap_door {
 				trap_door = false;
@@ -155,28 +154,28 @@ pub unsafe fn play_level(game: &mut GameState) {
 				if wizard {
 					inventory(&mut level_objects, AllObjects);
 				} else {
-					message(unknown_command, 0);
+					message(UNKNOWN_COMMAND, 0);
 				}
 			}
 			'\x13' => {
 				if wizard {
 					draw_magic_map(&mut game.level);
 				} else {
-					message(unknown_command, 0);
+					message(UNKNOWN_COMMAND, 0);
 				}
 			}
 			'\x14' => {
 				if wizard {
 					show_traps(&game.level);
 				} else {
-					message(unknown_command, 0);
+					message(UNKNOWN_COMMAND, 0);
 				}
 			}
 			'\x0f' => {
 				if wizard {
 					show_objects(&game.player, &game.level);
 				} else {
-					message(unknown_command, 0);
+					message(UNKNOWN_COMMAND, 0);
 				}
 			}
 			'\x01' => {
@@ -186,14 +185,14 @@ pub unsafe fn play_level(game: &mut GameState) {
 				if wizard {
 					new_object_for_wizard(&mut game.player);
 				} else {
-					message(unknown_command, 0);
+					message(UNKNOWN_COMMAND, 0);
 				}
 			}
 			'\x0d' => {
 				if wizard {
 					show_monsters(&mut game.level);
 				} else {
-					message(unknown_command, 0);
+					message(UNKNOWN_COMMAND, 0);
 				}
 			}
 			'S' => {
@@ -203,7 +202,7 @@ pub unsafe fn play_level(game: &mut GameState) {
 				kick_into_pack(&mut game.player, &mut game.level);
 			}
 			_ => {
-				message(unknown_command, 0);
+				message(UNKNOWN_COMMAND, 0);
 			}
 		}
 	}

@@ -18,7 +18,7 @@ pub static mut confused: usize = 0;
 pub static mut levitate: usize = 0;
 pub static mut haste_self: usize = 0;
 pub static mut extra_hp: isize = 0;
-pub static strange_feeling: &'static str = "you have a strange feeling for a moment, then it passes";
+pub const STRANGE_FEELING: &'static str = "you have a strange feeling for a moment, then it passes";
 
 pub unsafe fn quaff(player: &mut Player, level: &mut Level) {
 	let ch = pack_letter("quaff what?", Potions, player);
@@ -83,12 +83,12 @@ pub unsafe fn quaff(player: &mut Player, level: &mut Level) {
 						PotionKind::DetectMonster => {
 							show_monsters(level);
 							if MASH.is_empty() {
-								message(strange_feeling, 0);
+								message(STRANGE_FEELING, 0);
 							}
 						}
 						PotionKind::DetectObjects => {
 							if level_objects.is_empty() {
-								message(strange_feeling, 0);
+								message(STRANGE_FEELING, 0);
 							} else {
 								if blind == 0 {
 									show_objects(player, level);

@@ -89,13 +89,13 @@ unsafe fn throw_at_monster(monster: &mut Monster, obj_id: ObjectId, player: &mut
 		}
 		hit_chance
 	};
-	hit_message = format!("the {}", player.to_object_name_with_quantity(obj_id, 1).trim());
+	HIT_MESSAGE = format!("the {}", player.to_object_name_with_quantity(obj_id, 1).trim());
 	if !rand_percent(hit_chance) {
-		hit_message += " misses  ";
+		HIT_MESSAGE += " misses  ";
 		return false;
 	}
 
-	hit_message += " hit  ";
+	HIT_MESSAGE += " hit  ";
 	if player.object_what(obj_id) == Wand && rand_percent(75) {
 		zap_monster(monster, player.object_kind(obj_id), player, level);
 	} else {

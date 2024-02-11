@@ -16,7 +16,7 @@ use crate::scrolls::ScrollKind::ScareMonster;
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD};
 use crate::weapons::WeaponKind;
 
-pub static CURSE_MESSAGE: &'static str = "you can't, it appears to be cursed";
+pub const CURSE_MESSAGE: &'static str = "you can't, it appears to be cursed";
 pub const MAX_PACK_COUNT: usize = 24;
 
 pub fn take_from_pack(obj_id: ObjectId, pack: &mut ObjectPack) -> Option<obj> {

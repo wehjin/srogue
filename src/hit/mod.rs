@@ -3,7 +3,7 @@
 use libc::{c_char};
 
 pub static mut FIGHT_MONSTER: Option<u64> = None;
-pub static mut hit_message: String = String::new();
+pub static mut HIT_MESSAGE: String = String::new();
 
 fn reduce_chance(chance: usize, reduction: isize) -> usize {
 	let reduction: usize = reduction.max(0) as usize;
@@ -37,16 +37,16 @@ pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame
 	let monster_name = if let Some(name) = other { name } else { &base_monster_name };
 	if !rand_percent(hit_chance) {
 		if FIGHT_MONSTER.is_none() {
-			hit_message = format!("{}the {} misses", hit_message, monster_name);
-			message(&hit_message, 1);
-			hit_message.clear();
+			HIT_MESSAGE = format!("{}the {} misses", HIT_MESSAGE, monster_name);
+			message(&HIT_MESSAGE, 1);
+			HIT_MESSAGE.clear();
 		}
 		return;
 	}
 	if FIGHT_MONSTER.is_none() {
-		hit_message = format!("{}the {} hit", hit_message, monster_name);
-		message(&hit_message, 1);
-		hit_message.clear();
+		HIT_MESSAGE = format!("{}the {} hit", HIT_MESSAGE, monster_name);
+		message(&HIT_MESSAGE, 1);
+		HIT_MESSAGE.clear();
 	}
 	let mut damage: isize = if !monster.m_flags.stationary {
 		let mut damage = get_damage(monster.m_damage(), DamageEffect::Roll);
@@ -89,7 +89,7 @@ pub unsafe fn rogue_hit(monster: &mut monster::Monster, force_hit: bool, player:
 	let hit_chance = if wizard { hit_chance * 2 } else { hit_chance };
 	if !rand_percent(hit_chance) {
 		if FIGHT_MONSTER.is_none() {
-			hit_message = "you miss  ".to_string();
+			HIT_MESSAGE = "you miss  ".to_string();
 		}
 	} else {
 		let player_exp = player.exp();
@@ -98,7 +98,7 @@ pub unsafe fn rogue_hit(monster: &mut monster::Monster, force_hit: bool, player:
 		let damage = if wizard { damage * 3 } else { damage };
 		if mon_damage(monster, damage, player, level) {
 			if FIGHT_MONSTER.is_none() {
-				hit_message = "you hit  ".to_string();
+				HIT_MESSAGE = "you hit  ".to_string();
 			}
 		}
 	}
@@ -185,9 +185,9 @@ pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: isize, player: 
 		FIGHT_MONSTER = None;
 		cough_up(monster, player, level);
 		let mn = mon_name(monster, level);
-		hit_message = format!("{}defeated the {}", hit_message, mn);
-		message(&hit_message, 1);
-		hit_message.clear();
+		HIT_MESSAGE = format!("{}defeated the {}", HIT_MESSAGE, mn);
+		message(&HIT_MESSAGE, 1);
+		HIT_MESSAGE.clear();
 		add_exp(monster.kill_exp(), true, player);
 		if monster.m_flags.holds {
 			level.being_held = false;
