@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
 
 use rand::seq::SliceRandom;
 use rand::thread_rng;
@@ -337,7 +337,7 @@ pub unsafe fn add_mazes(level_depth: usize, level: &mut Level) {
 	if level_depth > 1 {
 		let start = get_rand(0, MAX_ROOM - 1);
 		let maze_percent = {
-			let mut nominal_percent = (level_depth * 5) / 4;
+			let nominal_percent = (level_depth * 5) / 4;
 			if level_depth > 15 {
 				nominal_percent + level_depth
 			} else {

@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
 
 use ncurses::{chtype, mvaddch, refresh};
 use MoveResult::MoveFailed;
@@ -296,7 +296,7 @@ pub unsafe fn is_direction(c: char) -> bool {
 		|| c == CANCEL
 }
 
-pub unsafe fn check_hunger(mut messages_only: libc::c_char, player: &mut Player, level: &mut Level) -> bool {
+pub unsafe fn check_hunger(messages_only: libc::c_char, player: &mut Player, level: &mut Level) -> bool {
 	let mut i: libc::c_short = 0;
 	let mut n: libc::c_short = 0;
 	let mut fainted: bool = false;

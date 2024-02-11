@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
 #![feature(extern_types)]
 
 extern "C" {}
@@ -74,7 +74,7 @@ pub fn main() {
 	let (mut game, mut restored) = unsafe { init() };
 	loop {
 		if !restored {
-			unsafe { clear_level(&mut game.player, &mut game.level); }
+			clear_level(&mut game.player, &mut game.level);
 			game.player.descend();
 			unsafe { make_level(&game.player, &mut game.level) };
 			unsafe { put_objects(&game.player, &mut game.level); }

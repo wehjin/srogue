@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
 
 mod object_id;
 mod object_pack;
@@ -186,7 +186,7 @@ pub static mut free_list: *mut object = 0 as *mut object;
 pub static mut id_potions: [id; POTIONS] = {
 	[
 		{
-			let mut init = id {
+			let init = id {
 				value: 100,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -194,7 +194,7 @@ pub static mut id_potions: [id; POTIONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 250,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -202,7 +202,7 @@ pub static mut id_potions: [id; POTIONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 100,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -210,7 +210,7 @@ pub static mut id_potions: [id; POTIONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 200,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -218,7 +218,7 @@ pub static mut id_potions: [id; POTIONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 10,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -226,7 +226,7 @@ pub static mut id_potions: [id; POTIONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 300,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -234,7 +234,7 @@ pub static mut id_potions: [id; POTIONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 10,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -242,7 +242,7 @@ pub static mut id_potions: [id; POTIONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 25,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -250,7 +250,7 @@ pub static mut id_potions: [id; POTIONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 100,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -258,7 +258,7 @@ pub static mut id_potions: [id; POTIONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 100,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -266,7 +266,7 @@ pub static mut id_potions: [id; POTIONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 10,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -274,7 +274,7 @@ pub static mut id_potions: [id; POTIONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 80,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -282,7 +282,7 @@ pub static mut id_potions: [id; POTIONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 150,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -290,7 +290,7 @@ pub static mut id_potions: [id; POTIONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 145,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -302,7 +302,7 @@ pub static mut id_potions: [id; POTIONS] = {
 pub static mut id_scrolls: [id; SCROLLS] = {
 	[
 		{
-			let mut init = id {
+			let init = id {
 				value: 505,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -310,7 +310,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 200,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -318,7 +318,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 235,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -326,7 +326,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 235,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -334,7 +334,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 175,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -342,7 +342,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 190,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -350,7 +350,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 25,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -358,7 +358,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 610,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -366,7 +366,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 210,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -374,7 +374,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 100,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -382,7 +382,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 25,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -390,7 +390,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 180,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -402,7 +402,7 @@ pub static mut id_scrolls: [id; SCROLLS] = {
 pub static mut id_weapons: [id; WEAPONS] = {
 	[
 		{
-			let mut init = id {
+			let init = id {
 				value: 150,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -410,7 +410,7 @@ pub static mut id_weapons: [id; WEAPONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 8,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -418,7 +418,7 @@ pub static mut id_weapons: [id; WEAPONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 15,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -426,7 +426,7 @@ pub static mut id_weapons: [id; WEAPONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 27,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -434,7 +434,7 @@ pub static mut id_weapons: [id; WEAPONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 35,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -442,7 +442,7 @@ pub static mut id_weapons: [id; WEAPONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 360,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -450,7 +450,7 @@ pub static mut id_weapons: [id; WEAPONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 470,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -458,7 +458,7 @@ pub static mut id_weapons: [id; WEAPONS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 580,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -470,7 +470,7 @@ pub static mut id_weapons: [id; WEAPONS] = {
 pub static mut id_armors: [id; ARMORS] = {
 	[
 		{
-			let mut init = id {
+			let init = id {
 				value: 300,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -478,7 +478,7 @@ pub static mut id_armors: [id; ARMORS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 300,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -486,7 +486,7 @@ pub static mut id_armors: [id; ARMORS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 400,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -494,7 +494,7 @@ pub static mut id_armors: [id; ARMORS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 500,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -502,7 +502,7 @@ pub static mut id_armors: [id; ARMORS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 600,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -510,7 +510,7 @@ pub static mut id_armors: [id; ARMORS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 600,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -518,7 +518,7 @@ pub static mut id_armors: [id; ARMORS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 700,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -530,7 +530,7 @@ pub static mut id_armors: [id; ARMORS] = {
 pub static mut id_wands: [id; MAX_WAND] = {
 	[
 		{
-			let mut init = id {
+			let init = id {
 				value: 25,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -538,7 +538,7 @@ pub static mut id_wands: [id; MAX_WAND] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 50,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -546,7 +546,7 @@ pub static mut id_wands: [id; MAX_WAND] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 45,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -554,7 +554,7 @@ pub static mut id_wands: [id; MAX_WAND] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 8,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -562,7 +562,7 @@ pub static mut id_wands: [id; MAX_WAND] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 55,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -570,7 +570,7 @@ pub static mut id_wands: [id; MAX_WAND] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 2,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -578,7 +578,7 @@ pub static mut id_wands: [id; MAX_WAND] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 25,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -586,7 +586,7 @@ pub static mut id_wands: [id; MAX_WAND] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 20,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -594,7 +594,7 @@ pub static mut id_wands: [id; MAX_WAND] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 20,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -602,7 +602,7 @@ pub static mut id_wands: [id; MAX_WAND] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 0,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -614,7 +614,7 @@ pub static mut id_wands: [id; MAX_WAND] = {
 pub static mut id_rings: [id; RINGS] = {
 	[
 		{
-			let mut init = id {
+			let init = id {
 				value: 250,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -622,7 +622,7 @@ pub static mut id_rings: [id; RINGS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 100,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -630,7 +630,7 @@ pub static mut id_rings: [id; RINGS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 255,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -638,7 +638,7 @@ pub static mut id_rings: [id; RINGS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 295,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -646,7 +646,7 @@ pub static mut id_rings: [id; RINGS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 200,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -654,7 +654,7 @@ pub static mut id_rings: [id; RINGS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 250,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -662,7 +662,7 @@ pub static mut id_rings: [id; RINGS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 250,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -670,7 +670,7 @@ pub static mut id_rings: [id; RINGS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 25,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -678,7 +678,7 @@ pub static mut id_rings: [id; RINGS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 300,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -686,7 +686,7 @@ pub static mut id_rings: [id; RINGS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 290,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -694,7 +694,7 @@ pub static mut id_rings: [id; RINGS] = {
 			init
 		},
 		{
-			let mut init = id {
+			let init = id {
 				value: 270,
 				title: None,
 				id_status: IdStatus::Unidentified,
@@ -718,7 +718,7 @@ pub unsafe fn put_objects(player: &Player, level: &mut Level) {
 		party_counter = next_party(player.cur_depth);
 	}
 	for _i in 0..n {
-		let mut obj = gr_object(player.cur_depth);
+		let obj = gr_object(player.cur_depth);
 		rand_place(obj, player, level);
 	}
 	put_gold(player.cur_depth, level);

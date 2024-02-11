@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
 
 use std::{fs, process, thread};
 use std::error::Error;
@@ -144,14 +144,14 @@ pub fn md_sleep(nsecs: i64) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn md_getenv(mut name: *mut libc::c_char) -> *mut libc::c_char {
+pub unsafe extern "C" fn md_getenv(name: *mut libc::c_char) -> *mut libc::c_char {
 	let mut value: *mut libc::c_char = 0 as *mut libc::c_char;
 	value = libc::getenv(name);
 	return value;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn md_malloc(mut n: i64) -> *mut libc::c_char {
+pub unsafe extern "C" fn md_malloc(n: i64) -> *mut libc::c_char {
 	let t = libc::malloc(n as libc::size_t);
 	return t as *mut libc::c_char;
 }

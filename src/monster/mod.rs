@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
 
 use ncurses::chtype;
 use serde::{Deserialize, Serialize};
@@ -440,7 +440,7 @@ unsafe fn random_spot_for_monster(start_row: i64, start_col: i64, level: &Level)
 
 pub unsafe fn create_monster(player: &Player, level: &mut Level) {
 	if let Some(found) = random_spot_for_monster(player.rogue.row, player.rogue.col, level) {
-		let mut monster = gr_monster(player.cur_depth, 0, None);
+		let monster = gr_monster(player.cur_depth, 0, None);
 		put_m_at(found.row, found.col, monster, level);
 
 		let monster = MASH.monster_at_spot_mut(found.row, found.col).expect("created is in monster in mash");

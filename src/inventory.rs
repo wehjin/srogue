@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
 
 use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
 use crate::level::constants::{DCOLS, DROWS};
@@ -241,11 +241,20 @@ unsafe fn get_identified(obj: &object) -> String {
 			};
 			format!("{}{}{}{}", get_quantity(obj), more_info, name_of(obj), get_id_real(obj))
 		}
-		Wand => {
-			let more_info = if wizard || obj.identified { format!("[{}]", obj.class) } else { "".to_string() };
-			format!("{}{}{}{}", get_quantity(obj), name_of(obj), get_id_real(obj), more_info)
-		}
-		Armor => format!("{}{} {}[{}]", if obj.d_enchant >= 0 { "+" } else { "" }, obj.d_enchant, get_title(obj), get_armor_class(Some(obj))),
+		Wand => format!("{}{}{}{}",
+		                get_quantity(obj),
+		                name_of(obj),
+		                get_id_real(obj),
+		                if wizard || obj.identified {
+			                format!("[{}]", obj.class)
+		                } else {
+			                "".to_string()
+		                }),
+		Armor => format!("{}{} {}[{}] ",
+		                 if obj.d_enchant >= 0 { "+" } else { "" },
+		                 obj.d_enchant,
+		                 get_title(obj),
+		                 get_armor_class(Some(obj))),
 		Weapon => format!("{}{}{},{}{} {}",
 		                  get_quantity(obj),
 		                  if obj.hit_enchant >= 0 { "+" } else { "" }, obj.hit_enchant,

@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
 
 use libc::{c_int};
 use ncurses::{addch, chtype, clrtoeol, curscr, mvaddstr, wrefresh};
@@ -244,6 +244,6 @@ pub fn sound_bell() {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn is_digit(mut ch: libc::c_short) -> libc::c_char {
+pub unsafe extern "C" fn is_digit(ch: libc::c_short) -> libc::c_char {
 	return (ch as i64 >= '0' as i64 && ch as i64 <= '9' as i64) as libc::c_char;
 }
