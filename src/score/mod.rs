@@ -326,9 +326,7 @@ unsafe fn get_value(obj: &obj) -> usize {
 		ObjectWhat::Armor => obj.armor_value(),
 		ObjectWhat::Wand => obj.wand_value(),
 		ObjectWhat::Scroll => obj.scroll_value(),
-		ObjectWhat::Potion => {
-			id_potions[wc as usize].value * obj.quantity
-		}
+		ObjectWhat::Potion => obj.potion_value(),
 		ObjectWhat::Amulet => 5000,
 		ObjectWhat::Ring => {
 			id_rings[wc as usize].value * (obj.class as i16 + 1)

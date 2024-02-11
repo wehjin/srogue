@@ -1,5 +1,6 @@
 use crate::armors::ArmorKind;
 use crate::objects::{obj};
+use crate::prelude::potion_kind::PotionKind;
 use crate::scrolls::ScrollKind;
 use crate::weapons::WeaponKind;
 
@@ -33,6 +34,36 @@ impl obj {
 		value *= self.quantity;
 		value
 	}
+	pub fn potion_value(&self) -> i16 {
+		let mut value = self.potion_kind().expect("potion kind").sale_value();
+		value *= self.quantity;
+		value
+	}
+}
+
+impl Sellable for PotionKind {
+	fn sale_value(&self) -> i16 {
+		match self {
+			PotionKind::IncreaseStrength => 100,
+			PotionKind::RestoreStrength => 250,
+			PotionKind::Healing => 100,
+			PotionKind::ExtraHealing => 200,
+			PotionKind::Poison => 10,
+			PotionKind::RaiseLevel => 300,
+			PotionKind::Blindness => 10,
+			PotionKind::Hallucination => 25,
+			PotionKind::DetectMonster => 100,
+			PotionKind::DetectObjects => 100,
+			PotionKind::Confusion => 10,
+			PotionKind::Levitation => 80,
+			PotionKind::HasteSelf => 150,
+			PotionKind::SeeInvisible => 145,
+		}
+	}
+}
+
+pub trait Sellable {
+	fn sale_value(&self) -> i16;
 }
 
 impl Sellable for ScrollKind {
@@ -52,10 +83,6 @@ impl Sellable for ScrollKind {
 			ScrollKind::MagicMapping => 180,
 		}
 	}
-}
-
-pub trait Sellable {
-	fn sale_value(&self) -> i16;
 }
 
 impl Sellable for WandKind {
