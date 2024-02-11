@@ -4,6 +4,7 @@ mod object_id;
 mod object_pack;
 mod potions;
 mod scrolls;
+mod weapons;
 
 use std::clone::Clone;
 use std::string::ToString;

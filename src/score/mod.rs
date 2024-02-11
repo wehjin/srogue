@@ -17,7 +17,10 @@ use crate::prelude::potion_kind::POTIONS;
 use crate::prelude::scroll_kind::SCROLLS;
 use crate::prelude::wand_kind::MAX_WAND;
 use crate::settings::{login_name, nick_name};
-use crate::weapons::constants::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
+use crate::weapons::constants::{WEAPONS};
+
+mod values;
+
 
 pub const SCORE_FILE: &'static str = "/usr/games/player.rogue.scores";
 
@@ -319,15 +322,7 @@ pub unsafe fn sell_pack(player: &mut Player)
 unsafe fn get_value(obj: &obj) -> usize {
 	let wc = obj.which_kind;
 	let mut val = match obj.what_is {
-		ObjectWhat::Weapon => {
-			let mut val = id_weapons[wc as usize].value;
-			if (wc == ARROW) || (wc == DAGGER) || (wc == SHURIKEN) || (wc == DART) {
-				val *= obj.quantity;
-			}
-			val += obj.d_enchant as i16 * 85;
-			val += obj.hit_enchant * 85;
-			val
-		}
+		ObjectWhat::Weapon => obj.weapon_value(),
 		ObjectWhat::Armor => {
 			let mut val = id_armors[wc as usize].value;
 			val += obj.d_enchant as i16 * 75;
