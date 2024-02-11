@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
 use crate::level::constants::{DCOLS, DROWS};
@@ -382,7 +382,7 @@ pub unsafe fn get_wand_and_ring_materials() {
 }
 
 fn take_unused<const N: usize>(used: &mut [bool; N]) -> usize {
-	let mut j = 0;
+	let mut j;
 	loop {
 		j = get_rand(0, used.len() - 1);
 		if !used[j] {

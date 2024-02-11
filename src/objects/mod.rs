@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 mod object_id;
 mod object_pack;
@@ -1007,7 +1007,7 @@ pub unsafe fn new_object_for_wizard(player: &mut Player) {
 	message("type of object?", 0);
 	let ch = {
 		const CHOICES: &'static str = "!?:)]=/,\x1B";
-		let mut ch: char = char::default();
+		let mut ch: char;
 		loop {
 			ch = rgetchar();
 			match CHOICES.find(ch) {
@@ -1077,7 +1077,7 @@ pub unsafe fn new_object_for_wizard(player: &mut Player) {
 
 unsafe fn get_kind(max_kind: usize) -> Option<usize> {
 	let good_kind = {
-		let mut good_kind = None;
+		let good_kind;
 		loop {
 			let line = get_input_line::<String>("which kind?", None, None, false, true);
 			let trimmed_line = line.trim();

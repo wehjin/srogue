@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use libc::{c_char};
 
@@ -148,33 +148,30 @@ pub unsafe fn get_number(s: *const c_char) -> usize {
 	return total;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn damage_for_strength(player_strength: isize) -> i64 {
-	let mut strength: libc::c_short = 0;
-	strength = (player_strength as i64 + add_strength as i64)
-		as libc::c_short;
-	if strength as i64 <= 6i64 {
-		return strength as i64 - 5i64;
+pub unsafe fn damage_for_strength(player_strength: isize) -> isize {
+	let strength = player_strength + add_strength;
+	if strength <= 6 {
+		return strength - 5;
 	}
-	if strength as i64 <= 14i64 {
+	if strength <= 14 {
 		return 1;
 	}
-	if strength as i64 <= 17i64 {
-		return 3i64;
+	if strength <= 17 {
+		return 3;
 	}
-	if strength as i64 <= 18i64 {
-		return 4i64;
+	if strength <= 18 {
+		return 4;
 	}
-	if strength as i64 <= 20i64 {
-		return 5i64;
+	if strength <= 20 {
+		return 5;
 	}
-	if strength as i64 <= 21 {
-		return 6i64;
+	if strength <= 21 {
+		return 6;
 	}
-	if strength as i64 <= 30i64 {
-		return 7i64;
+	if strength <= 30 {
+		return 7;
 	}
-	return 8i64;
+	return 8;
 }
 
 pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: isize, player: &mut Player, level: &mut Level) -> bool {
@@ -203,7 +200,7 @@ pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: isize, player: 
 
 pub unsafe fn fight(to_the_death: bool, player: &mut Player, level: &mut Level) {
 	let mut first_miss: bool = true;
-	let mut ch: char = 0 as char;
+	let mut ch: char;
 	loop {
 		ch = rgetchar() as u8 as char;
 		if is_direction(ch) {

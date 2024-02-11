@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use std::{fs, process, thread};
 use std::error::Error;
@@ -143,11 +143,8 @@ pub fn md_sleep(nsecs: i64) {
 	thread::sleep(Duration::from_nanos(nsecs as u64));
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn md_getenv(name: *mut libc::c_char) -> *mut libc::c_char {
-	let mut value: *mut libc::c_char = 0 as *mut libc::c_char;
-	value = libc::getenv(name);
-	return value;
+pub unsafe fn md_getenv(name: *mut libc::c_char) -> *mut libc::c_char {
+	libc::getenv(name)
 }
 
 #[no_mangle]

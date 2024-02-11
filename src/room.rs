@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use std::ops::{RangeInclusive};
 use ncurses::{addch, chtype, mvaddch, mvinch};
@@ -288,8 +288,8 @@ pub unsafe fn random_spot_with_flag(flags: &[CellKind], player: &Player, level: 
 }
 
 pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, kinds: &[CellKind], player: &Player, level: &Level) {
-	let mut r = 0;
-	let mut c = 0;
+	let mut r;
+	let mut c;
 	loop {
 		r = get_rand(MIN_ROW, DROWS as i64 - 2);
 		c = get_rand(0, DCOLS as i64 - 1);

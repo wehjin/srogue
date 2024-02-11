@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use crate::{get_input_line, message, mv_aquatars, print_stats};
 use crate::objects::IdStatus::{Called, Identified};
@@ -169,7 +169,7 @@ pub unsafe fn pack_letter(prompt: &str, filter: PackFilter, player: &Player) -> 
 	loop {
 		message(prompt, 0);
 		let pack_op = {
-			let mut pack_op = None;
+			let mut pack_op;
 			loop {
 				let ch = rgetchar() as u8 as char;
 				pack_op = get_pack_op(ch, filter.clone());

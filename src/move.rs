@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use ncurses::{chtype, mvaddch, refresh};
 use MoveResult::MoveFailed;
@@ -194,8 +194,8 @@ pub unsafe fn next_to_something(drow: i64, dcol: i64, player: &Player, level: &L
 	if blind != 0 {
 		return false;
 	}
-	let mut row = 0;
-	let mut col = 0;
+	let mut row;
+	let mut col;
 	let mut pass_count = 0;
 	let i_end = if player.rogue.row < (DROWS as i64 - 2) { 1 } else { 0 };
 	let j_end = if player.rogue.col < (DCOLS as i64 - 1) { 1 } else { 0 };
@@ -274,7 +274,7 @@ pub unsafe fn move_onto(player: &mut Player, level: &mut Level) {
 }
 
 pub unsafe fn get_dir_or_cancel() -> char {
-	let mut dir = CANCEL;
+	let mut dir: char;
 	let mut first_miss: bool = true;
 	loop {
 		dir = rgetchar();
@@ -297,8 +297,8 @@ pub unsafe fn is_direction(c: char) -> bool {
 }
 
 pub unsafe fn check_hunger(messages_only: libc::c_char, player: &mut Player, level: &mut Level) -> bool {
-	let mut i: libc::c_short = 0;
-	let mut n: libc::c_short = 0;
+	let mut i: libc::c_short;
+	let n: libc::c_short;
 	let mut fainted: bool = false;
 	if player.rogue.moves_left as libc::c_int == 300 as libc::c_int {
 		hunger_str = "hungry".to_string();

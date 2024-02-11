@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use ncurses::{chtype, mvaddch, mvinch, refresh};
 use rand::prelude::SliceRandom;
@@ -124,34 +124,39 @@ fn rogue_weapon_is_bow(player: &Player) -> bool {
 pub unsafe fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i64, col: &mut i64, player: &Player, level: &Level) -> Option<u64> {
 	let mut orow = *row;
 	let mut ocol = *col;
-	let ch = get_mask_char(obj_what);
-	for mut i in 0..24 {
+	let obj_char = get_mask_char(obj_what);
+	let mut i = 0;
+	while i < 24 {
 		get_dir_rc(dir, row, col, false);
-		if level.dungeon[*row as usize][*col as usize].is_nothing()
-			|| (level.dungeon[*row as usize][*col as usize].is_any_kind(&[CellKind::HorizontalWall, CellKind::VerticalWall, CellKind::Hidden]) && !level.dungeon[*row as usize][*col as usize].is_trap()) {
+		const WALL_OR_HIDDEN: [CellKind; 3] = [CellKind::HorizontalWall, CellKind::VerticalWall, CellKind::Hidden];
+		let cell = &level.dungeon[*row as usize][*col as usize];
+		if cell.is_nothing()
+			|| (cell.is_any_kind(&WALL_OR_HIDDEN) && !cell.is_trap()) {
 			*row = orow;
 			*col = ocol;
 			return None;
 		}
+
 		if i != 0 && rogue_can_see(orow, ocol, player, level) {
 			mvaddch(orow as i32, ocol as i32, get_dungeon_char(orow, ocol, level));
 		}
 		if rogue_can_see(*row, *col, player, level) {
-			if !level.dungeon[*row as usize][*col as usize].is_monster() {
-				mvaddch(*row as i32, *col as i32, chtype::from(ch));
+			if !cell.is_monster() {
+				mvaddch(*row as i32, *col as i32, chtype::from(obj_char));
 			}
 			refresh();
 		}
-		orow = *row;
-		ocol = *col;
-		if level.dungeon[*row as usize][*col as usize].is_monster() {
+		if cell.is_monster() {
 			if !imitating(*row, *col, level) {
 				return MASH.monster_at_spot(*row, *col).map(|m| m.id());
 			}
 		}
-		if level.dungeon[*row as usize][*col as usize].is_tunnel() {
+		if cell.is_tunnel() {
 			i += 2;
 		}
+		orow = *row;
+		ocol = *col;
+		i += 1;
 	}
 	return None;
 }

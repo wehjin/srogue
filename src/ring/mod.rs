@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
+#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use constants::{ADD_STRENGTH, ADORNMENT, DEXTERITY, R_TELEPORT, RINGS};
 use crate::player::Player;
@@ -91,8 +91,8 @@ unsafe fn ask_ring_hand() -> Option<PlayerHand> {
 }
 
 unsafe fn ask_left_or_right() -> char {
-	let mut ch = char::default();
 	message("left or right hand?", 0);
+	let mut ch;
 	loop {
 		ch = rgetchar();
 		let good_ch = ch == CANCEL || ch == 'l' || ch == 'r' || ch == '\n' || ch == '\r';
