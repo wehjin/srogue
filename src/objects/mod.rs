@@ -22,7 +22,7 @@ use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
 use crate::prelude::potion_kind::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
 use crate::prelude::potion_kind::{PotionKind, POTIONS};
-use crate::prelude::ring_kind::RINGS;
+use crate::ring::constants::RINGS;
 use crate::scrolls::ScrollKind::{AggravateMonster, CreateMonster, EnchArmor, EnchWeapon, HoldMonster, Identify, MagicMapping, ProtectArmor, RemoveCurse, ScareMonster, Sleep, Teleport};
 use crate::scrolls::constants::SCROLLS;
 pub use object_id::*;

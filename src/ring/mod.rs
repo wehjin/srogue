@@ -1,16 +1,18 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
 
-use crate::player::{Player};
+use constants::{ADD_STRENGTH, ADORNMENT, DEXTERITY, R_TELEPORT, RINGS};
+use crate::player::Player;
 use crate::player::rings::HandUsage;
 use crate::prelude::*;
 use crate::prelude::item_usage::{ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat::Ring;
 use crate::prelude::object_what::PackFilter::Rings;
-use crate::prelude::ring_kind::{RingKind, RINGS};
+use ring_kind::RingKind;
 use crate::prelude::stat_const::STAT_STRENGTH;
 
+pub(crate) mod constants;
+pub(crate) mod ring_kind;
 
-pub static left_or_right: &'static str = "left or right hand?";
 #[no_mangle]
 pub static mut stealthy: libc::c_short = 0;
 pub static mut r_rings: isize = 0;
@@ -90,7 +92,7 @@ unsafe fn ask_ring_hand() -> Option<PlayerHand> {
 
 unsafe fn ask_left_or_right() -> char {
 	let mut ch = char::default();
-	message(left_or_right, 0);
+	message("left or right hand?", 0);
 	loop {
 		ch = rgetchar();
 		let good_ch = ch == CANCEL || ch == 'l' || ch == 'r' || ch == '\n' || ch == '\r';
@@ -148,10 +150,10 @@ pub fn gr_ring(ring: &mut object, assign_wk: bool) {
 	}
 	ring.class = 0;
 	match ring.which_kind {
-		ring_kind::R_TELEPORT => {
+		R_TELEPORT => {
 			ring.is_cursed = 1;
 		}
-		ring_kind::ADD_STRENGTH | ring_kind::DEXTERITY => {
+		ADD_STRENGTH | DEXTERITY => {
 			loop {
 				ring.class = get_rand(0, 4) - 2;
 				if ring.class != 0 {
@@ -160,7 +162,7 @@ pub fn gr_ring(ring: &mut object, assign_wk: bool) {
 			}
 			ring.is_cursed = if ring.class < 0 { 1 } else { 0 };
 		}
-		ring_kind::ADORNMENT => {
+		ADORNMENT => {
 			ring.is_cursed = if coin_toss() { 1 } else { 0 };
 		}
 		_ => {}

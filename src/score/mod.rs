@@ -1,6 +1,6 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments)]
 
-use std::cmp::{Ordering};
+use std::cmp::Ordering;
 use std::fs::File;
 use std::io::{Read, Seek, Write};
 use ncurses::{mv, mvaddch, mvaddstr, mvinch, refresh, standend, standout};
@@ -17,7 +17,7 @@ use crate::prelude::potion_kind::POTIONS;
 use crate::scrolls::constants::SCROLLS;
 use crate::zap::constants::MAX_WAND;
 use crate::settings::{login_name, nick_name};
-use crate::weapons::constants::{WEAPONS};
+use crate::weapons::constants::WEAPONS;
 
 mod values;
 
@@ -302,7 +302,7 @@ pub unsafe fn sell_pack(player: &mut Player)
 		if player.object_what(id) != ObjectWhat::Food {
 			let obj = player.object_mut(id).expect("obj in player");
 			obj.identified = true;
-			let obj_value = get_value(obj);
+			let obj_value = obj.sale_value();
 			let obj_desc = get_obj_desc(obj);
 			player.rogue.gold += obj_value;
 			if row < DROWS {
@@ -318,29 +318,6 @@ pub unsafe fn sell_pack(player: &mut Player)
 	}
 	message("", 0);
 }
-
-unsafe fn get_value(obj: &obj) -> usize {
-	let wc = obj.which_kind;
-	let mut val = match obj.what_is {
-		ObjectWhat::Weapon => obj.weapon_value(),
-		ObjectWhat::Armor => obj.armor_value(),
-		ObjectWhat::Wand => obj.wand_value(),
-		ObjectWhat::Scroll => obj.scroll_value(),
-		ObjectWhat::Potion => obj.potion_value(),
-		ObjectWhat::Amulet => 5000,
-		ObjectWhat::Ring => {
-			id_rings[wc as usize].value * (obj.class as i16 + 1)
-		}
-		ObjectWhat::Gold => 0,
-		ObjectWhat::Food => 0,
-		ObjectWhat::None => 0,
-	};
-	if val <= 0 {
-		val = 10;
-	}
-	return val as usize;
-}
-
 
 pub unsafe fn id_all()
 {

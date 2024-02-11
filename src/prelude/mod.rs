@@ -185,7 +185,6 @@ pub mod food_kind {
 }
 
 pub mod potion_kind;
-pub mod ring_kind;
 
 pub mod stat_const {
 	pub const STAT_LEVEL: usize = 0o1;

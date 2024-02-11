@@ -1,12 +1,32 @@
 use crate::armors::ArmorKind;
-use crate::objects::{obj};
+use crate::objects::obj;
+use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::potion_kind::PotionKind;
+use crate::ring::ring_kind::RingKind;
 use crate::scrolls::ScrollKind;
 use crate::weapons::WeaponKind;
-
 use crate::zap::wand_kind::WandKind;
 
 impl obj {
+	/// From score.c
+	pub fn sale_value(&self) -> usize {
+		let mut value = match self.what_is {
+			ObjectWhat::Weapon => self.weapon_value(),
+			ObjectWhat::Armor => self.armor_value(),
+			ObjectWhat::Wand => self.wand_value(),
+			ObjectWhat::Scroll => self.scroll_value(),
+			ObjectWhat::Potion => self.potion_value(),
+			ObjectWhat::Amulet => 5000,
+			ObjectWhat::Ring => self.ring_value(),
+			ObjectWhat::Gold => 0,
+			ObjectWhat::Food => 0,
+			ObjectWhat::None => 0,
+		};
+		if value <= 0 {
+			value = 10;
+		}
+		value as usize
+	}
 	pub fn weapon_value(&self) -> i16 {
 		let mut value = self.weapon_kind().expect("weapon kind").sale_value();
 		if self.is_arrow_or_throwing_weapon() {
@@ -39,6 +59,33 @@ impl obj {
 		value *= self.quantity;
 		value
 	}
+	pub fn ring_value(&self) -> i16 {
+		let mut value = self.ring_kind().expect("ring kind").sale_value();
+		value *= (self.class as i16) + 1;
+		value
+	}
+}
+
+impl Sellable for RingKind {
+	fn sale_value(&self) -> i16 {
+		match self {
+			RingKind::Stealth => 250,
+			RingKind::RTeleport => 100,
+			RingKind::Regeneration => 255,
+			RingKind::SlowDigest => 295,
+			RingKind::AddStrength => 200,
+			RingKind::SustainStrength => 250,
+			RingKind::Dexterity => 250,
+			RingKind::Adornment => 25,
+			RingKind::RSeeInvisible => 300,
+			RingKind::MaintainArmor => 290,
+			RingKind::Searching => 270,
+		}
+	}
+}
+
+pub trait Sellable {
+	fn sale_value(&self) -> i16;
 }
 
 impl Sellable for PotionKind {
@@ -60,10 +107,6 @@ impl Sellable for PotionKind {
 			PotionKind::SeeInvisible => 145,
 		}
 	}
-}
-
-pub trait Sellable {
-	fn sale_value(&self) -> i16;
 }
 
 impl Sellable for ScrollKind {
