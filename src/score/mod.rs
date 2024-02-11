@@ -15,7 +15,7 @@ use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::potion_kind::POTIONS;
 use crate::prelude::scroll_kind::SCROLLS;
-use crate::prelude::wand_kind::MAX_WAND;
+use crate::zap::constants::MAX_WAND;
 use crate::settings::{login_name, nick_name};
 use crate::weapons::constants::{WEAPONS};
 
@@ -324,11 +324,17 @@ unsafe fn get_value(obj: &obj) -> usize {
 	let mut val = match obj.what_is {
 		ObjectWhat::Weapon => obj.weapon_value(),
 		ObjectWhat::Armor => obj.armor_value(),
-		ObjectWhat::Wand => id_wands[wc as usize].value * (obj.class as i16 + 1),
-		ObjectWhat::Scroll => id_scrolls[wc as usize].value * obj.quantity,
-		ObjectWhat::Potion => id_potions[wc as usize].value * obj.quantity,
+		ObjectWhat::Wand => obj.wand_value(),
+		ObjectWhat::Scroll => {
+			id_scrolls[wc as usize].value * obj.quantity
+		}
+		ObjectWhat::Potion => {
+			id_potions[wc as usize].value * obj.quantity
+		}
 		ObjectWhat::Amulet => 5000,
-		ObjectWhat::Ring => id_rings[wc as usize].value * (obj.class as i16 + 1),
+		ObjectWhat::Ring => {
+			id_rings[wc as usize].value * (obj.class as i16 + 1)
+		}
 		ObjectWhat::Gold => 0,
 		ObjectWhat::Food => 0,
 		ObjectWhat::None => 0,

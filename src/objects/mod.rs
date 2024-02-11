@@ -6,6 +6,7 @@ mod potions;
 mod scrolls;
 mod weapons;
 mod armors;
+mod kinds;
 
 use std::clone::Clone;
 use std::string::ToString;
@@ -24,13 +25,13 @@ use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::prelude::ring_kind::RINGS;
 use crate::prelude::scroll_kind::ScrollKind::{AggravateMonster, CreateMonster, EnchArmor, EnchWeapon, HoldMonster, Identify, MagicMapping, ProtectArmor, RemoveCurse, ScareMonster, Sleep, Teleport};
 use crate::prelude::scroll_kind::SCROLLS;
-use crate::prelude::wand_kind::{CANCELLATION, MAGIC_MISSILE, MAX_WAND};
 pub use object_id::*;
 use crate::settings::fruit;
 pub use object_pack::*;
 use crate::armors::constants::{ARMORS, PLATE, SPLINT};
 use crate::player::Player;
 use crate::weapons::constants::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
+use crate::zap::constants::{CANCELLATION, MAGIC_MISSILE, MAX_WAND};
 
 
 #[derive(Clone, Serialize, Deserialize)]

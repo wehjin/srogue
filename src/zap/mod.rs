@@ -5,8 +5,11 @@ use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Wands;
-use crate::prelude::wand_kind::WandKind;
+use wand_kind::WandKind;
 use crate::settings::set_score_only;
+
+pub(crate) mod constants;
+pub(crate) mod wand_kind;
 
 pub static mut wizard: bool = false;
 

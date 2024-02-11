@@ -1,7 +1,5 @@
 use crate::objects::obj;
 use crate::prelude::item_usage::BEING_WIELDED;
-use crate::prelude::object_what::ObjectWhat::Weapon;
-use crate::weapons::WeaponKind;
 
 impl obj {
 	pub fn is_wielded_throwing_weapon(&self) -> bool {
@@ -25,12 +23,4 @@ impl obj {
 	pub fn is_wielded(&self) -> bool {
 		(self.in_use_flags & BEING_WIELDED) != 0
 	}
-	pub fn weapon_kind(&self) -> Option<WeaponKind> {
-		if self.what_is == Weapon {
-			Some(WeaponKind::from(self.which_kind))
-		} else {
-			None
-		}
-	}
 }
-

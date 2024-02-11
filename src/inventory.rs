@@ -11,14 +11,15 @@ use crate::prelude::*;
 use crate::armors::ArmorKind;
 use crate::prelude::food_kind::RATION;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_LEFT_HAND, ON_RIGHT_HAND};
-use crate::prelude::object_what::{PackFilter};
+use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::ObjectWhat::{Amulet, Armor, Food, Gold, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::prelude::ring_kind::{ADD_STRENGTH, DEXTERITY, RingKind, RINGS};
 use crate::prelude::scroll_kind::{ScrollKind, SCROLLS};
-use crate::prelude::wand_kind::{WandKind, MAX_WAND};
+use crate::zap::wand_kind::WandKind;
 use crate::weapons::WeaponKind;
+use crate::zap::constants::MAX_WAND;
 
 pub static mut IS_WOOD: [bool; MAX_WAND] = [false; MAX_WAND];
 const WAND_MATERIALS: [&'static str; MAX_WAND_MATERIAL] = [

@@ -181,8 +181,6 @@ pub mod object_what {
 
 pub mod scroll_kind;
 
-pub mod wand_kind;
-
 pub mod food_kind {
 	pub const RATION: u16 = 0;
 	pub const FRUIT: u16 = 1;
