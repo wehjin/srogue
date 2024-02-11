@@ -15,7 +15,7 @@ use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::potion_kind::POTIONS;
 use crate::scrolls::constants::SCROLLS;
-use crate::zap::constants::MAX_WAND;
+use crate::zap::constants::WANDS;
 use crate::settings::{login_name, nick_name};
 use crate::weapons::constants::WEAPONS;
 
@@ -330,7 +330,7 @@ pub unsafe fn id_all()
 	for i in 0..ARMORS {
 		id_armors[i].id_status = Identified;
 	}
-	for i in 0..MAX_WAND {
+	for i in 0..WANDS {
 		id_wands[i].id_status = Identified;
 	}
 	for i in 0..POTIONS {

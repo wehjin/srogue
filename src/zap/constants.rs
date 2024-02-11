@@ -8,5 +8,5 @@ pub const PUT_TO_SLEEP: u16 = 6;
 pub const MAGIC_MISSILE: u16 = 7;
 pub const CANCELLATION: u16 = 8;
 pub const DO_NOTHING: u16 = 9;
-pub const MAX_WAND: usize = 10;
+pub const WANDS: usize = 10;
 

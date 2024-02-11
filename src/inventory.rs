@@ -21,9 +21,9 @@ use crate::scrolls::ScrollKind;
 use crate::scrolls::constants::SCROLLS;
 use crate::zap::wand_kind::WandKind;
 use crate::weapons::WeaponKind;
-use crate::zap::constants::MAX_WAND;
+use crate::zap::constants::WANDS;
 
-pub static mut IS_WOOD: [bool; MAX_WAND] = [false; MAX_WAND];
+pub static mut IS_WOOD: [bool; WANDS] = [false; WANDS];
 const WAND_MATERIALS: [&'static str; MAX_WAND_MATERIAL] = [
 	"steel ",
 	"bronze ",
@@ -366,7 +366,7 @@ fn get_in_use_description(obj: &object) -> &'static str {
 pub unsafe fn get_wand_and_ring_materials() {
 	{
 		let mut used = [false; MAX_WAND_MATERIAL];
-		for i in 0..MAX_WAND {
+		for i in 0..WANDS {
 			let j = take_unused(&mut used);
 			id_wands[i].title = Some(WAND_MATERIALS[j].to_string());
 			IS_WOOD[i] = j > MAX_METAL;
