@@ -323,14 +323,7 @@ unsafe fn get_value(obj: &obj) -> usize {
 	let wc = obj.which_kind;
 	let mut val = match obj.what_is {
 		ObjectWhat::Weapon => obj.weapon_value(),
-		ObjectWhat::Armor => {
-			let mut val = id_armors[wc as usize].value;
-			val += obj.d_enchant as i16 * 75;
-			if obj.is_protected != 0 {
-				val += 200;
-			}
-			val
-		}
+		ObjectWhat::Armor => obj.armor_value(),
 		ObjectWhat::Wand => id_wands[wc as usize].value * (obj.class as i16 + 1),
 		ObjectWhat::Scroll => id_scrolls[wc as usize].value * obj.quantity,
 		ObjectWhat::Potion => id_potions[wc as usize].value * obj.quantity,

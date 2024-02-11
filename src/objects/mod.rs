@@ -5,6 +5,7 @@ mod object_pack;
 mod potions;
 mod scrolls;
 mod weapons;
+mod armors;
 
 use std::clone::Clone;
 use std::string::ToString;
@@ -29,7 +30,6 @@ use crate::settings::fruit;
 pub use object_pack::*;
 use crate::armors::constants::{ARMORS, PLATE, SPLINT};
 use crate::player::Player;
-use crate::weapons::WeaponKind;
 use crate::weapons::constants::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
 
 
@@ -127,34 +127,6 @@ impl obj {
 	pub fn is_on_right_hand(&self) -> bool { self.in_use_flags & ON_RIGHT_HAND != 0 }
 	pub fn is_at(&self, row: i64, col: i64) -> bool {
 		self.row == row && self.col == col
-	}
-	pub fn is_wielded_throwing_weapon(&self) -> bool {
-		self.is_wielded() && self.is_throwing_weapon()
-	}
-	pub fn is_throwing_weapon(&self) -> bool {
-		if let Some(kind) = self.weapon_kind() {
-			kind.is_throwing_weapon()
-		} else {
-			false
-		}
-	}
-	pub fn is_arrow_or_throwing_weapon(&self) -> bool {
-		if let Some(kind) = self.weapon_kind() {
-			kind.is_arrow_or_throwing_weapon()
-		} else {
-			false
-		}
-	}
-	pub fn is_weapon(&self) -> bool { self.weapon_kind().is_some() }
-	pub fn is_wielded(&self) -> bool {
-		(self.in_use_flags & BEING_WIELDED) != 0
-	}
-	pub fn weapon_kind(&self) -> Option<WeaponKind> {
-		if self.what_is == Weapon {
-			Some(WeaponKind::from(self.which_kind))
-		} else {
-			None
-		}
 	}
 	pub fn gold_quantity(&self) -> Option<usize> {
 		if self.what_is == Gold {

@@ -6,4 +6,3 @@ pub const BANDED: u16 = 4;
 pub const SPLINT: u16 = 5;
 pub const PLATE: u16 = 6;
 pub const ARMORS: usize = 7;
-
