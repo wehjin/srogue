@@ -13,8 +13,6 @@ use crate::prelude::stat_const::STAT_STRENGTH;
 pub(crate) mod constants;
 pub(crate) mod ring_kind;
 
-pub static mut r_rings: isize = 0;
-
 pub unsafe fn put_on_ring(player: &mut Player, level: &mut Level) {
 	if player.hand_usage() == HandUsage::Both {
 		message("wearing two rings already", 0);
@@ -157,7 +155,8 @@ pub fn gr_ring(ring: &mut object, assign_wk: bool) {
 }
 
 pub unsafe fn inv_rings(player: &Player) {
-	if r_rings == 0 {
+	let hand_usage = player.hand_usage();
+	if hand_usage == HandUsage::None {
 		message("not wearing any rings", 0);
 	} else {
 		for ring_hand in PlayerHand::ALL_HANDS {
@@ -170,7 +169,7 @@ pub unsafe fn inv_rings(player: &Player) {
 	if wizard {
 		message(
 			&format!("ste {}, r_r {}, e_r {}, r_t {}, s_s {}, a_s {}, reg {}, r_e {}, s_i {}, m_a {}, aus {}",
-			         player.ring_effects.stealthy(), r_rings,
+			         player.ring_effects.stealthy(), hand_usage.count_hands(),
 			         player.ring_effects.calorie_burn(), player.ring_effects.has_teleport(),
 			         player.ring_effects.has_sustain_strength(), player.ring_effects.add_strength(),
 			         player.ring_effects.regeneration(), player.ring_effects.dexterity(),
@@ -205,7 +204,6 @@ pub(crate) mod effects;
 
 pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 	player.ring_effects.clear_stealthy();
-	r_rings = 0;
 	player.ring_effects.clear_calorie_burn();
 	player.ring_effects.set_teleport(false);
 	player.ring_effects.set_sustain_strength(false);
@@ -222,7 +220,6 @@ pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 				continue;
 			}
 			Some(ring_id) => {
-				r_rings += 1;
 				player.ring_effects.incr_calorie_burn();
 				match player.expect_object(ring_id).ring_kind().expect("ring kind") {
 					RingKind::Stealth => {

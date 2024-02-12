@@ -79,10 +79,11 @@ pub unsafe fn throw(player: &mut Player, level: &mut Level) {
 unsafe fn throw_at_monster(monster: &mut Monster, obj_id: ObjectId, player: &mut Player, level: &mut Level) -> bool {
 	let hit_chance = {
 		let player_exp = player.buffed_exp();
+		let player_debuf = player.debuf_exp();
 		let player_weapon_is_bow = rogue_weapon_is_bow(player);
 
 		let obj = player.object(obj_id).expect("obj in pack");
-		let mut hit_chance = get_hit_chance(Some(obj), player_exp);
+		let mut hit_chance = get_hit_chance(Some(obj), player_exp, player_debuf);
 		if obj.which_kind == ARROW && player_weapon_is_bow {
 			hit_chance += hit_chance / 3;
 		} else if obj.is_wielded_throwing_weapon() {
@@ -102,10 +103,11 @@ unsafe fn throw_at_monster(monster: &mut Monster, obj_id: ObjectId, player: &mut
 	} else {
 		let player_str = player.buffed_strength();
 		let player_exp = player.buffed_exp();
+		let player_debuf = player.debuf_exp();
 		let damage = {
-			let mut damage = get_weapon_damage(player.object(obj_id), player_str, player_exp);
+			let mut damage = get_weapon_damage(player.object(obj_id), player_str, player_exp, player_debuf);
 			if player.object_kind(obj_id) == ARROW && rogue_weapon_is_bow(player) {
-				damage += get_weapon_damage(player.weapon(), player_str, player_exp);
+				damage += get_weapon_damage(player.weapon(), player_str, player_exp, player_debuf);
 				damage = (damage * 2) / 3;
 			} else if player.check_object(obj_id, obj::is_wielded_throwing_weapon) {
 				damage = (damage * 3) / 2;

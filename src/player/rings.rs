@@ -10,6 +10,17 @@ pub enum HandUsage {
 	Both,
 }
 
+impl HandUsage {
+	pub fn count_hands(&self) -> isize {
+		match self {
+			HandUsage::None => 0,
+			HandUsage::Left => 1,
+			HandUsage::Right => 1,
+			HandUsage::Both => 2,
+		}
+	}
+}
+
 impl Player {
 	pub fn hand_usage(&self) -> HandUsage {
 		let left = self.ring_id(PlayerHand::Left).is_some();

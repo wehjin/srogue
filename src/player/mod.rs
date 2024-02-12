@@ -32,6 +32,9 @@ impl Player {
 	pub fn buffed_exp(&self) -> isize {
 		self.ring_effects.apply_dexterity(self.exp())
 	}
+	pub fn debuf_exp(&self) -> isize {
+		self.hand_usage().count_hands()
+	}
 }
 
 impl Player {

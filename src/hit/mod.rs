@@ -20,7 +20,7 @@ pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame
 	let mut hit_chance: usize = if player.cur_depth >= (AMULET_LEVEL * 2) {
 		100
 	} else {
-		let reduction = (2 * player.buffed_exp()) - r_rings;
+		let reduction = (2 * player.buffed_exp()) - player.debuf_exp();
 		reduce_chance(monster.m_hit_chance(), reduction)
 	};
 	if wizard {
@@ -31,7 +31,7 @@ pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame
 	}
 
 	if other.is_some() {
-		hit_chance = reduce_chance(hit_chance, player.buffed_exp() - r_rings);
+		hit_chance = reduce_chance(hit_chance, player.buffed_exp() - player.debuf_exp());
 	}
 
 	let base_monster_name = mon_name(&*monster, player, level);
@@ -94,8 +94,9 @@ pub unsafe fn rogue_hit(monster: &mut monster::Monster, force_hit: bool, player:
 		}
 	} else {
 		let player_exp = player.buffed_exp();
+		let player_debuf = player.debuf_exp();
 		let player_str = player.buffed_strength();
-		let damage = get_weapon_damage(player.weapon(), player_str, player_exp);
+		let damage = get_weapon_damage(player.weapon(), player_str, player_exp, player_debuf);
 		let damage = if wizard { damage * 3 } else { damage };
 		if mon_damage(monster, damage, player, level) {
 			if FIGHT_MONSTER.is_none() {
@@ -308,13 +309,14 @@ pub fn get_dir_rc(dir: char, row: &mut i64, col: &mut i64, allow_off_screen: boo
 
 pub unsafe fn get_hit_chance_player(weapon: Option<&object>, player: &Player) -> usize {
 	let player_exp = player.buffed_exp();
-	get_hit_chance(weapon, player_exp)
+	let player_debuf = player.debuf_exp();
+	get_hit_chance(weapon, player_exp, player_debuf)
 }
 
-pub unsafe fn get_hit_chance(obj: Option<&object>, buffed_exp: isize) -> usize {
+pub unsafe fn get_hit_chance(obj: Option<&object>, buffed_exp: isize, debuf_exp: isize) -> usize {
 	let mut hit_chance = 40isize;
 	hit_chance += 3 * to_hit(obj) as isize;
-	hit_chance += (2 * buffed_exp) - r_rings;
+	hit_chance += (2 * buffed_exp) - debuf_exp;
 	hit_chance as usize
 }
 
@@ -326,10 +328,10 @@ fn to_hit(obj: Option<&object>) -> usize {
 	}
 }
 
-pub unsafe fn get_weapon_damage(weapon: Option<&object>, buffed_str: isize, buffed_exp: isize) -> isize {
+pub unsafe fn get_weapon_damage(weapon: Option<&object>, buffed_str: isize, buffed_exp: isize, debuf_exp: isize) -> isize {
 	let mut damage = get_w_damage(weapon);
 	damage += damage_for_strength(buffed_str);
-	damage += (buffed_exp - r_rings + 1) / 2;
+	damage += (buffed_exp - debuf_exp + 1) / 2;
 	damage
 }
 
@@ -350,7 +352,6 @@ use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::stat_const::STAT_HP;
 use crate::r#move::{can_move, is_direction, one_move_rogue};
 use crate::random::rand_percent;
-use crate::ring::{r_rings};
 use crate::room::get_dungeon_char;
 use crate::score::killed_by;
 use crate::spec_hit::{clear_gold_seeker, check_imitator, cough_up, special_hit};
