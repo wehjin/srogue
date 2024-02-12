@@ -10,18 +10,23 @@ mod dungeon;
 
 pub use cells::*;
 pub use dungeon::*;
+use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM, MAX_TRAP};
 use crate::message::{message, print_stats};
 use crate::monster::wake_room;
 use crate::objects::put_amulet;
 use crate::pack::has_amulet;
 use crate::player::Player;
-use crate::random::{get_rand, rand_percent};
-use crate::room::{gr_row_col, is_all_connected, light_passage, light_up_room};
+use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::room::{DoorDirection, get_opt_room_number, get_room_number, gr_row_col, is_all_connected, light_passage, light_up_room, Room, RoomBounds, RoomType};
 use crate::score::win;
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
+use crate::r#use::{extra_hp, levitate};
 use crate::room::RoomType::Nothing;
+use crate::spec_hit::less_hp;
+use crate::trap::Trap;
+use crate::zap::wizard;
 
 pub static mut cur_room: i64 = 0;
 pub static mut new_level_message: Option<String> = None;

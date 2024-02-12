@@ -1,6 +1,6 @@
 use crate::objects::{obj, ObjectId};
 use crate::player::Player;
-use crate::prelude::get_rand;
+use crate::random::get_rand;
 
 impl Player {
 	pub unsafe fn to_object_name_with_quantity(&self, obj_id: ObjectId, quantity: i16) -> String {

@@ -3,6 +3,12 @@
 use ncurses::{chtype, mvaddch, mvinch, refresh};
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
+use crate::hit::{get_dir_rc, get_hit_chance, get_weapon_damage, HIT_MESSAGE, mon_damage};
+use crate::level::{CellKind, Level};
+use crate::message::{CANCEL, check_message, message, print_stats};
+use crate::monster::{MASH, Monster, mv_aquatars, rogue_can_see};
+use crate::objects::{obj, ObjectId, place_at};
+use crate::pack::{CURSE_MESSAGE, pack_letter, unwear, unwield};
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::item_usage::{NOT_USED};
@@ -10,9 +16,16 @@ use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Weapons;
 use crate::prelude::stat_const::STAT_ARMOR;
+use crate::r#move::get_dir_or_cancel;
+use crate::r#use::vanish;
+use crate::random::{get_rand, rand_percent};
+use crate::ring::un_put_hand;
+use crate::room::{get_dungeon_char, get_mask_char};
+use crate::spec_hit::{clear_gold_seeker, imitating};
 use crate::throw::Move::{Up, UpLeft, UpRight, Left, Right, Same, Down, DownLeft, DownRight};
 use crate::weapons::{WeaponKind};
 use crate::weapons::constants::ARROW;
+use crate::zap::zap_monster;
 
 pub unsafe fn throw(player: &mut Player, level: &mut Level) {
 	let dir = get_dir_or_cancel();

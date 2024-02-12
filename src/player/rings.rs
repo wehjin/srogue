@@ -1,6 +1,6 @@
 use crate::objects::{obj, ObjectId};
 use crate::player::Player;
-use crate::prelude::PlayerHand;
+use crate::ring::PlayerHand;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum HandUsage {

@@ -3,7 +3,7 @@ use std::io::Read;
 use libc::c_int;
 use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
 use crate::level::constants::{DCOLS, DROWS};
-use crate::prelude::*;
+use crate::message::{message, rgetchar};
 
 static INSTRUCTIONS_FILE: &'static str = "/usr/games/player.rogue.instr";
 

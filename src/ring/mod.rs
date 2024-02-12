@@ -3,12 +3,20 @@
 use constants::{ADD_STRENGTH, ADORNMENT, DEXTERITY, R_TELEPORT, RINGS};
 use crate::player::Player;
 use crate::player::rings::HandUsage;
-use crate::prelude::*;
 use crate::prelude::item_usage::{ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat::Ring;
 use crate::prelude::object_what::PackFilter::Rings;
 use ring_kind::RingKind;
+use crate::inventory::get_obj_desc;
+use crate::level::Level;
+use crate::message::{CANCEL, check_message, message, print_stats, rgetchar};
+use crate::objects::{obj, object, ObjectId};
+use crate::pack::{CURSE_MESSAGE, pack_letter};
 use crate::prelude::stat_const::STAT_STRENGTH;
+use crate::r#move::reg_move;
+use crate::r#use::relight;
+use crate::random::{coin_toss, get_rand};
+use crate::zap::wizard;
 
 pub(crate) mod constants;
 pub(crate) mod ring_kind;

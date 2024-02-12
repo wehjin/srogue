@@ -2,13 +2,23 @@
 
 use ncurses::{chtype, mvaddch, refresh, standend, standout};
 use crate::armors::ArmorKind;
+use crate::hit::mon_hit;
+use crate::inventory::get_obj_desc;
 use crate::level::constants::{DCOLS, DROWS};
-use crate::monster::Monster;
+use crate::level::{add_exp, CellKind, hp_raise, Level, LEVEL_POINTS};
+use crate::message::{check_message, message, print_stats};
+use crate::monster::{MASH, mon_can_go, mon_disappeared, mon_name, mon_sees, Monster, move_mon_to, mv_mons, mv_monster, rogue_can_see, rogue_is_around};
+use crate::objects::{alloc_object, get_armor_class, gr_object, level_objects, obj, place_at};
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD, STAT_HP, STAT_STRENGTH};
+use crate::r#move::YOU_CAN_MOVE_AGAIN;
+use crate::r#use::{blind, confuse, levitate, vanish};
+use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::room::{get_dungeon_char, get_room_number};
+use crate::score::killed_by;
 
 
 pub static mut less_hp: isize = 0;

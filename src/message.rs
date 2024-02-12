@@ -2,7 +2,12 @@
 
 use libc::{c_int};
 use ncurses::{addch, chtype, clrtoeol, curscr, mvaddstr, wrefresh};
+use crate::init::{cant_int, did_int, onintr, save_is_interactive};
 use crate::level::constants::DROWS;
+use crate::machdep::md_slurp;
+use crate::objects::get_armor_class;
+use crate::pack::wait_for_ack;
+use crate::play::interrupted;
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_EXP, STAT_GOLD, STAT_HP, STAT_HUNGER, STAT_LABEL, STAT_LEVEL, STAT_STRENGTH};

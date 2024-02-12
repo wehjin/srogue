@@ -3,8 +3,8 @@
 use ncurses::chtype;
 use serde::{Deserialize, Serialize};
 use crate::message::message;
-use crate::random::{coin_toss, get_rand, rand_percent};
-use crate::room::gr_row_col;
+use crate::random::{coin_toss, get_rand, get_rand_indices, rand_percent};
+use crate::room::{dr_course, get_room_number, gr_row_col, random_spot_with_flag};
 
 
 pub mod flags;
@@ -16,12 +16,19 @@ pub use flags::MonsterFlags;
 pub use kind::*;
 pub use mash::*;
 use crate::{odds};
+use crate::hit::mon_hit;
 use crate::level::constants::{DCOLS, DROWS};
+use crate::level::{CellKind, cur_room, Level};
+use crate::objects::{level_objects, ObjectId, ObjectPack};
 use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::Scroll;
+use crate::r#move::is_passable;
+use crate::r#use::{blind, halluc, haste_self};
 use crate::scrolls::ScrollKind;
 use crate::scrolls::ScrollKind::ScareMonster;
 use crate::room::RoomType::Maze;
+use crate::spec_hit::{flame_broil, m_confuse, seek_gold};
+use crate::throw::RandomWalk;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Fighter {

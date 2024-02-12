@@ -2,13 +2,14 @@
 
 use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
 use crate::level::constants::{DCOLS, DROWS};
-use crate::message;
-use crate::pack::wait_for_ack;
+use crate::pack::{pack_letter, wait_for_ack};
 use crate::player::Player;
 use crate::random::get_rand;
 
 use crate::prelude::*;
 use crate::armors::ArmorKind;
+use crate::message::{CANCEL, message};
+use crate::objects::{get_armor_class, id, id_armors, id_potions, id_rings, id_scrolls, id_wands, id_weapons, IdStatus, name_of, obj, object, ObjectPack};
 use crate::prelude::food_kind::RATION;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::PackFilter;
@@ -17,11 +18,13 @@ use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::ring::ring_kind::RingKind;
 use crate::ring::constants::{ADD_STRENGTH, DEXTERITY, RINGS};
+use crate::score::is_vowel;
 use crate::scrolls::ScrollKind;
 use crate::scrolls::constants::SCROLLS;
 use crate::zap::wand_kind::WandKind;
 use crate::weapons::WeaponKind;
 use crate::zap::constants::WANDS;
+use crate::zap::wizard;
 
 pub static mut IS_WOOD: [bool; WANDS] = [false; WANDS];
 const WAND_MATERIALS: [&'static str; MAX_WAND_MATERIAL] = [

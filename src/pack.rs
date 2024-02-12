@@ -1,19 +1,22 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
-use crate::{get_input_line, message, mv_aquatars, print_stats};
-use crate::objects::IdStatus::{Called, Identified};
-use crate::objects::place_at;
+use crate::inventory::{get_id_table, get_inv_obj_desc, get_obj_desc, get_title, inventory};
+use crate::level::{CellKind, Level};
+use crate::message::{CANCEL, LIST, check_message, get_input_line, message, print_stats, rgetchar, sound_bell};
+use crate::monster::mv_aquatars;
+use crate::objects::IdStatus::{Called, Identified, Unidentified};
+use crate::objects::{id_scrolls, level_objects, obj, object, ObjectId, ObjectPack, place_at};
 use crate::player::Player;
 
-use crate::prelude::*;
 use crate::prelude::food_kind::FRUIT;
-use crate::prelude::IdStatus::Unidentified;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::object_what::{PackFilter};
 use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
 use crate::scrolls::ScrollKind::ScareMonster;
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD};
+use crate::r#move::reg_move;
+use crate::ring::un_put_hand;
 use crate::weapons::WeaponKind;
 
 pub const CURSE_MESSAGE: &'static str = "you can't, it appears to be cursed";

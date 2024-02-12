@@ -1,7 +1,14 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use ncurses::{addch, chtype, mvaddch, mvinch};
+use crate::inventory::{get_id_table, get_obj_desc};
+use crate::level::{add_exp, cur_room, Level, LEVEL_POINTS, put_player};
+use crate::machdep::md_sleep;
+use crate::message::{CANCEL, check_message, hunger_str, message, print_stats};
+use crate::monster::{aggravate, create_monster, gr_obj_char, MASH, mv_mons, player_hallucinating, show_monsters};
 use crate::objects::IdStatus::{Called, Identified};
+use crate::objects::{id_potions, id_scrolls, level_objects, name_of, ObjectId, show_objects};
+use crate::pack::{pack_letter, take_from_pack, unwear, unwield};
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::food_kind::{FRUIT, RATION};
@@ -9,8 +16,13 @@ use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll,
 use crate::prelude::object_what::PackFilter::{AllObjects, Foods, Potions, Scrolls};
 use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_HP, STAT_HUNGER, STAT_STRENGTH};
+use crate::r#move::{reg_move, YOU_CAN_MOVE_AGAIN};
+use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::ring::un_put_hand;
+use crate::room::{darken_room, draw_magic_map, get_dungeon_char, get_opt_room_number, light_passage, light_up_room};
 use crate::scrolls::ScrollKind;
 use crate::settings::fruit;
+use crate::trap::{is_off_screen, no_rogue};
 
 pub static mut halluc: usize = 0;
 pub static mut blind: usize = 0;

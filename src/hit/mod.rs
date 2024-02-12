@@ -338,7 +338,7 @@ pub unsafe fn get_weapon_damage(weapon: Option<&object>, buffed_str: isize, buff
 mod damage_stat;
 
 pub use damage_stat::*;
-use crate::level::{add_exp, Level};
+use crate::level::{add_exp, CellKind, Level};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
 use crate::monster;
@@ -346,7 +346,7 @@ use crate::monster::{MASH, mon_name};
 use crate::objects::{get_armor_class, object};
 use crate::play::interrupted;
 use crate::player::Player;
-use crate::prelude::{AMULET_LEVEL, CellKind, MIN_ROW};
+use crate::prelude::{AMULET_LEVEL, MIN_ROW};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::stat_const::STAT_HP;

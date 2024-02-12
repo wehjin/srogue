@@ -1,15 +1,19 @@
 use std::error::Error;
 use std::fs;
 use serde::{Deserialize, Serialize};
+use crate::init::GameState;
+use crate::inventory::IS_WOOD;
 use crate::level::{cur_room, Level};
 use crate::machdep::{get_current_time, RogueTime};
-use crate::monster::{MonsterMash};
-use crate::objects::{foods, id};
+use crate::message::hunger_str;
+use crate::monster::{MASH, MonsterMash};
+use crate::objects::{foods, id, id_potions, id_rings, id_scrolls, id_wands, level_objects, ObjectPack};
 use crate::player::Player;
-use crate::prelude::{blind, confused, GameState, halluc, haste_self, levitate, m_moves, ObjectPack, wizard};
-use crate::save::{hunger_str, id_potions, id_rings, id_scrolls, id_wands, IS_WOOD, MASH, level_objects};
+use crate::r#move::m_moves;
+use crate::r#use::{blind, confused, halluc, haste_self, levitate};
 use crate::settings;
 use crate::settings::{login_name, score_only};
+use crate::zap::wizard;
 
 pub fn from_file(path: &str) -> Result<SaveData, Box<dyn Error>> {
 	let json = fs::read_to_string(path)?;

@@ -4,7 +4,6 @@
 extern "C" {}
 
 use std::sync::OnceLock;
-use crate::prelude::*;
 
 mod message;
 mod level;
@@ -35,7 +34,14 @@ mod armors;
 mod scrolls;
 
 use libc::{setuid, perror, geteuid, getuid, uid_t};
+use crate::init::{clean_up, init};
+use crate::level::{clear_level, make_level, put_player};
+use crate::message::print_stats;
+use crate::monster::{MASH, put_mons};
+use crate::objects::{level_objects, put_objects, put_stairs};
+use crate::play::play_level;
 use crate::prelude::stat_const::STAT_ALL;
+use crate::trap::add_traps;
 
 pub mod odds;
 

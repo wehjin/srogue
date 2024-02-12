@@ -2,11 +2,20 @@
 
 use ncurses::{mvaddch, mvinch};
 use crate::player::Player;
-use crate::prelude::*;
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Wands;
 use wand_kind::WandKind;
+use crate::hit::{FIGHT_MONSTER, get_dir_rc, rogue_hit};
+use crate::level::{CellKind, Level};
+use crate::message::{CANCEL, check_message, get_input_line, message};
+use crate::monster::{gmc, gr_monster, MASH, Monster, MonsterKind, rogue_can_see};
+use crate::pack::pack_letter;
+use crate::r#move::{get_dir_or_cancel, reg_move};
+use crate::r#use::relight;
+use crate::random::get_rand;
+use crate::room::gr_row_col;
 use crate::settings::set_score_only;
+use crate::spec_hit::imitating;
 
 pub(crate) mod constants;
 pub(crate) mod wand_kind;

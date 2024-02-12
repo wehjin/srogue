@@ -4,14 +4,19 @@ use std::ops::{RangeInclusive};
 use ncurses::{addch, chtype, mvaddch, mvinch};
 use serde::{Deserialize, Serialize};
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM};
+use crate::level::{CellKind, Level, same_col, same_row};
+use crate::monster::{gmc_row_col, MASH, mon_sees, Monster};
+use crate::objects::{gr_object, level_objects, place_at};
 use crate::player::Player;
 use crate::prelude::*;
-use crate::prelude::DoorDirection::{Left, Right};
 use crate::prelude::object_what::ObjectWhat;
-use crate::prelude::RoomType::Nothing;
-use crate::room::DoorDirection::{Up, Down};
+use crate::r#move::can_move;
+use crate::r#use::blind;
+use crate::random::get_rand;
+use crate::room::DoorDirection::{Up, Down, Left, Right};
 use crate::room::room_visitor::RoomVisitor;
-use crate::room::RoomType::{Maze};
+use crate::room::RoomType::{Maze, Nothing};
+use crate::spec_hit::imitating;
 
 #[derive(Copy, Clone, Default, Serialize, Deserialize)]
 pub struct dr {
@@ -87,7 +92,7 @@ impl DoorDirection {
 			Left => 3,
 		}
 	}
-	pub fn inverse(&self) -> DoorDirection {
+	pub fn inverse(&self) -> Self {
 		match self {
 			Up => Down,
 			Right => Left,

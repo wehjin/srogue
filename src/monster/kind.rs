@@ -2,7 +2,7 @@ use ncurses::chtype;
 use serde::{Deserialize, Serialize};
 use crate::hit::DamageStat;
 use crate::monster::{MonsterFlags};
-use crate::prelude::{get_rand};
+use crate::random::get_rand;
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum MonsterKind {

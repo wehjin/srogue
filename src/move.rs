@@ -2,15 +2,29 @@
 
 use ncurses::{chtype, mvaddch, refresh};
 use MoveResult::MoveFailed;
+use crate::hit::{get_dir_rc, rogue_hit};
 use crate::hunger::{FAINT, HUNGRY, STARVE, WEAK};
+use crate::inventory::{get_inv_obj_desc, get_obj_desc};
 use crate::level::constants::{DCOLS, DROWS};
+use crate::level::{CellKind, cur_room, Level};
+use crate::message::{CANCEL, check_message, hunger_str, message, print_stats, rgetchar, sound_bell};
+use crate::monster::{MASH, mv_mons, put_wanderer, wake_room};
+use crate::objects::level_objects;
 use crate::odds::R_TELE_PERCENT;
+use crate::pack::{pick_up, PickUpResult};
+use crate::play::interrupted;
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
+use crate::r#use::{blind, confused, halluc, hallucinate, haste_self, levitate, tele, unblind, unconfuse, unhallucinate};
+use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::room::{darken_room, get_dungeon_char, get_room_number, light_passage, light_up_room};
+use crate::score::killed_by;
 use crate::settings::jump;
+use crate::throw::Move;
+use crate::trap::{is_off_screen, search, trap_player};
 
 pub static mut m_moves: i16 = 0;
 pub const YOU_CAN_MOVE_AGAIN: &'static str = "you can move again";

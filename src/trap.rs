@@ -3,11 +3,21 @@
 use ncurses::{chtype, mvaddch};
 use serde::{Deserialize, Serialize};
 use TrapKind::NoTrap;
+use crate::hit::{DamageEffect, DamageStat, get_damage, get_dir_rc};
 use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
+use crate::level::{CellKind, Level, new_level_message};
+use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
+use crate::play::interrupted;
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_STRENGTH};
+use crate::r#move::{is_direction, reg_move};
+use crate::r#use::{blind, take_a_nap, tele};
+use crate::random::{get_rand, rand_percent};
+use crate::room::{get_dungeon_char, gr_row_col};
+use crate::score::killed_by;
+use crate::spec_hit::rust;
 use crate::trap::trap_kind::TrapKind;
 use crate::trap::trap_kind::TrapKind::{BearTrap, DartTrap, RustTrap, SleepingGasTrap, TeleTrap, TrapDoor};
 
