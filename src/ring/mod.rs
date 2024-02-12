@@ -171,7 +171,7 @@ pub unsafe fn inv_rings(player: &Player) {
 	if wizard {
 		message(
 			&format!("ste {}, r_r {}, e_r {}, r_t {}, s_s {}, a_s {}, reg {}, r_e {}, s_i {}, m_a {}, aus {}",
-			         player.ring_effects.stealthy(), r_rings, e_rings, r_teleport, sustain_strength,
+			         player.ring_effects.stealthy(), r_rings, e_rings, player.ring_effects.has_teleport(), sustain_strength,
 			         add_strength, regeneration, ring_exp, r_see_invisible,
 			         maintain_armor, auto_search),
 			0,
@@ -205,7 +205,7 @@ pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 	player.ring_effects.clear_stealthy();
 	r_rings = 0;
 	e_rings = 0;
-	r_teleport = false;
+	player.ring_effects.set_teleport(false);
 	sustain_strength = false;
 	add_strength = 0;
 	regeneration = 0;
@@ -223,8 +223,12 @@ pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 				r_rings += 1;
 				e_rings += 1;
 				match RingKind::from_index(ring.which_kind as usize) {
-					RingKind::Stealth => { player.ring_effects.incr_stealthy(); }
-					RingKind::RTeleport => { r_teleport = true; }
+					RingKind::Stealth => {
+						player.ring_effects.incr_stealthy();
+					}
+					RingKind::RTeleport => {
+						player.ring_effects.set_teleport(true);
+					}
 					RingKind::Regeneration => { regeneration += 1; }
 					RingKind::SlowDigest => { e_rings -= 2; }
 					RingKind::AddStrength => { add_strength += ring.class; }

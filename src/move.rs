@@ -10,7 +10,7 @@ use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
-use crate::ring::effects::{auto_search, e_rings, r_teleport, regeneration};
+use crate::ring::effects::{auto_search, e_rings, regeneration};
 use crate::settings::jump;
 
 pub static mut m_moves: i16 = 0;
@@ -43,7 +43,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, player: &mut Player, lev
 			return MoveFailed;
 		}
 	}
-	if r_teleport && rand_percent(R_TELE_PERCENT) {
+	if player.ring_effects.has_teleport() && rand_percent(R_TELE_PERCENT) {
 		tele(player, level);
 		return StoppedOnSomething;
 	}

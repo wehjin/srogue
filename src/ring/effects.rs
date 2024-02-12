@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::odds;
 
-pub static mut r_teleport: bool = false;
 pub static mut regeneration: isize = 0;
 pub static mut e_rings: libc::c_short = 0;
 pub static mut add_strength: isize = 0;
@@ -14,6 +13,14 @@ pub static mut auto_search: libc::c_short = 0;
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
 pub struct RingEffects {
 	stealthy: usize,
+	r_teleport: bool,
+}
+
+impl RingEffects {
+	pub fn has_teleport(&self) -> bool { self.r_teleport }
+	pub fn set_teleport(&mut self, enable: bool) {
+		self.r_teleport = enable;
+	}
 }
 
 impl RingEffects {
