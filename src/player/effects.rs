@@ -1,11 +1,14 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Default, Serialize, Deserialize)]
-pub struct Hallucination(usize);
+pub struct TimeEffect(usize);
 
-impl Hallucination {
+impl TimeEffect {
 	pub fn is_active(&self) -> bool {
 		self.0 > 0
+	}
+	pub fn is_inactive(&self) -> bool {
+		!self.is_active()
 	}
 	pub fn clear(&mut self) {
 		self.0 = 0;

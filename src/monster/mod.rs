@@ -23,7 +23,7 @@ use crate::objects::{level_objects, ObjectId, ObjectPack};
 use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::Scroll;
 use crate::r#move::is_passable;
-use crate::r#use::{blind, haste_self};
+use crate::r#use::{haste_self};
 use crate::scrolls::ScrollKind;
 use crate::scrolls::ScrollKind::ScareMonster;
 use crate::room::RoomType::Maze;
@@ -151,9 +151,9 @@ pub unsafe fn gmc_row_col(row: i64, col: i64, player: &Player, level: &Level) ->
 	}
 }
 
-pub unsafe fn gmc(monster: &Monster, player: &Player, level: &Level) -> chtype {
+pub fn gmc(monster: &Monster, player: &Player, level: &Level) -> chtype {
 	if (monster.is_invisible() && !player_defeats_invisibility(player, level))
-		|| (blind != 0) {
+		|| player.blind.is_active() {
 		monster.trail_char
 	} else if monster.m_flags.imitates {
 		monster.disguise_char
@@ -273,7 +273,8 @@ pub unsafe fn move_mon_to(monster: &mut Monster, row: i64, col: i64, player: &Pl
 	}
 	// Set the screen appearance at the newly occupied spot
 	monster.trail_char = ncurses::mvinch(row as i32, col as i32);
-	if blind == 0 && (level.detect_monster || rogue_can_see(row, col, player, level)) {
+	if player.blind.is_inactive()
+		&& (level.detect_monster || rogue_can_see(row, col, player, level)) {
 		if !monster.m_flags.invisible || player_defeats_invisibility(player, level) {
 			ncurses::mvaddch(row as i32, col as i32, gmc(monster, player, level));
 		}
@@ -281,7 +282,7 @@ pub unsafe fn move_mon_to(monster: &mut Monster, row: i64, col: i64, player: &Pl
 	if level.dungeon[row as usize][col as usize].is_door()
 		&& !in_current_room(row, col, level)
 		&& level.dungeon[mrow as usize][mcol as usize].is_floor()
-		&& blind == 0 {
+		&& player.blind.is_inactive() {
 		ncurses::mvaddch(mrow as i32, mcol as i32, chtype::from(' '));
 	}
 	if level.dungeon[row as usize][col as usize].is_door() {
@@ -353,7 +354,8 @@ pub unsafe fn wake_room(rn: i64, entering: bool, row: i64, col: i64, player: &Pl
 }
 
 pub unsafe fn mon_name(monster: &Monster, player: &Player, level: &Level) -> &'static str {
-	if player_is_blind() || (monster.m_flags.invisible && !player_defeats_invisibility(player, level)) {
+	if player.blind.is_active()
+		|| (monster.m_flags.invisible && !player_defeats_invisibility(player, level)) {
 		"something"
 	} else if player.halluc.is_active() {
 		MonsterKind::random_name()
@@ -362,9 +364,7 @@ pub unsafe fn mon_name(monster: &Monster, player: &Player, level: &Level) -> &'s
 	}
 }
 
-pub unsafe fn player_is_blind() -> bool { blind != 0 }
-
-pub unsafe fn player_defeats_invisibility(player: &Player, level: &Level) -> bool {
+pub fn player_defeats_invisibility(player: &Player, level: &Level) -> bool {
 	level.detect_monster || level.see_invisible || player.ring_effects.has_see_invisible()
 }
 
@@ -405,9 +405,9 @@ pub unsafe fn put_wanderer(player: &Player, level: &mut Level) {
 	}
 }
 
-pub unsafe fn show_monsters(level: &mut Level) {
+pub unsafe fn show_monsters(player: &Player, level: &mut Level) {
 	level.detect_monster = true;
-	if blind != 0 {
+	if player.blind.is_active() {
 		return;
 	}
 	for monster in &mut MASH.monsters {
@@ -462,7 +462,7 @@ pub unsafe fn put_m_at(row: i64, col: i64, mut monster: Monster, level: &mut Lev
 }
 
 pub unsafe fn rogue_can_see(row: i64, col: i64, player: &Player, level: &Level) -> bool {
-	blind == 0
+	player.blind.is_inactive()
 		&& ((in_current_room(row, col, level) && not_in_maze(level)) || is_very_close(row, col, player))
 }
 

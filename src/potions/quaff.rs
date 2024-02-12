@@ -5,7 +5,7 @@ use crate::monster::{MASH, show_monsters};
 use crate::objects::{level_objects, show_objects};
 use crate::player::Player;
 use crate::potions::kind::PotionKind;
-use crate::r#use::{blind, confused, extra_hp, haste_self, levitate, STRANGE_FEELING};
+use crate::r#use::{confused, extra_hp, haste_self, levitate, STRANGE_FEELING};
 use crate::random::get_rand;
 use crate::settings::fruit;
 
@@ -55,7 +55,7 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: 
 			player.halluc.extend(amount);
 		}
 		PotionKind::DetectMonster => {
-			show_monsters(level);
+			show_monsters(player, level);
 			if MASH.is_empty() {
 				message(STRANGE_FEELING, 0);
 			}
@@ -64,7 +64,7 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: 
 			if level_objects.is_empty() {
 				message(STRANGE_FEELING, 0);
 			} else {
-				if blind == 0 {
+				if player.blind.is_inactive() {
 					show_objects(player, level);
 				}
 			}
@@ -92,8 +92,8 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: 
 			}
 		}
 		PotionKind::SeeInvisible => {
-			message(&format!("hmm, this potion tastes like {}juice", fruit()), 0);
-			if blind != 0 {
+			message(&format!("hmm, this potion tastes like {} juice", fruit().trim()), 0);
+			if player.blind.is_active() {
 				crate::r#use::unblind(player, level);
 			}
 			level.see_invisible = true;
@@ -127,7 +127,7 @@ unsafe fn potion_heal(extra: bool, player: &mut Player, level: &mut Level) {
 			player.rogue.hp_current = player.rogue.hp_max;
 		}
 	}
-	if blind != 0 {
+	if player.blind.is_active() {
 		crate::r#use::unblind(player, level);
 	}
 	if confused != 0 && extra {
@@ -135,7 +135,6 @@ unsafe fn potion_heal(extra: bool, player: &mut Player, level: &mut Level) {
 	} else if confused != 0 {
 		confused = (confused / 2) + 1;
 	}
-
 	if player.halluc.is_active() {
 		if extra {
 			crate::r#use::unhallucinate(player, level);
@@ -145,11 +144,11 @@ unsafe fn potion_heal(extra: bool, player: &mut Player, level: &mut Level) {
 	}
 }
 
-unsafe fn go_blind(player: &Player, level: &Level) {
-	if blind == 0 {
+unsafe fn go_blind(player: &mut Player, level: &Level) {
+	if player.blind.is_inactive() {
 		message("a cloak of darkness falls around you", 0);
 	}
-	blind += get_rand(500, 800);
+	player.blind.extend(get_rand(500, 800));
 
 	if level.detect_monster {
 		for monster in &MASH.monsters {

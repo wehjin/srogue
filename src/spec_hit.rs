@@ -15,7 +15,7 @@ use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD, STAT_HP, STAT_STRENGTH};
 use crate::r#move::YOU_CAN_MOVE_AGAIN;
-use crate::r#use::{blind, confuse, levitate, vanish};
+use crate::r#use::{confuse, levitate, vanish};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::room::{get_dungeon_char, get_room_number};
 use crate::score::killed_by;
@@ -266,7 +266,7 @@ pub fn clear_gold_seeker(monster: &mut Monster) {
 pub unsafe fn check_imitator(monster: &mut Monster, player: &Player, level: &Level) -> bool {
 	if monster.m_flags.imitates {
 		monster.wake_up();
-		if blind == 0 {
+		if player.blind.is_inactive() {
 			mvaddch(monster.spot.row as i32, monster.spot.col as i32, get_dungeon_char(monster.spot.row, monster.spot.col, player, level));
 			check_message();
 			let msg = format!("wait, that's a {}!", mon_name(monster, player, level));
@@ -388,7 +388,7 @@ pub unsafe fn flame_broil(monster: &mut Monster, player: &mut Player, level: &mu
 			return false;
 		}
 	}
-	if blind == 0 && !rogue_is_around(monster.spot.row, monster.spot.col, player) {
+	if player.blind.is_inactive() && !rogue_is_around(monster.spot.row, monster.spot.col, player) {
 		let mut row = monster.spot.row;
 		let mut col = monster.spot.col;
 		get_closer(&mut row, &mut col, player.rogue.row, player.rogue.col);

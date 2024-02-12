@@ -25,7 +25,6 @@ use crate::scrolls::ScrollKind;
 use crate::settings::fruit;
 use crate::trap::is_off_screen;
 
-pub static mut blind: usize = 0;
 pub static mut haste_self: usize = 0;
 pub static mut confused: usize = 0;
 pub static mut levitate: usize = 0;
@@ -62,7 +61,7 @@ pub unsafe fn quaff(player: &mut Player, level: &mut Level) {
 }
 
 pub unsafe fn read_scroll(player: &mut Player, level: &mut Level) {
-	if blind != 0 {
+	if player.blind.is_active() {
 		message("You can't see to read the scroll.", 0);
 		return;
 	}
@@ -292,7 +291,7 @@ pub unsafe fn tele(player: &mut Player, level: &mut Level) {
 	mvaddch(player.rogue.row as i32, player.rogue.col as i32, get_dungeon_char(player.rogue.row, player.rogue.col, player, level));
 
 	if cur_room >= 0 {
-		darken_room(cur_room, level);
+		darken_room(cur_room, player, level);
 	}
 	put_player(get_opt_room_number(player.rogue.row, player.rogue.col, level), player, level);
 	level.being_held = false;
@@ -300,7 +299,7 @@ pub unsafe fn tele(player: &mut Player, level: &mut Level) {
 }
 
 pub unsafe fn hallucinate_on_screen(player: &Player) {
-	if blind != 0 {
+	if player.blind.is_active() {
 		return;
 	}
 
@@ -339,16 +338,15 @@ pub unsafe fn unhallucinate(player: &mut Player, level: &mut Level) {
 	message("everything looks SO boring now", 1);
 }
 
-pub unsafe fn unblind(player: &Player, level: &mut Level)
-{
-	blind = 0;
+pub unsafe fn unblind(player: &mut Player, level: &mut Level) {
+	player.blind.clear();
 	message("the veil of darkness lifts", 1);
 	relight(player, level);
 	if player.halluc.is_active() {
 		hallucinate_on_screen(player);
 	}
 	if level.detect_monster {
-		show_monsters(level);
+		show_monsters(player, level);
 	}
 }
 

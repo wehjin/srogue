@@ -18,7 +18,7 @@ use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
-use crate::r#use::{blind, confused, hallucinate_on_screen, haste_self, levitate, tele, unblind, unconfuse, unhallucinate};
+use crate::r#use::{confused, hallucinate_on_screen, haste_self, levitate, tele, unblind, unconfuse, unhallucinate};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::room::{darken_room, get_dungeon_char, get_room_number, light_passage, light_up_room};
 use crate::score::killed_by;
@@ -81,7 +81,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, player: &mut Player, lev
 	} else if level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_door() && level.dungeon[row as usize][col as usize].is_tunnel() {
 		light_passage(row, col, player, level);
 		wake_room(cur_room, false, player.rogue.row, player.rogue.col, player, level);
-		darken_room(cur_room, level);
+		darken_room(cur_room, player, level);
 		cur_room = PASSAGE;
 	} else if level.dungeon[row as usize][col as usize].is_tunnel() {
 		light_passage(row, col, player, level);
@@ -205,7 +205,7 @@ pub unsafe fn next_to_something(drow: i64, dcol: i64, player: &Player, level: &L
 	if confused != 0 {
 		return true;
 	}
-	if blind != 0 {
+	if player.blind.is_active() {
 		return false;
 	}
 	let mut row;
@@ -395,9 +395,9 @@ pub unsafe fn reg_move(player: &mut Player, level: &mut Level) -> bool {
 			unhallucinate(player, level);
 		}
 	}
-	if blind != 0 {
-		blind -= 1;
-		if blind == 0 {
+	if player.blind.is_active() {
+		player.blind.decr();
+		if player.blind.is_inactive() {
 			unblind(player, level);
 		}
 	}

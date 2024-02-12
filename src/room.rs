@@ -11,7 +11,6 @@ use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::object_what::ObjectWhat;
 use crate::r#move::can_move;
-use crate::r#use::blind;
 use crate::random::get_rand;
 use crate::room::DoorDirection::{Up, Down, Left, Right};
 use crate::room::room_visitor::RoomVisitor;
@@ -173,26 +172,27 @@ impl Room {
 }
 
 pub unsafe fn light_up_room(rn: i64, player: &Player, level: &mut Level) {
-	if blind == 0 {
-		for i in level.rooms[rn as usize].top_row..=level.rooms[rn as usize].bottom_row {
-			for j in level.rooms[rn as usize].left_col..=level.rooms[rn as usize].right_col {
-				if level.dungeon[i as usize][j as usize].is_monster() {
-					if let Some(monster) = MASH.monster_at_spot_mut(i, j) {
-						level.dungeon[monster.spot.row as usize][monster.spot.col as usize].remove_kind(CellKind::Monster);
-						monster.trail_char = get_dungeon_char(monster.spot.row, monster.spot.col, player, level);
-						level.dungeon[monster.spot.row as usize][monster.spot.col as usize].add_kind(CellKind::Monster);
-					}
-				}
-				mvaddch(i as i32, j as i32, get_dungeon_char(i, j, player, level));
-			}
-		}
-		mvaddch(player.rogue.row as i32, player.rogue.col as i32, player.rogue.fchar as chtype);
+	if player.blind.is_active() {
+		return;
 	}
+	for i in level.rooms[rn as usize].top_row..=level.rooms[rn as usize].bottom_row {
+		for j in level.rooms[rn as usize].left_col..=level.rooms[rn as usize].right_col {
+			if level.dungeon[i as usize][j as usize].is_monster() {
+				if let Some(monster) = MASH.monster_at_spot_mut(i, j) {
+					level.dungeon[monster.spot.row as usize][monster.spot.col as usize].remove_kind(CellKind::Monster);
+					monster.trail_char = get_dungeon_char(monster.spot.row, monster.spot.col, player, level);
+					level.dungeon[monster.spot.row as usize][monster.spot.col as usize].add_kind(CellKind::Monster);
+				}
+			}
+			mvaddch(i as i32, j as i32, get_dungeon_char(i, j, player, level));
+		}
+	}
+	mvaddch(player.rogue.row as i32, player.rogue.col as i32, player.rogue.fchar as chtype);
 }
 
 
 pub unsafe fn light_passage(row: i64, col: i64, player: &Player, level: &Level) {
-	if blind != 0 {
+	if player.blind.is_active() {
 		return;
 	}
 	let i_end = if row < DROWS as i64 - 2 { 1 } else { 0 };
@@ -208,10 +208,10 @@ pub unsafe fn light_passage(row: i64, col: i64, player: &Player, level: &Level) 
 	}
 }
 
-pub unsafe fn darken_room(rn: i64, level: &Level) {
+pub unsafe fn darken_room(rn: i64, player: &Player, level: &Level) {
 	for i in (level.rooms[rn as usize].top_row as usize + 1)..level.rooms[rn as usize].bottom_row as usize {
 		for j in (level.rooms[rn as usize].left_col as usize + 1)..level.rooms[rn as usize].right_col as usize {
-			if blind != 0 {
+			if player.blind.is_active() {
 				mvaddch(i as i32, j as i32, chtype::from(' '));
 			} else if !level.dungeon[i][j].is_any_kind(&[CellKind::Object, CellKind::Stairs])
 				&& !(level.detect_monster && level.dungeon[i][j].is_monster()) {

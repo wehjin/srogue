@@ -13,7 +13,7 @@ use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_STRENGTH};
 use crate::r#move::{is_direction, reg_move};
-use crate::r#use::{blind, take_a_nap, tele};
+use crate::r#use::{take_a_nap, tele};
 use crate::random::{get_rand, rand_percent};
 use crate::room::{get_dungeon_char, gr_row_col};
 use crate::score::killed_by;
@@ -275,7 +275,7 @@ pub unsafe fn search(n: usize, is_auto: bool, player: &mut Player, level: &mut L
 				if level.dungeon[row as usize][col as usize].is_hidden() {
 					if rand_percent(17 + player.buffed_exp() as usize) {
 						level.dungeon[row as usize][col as usize].remove_kind(CellKind::Hidden);
-						if not_blind() && !player.is_at(row, col) {
+						if player.blind.is_inactive() && !player.is_at(row, col) {
 							mvaddch(row as i32, col as i32, get_dungeon_char(row, col, player, level));
 						}
 						shown += 1;
@@ -296,11 +296,6 @@ pub unsafe fn search(n: usize, is_auto: bool, player: &mut Player, level: &mut L
 			}
 		}
 	}
-}
-
-pub unsafe fn not_blind() -> bool {
-	let not_blind = blind == 0;
-	not_blind
 }
 
 pub fn is_off_screen(row: i64, col: i64) -> bool {

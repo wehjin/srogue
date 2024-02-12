@@ -207,7 +207,7 @@ pub unsafe fn play_level(game: &mut GameState) {
 			}
 			'\x0d' => {
 				if wizard {
-					show_monsters(&mut game.level);
+					show_monsters(&game.player, &mut game.level);
 				} else {
 					message(UNKNOWN_COMMAND, 0);
 				}
