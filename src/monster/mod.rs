@@ -23,7 +23,6 @@ use crate::objects::{level_objects, ObjectId, ObjectPack};
 use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::Scroll;
 use crate::r#move::is_passable;
-use crate::r#use::{haste_self};
 use crate::scrolls::ScrollKind;
 use crate::scrolls::ScrollKind::ScareMonster;
 use crate::room::RoomType::Maze;
@@ -77,7 +76,7 @@ pub fn gr_monster(level_depth: usize, first_level_boost: usize, kind: Option<Mon
 }
 
 pub unsafe fn mv_mons(player: &mut Player, level: &mut Level) {
-	if haste_self % 2 != 0 {
+	if player.haste_self.is_half_active() {
 		return;
 	}
 

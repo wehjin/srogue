@@ -25,6 +25,7 @@ pub struct Player {
 	pub halluc: TimeEffect,
 	pub blind: TimeEffect,
 	pub levitate: TimeEffect,
+	pub haste_self: TimeEffect,
 }
 
 impl Player {
@@ -193,6 +194,7 @@ impl Player {
 			halluc: TimeEffect::default(),
 			blind: TimeEffect::default(),
 			levitate: TimeEffect::default(),
+			haste_self: TimeEffect::default(),
 		}
 	}
 }

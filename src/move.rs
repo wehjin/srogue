@@ -18,7 +18,7 @@ use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
-use crate::r#use::{confused, hallucinate_on_screen, haste_self, tele, unblind, unconfuse, unhallucinate};
+use crate::r#use::{confused, hallucinate_on_screen, tele, unblind, unconfuse, unhallucinate};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::room::{darken_room, get_dungeon_char, get_room_number, light_passage, light_up_room};
 use crate::score::killed_by;
@@ -419,9 +419,9 @@ pub unsafe fn reg_move(player: &mut Player, level: &mut Level) -> bool {
 			}
 		}
 	}
-	if haste_self > 0 {
-		haste_self -= 1;
-		if haste_self == 0 {
+	if player.haste_self.is_active() {
+		player.haste_self.decr();
+		if player.haste_self.is_inactive() {
 			message("you feel yourself slowing down", 0);
 		}
 	}

@@ -10,7 +10,7 @@ use crate::monster::{MASH, MonsterMash};
 use crate::objects::{foods, id, id_potions, id_rings, id_scrolls, id_wands, level_objects, ObjectPack};
 use crate::player::Player;
 use crate::r#move::m_moves;
-use crate::r#use::{confused, haste_self};
+use crate::r#use::{confused};
 use crate::settings;
 use crate::settings::{login_name, score_only};
 use crate::zap::wizard;
@@ -38,7 +38,6 @@ pub struct SaveData {
 	pub cur_room: i64,
 	pub level: Level,
 	pub confused: usize,
-	pub haste_self: usize,
 	pub wizard: bool,
 	pub score_only: bool,
 	pub m_moves: i16,
@@ -63,7 +62,6 @@ impl SaveData {
 			cur_room,
 			level: game.level.clone(),
 			confused,
-			haste_self,
 			wizard,
 			score_only: score_only(),
 			m_moves,
@@ -83,7 +81,6 @@ impl SaveData {
 		load_array(&mut IS_WOOD, &self.is_wood);
 		cur_room = self.cur_room;
 		confused = self.confused;
-		haste_self = self.haste_self;
 		wizard = self.wizard;
 		settings::set_score_only(self.score_only);
 		m_moves = self.m_moves;

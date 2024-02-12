@@ -5,7 +5,7 @@ use crate::monster::{MASH, show_monsters};
 use crate::objects::{level_objects, show_objects};
 use crate::player::Player;
 use crate::potions::kind::PotionKind;
-use crate::r#use::{confused, extra_hp, haste_self, STRANGE_FEELING};
+use crate::r#use::{confused, extra_hp, STRANGE_FEELING};
 use crate::random::get_rand;
 use crate::settings::fruit;
 
@@ -90,10 +90,8 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: 
 		}
 		PotionKind::HasteSelf => {
 			message("you feel yourself moving much faster", 0);
-			haste_self += get_rand(11, 21);
-			if haste_self % 2 == 0 {
-				haste_self += 1;
-			}
+			player.haste_self.extend(get_rand(11, 21));
+			player.haste_self.ensure_half_active();
 		}
 		PotionKind::SeeInvisible => {
 			message(&format!("hmm, this potion tastes like {} juice", fruit().trim()), 0);
