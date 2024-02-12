@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::odds;
 
-pub static mut maintain_armor: bool = false;
 pub static mut auto_search: libc::c_short = 0;
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
@@ -14,6 +13,14 @@ pub struct RingEffects {
 	sustain_strength: bool,
 	ring_exp: isize,
 	r_see_invisible: bool,
+	maintain_armor: bool,
+}
+
+impl RingEffects {
+	pub fn has_maintain_armor(&self) -> bool { self.maintain_armor }
+	pub fn set_maintain_armor(&mut self, enable: bool) {
+		self.maintain_armor = enable;
+	}
 }
 
 impl RingEffects {

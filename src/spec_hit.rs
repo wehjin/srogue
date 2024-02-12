@@ -9,7 +9,7 @@ use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD, STAT_HP, STAT_STRENGTH};
-use crate::ring::effects::{maintain_armor};
+
 
 pub static mut less_hp: isize = 0;
 pub const FLAME_NAME: &'static str = "flame";
@@ -50,8 +50,10 @@ pub unsafe fn rust(monster: Option<&mut Monster>, player: &mut Player) {
 		return;
 	}
 
+	let player_has_maintain_armor = player.ring_effects.has_maintain_armor();
+
 	let armor = player.armor_mut().expect("armor exists");
-	if armor.is_protected != 0 || maintain_armor {
+	if armor.is_protected != 0 || player_has_maintain_armor {
 		if let Some(monster) = monster {
 			if !monster.m_flags.rust_vanished {
 				message("the rust vanishes instantly", 0);

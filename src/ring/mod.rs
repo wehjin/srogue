@@ -175,7 +175,8 @@ pub unsafe fn inv_rings(player: &Player) {
 			         player.ring_effects.calorie_burn(), player.ring_effects.has_teleport(),
 			         player.ring_effects.has_sustain_strength(), player.ring_effects.add_strength(),
 			         player.ring_effects.regeneration(), player.ring_effects.dexterity(),
-			         player.ring_effects.has_see_invisible(), maintain_armor, auto_search),
+			         player.ring_effects.has_see_invisible(), player.ring_effects.has_maintain_armor(),
+			         auto_search),
 			0,
 		);
 	}
@@ -213,7 +214,7 @@ pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 	player.ring_effects.clear_regeneration();
 	player.ring_effects.clear_dexterity();
 	player.ring_effects.set_see_invisible(false);
-	maintain_armor = false;
+	player.ring_effects.set_maintain_armor(false);
 	auto_search = 0;
 
 	for ring_hand in PlayerHand::ALL_HANDS {
@@ -255,7 +256,7 @@ pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 						player.ring_effects.set_see_invisible(true);
 					}
 					RingKind::MaintainArmor => {
-						maintain_armor = true;
+						player.ring_effects.set_maintain_armor(true);
 					}
 					RingKind::Searching => {
 						auto_search += 2;
