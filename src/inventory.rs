@@ -10,7 +10,7 @@ use crate::prelude::*;
 use crate::armors::ArmorKind;
 use crate::message::{CANCEL, message};
 use crate::objects::{get_armor_class, id, id_armors, id_potions, id_rings, id_scrolls, id_wands, id_weapons, IdStatus, name_of, obj, object, ObjectPack};
-use crate::potions::{PotionKind, POTIONS};
+use crate::potions::kind::{PotionKind, POTIONS};
 use crate::prelude::food_kind::RATION;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::PackFilter;
@@ -343,7 +343,8 @@ pub unsafe fn get_obj_desc(obj: &object) -> String {
 			}
 		}
 	};
-	let desc = if desc.starts_with("a ") && is_vowel(desc.chars().nth(2).expect("char at 2")) {
+	let desc = if desc.starts_with("a ")
+		&& is_vowel(desc.chars().nth(2).expect("char at 2")) {
 		format!("an {}", &desc[2..])
 	} else {
 		desc

@@ -1,7 +1,7 @@
 use crate::armors::ArmorKind;
 use crate::objects::obj;
 use crate::prelude::object_what::ObjectWhat;
-use crate::potions::PotionKind;
+use crate::potions::kind::PotionKind;
 use crate::ring::ring_kind::RingKind;
 use crate::scrolls::ScrollKind;
 use crate::weapons::WeaponKind;
