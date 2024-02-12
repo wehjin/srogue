@@ -47,7 +47,11 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: 
 			add_exp(1, true, player);
 		}
 		PotionKind::Blindness => {
-			go_blind(player, level);
+			if player.blind.is_inactive() {
+				message("a cloak of darkness falls around you", 0);
+			}
+			player.blind.extend(get_rand(500, 800));
+			show_blind(player, level);
 		}
 		PotionKind::Hallucination => {
 			message("oh wow, everything seems so cosmic", 0);
@@ -144,12 +148,7 @@ unsafe fn potion_heal(extra: bool, player: &mut Player, level: &mut Level) {
 	}
 }
 
-unsafe fn go_blind(player: &mut Player, level: &Level) {
-	if player.blind.is_inactive() {
-		message("a cloak of darkness falls around you", 0);
-	}
-	player.blind.extend(get_rand(500, 800));
-
+unsafe fn show_blind(player: &Player, level: &Level) {
 	if level.detect_monster {
 		for monster in &MASH.monsters {
 			mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.trail_char);
