@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::odds;
 
-pub static mut regeneration: isize = 0;
 pub static mut e_rings: libc::c_short = 0;
 pub static mut add_strength: isize = 0;
 pub static mut sustain_strength: bool = false;
@@ -14,6 +13,19 @@ pub static mut auto_search: libc::c_short = 0;
 pub struct RingEffects {
 	stealthy: usize,
 	r_teleport: bool,
+	regeneration: isize,
+}
+
+impl RingEffects {
+	pub fn regeneration(&self) -> isize {
+		self.regeneration
+	}
+	pub fn clear_regeneration(&mut self) {
+		self.regeneration = 0;
+	}
+	pub fn incr_regeneration(&mut self) {
+		self.regeneration += 1;
+	}
 }
 
 impl RingEffects {
@@ -24,13 +36,13 @@ impl RingEffects {
 }
 
 impl RingEffects {
-	pub fn is_stealthy(&self) -> bool { self.stealthy() > 0 }
 	pub fn stealthy(&self) -> usize { self.stealthy }
-	pub fn incr_stealthy(&mut self) {
-		self.stealthy += 1;
-	}
+	pub fn is_stealthy(&self) -> bool { self.stealthy() > 0 }
 	pub fn clear_stealthy(&mut self) {
 		self.stealthy = 0;
+	}
+	pub fn incr_stealthy(&mut self) {
+		self.stealthy += 1;
 	}
 	pub fn apply_stealthy(&self, chance: usize) -> usize {
 		if self.is_stealthy() {

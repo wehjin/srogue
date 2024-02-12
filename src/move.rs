@@ -10,7 +10,7 @@ use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
-use crate::ring::effects::{auto_search, e_rings, regeneration};
+use crate::ring::effects::{auto_search, e_rings};
 use crate::settings::jump;
 
 pub static mut m_moves: i16 = 0;
@@ -439,44 +439,44 @@ pub unsafe fn rest(count: libc::c_int, player: &mut Player, level: &mut Level) {
 
 
 pub unsafe fn heal(player: &mut Player) {
-	static mut heal_exp: isize = -1;
-	static mut n: isize = 0;
-	static mut c: isize = 0;
-	static mut alt: bool = false;
+	static mut heal_level: isize = -1;
+	static mut time_between_heals: isize = 0;
+	static mut time_since_last_heal_or_damage: isize = 0;
+	static mut double_healing_toggle: bool = false;
 
 	if player.rogue.hp_current == player.rogue.hp_max {
-		c = 0;
+		time_since_last_heal_or_damage = 0;
 		return;
 	}
-	if player.rogue.exp != heal_exp {
-		heal_exp = player.rogue.exp;
-		match heal_exp {
-			1 => { n = 20 }
-			2 => { n = 18 }
-			3 => { n = 17 }
-			4 => { n = 14 }
-			5 => { n = 13 }
-			6 => { n = 10 }
-			7 => { n = 9 }
-			8 => { n = 8 }
-			9 => { n = 7 }
-			10 => { n = 4 }
-			11 => { n = 3 }
-			_ => { n = 2; }
+	if player.rogue.exp != heal_level {
+		heal_level = player.rogue.exp;
+		time_between_heals = match heal_level {
+			1 => 20,
+			2 => 18,
+			3 => 17,
+			4 => 14,
+			5 => 13,
+			6 => 10,
+			7 => 9,
+			8 => 8,
+			9 => 7,
+			10 => 4,
+			11 => 3,
+			_ => 2,
 		}
 	}
-	c += 1;
-	if c >= n {
-		c = 0;
-		player.rogue.hp_current += 1;
-		alt = !alt;
-		if alt {
-			player.rogue.hp_current += 1;
+	time_since_last_heal_or_damage += 1;
+	if time_since_last_heal_or_damage >= time_between_heals {
+		time_since_last_heal_or_damage = 0;
+		double_healing_toggle = !double_healing_toggle;
+
+		let mut healing = player.rogue.hp_current;
+		healing += 1;
+		if double_healing_toggle {
+			healing += 1;
 		}
-		player.rogue.hp_current += regeneration;
-		if player.rogue.hp_current > player.rogue.hp_max {
-			player.rogue.hp_current = player.rogue.hp_max;
-		}
+		healing += player.ring_effects.regeneration();
+		player.rogue.hp_current = healing.min(player.rogue.hp_max);
 		print_stats(STAT_HP, player);
 	}
 }
