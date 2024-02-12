@@ -27,7 +27,6 @@ use crate::trap::is_off_screen;
 
 pub static mut haste_self: usize = 0;
 pub static mut confused: usize = 0;
-pub static mut levitate: usize = 0;
 pub static mut extra_hp: isize = 0;
 pub const STRANGE_FEELING: &'static str = "you have a strange feeling for a moment, then it passes";
 

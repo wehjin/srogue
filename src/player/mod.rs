@@ -24,6 +24,7 @@ pub struct Player {
 	pub ring_effects: RingEffects,
 	pub halluc: TimeEffect,
 	pub blind: TimeEffect,
+	pub levitate: TimeEffect,
 }
 
 impl Player {
@@ -191,6 +192,7 @@ impl Player {
 			ring_effects: RingEffects::default(),
 			halluc: TimeEffect::default(),
 			blind: TimeEffect::default(),
+			levitate: TimeEffect::default(),
 		}
 	}
 }

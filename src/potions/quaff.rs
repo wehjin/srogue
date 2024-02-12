@@ -5,7 +5,7 @@ use crate::monster::{MASH, show_monsters};
 use crate::objects::{level_objects, show_objects};
 use crate::player::Player;
 use crate::potions::kind::PotionKind;
-use crate::r#use::{confused, extra_hp, haste_self, levitate, STRANGE_FEELING};
+use crate::r#use::{confused, extra_hp, haste_self, STRANGE_FEELING};
 use crate::random::get_rand;
 use crate::settings::fruit;
 
@@ -84,7 +84,7 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: 
 		}
 		PotionKind::Levitation => {
 			message("you start to float in the air", 0);
-			levitate += get_rand(15, 30);
+			player.levitate.extend(get_rand(15, 30));
 			level.bear_trap = 0;
 			level.being_held = false;
 		}

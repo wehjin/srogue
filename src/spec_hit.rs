@@ -15,7 +15,7 @@ use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD, STAT_HP, STAT_STRENGTH};
 use crate::r#move::YOU_CAN_MOVE_AGAIN;
-use crate::r#use::{confuse, levitate, vanish};
+use crate::r#use::{confuse, vanish};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::room::{get_dungeon_char, get_room_number};
 use crate::score::killed_by;
@@ -31,7 +31,7 @@ pub unsafe fn special_hit(monster: &mut Monster, player: &mut Player, level: &mu
 	if monster.m_flags.rusts {
 		rust(Some(monster), player);
 	}
-	if monster.m_flags.holds && levitate == 0 {
+	if monster.m_flags.holds && player.levitate.is_inactive() {
 		level.being_held = true;
 	}
 	if monster.m_flags.freezes {

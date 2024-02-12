@@ -22,7 +22,7 @@ use crate::room::{DoorDirection, get_opt_room_number, get_room_number, gr_row_co
 use crate::score::win;
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
-use crate::r#use::{extra_hp, levitate};
+use crate::r#use::{extra_hp};
 use crate::room::RoomType::Nothing;
 use crate::spec_hit::less_hp;
 use crate::trap::Trap;
@@ -606,7 +606,7 @@ pub unsafe fn drop_check(player: &Player, level: &Level) -> bool {
 		return true;
 	}
 	if level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_kind(CellKind::Stairs) {
-		if levitate != 0 {
+		if player.levitate.is_active() {
 			message("you're floating in the air!", 0);
 			return false;
 		}
