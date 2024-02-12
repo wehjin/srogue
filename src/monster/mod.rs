@@ -15,7 +15,7 @@ use crate::prelude::*;
 pub use flags::MonsterFlags;
 pub use kind::*;
 pub use mash::*;
-use crate::{odds};
+use crate::odds;
 use crate::hit::mon_hit;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::{CellKind, cur_room, Level};
@@ -23,7 +23,7 @@ use crate::objects::{level_objects, ObjectId, ObjectPack};
 use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::Scroll;
 use crate::r#move::is_passable;
-use crate::r#use::{blind, halluc, haste_self};
+use crate::r#use::{blind, haste_self};
 use crate::scrolls::ScrollKind;
 use crate::scrolls::ScrollKind::ScareMonster;
 use crate::room::RoomType::Maze;
@@ -355,14 +355,12 @@ pub unsafe fn wake_room(rn: i64, entering: bool, row: i64, col: i64, player: &Pl
 pub unsafe fn mon_name(monster: &Monster, player: &Player, level: &Level) -> &'static str {
 	if player_is_blind() || (monster.m_flags.invisible && !player_defeats_invisibility(player, level)) {
 		"something"
-	} else if player_hallucinating() {
+	} else if player.halluc.is_active() {
 		MonsterKind::random_name()
 	} else {
 		monster.name()
 	}
 }
-
-pub unsafe fn player_hallucinating() -> bool { halluc != 0 }
 
 pub unsafe fn player_is_blind() -> bool { blind != 0 }
 

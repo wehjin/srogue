@@ -5,13 +5,13 @@ use crate::inventory::{get_id_table, get_obj_desc};
 use crate::level::{add_exp, cur_room, Level, put_player};
 use crate::machdep::md_sleep;
 use crate::message::{CANCEL, check_message, hunger_str, message, print_stats};
-use crate::monster::{aggravate, create_monster, gr_obj_char, MASH, mv_mons, player_hallucinating, show_monsters};
+use crate::monster::{aggravate, create_monster, gr_obj_char, MASH, mv_mons, show_monsters};
 use crate::objects::IdStatus::{Called, Identified};
 use crate::objects::{id_potions, id_scrolls, level_objects, name_of, ObjectId};
 use crate::pack::{pack_letter, take_from_pack, unwear, unwield};
 use crate::player::Player;
-use crate::potions::quaff;
 use crate::potions::kind::{PotionKind, POTIONS};
+use crate::potions::quaff::quaff_potion;
 use crate::prelude::*;
 use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll, Wand, Weapon};
@@ -23,13 +23,12 @@ use crate::ring::un_put_hand;
 use crate::room::{darken_room, draw_magic_map, get_dungeon_char, get_opt_room_number, light_passage, light_up_room};
 use crate::scrolls::ScrollKind;
 use crate::settings::fruit;
-use crate::trap::{is_off_screen, no_rogue};
+use crate::trap::is_off_screen;
 
-pub static mut halluc: usize = 0;
 pub static mut blind: usize = 0;
+pub static mut haste_self: usize = 0;
 pub static mut confused: usize = 0;
 pub static mut levitate: usize = 0;
-pub static mut haste_self: usize = 0;
 pub static mut extra_hp: isize = 0;
 pub const STRANGE_FEELING: &'static str = "you have a strange feeling for a moment, then it passes";
 
@@ -50,7 +49,7 @@ pub unsafe fn quaff(player: &mut Player, level: &mut Level) {
 					return;
 				}
 				Some(potion_kind) => {
-					quaff::kind(potion_kind, player, level);
+					quaff_potion(potion_kind, player, level);
 					print_stats(STAT_STRENGTH | STAT_HP, player);
 					if id_potions[potion_kind.to_index()].id_status != Called {
 						id_potions[potion_kind.to_index()].id_status = Identified;
@@ -92,10 +91,10 @@ pub unsafe fn read_scroll(player: &mut Player, level: &mut Level) {
 							hold_monster(player, level);
 						}
 						ScrollKind::EnchWeapon => {
+							let glow_color = get_ench_color(player);
 							if let Some(weapon) = player.weapon_mut() {
 								let weapon_name = name_of(weapon);
 								let plural_char = if weapon.quantity <= 1 { "s" } else { "" };
-								let glow_color = get_ench_color();
 								let msg = format!("your {}glow{} {}for a moment", weapon_name, plural_char, glow_color);
 								message(&msg, 0);
 								if coin_toss() {
@@ -109,8 +108,9 @@ pub unsafe fn read_scroll(player: &mut Player, level: &mut Level) {
 							}
 						}
 						ScrollKind::EnchArmor => {
+							let glow_color = get_ench_color(player);
 							if let Some(armor) = player.armor_mut() {
-								let msg = format!("your armor glows {}for a moment", get_ench_color());
+								let msg = format!("your armor glows {} for a moment", glow_color.trim());
 								message(&msg, 0);
 								armor.d_enchant += 1;
 								armor.is_cursed = 0;
@@ -143,10 +143,10 @@ pub unsafe fn read_scroll(player: &mut Player, level: &mut Level) {
 							}
 						}
 						ScrollKind::RemoveCurse => {
-							let msg = if !player_hallucinating() {
-								"you feel as though someone is watching over you"
-							} else {
+							let msg = if player.halluc.is_active() {
 								"you feel in touch with the universal oneness"
+							} else {
+								"you feel as though someone is watching over you"
 							};
 							message(msg, 0);
 							uncurse_all(player);
@@ -299,14 +299,16 @@ pub unsafe fn tele(player: &mut Player, level: &mut Level) {
 	level.bear_trap = 0;
 }
 
-pub unsafe fn hallucinate(player: &Player) {
+pub unsafe fn hallucinate_on_screen(player: &Player) {
 	if blind != 0 {
 		return;
 	}
 
 	for obj in level_objects.objects() {
 		let ch = mvinch(obj.row as i32, obj.col as i32);
-		if !is_monster_char(ch) && no_rogue(obj.row, obj.col, player) {
+		let row = obj.row;
+		let col = obj.col;
+		if !is_monster_char(ch) && !player.is_at(row, col) {
 			let should_overdraw = match ch as u8 as char {
 				' ' | '.' | '#' | '+' => false,
 				_ => true
@@ -331,8 +333,8 @@ pub fn is_monster_char(ch: chtype) -> bool {
 	}
 }
 
-pub unsafe fn unhallucinate(player: &Player, level: &mut Level) {
-	halluc = 0;
+pub unsafe fn unhallucinate(player: &mut Player, level: &mut Level) {
+	player.halluc.clear();
 	relight(player, level);
 	message("everything looks SO boring now", 1);
 }
@@ -342,8 +344,8 @@ pub unsafe fn unblind(player: &Player, level: &mut Level)
 	blind = 0;
 	message("the veil of darkness lifts", 1);
 	relight(player, level);
-	if halluc != 0 {
-		hallucinate(player);
+	if player.halluc.is_active() {
+		hallucinate_on_screen(player);
 	}
 	if level.detect_monster {
 		show_monsters(level);
@@ -370,20 +372,22 @@ pub unsafe fn take_a_nap(player: &mut Player, level: &mut Level) {
 	message(YOU_CAN_MOVE_AGAIN, 0);
 }
 
-pub unsafe fn get_ench_color() -> &'static str {
-	if halluc != 0 {
-		return PotionKind::from_index(get_rand(0, POTIONS - 1)).title();
+pub fn get_ench_color(player: &Player) -> &'static str {
+	if player.halluc.is_active() {
+		PotionKind::from_index(get_rand(0, POTIONS - 1)).title()
+	} else {
+		"blue "
 	}
-	return "blue ";
 }
 
 pub unsafe fn confuse() {
 	confused += get_rand(12, 22);
 }
 
-pub unsafe fn unconfuse() {
+pub unsafe fn unconfuse(player: &Player) {
 	confused = 0;
-	let msg = format!("you feel less {} now", if halluc > 0 { "trippy" } else { "confused" });
+	let feeling = if player.halluc.is_active() { "trippy" } else { "confused" };
+	let msg = format!("you feel less {} now", feeling);
 	message(&msg, 1);
 }
 

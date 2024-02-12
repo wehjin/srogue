@@ -5,11 +5,11 @@ use crate::monster::{MASH, show_monsters};
 use crate::objects::{level_objects, show_objects};
 use crate::player::Player;
 use crate::potions::kind::PotionKind;
-use crate::r#use::{blind, confused, extra_hp, halluc, haste_self, levitate, STRANGE_FEELING};
+use crate::r#use::{blind, confused, extra_hp, haste_self, levitate, STRANGE_FEELING};
 use crate::random::get_rand;
 use crate::settings::fruit;
 
-pub unsafe fn kind(potion_kind: PotionKind, player: &mut Player, level: &mut Level) {
+pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: &mut Level) {
 	match potion_kind {
 		PotionKind::IncreaseStrength => {
 			message("you feel stronger now, what bulging muscles!", 0);
@@ -38,7 +38,7 @@ pub unsafe fn kind(potion_kind: PotionKind, player: &mut Player, level: &mut Lev
 				}
 			}
 			message("you feel very sick now", 0);
-			if halluc != 0 {
+			if player.halluc.is_active() {
 				crate::r#use::unhallucinate(player, level);
 			}
 		}
@@ -51,7 +51,8 @@ pub unsafe fn kind(potion_kind: PotionKind, player: &mut Player, level: &mut Lev
 		}
 		PotionKind::Hallucination => {
 			message("oh wow, everything seems so cosmic", 0);
-			halluc += get_rand(500, 800);
+			let amount = get_rand(500, 800);
+			player.halluc.extend(amount);
 		}
 		PotionKind::DetectMonster => {
 			show_monsters(level);
@@ -69,7 +70,12 @@ pub unsafe fn kind(potion_kind: PotionKind, player: &mut Player, level: &mut Lev
 			}
 		}
 		PotionKind::Confusion => {
-			message(if halluc != 0 { "what a trippy feeling" } else { "you feel confused" }, 0);
+			let msg = if player.halluc.is_active() {
+				"what a trippy feeling"
+			} else {
+				"you feel confused"
+			};
+			message(msg, 0);
 			crate::r#use::confuse();
 		}
 		PotionKind::Levitation => {
@@ -125,14 +131,17 @@ unsafe fn potion_heal(extra: bool, player: &mut Player, level: &mut Level) {
 		crate::r#use::unblind(player, level);
 	}
 	if confused != 0 && extra {
-		crate::r#use::unconfuse();
+		crate::r#use::unconfuse(player);
 	} else if confused != 0 {
 		confused = (confused / 2) + 1;
 	}
-	if halluc != 0 && extra {
-		crate::r#use::unhallucinate(player, level);
-	} else if halluc != 0 {
-		halluc = (halluc / 2) + 1;
+
+	if player.halluc.is_active() {
+		if extra {
+			crate::r#use::unhallucinate(player, level);
+		} else {
+			player.halluc.halve();
+		}
 	}
 }
 

@@ -18,7 +18,7 @@ use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
-use crate::r#use::{blind, confused, halluc, hallucinate, haste_self, levitate, tele, unblind, unconfuse, unhallucinate};
+use crate::r#use::{blind, confused, hallucinate_on_screen, haste_self, levitate, tele, unblind, unconfuse, unhallucinate};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::room::{darken_room, get_dungeon_char, get_room_number, light_passage, light_up_room};
 use crate::score::killed_by;
@@ -387,12 +387,12 @@ pub unsafe fn reg_move(player: &mut Player, level: &mut Level) -> bool {
 		m_moves = 0;
 		put_wanderer(player, level);
 	}
-	if halluc != 0 {
-		halluc -= 1;
-		if halluc == 0 {
-			unhallucinate(player, level);
+	if player.halluc.is_active() {
+		player.halluc.decr();
+		if player.halluc.is_active() {
+			hallucinate_on_screen(player);
 		} else {
-			hallucinate(player);
+			unhallucinate(player, level);
 		}
 	}
 	if blind != 0 {
@@ -404,7 +404,7 @@ pub unsafe fn reg_move(player: &mut Player, level: &mut Level) -> bool {
 	if confused != 0 {
 		confused -= 1;
 		if confused == 0 {
-			unconfuse();
+			unconfuse(player);
 		}
 	}
 	if level.bear_trap > 0 {

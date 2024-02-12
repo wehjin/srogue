@@ -4,6 +4,7 @@ use crate::monster::Fighter;
 use crate::objects::{obj, object, ObjectId, ObjectPack};
 use crate::pack::{check_duplicate, next_avail_ichar};
 use crate::armors::ArmorKind;
+use crate::player::effects::Hallucination;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::{DungeonSpot, LAST_DUNGEON, MAX_ARMOR, MAX_GOLD};
 use crate::prelude::object_what::ObjectWhat;
@@ -12,7 +13,7 @@ use crate::weapons::WeaponKind;
 
 pub(crate) mod rings;
 pub(crate) mod objects;
-
+pub mod effects;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
@@ -21,6 +22,7 @@ pub struct Player {
 	pub rogue: Fighter,
 	pub party_counter: usize,
 	pub ring_effects: RingEffects,
+	pub halluc: Hallucination,
 }
 
 impl Player {
@@ -185,7 +187,8 @@ impl Player {
 				moves_left: 1250,
 			},
 			party_counter: 0,
-			ring_effects: Default::default(),
+			ring_effects: RingEffects::default(),
+			halluc: Hallucination::default(),
 		}
 	}
 }

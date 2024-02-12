@@ -275,7 +275,7 @@ pub unsafe fn search(n: usize, is_auto: bool, player: &mut Player, level: &mut L
 				if level.dungeon[row as usize][col as usize].is_hidden() {
 					if rand_percent(17 + player.buffed_exp() as usize) {
 						level.dungeon[row as usize][col as usize].remove_kind(CellKind::Hidden);
-						if not_blind() && no_rogue(row, col, player) {
+						if not_blind() && !player.is_at(row, col) {
 							mvaddch(row as i32, col as i32, get_dungeon_char(row, col, player, level));
 						}
 						shown += 1;
@@ -296,10 +296,6 @@ pub unsafe fn search(n: usize, is_auto: bool, player: &mut Player, level: &mut L
 			}
 		}
 	}
-}
-
-pub fn no_rogue(row: i64, col: i64, player: &Player) -> bool {
-	!player.is_at(row, col)
 }
 
 pub unsafe fn not_blind() -> bool {
