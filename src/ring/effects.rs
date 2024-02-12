@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::odds;
 
-pub static mut e_rings: libc::c_short = 0;
 pub static mut add_strength: isize = 0;
 pub static mut sustain_strength: bool = false;
 pub static mut ring_exp: isize = 0;
@@ -14,6 +13,22 @@ pub struct RingEffects {
 	stealthy: usize,
 	r_teleport: bool,
 	regeneration: isize,
+	e_rings: isize,
+}
+
+impl RingEffects {
+	pub fn calorie_burn(&self) -> isize {
+		self.e_rings
+	}
+	pub fn clear_calorie_burn(&mut self) {
+		self.e_rings = 0;
+	}
+	pub fn incr_calorie_burn(&mut self) {
+		self.e_rings += 1;
+	}
+	pub fn slow_calorie_burn(&mut self) {
+		self.e_rings -= 2;
+	}
 }
 
 impl RingEffects {

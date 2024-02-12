@@ -41,7 +41,7 @@ pub struct Fighter {
 	pub row: i64,
 	pub col: i64,
 	pub fchar: char,
-	pub moves_left: usize,
+	pub moves_left: isize,
 }
 
 pub static mut mon_disappeared: bool = false;

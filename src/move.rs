@@ -2,7 +2,7 @@
 
 use ncurses::{chtype, mvaddch, refresh};
 use MoveResult::MoveFailed;
-use crate::hunger::HUNGRY;
+use crate::hunger::{FAINT, HUNGRY, STARVE, WEAK};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::odds::R_TELE_PERCENT;
 use crate::player::Player;
@@ -10,7 +10,7 @@ use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
-use crate::ring::effects::{auto_search, e_rings};
+use crate::ring::effects::{auto_search};
 use crate::settings::jump;
 
 pub static mut m_moves: i16 = 0;
@@ -297,82 +297,74 @@ pub unsafe fn is_direction(c: char) -> bool {
 		|| c == CANCEL
 }
 
-pub unsafe fn check_hunger(messages_only: libc::c_char, player: &mut Player, level: &mut Level) -> bool {
-	let mut i: libc::c_short;
-	let n: libc::c_short;
-	let mut fainted: bool = false;
-	if player.rogue.moves_left as libc::c_int == 300 as libc::c_int {
+pub unsafe fn check_hunger(messages_only: bool, player: &mut Player, level: &mut Level) -> bool {
+	if player.rogue.moves_left == HUNGRY {
 		hunger_str = "hungry".to_string();
 		message(&hunger_str, 0);
 		print_stats(STAT_HUNGER, player);
 	}
-	if player.rogue.moves_left as libc::c_int == 150 as libc::c_int {
+	if player.rogue.moves_left == WEAK {
 		hunger_str = "weak".to_string();
 		message(&hunger_str, 1);
 		print_stats(STAT_HUNGER, player);
 	}
-	if player.rogue.moves_left as libc::c_int <= 20 as libc::c_int {
-		if player.rogue.moves_left as libc::c_int == 20 as libc::c_int {
+
+	let mut fainted = false;
+	if player.rogue.moves_left <= FAINT {
+		if player.rogue.moves_left == FAINT {
 			hunger_str = "faint".to_string();
 			message(&hunger_str, 1);
 			print_stats(STAT_HUNGER, player);
 		}
-		n = get_rand(
-			0 as libc::c_int,
-			20 as libc::c_int - player.rogue.moves_left as libc::c_int,
-		) as libc::c_short;
-		if n as libc::c_int > 0 as libc::c_int {
+		let n = get_rand(0, FAINT - player.rogue.moves_left);
+		if n > 0 {
 			fainted = true;
 			if rand_percent(40) {
 				player.rogue.moves_left += 1;
-				player.rogue.moves_left;
 			}
 			message("you faint", 1);
-			i = 0 as libc::c_int as libc::c_short;
-			while (i as libc::c_int) < n as libc::c_int {
+			for _ in 0..n {
 				if coin_toss() {
 					mv_mons(player, level);
 				}
-				i += 1;
 			}
 			message(YOU_CAN_MOVE_AGAIN, 1);
 		}
 	}
-	if messages_only != 0 {
+	if messages_only {
 		return fainted;
 	}
-	if player.rogue.moves_left as libc::c_int <= 0 as libc::c_int {
+	if player.rogue.moves_left <= STARVE {
 		killed_by(Ending::Starvation, player);
 	}
-	match e_rings as libc::c_int {
+
+	match player.ring_effects.calorie_burn() {
 		-1 => {
-			player.rogue.moves_left = (player.rogue.moves_left as libc::c_int - player.rogue.moves_left as libc::c_int % 2 as libc::c_int) as usize;
+			player.rogue.moves_left -= player.rogue.moves_left % 2;
 		}
 		0 => {
 			player.rogue.moves_left -= 1;
-			player.rogue.moves_left;
 		}
 		1 => {
 			player.rogue.moves_left -= 1;
-			player.rogue.moves_left;
-			check_hunger(1, player, level);
-			player.rogue.moves_left = (player.rogue.moves_left as libc::c_int - player.rogue.moves_left as libc::c_int % 2 as libc::c_int) as usize;
+			check_hunger(true, player, level);
+			player.rogue.moves_left -= player.rogue.moves_left % 2;
 		}
 		2 => {
 			player.rogue.moves_left -= 1;
-			player.rogue.moves_left;
-			check_hunger(1, player, level);
+			check_hunger(true, player, level);
 			player.rogue.moves_left -= 1;
-			player.rogue.moves_left;
 		}
-		_ => {}
+		_ => {
+			// No burn for -2
+		}
 	}
 	return fainted;
 }
 
 pub unsafe fn reg_move(player: &mut Player, level: &mut Level) -> bool {
 	let fainted = if player.rogue.moves_left <= HUNGRY || player.cur_depth >= player.max_depth {
-		check_hunger(0, player, level)
+		check_hunger(false, player, level)
 	} else {
 		false
 	};
