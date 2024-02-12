@@ -172,7 +172,7 @@ pub unsafe fn inv_rings(player: &Player) {
 		message(
 			&format!("ste {}, r_r {}, e_r {}, r_t {}, s_s {}, a_s {}, reg {}, r_e {}, s_i {}, m_a {}, aus {}",
 			         player.ring_effects.stealthy(), r_rings, player.ring_effects.calorie_burn(), player.ring_effects.has_teleport(), sustain_strength,
-			         add_strength, player.ring_effects.regeneration(), ring_exp, r_see_invisible,
+			         player.ring_effects.add_strength(), player.ring_effects.regeneration(), ring_exp, r_see_invisible,
 			         maintain_armor, auto_search),
 			0,
 		);
@@ -207,7 +207,7 @@ pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 	player.ring_effects.clear_calorie_burn();
 	player.ring_effects.set_teleport(false);
 	sustain_strength = false;
-	add_strength = 0;
+	player.ring_effects.clear_add_strength();
 	player.ring_effects.clear_regeneration();
 	ring_exp = 0;
 	r_see_invisible = false;
@@ -227,9 +227,15 @@ pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 					RingKind::RTeleport => { player.ring_effects.set_teleport(true); }
 					RingKind::Regeneration => { player.ring_effects.incr_regeneration(); }
 					RingKind::SlowDigest => { player.ring_effects.slow_calorie_burn(); }
-					RingKind::AddStrength => { add_strength += player.expect_object(ring_id).class; }
+					RingKind::AddStrength => {
+						let player_class = player.expect_object(ring_id).class;
+						player.ring_effects.increase_add_strength(player_class);
+					}
 					RingKind::SustainStrength => { sustain_strength = true; }
-					RingKind::Dexterity => { ring_exp += player.expect_object(ring_id).class; }
+					RingKind::Dexterity => {
+						let player_class = player.expect_object(ring_id).class;
+						ring_exp += player_class;
+					}
 					RingKind::Adornment => {}
 					RingKind::RSeeInvisible => { r_see_invisible = true; }
 					RingKind::MaintainArmor => { maintain_armor = true; }

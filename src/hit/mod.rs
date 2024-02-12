@@ -93,7 +93,7 @@ pub unsafe fn rogue_hit(monster: &mut monster::Monster, force_hit: bool, player:
 		}
 	} else {
 		let player_exp = player.exp();
-		let player_str = player.cur_strength();
+		let player_str = player.buffed_strength();
 		let damage = get_weapon_damage(player.weapon(), player_str, player_exp);
 		let damage = if wizard { damage * 3 } else { damage };
 		if mon_damage(monster, damage, player, level) {
@@ -148,8 +148,7 @@ pub unsafe fn get_number(s: *const c_char) -> usize {
 	return total;
 }
 
-pub unsafe fn damage_for_strength(player_strength: isize) -> isize {
-	let strength = player_strength + add_strength;
+pub unsafe fn damage_for_strength(strength: isize) -> isize {
 	if strength <= 6 {
 		return strength - 5;
 	}
@@ -351,7 +350,7 @@ use crate::prelude::stat_const::STAT_HP;
 use crate::r#move::{can_move, is_direction, one_move_rogue};
 use crate::random::rand_percent;
 use crate::ring::{r_rings};
-use crate::ring::effects::{add_strength, ring_exp};
+use crate::ring::effects::{ring_exp};
 use crate::room::get_dungeon_char;
 use crate::score::killed_by;
 use crate::spec_hit::{clear_gold_seeker, check_imitator, cough_up, special_hit};

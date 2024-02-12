@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::odds;
 
-pub static mut add_strength: isize = 0;
 pub static mut sustain_strength: bool = false;
 pub static mut ring_exp: isize = 0;
 pub static mut r_see_invisible: bool = false;
@@ -14,6 +13,21 @@ pub struct RingEffects {
 	r_teleport: bool,
 	regeneration: isize,
 	e_rings: isize,
+	add_strength: isize,
+}
+
+impl RingEffects {
+	pub fn add_strength(&self) -> isize { self.add_strength }
+	pub fn has_add_strength(&self) -> bool { self.add_strength() > 0 }
+	pub fn clear_add_strength(&mut self) {
+		self.add_strength = 0;
+	}
+	pub fn increase_add_strength(&mut self, amount: isize) {
+		self.add_strength += amount;
+	}
+	pub fn apply_add_strength(&self, str: isize) -> isize {
+		str + self.add_strength
+	}
 }
 
 impl RingEffects {

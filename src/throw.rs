@@ -99,7 +99,7 @@ unsafe fn throw_at_monster(monster: &mut Monster, obj_id: ObjectId, player: &mut
 	if player.object_what(obj_id) == Wand && rand_percent(75) {
 		zap_monster(monster, player.object_kind(obj_id), player, level);
 	} else {
-		let player_str = player.cur_strength();
+		let player_str = player.buffed_strength();
 		let player_exp = player.exp();
 		let damage = {
 			let mut damage = get_weapon_damage(player.object(obj_id), player_str, player_exp);

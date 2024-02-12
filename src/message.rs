@@ -6,7 +6,6 @@ use crate::level::constants::DROWS;
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_EXP, STAT_GOLD, STAT_HP, STAT_HUNGER, STAT_LABEL, STAT_LEVEL, STAT_STRENGTH};
-use crate::ring::effects::add_strength;
 
 pub static mut msg_written: String = String::new();
 pub static mut msg_cleared: bool = true;
@@ -174,7 +173,8 @@ pub unsafe fn print_stats(stat_mask: usize, player: &mut Player) {
 			player.rogue.str_current -= player.rogue.str_max - MAX_STRENGTH;
 			player.rogue.str_max = MAX_STRENGTH;
 		}
-		let s = format!("{}({})", player.rogue.str_current + add_strength, player.rogue.str_max);
+		let strength = player.buffed_strength();
+		let s = format!("{}({})", strength, player.rogue.str_max);
 		mvaddstr(STATS_ROW, 41, &s);
 		pad(&s, 6);
 	}
