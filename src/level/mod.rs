@@ -16,15 +16,14 @@ use crate::message::{message, print_stats};
 use crate::monster::wake_room;
 use crate::objects::put_amulet;
 use crate::pack::has_amulet;
+use crate::player::constants::INIT_HP;
 use crate::player::Player;
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::room::{DoorDirection, get_opt_room_number, get_room_number, gr_row_col, is_all_connected, light_passage, light_up_room, Room, RoomBounds, RoomType};
 use crate::score::win;
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
-use crate::r#use::{extra_hp};
 use crate::room::RoomType::Nothing;
-use crate::spec_hit::less_hp;
 use crate::trap::Trap;
 use crate::zap::wizard;
 
@@ -678,15 +677,20 @@ pub unsafe fn hp_raise() -> isize {
 	}
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn show_average_hp(player: &Player) {
+pub unsafe fn show_average_hp(player: &Player) {
 	let (real_average, effective_average) = if player.rogue.exp == 1 {
 		(0.0, 0.0)
 	} else {
-		let real = (player.rogue.hp_max - extra_hp - INIT_HP + less_hp) as f32 / (player.rogue.exp - 1) as f32;
+		let real = (player.rogue.hp_max - player.extra_hp - INIT_HP + player.less_hp) as f32 / (player.rogue.exp - 1) as f32;
 		let average = (player.rogue.hp_max - INIT_HP) as f32 / (player.rogue.exp - 1) as f32;
 		(real, average)
 	};
-	let msg = format!("R-Hp: {:.2}, E-Hp: {:.2} (!: {}, V: {})", real_average, effective_average, extra_hp, less_hp);
+	let msg = format!(
+		"R-Hp: {:.2}, E-Hp: {:.2} (!: {}, V: {})",
+		real_average,
+		effective_average,
+		player.extra_hp,
+		player.less_hp
+	);
 	message(&msg, 0);
 }

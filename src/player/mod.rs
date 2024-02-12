@@ -14,6 +14,7 @@ use crate::weapons::WeaponKind;
 pub(crate) mod rings;
 pub(crate) mod objects;
 pub mod effects;
+pub mod constants;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
@@ -27,6 +28,8 @@ pub struct Player {
 	pub levitate: TimeEffect,
 	pub haste_self: TimeEffect,
 	pub confused: TimeEffect,
+	pub extra_hp: isize,
+	pub less_hp: isize,
 }
 
 impl Player {
@@ -197,6 +200,8 @@ impl Player {
 			levitate: Default::default(),
 			haste_self: Default::default(),
 			confused: Default::default(),
+			extra_hp: 0,
+			less_hp: 0,
 		}
 	}
 }

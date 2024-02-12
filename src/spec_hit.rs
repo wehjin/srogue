@@ -20,8 +20,6 @@ use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::room::{get_dungeon_char, get_room_number};
 use crate::score::killed_by;
 
-
-pub static mut less_hp: isize = 0;
 pub const FLAME_NAME: &'static str = "flame";
 
 pub unsafe fn special_hit(monster: &mut Monster, player: &mut Player, level: &mut Level) {
@@ -337,9 +335,10 @@ unsafe fn drain_life(player: &mut Player) {
 		message("you feel weaker", 0);
 	}
 	if n != 2 {
-		player.rogue.hp_max -= 1;
-		player.rogue.hp_current -= 1;
-		less_hp += 1;
+		let drain = 1;
+		player.rogue.hp_max -= drain;
+		player.rogue.hp_current -= drain;
+		player.less_hp += drain;
 	}
 	if n != 1 {
 		if player.rogue.str_current > 3 && !player.ring_effects.has_sustain_strength() {

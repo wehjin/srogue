@@ -1,4 +1,4 @@
-use libc::{c_ushort};
+use libc::c_ushort;
 use serde::{Deserialize, Serialize};
 use crate::level::constants::{DCOLS, DROWS};
 
@@ -18,10 +18,7 @@ pub const COL2: i64 = 52;
 pub const ROW1: i64 = 7;
 pub const ROW2: i64 = 15;
 pub const HIDE_PERCENT: usize = 12;
-
 pub const AMULET_LEVEL: usize = 26;
-
-
 pub const MAX_EXP_LEVEL: usize = 21;
 pub const MAX_EXP: isize = 10000000;
 pub const MAX_GOLD: usize = 900000;
@@ -29,7 +26,6 @@ pub const MAX_ARMOR: isize = 99;
 pub const MAX_HP: isize = 800;
 pub const MAX_STRENGTH: isize = 99;
 pub const LAST_DUNGEON: usize = 99;
-pub const INIT_HP: isize = 12;
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
 pub struct DungeonSpot {

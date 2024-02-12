@@ -5,7 +5,7 @@ use crate::monster::{MASH, show_monsters};
 use crate::objects::{level_objects, show_objects};
 use crate::player::Player;
 use crate::potions::kind::PotionKind;
-use crate::r#use::{extra_hp, STRANGE_FEELING};
+use crate::r#use::{STRANGE_FEELING};
 use crate::random::get_rand;
 use crate::settings::fruit;
 
@@ -109,25 +109,24 @@ unsafe fn potion_heal(extra: bool, player: &mut Player, level: &mut Level) {
 
 	let mut ratio = player.rogue.hp_current as f32 / player.rogue.hp_max as f32;
 	if ratio >= 1.00 {
-		player.rogue.hp_max += if extra { 2 } else { 1 };
-		extra_hp += if extra { 2 } else { 1 };
+		let raise_max = if extra { 2 } else { 1 };
+		player.rogue.hp_max += raise_max;
+		player.extra_hp += raise_max;
 		player.rogue.hp_current = player.rogue.hp_max;
 	} else if ratio >= 0.90 {
-		player.rogue.hp_max += if extra { 1 } else { 0 };
-		extra_hp += if extra { 1 } else { 0 };
+		let raise_max = if extra { 1 } else { 0 };
+		player.rogue.hp_max += raise_max;
+		player.extra_hp += raise_max;
 		player.rogue.hp_current = player.rogue.hp_max;
 	} else {
-		if ratio < 0.33 {
-			ratio = 0.33;
-		}
+		ratio = ratio.max(0.33);
 		if extra {
 			ratio += ratio;
 		}
-		let add = ratio * (player.rogue.hp_max - player.rogue.hp_current) as f32;
-		player.rogue.hp_current += add as isize;
-		if player.rogue.hp_current > player.rogue.hp_max {
-			player.rogue.hp_current = player.rogue.hp_max;
-		}
+		let missing_hp = player.rogue.hp_max - player.rogue.hp_current;
+		let restore = ratio * (missing_hp as f32);
+		player.rogue.hp_current += restore as isize;
+		player.rogue.hp_current = player.rogue.hp_current.min(player.rogue.hp_max);
 	}
 	if player.blind.is_active() {
 		crate::r#use::unblind(player, level);
