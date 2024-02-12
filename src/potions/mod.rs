@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::prelude::potion_kind::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, HasteSelf, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
+use crate::potions::PotionKind::*;
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum PotionKind {
@@ -52,3 +52,4 @@ impl PotionKind {
 		&Self::TITLE[self.to_index()]
 	}
 }
+

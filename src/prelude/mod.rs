@@ -160,8 +160,6 @@ pub mod food_kind {
 	pub const FRUIT: u16 = 1;
 }
 
-pub mod potion_kind;
-
 pub mod stat_const {
 	pub const STAT_LEVEL: usize = 0o1;
 	pub const STAT_GOLD: usize = 0o2;

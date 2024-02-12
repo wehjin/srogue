@@ -2,7 +2,7 @@ use crate::armors::ArmorKind;
 use crate::objects::obj;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::{Armor, Wand, Weapon};
-use crate::prelude::potion_kind::PotionKind;
+use crate::potions::PotionKind;
 use crate::ring::ring_kind::RingKind;
 use crate::zap::wand_kind::WandKind;
 use crate::weapons::WeaponKind;

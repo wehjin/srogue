@@ -20,7 +20,7 @@ use crate::objects::{id_armors, id_potions, id_scrolls, id_wands, id_weapons};
 use crate::pack::{has_amulet, unwear, unwield};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat;
-use crate::prelude::potion_kind::POTIONS;
+use crate::potions::POTIONS;
 use crate::ring::{PlayerHand, un_put_hand};
 use crate::scrolls::constants::SCROLLS;
 use crate::zap::constants::WANDS;

@@ -19,8 +19,7 @@ use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::item_usage::{BEING_USED, BEING_WIELDED, BEING_WORN, NOT_USED, ON_EITHER_HAND, ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
-use crate::prelude::potion_kind::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
-use crate::prelude::potion_kind::{PotionKind, POTIONS};
+use crate::potions::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
 use crate::ring::constants::RINGS;
 use crate::scrolls::ScrollKind::{AggravateMonster, CreateMonster, EnchArmor, EnchWeapon, HoldMonster, Identify, MagicMapping, ProtectArmor, RemoveCurse, ScareMonster, Sleep, Teleport};
 use crate::scrolls::constants::SCROLLS;
@@ -35,6 +34,7 @@ use crate::message::{CANCEL, check_message, get_input_line, message, rgetchar, s
 use crate::monster::{MASH, party_monsters};
 use crate::pack::MAX_PACK_COUNT;
 use crate::player::Player;
+use crate::potions::{PotionKind, POTIONS};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::ring::gr_ring;
 use crate::room::{get_mask_char, gr_room, gr_row_col, party_objects, RoomType};

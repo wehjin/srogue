@@ -16,6 +16,7 @@ mod machdep;
 mod r#move;
 mod objects;
 mod pack;
+mod potions;
 mod play;
 mod player;
 mod random;
