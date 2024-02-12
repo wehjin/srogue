@@ -8,7 +8,6 @@ use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_STRENGTH};
-use crate::ring::effects::*;
 use crate::trap::trap_kind::TrapKind;
 use crate::trap::trap_kind::TrapKind::{BearTrap, DartTrap, RustTrap, SleepingGasTrap, TeleTrap, TrapDoor};
 
@@ -101,7 +100,7 @@ pub unsafe fn trap_player(row: usize, col: usize, player: &mut Player, level: &m
 		return;
 	}
 	level.dungeon[row][col].remove_kind(CellKind::Hidden);
-	if rand_percent((player.rogue.exp + ring_exp) as usize) {
+	if rand_percent(player.buffed_exp() as usize) {
 		message("the trap failed", 1);
 		return;
 	}
@@ -264,7 +263,7 @@ pub unsafe fn search(n: usize, is_auto: bool, player: &mut Player, level: &mut L
 					continue;
 				}
 				if level.dungeon[row as usize][col as usize].is_hidden() {
-					if rand_percent(17 + (player.rogue.exp + ring_exp) as usize) {
+					if rand_percent(17 + player.buffed_exp() as usize) {
 						level.dungeon[row as usize][col as usize].remove_kind(CellKind::Hidden);
 						if not_blind() && no_rogue(row, col, player) {
 							mvaddch(row as i32, col as i32, get_dungeon_char(row, col, level));

@@ -9,7 +9,7 @@ use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD, STAT_HP, STAT_STRENGTH};
-use crate::ring::effects::{maintain_armor, ring_exp};
+use crate::ring::effects::{maintain_armor};
 
 pub static mut less_hp: isize = 0;
 pub const FLAME_NAME: &'static str = "flame";
@@ -71,7 +71,7 @@ unsafe fn freeze(monster: &mut Monster, player: &mut Player, level: &mut Level) 
 	}
 	let mut freeze_percent: isize = 99;
 	freeze_percent -= player.rogue.str_current + (player.rogue.str_current / 2);
-	freeze_percent -= (player.rogue.exp + ring_exp) * 4;
+	freeze_percent -= player.buffed_exp() * 4;
 	freeze_percent -= get_armor_class(player.armor()) * 5;
 	freeze_percent -= player.rogue.hp_max / 3;
 	if freeze_percent > 10 {
@@ -284,8 +284,9 @@ unsafe fn sting(monster: &Monster, player: &mut Player, level: &Level) {
 	let mut sting_chance: isize = 35;
 	sting_chance += 6 * (6 - get_armor_class(player.armor()));
 
-	if (player.rogue.exp + ring_exp) > 8 {
-		sting_chance -= 6 * ((player.rogue.exp + ring_exp) - 8);
+	let buffed_exp = player.buffed_exp();
+	if buffed_exp > 8 {
+		sting_chance -= 6 * (buffed_exp - 8);
 	}
 	if rand_percent(sting_chance as usize) {
 		message(&format!("the {}'s bite has weakened you", mon_name(monster, level)), 0);

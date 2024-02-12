@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::odds;
 
-pub static mut ring_exp: isize = 0;
 pub static mut r_see_invisible: bool = false;
 pub static mut maintain_armor: bool = false;
 pub static mut auto_search: libc::c_short = 0;
@@ -14,6 +13,20 @@ pub struct RingEffects {
 	e_rings: isize,
 	add_strength: isize,
 	sustain_strength: bool,
+	ring_exp: isize,
+}
+
+impl RingEffects {
+	pub fn dexterity(&self) -> isize { self.ring_exp }
+	pub fn clear_dexterity(&mut self) {
+		self.ring_exp = 0;
+	}
+	pub fn increase_dexterity(&mut self, amount: isize) {
+		self.ring_exp += amount;
+	}
+	pub fn apply_dexterity(&self, exp: isize) -> isize {
+		exp + self.dexterity()
+	}
 }
 
 impl RingEffects {
@@ -52,9 +65,7 @@ impl RingEffects {
 }
 
 impl RingEffects {
-	pub fn regeneration(&self) -> isize {
-		self.regeneration
-	}
+	pub fn regeneration(&self) -> isize { self.regeneration }
 	pub fn clear_regeneration(&mut self) {
 		self.regeneration = 0;
 	}

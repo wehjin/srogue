@@ -78,8 +78,9 @@ pub unsafe fn throw(player: &mut Player, level: &mut Level) {
 
 unsafe fn throw_at_monster(monster: &mut Monster, obj_id: ObjectId, player: &mut Player, level: &mut Level) -> bool {
 	let hit_chance = {
-		let player_exp = player.exp();
+		let player_exp = player.buffed_exp();
 		let player_weapon_is_bow = rogue_weapon_is_bow(player);
+
 		let obj = player.object(obj_id).expect("obj in pack");
 		let mut hit_chance = get_hit_chance(Some(obj), player_exp);
 		if obj.which_kind == ARROW && player_weapon_is_bow {
@@ -100,7 +101,7 @@ unsafe fn throw_at_monster(monster: &mut Monster, obj_id: ObjectId, player: &mut
 		zap_monster(monster, player.object_kind(obj_id), player, level);
 	} else {
 		let player_str = player.buffed_strength();
-		let player_exp = player.exp();
+		let player_exp = player.buffed_exp();
 		let damage = {
 			let mut damage = get_weapon_damage(player.object(obj_id), player_str, player_exp);
 			if player.object_kind(obj_id) == ARROW && rogue_weapon_is_bow(player) {

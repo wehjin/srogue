@@ -28,10 +28,13 @@ impl Player {
 	pub fn buffed_strength(&self) -> isize {
 		self.ring_effects.apply_add_strength(self.cur_strength())
 	}
+	pub fn exp(&self) -> isize { self.rogue.exp }
+	pub fn buffed_exp(&self) -> isize {
+		self.ring_effects.apply_dexterity(self.exp())
+	}
 }
 
 impl Player {
-	pub fn exp(&self) -> isize { self.rogue.exp }
 	pub fn is_at(&self, row: i64, col: i64) -> bool {
 		self.rogue.row == row && self.rogue.col == col
 	}

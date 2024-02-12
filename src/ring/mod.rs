@@ -174,7 +174,7 @@ pub unsafe fn inv_rings(player: &Player) {
 			         player.ring_effects.stealthy(), r_rings, player.ring_effects.calorie_burn(),
 			         player.ring_effects.has_teleport(), player.ring_effects.has_sustain_strength(),
 			         player.ring_effects.add_strength(), player.ring_effects.regeneration(),
-			         ring_exp, r_see_invisible, maintain_armor, auto_search),
+			         player.ring_effects.dexterity(), r_see_invisible, maintain_armor, auto_search),
 			0,
 		);
 	}
@@ -210,7 +210,7 @@ pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 	player.ring_effects.set_sustain_strength(false);
 	player.ring_effects.clear_add_strength();
 	player.ring_effects.clear_regeneration();
-	ring_exp = 0;
+	player.ring_effects.clear_dexterity();
 	r_see_invisible = false;
 	maintain_armor = false;
 	auto_search = 0;
@@ -245,7 +245,7 @@ pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 					}
 					RingKind::Dexterity => {
 						let player_class = player.expect_object(ring_id).class;
-						ring_exp += player_class;
+						player.ring_effects.increase_dexterity(player_class);
 					}
 					RingKind::Adornment => {}
 					RingKind::RSeeInvisible => {
