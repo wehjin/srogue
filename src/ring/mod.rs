@@ -9,7 +9,6 @@ use crate::prelude::object_what::ObjectWhat::Ring;
 use crate::prelude::object_what::PackFilter::Rings;
 use ring_kind::RingKind;
 use crate::prelude::stat_const::STAT_STRENGTH;
-use crate::ring::effects::*;
 
 pub(crate) mod constants;
 pub(crate) mod ring_kind;
@@ -176,7 +175,7 @@ pub unsafe fn inv_rings(player: &Player) {
 			         player.ring_effects.has_sustain_strength(), player.ring_effects.add_strength(),
 			         player.ring_effects.regeneration(), player.ring_effects.dexterity(),
 			         player.ring_effects.has_see_invisible(), player.ring_effects.has_maintain_armor(),
-			         auto_search),
+			         player.ring_effects.auto_search()),
 			0,
 		);
 	}
@@ -215,7 +214,7 @@ pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 	player.ring_effects.clear_dexterity();
 	player.ring_effects.set_see_invisible(false);
 	player.ring_effects.set_maintain_armor(false);
-	auto_search = 0;
+	player.ring_effects.clear_auto_search();
 
 	for ring_hand in PlayerHand::ALL_HANDS {
 		match player.ring_id(ring_hand) {
@@ -259,7 +258,7 @@ pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 						player.ring_effects.set_maintain_armor(true);
 					}
 					RingKind::Searching => {
-						auto_search += 2;
+						player.ring_effects.increase_auto_search(2);
 					}
 				}
 			}

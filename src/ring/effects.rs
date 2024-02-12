@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::odds;
 
-pub static mut auto_search: libc::c_short = 0;
-
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
 pub struct RingEffects {
 	stealthy: usize,
@@ -14,6 +12,17 @@ pub struct RingEffects {
 	ring_exp: isize,
 	r_see_invisible: bool,
 	maintain_armor: bool,
+	auto_search: isize,
+}
+
+impl RingEffects {
+	pub fn auto_search(&self) -> isize { self.auto_search }
+	pub fn clear_auto_search(&mut self) {
+		self.auto_search = 0;
+	}
+	pub fn increase_auto_search(&mut self, amount: isize) {
+		self.auto_search += amount;
+	}
 }
 
 impl RingEffects {

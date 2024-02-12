@@ -10,7 +10,6 @@ use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
-use crate::ring::effects::{auto_search};
 use crate::settings::jump;
 
 pub static mut m_moves: i16 = 0;
@@ -413,6 +412,8 @@ pub unsafe fn reg_move(player: &mut Player, level: &mut Level) -> bool {
 		}
 	}
 	heal(player);
+
+	let auto_search = player.ring_effects.auto_search();
 	if auto_search > 0 {
 		search(auto_search as usize, auto_search > 0, player, level);
 	}
