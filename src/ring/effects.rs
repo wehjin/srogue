@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::odds;
 
-pub static mut r_see_invisible: bool = false;
 pub static mut maintain_armor: bool = false;
 pub static mut auto_search: libc::c_short = 0;
 
@@ -14,6 +13,14 @@ pub struct RingEffects {
 	add_strength: isize,
 	sustain_strength: bool,
 	ring_exp: isize,
+	r_see_invisible: bool,
+}
+
+impl RingEffects {
+	pub fn has_see_invisible(&self) -> bool { self.r_see_invisible }
+	pub fn set_see_invisible(&mut self, enable: bool) {
+		self.r_see_invisible = enable;
+	}
 }
 
 impl RingEffects {

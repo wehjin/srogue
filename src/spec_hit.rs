@@ -140,7 +140,7 @@ unsafe fn steal_item(monster: &mut Monster, player: &mut Player, level: &mut Lev
 unsafe fn disappear(monster: &mut Monster, player: &Player, level: &mut Level) {
 	level.dungeon[monster.spot.row as usize][monster.spot.col as usize].remove_kind(CellKind::Monster);
 	if rogue_can_see(monster.spot.row, monster.spot.col, player, level) {
-		let dungeon_char = get_dungeon_char(monster.spot.row, monster.spot.col, level);
+		let dungeon_char = get_dungeon_char(monster.spot.row, monster.spot.col, player, level);
 		mvaddch(monster.spot.row as i32, monster.spot.col as i32, dungeon_char);
 	}
 	MASH.remove_monster(monster.id());
@@ -197,7 +197,7 @@ unsafe fn try_to_cough(row: i64, col: i64, obj: &obj, player: &Player, level: &m
 		place_at(obj.clone(), row, col, level);
 		if (row != player.rogue.row || col != player.rogue.col)
 			&& !dungeon_cell.is_monster() {
-			mvaddch(row as i32, col as i32, get_dungeon_char(row, col, level));
+			mvaddch(row as i32, col as i32, get_dungeon_char(row, col, player, level));
 		}
 		return true;
 	}
@@ -251,13 +251,13 @@ pub fn clear_gold_seeker(monster: &mut Monster) {
 	monster.m_flags.seeks_gold = false;
 }
 
-pub unsafe fn check_imitator(monster: &mut Monster, level: &Level) -> bool {
+pub unsafe fn check_imitator(monster: &mut Monster, player: &Player, level: &Level) -> bool {
 	if monster.m_flags.imitates {
 		monster.wake_up();
 		if blind == 0 {
-			mvaddch(monster.spot.row as i32, monster.spot.col as i32, get_dungeon_char(monster.spot.row, monster.spot.col, level));
+			mvaddch(monster.spot.row as i32, monster.spot.col as i32, get_dungeon_char(monster.spot.row, monster.spot.col, player, level));
 			check_message();
-			let msg = format!("wait, that's a {}!", mon_name(monster, level));
+			let msg = format!("wait, that's a {}!", mon_name(monster, player, level));
 			message(&msg, 1);
 		}
 		return true;
@@ -289,7 +289,7 @@ unsafe fn sting(monster: &Monster, player: &mut Player, level: &Level) {
 		sting_chance -= 6 * (buffed_exp - 8);
 	}
 	if rand_percent(sting_chance as usize) {
-		message(&format!("the {}'s bite has weakened you", mon_name(monster, level)), 0);
+		message(&format!("the {}'s bite has weakened you", mon_name(monster, player, level)), 0);
 		player.rogue.str_current -= 1;
 		print_stats(STAT_STRENGTH, player);
 	}
@@ -351,7 +351,7 @@ pub unsafe fn m_confuse(monster: &mut Monster, player: &Player, level: &Level) -
 	}
 	if rand_percent(55) {
 		monster.m_flags.confuses = false;
-		let msg = format!("the gaze of the {} has confused you", mon_name(monster, level));
+		let msg = format!("the gaze of the {} has confused you", mon_name(monster, player, level));
 		message(&msg, 1);
 		confuse();
 		return true;
@@ -395,7 +395,7 @@ pub unsafe fn flame_broil(monster: &mut Monster, player: &mut Player, level: &mu
 		col = monster.spot.col;
 		get_closer(&mut row, &mut col, player.rogue.row, player.rogue.col);
 		loop {
-			mvaddch(row as i32, col as i32, get_dungeon_char(row, col, level));
+			mvaddch(row as i32, col as i32, get_dungeon_char(row, col, player, level));
 			refresh();
 			get_closer(&mut row, &mut col, player.rogue.row, player.rogue.col);
 			let stay_looping = row != player.rogue.row || col != player.rogue.col;

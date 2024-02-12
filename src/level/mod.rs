@@ -585,7 +585,7 @@ pub unsafe fn put_player(nr: Option<usize>, player: &mut Player, level: &mut Lev
 	if cur_room != PASSAGE {
 		light_up_room(cur_room, player, level);
 	} else {
-		light_passage(player.rogue.row, player.rogue.col, level);
+		light_passage(player.rogue.row, player.rogue.col, player, level);
 	}
 	let rn = get_room_number(player.rogue.row, player.rogue.col, level);
 	wake_room(rn, true, player.rogue.row, player.rogue.col, player, level);

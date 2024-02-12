@@ -266,7 +266,7 @@ pub unsafe fn search(n: usize, is_auto: bool, player: &mut Player, level: &mut L
 					if rand_percent(17 + player.buffed_exp() as usize) {
 						level.dungeon[row as usize][col as usize].remove_kind(CellKind::Hidden);
 						if not_blind() && no_rogue(row, col, player) {
-							mvaddch(row as i32, col as i32, get_dungeon_char(row, col, level));
+							mvaddch(row as i32, col as i32, get_dungeon_char(row, col, player, level));
 						}
 						shown += 1;
 						if level.dungeon[row as usize][col as usize].is_trap() {

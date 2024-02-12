@@ -63,17 +63,17 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, player: &mut Player, lev
 			light_up_room(cur_room, player, level);
 			wake_room(cur_room, true, row, col, player, level);
 		} else {
-			light_passage(row, col, level);
+			light_passage(row, col, player, level);
 		}
 	} else if level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_door() && level.dungeon[row as usize][col as usize].is_tunnel() {
-		light_passage(row, col, level);
+		light_passage(row, col, player, level);
 		wake_room(cur_room, false, player.rogue.row, player.rogue.col, player, level);
 		darken_room(cur_room, level);
 		cur_room = PASSAGE;
 	} else if level.dungeon[row as usize][col as usize].is_tunnel() {
-		light_passage(row, col, level);
+		light_passage(row, col, player, level);
 	}
-	mvaddch(player.rogue.row as i32, player.rogue.col as i32, get_dungeon_char(player.rogue.row, player.rogue.col, level));
+	mvaddch(player.rogue.row as i32, player.rogue.col as i32, get_dungeon_char(player.rogue.row, player.rogue.col, player, level));
 	mvaddch(row as i32, col as i32, chtype::from(player.rogue.fchar));
 	if !jump() {
 		refresh();

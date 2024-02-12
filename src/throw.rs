@@ -59,7 +59,7 @@ pub unsafe fn throw(player: &mut Player, level: &mut Level) {
 
 			if rogue_can_see(spot.row, spot.col, player, level)
 				&& !(spot == rogue_spot) {
-				mvaddch(spot.row as i32, spot.col as i32, get_dungeon_char(spot.row, spot.col, level));
+				mvaddch(spot.row as i32, spot.col as i32, get_dungeon_char(spot.row, spot.col, player, level));
 			}
 			if let Some(monster_id) = monster_id {
 				let monster = MASH.monster_with_id_mut(monster_id).expect("monster with id");
@@ -139,7 +139,7 @@ pub unsafe fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i
 		}
 
 		if i != 0 && rogue_can_see(orow, ocol, player, level) {
-			mvaddch(orow as i32, ocol as i32, get_dungeon_char(orow, ocol, level));
+			mvaddch(orow as i32, ocol as i32, get_dungeon_char(orow, ocol, player, level));
 		}
 		if rogue_can_see(*row, *col, player, level) {
 			if !cell.is_monster() {
@@ -191,7 +191,7 @@ unsafe fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, player: &Player, lev
 		if rogue_can_see(row, col, player, level) && !player.is_at(row, col) {
 			let was_monster = level.dungeon[row as usize][col as usize].is_monster();
 			level.dungeon[row as usize][col as usize].remove_kind(CellKind::Monster);
-			let dungeon_char = get_dungeon_char(row, col, level);
+			let dungeon_char = get_dungeon_char(row, col, player, level);
 			if was_monster {
 				let monster_char = mvinch(row as i32, col as i32) as u8 as char;
 				if let Some(monster) = MASH.monster_at_spot_mut(row, col) {

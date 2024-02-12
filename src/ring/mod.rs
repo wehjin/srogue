@@ -171,10 +171,11 @@ pub unsafe fn inv_rings(player: &Player) {
 	if wizard {
 		message(
 			&format!("ste {}, r_r {}, e_r {}, r_t {}, s_s {}, a_s {}, reg {}, r_e {}, s_i {}, m_a {}, aus {}",
-			         player.ring_effects.stealthy(), r_rings, player.ring_effects.calorie_burn(),
-			         player.ring_effects.has_teleport(), player.ring_effects.has_sustain_strength(),
-			         player.ring_effects.add_strength(), player.ring_effects.regeneration(),
-			         player.ring_effects.dexterity(), r_see_invisible, maintain_armor, auto_search),
+			         player.ring_effects.stealthy(), r_rings,
+			         player.ring_effects.calorie_burn(), player.ring_effects.has_teleport(),
+			         player.ring_effects.has_sustain_strength(), player.ring_effects.add_strength(),
+			         player.ring_effects.regeneration(), player.ring_effects.dexterity(),
+			         player.ring_effects.has_see_invisible(), maintain_armor, auto_search),
 			0,
 		);
 	}
@@ -211,7 +212,7 @@ pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 	player.ring_effects.clear_add_strength();
 	player.ring_effects.clear_regeneration();
 	player.ring_effects.clear_dexterity();
-	r_see_invisible = false;
+	player.ring_effects.set_see_invisible(false);
 	maintain_armor = false;
 	auto_search = 0;
 
@@ -247,9 +248,11 @@ pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 						let player_class = player.expect_object(ring_id).class;
 						player.ring_effects.increase_dexterity(player_class);
 					}
-					RingKind::Adornment => {}
+					RingKind::Adornment => {
+						// Do nothing
+					}
 					RingKind::RSeeInvisible => {
-						r_see_invisible = true;
+						player.ring_effects.set_see_invisible(true);
 					}
 					RingKind::MaintainArmor => {
 						maintain_armor = true;

@@ -399,7 +399,7 @@ unsafe fn hold_monster(player: &Player, level: &Level) {
 }
 
 pub unsafe fn tele(player: &mut Player, level: &mut Level) {
-	mvaddch(player.rogue.row as i32, player.rogue.col as i32, get_dungeon_char(player.rogue.row, player.rogue.col, level));
+	mvaddch(player.rogue.row as i32, player.rogue.col as i32, get_dungeon_char(player.rogue.row, player.rogue.col, player, level));
 
 	if cur_room >= 0 {
 		darken_room(cur_room, level);
@@ -462,7 +462,7 @@ pub unsafe fn unblind(player: &Player, level: &mut Level)
 
 pub unsafe fn relight(player: &Player, level: &mut Level) {
 	if cur_room == PASSAGE {
-		light_passage(player.rogue.row, player.rogue.col, level);
+		light_passage(player.rogue.row, player.rogue.col, player, level);
 	} else {
 		light_up_room(cur_room, player, level);
 	}

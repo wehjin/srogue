@@ -174,11 +174,11 @@ pub unsafe fn light_up_room(rn: i64, player: &Player, level: &mut Level) {
 				if level.dungeon[i as usize][j as usize].is_monster() {
 					if let Some(monster) = MASH.monster_at_spot_mut(i, j) {
 						level.dungeon[monster.spot.row as usize][monster.spot.col as usize].remove_kind(CellKind::Monster);
-						monster.trail_char = get_dungeon_char(monster.spot.row, monster.spot.col, level);
+						monster.trail_char = get_dungeon_char(monster.spot.row, monster.spot.col, player, level);
 						level.dungeon[monster.spot.row as usize][monster.spot.col as usize].add_kind(CellKind::Monster);
 					}
 				}
-				mvaddch(i as i32, j as i32, get_dungeon_char(i, j, level));
+				mvaddch(i as i32, j as i32, get_dungeon_char(i, j, player, level));
 			}
 		}
 		mvaddch(player.rogue.row as i32, player.rogue.col as i32, player.rogue.fchar as chtype);
@@ -186,7 +186,7 @@ pub unsafe fn light_up_room(rn: i64, player: &Player, level: &mut Level) {
 }
 
 
-pub unsafe fn light_passage(row: i64, col: i64, level: &Level) {
+pub unsafe fn light_passage(row: i64, col: i64, player: &Player, level: &Level) {
 	if blind != 0 {
 		return;
 	}
@@ -197,7 +197,7 @@ pub unsafe fn light_passage(row: i64, col: i64, level: &Level) {
 	for i in i_start..=i_end {
 		for j in j_start..=j_end {
 			if can_move(row, col, row + i, col + j, level) {
-				mvaddch((row + i) as i32, (col + j) as i32, get_dungeon_char(row + i, col + j, level));
+				mvaddch((row + i) as i32, (col + j) as i32, get_dungeon_char(row + i, col + j, player, level));
 			}
 		}
 	}
@@ -221,10 +221,10 @@ pub unsafe fn darken_room(rn: i64, level: &Level) {
 	}
 }
 
-pub unsafe fn get_dungeon_char(row: i64, col: i64, level: &Level) -> chtype {
+pub unsafe fn get_dungeon_char(row: i64, col: i64, player: &Player, level: &Level) -> chtype {
 	let mask = level.dungeon[row as usize][col as usize];
 	if mask.is_monster() {
-		return gmc_row_col(row, col, level);
+		return gmc_row_col(row, col, player, level);
 	}
 	if mask.is_object() {
 		let obj = level_objects.find_object_at(row, col).expect("obj at row,col in level object");

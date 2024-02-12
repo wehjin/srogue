@@ -34,7 +34,7 @@ pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame
 		hit_chance = reduce_chance(hit_chance, player.buffed_exp() - r_rings);
 	}
 
-	let base_monster_name = mon_name(&*monster, level);
+	let base_monster_name = mon_name(&*monster, player, level);
 	let monster_name = if let Some(name) = other { name } else { &base_monster_name };
 	if !rand_percent(hit_chance) {
 		if FIGHT_MONSTER.is_none() {
@@ -83,7 +83,7 @@ pub unsafe fn mon_hit(monster: &mut monster::Monster, other: Option<&str>, flame
 }
 
 pub unsafe fn rogue_hit(monster: &mut monster::Monster, force_hit: bool, player: &mut Player, level: &mut Level) {
-	if check_imitator(monster, level) {
+	if check_imitator(monster, player, level) {
 		return;
 	}
 	let hit_chance = if force_hit { 100 } else { get_hit_chance_player(player.weapon(), player) };
@@ -180,11 +180,11 @@ pub unsafe fn mon_damage(monster: &mut monster::Monster, damage: isize, player: 
 		let row = monster.spot.row;
 		let col = monster.spot.col;
 		level.dungeon[row as usize][col as usize].remove_kind(CellKind::Monster);
-		ncurses::mvaddch(row as i32, col as i32, get_dungeon_char(row, col, level));
+		ncurses::mvaddch(row as i32, col as i32, get_dungeon_char(row, col, player, level));
 
 		FIGHT_MONSTER = None;
 		cough_up(monster, player, level);
-		let mn = mon_name(monster, level);
+		let mn = mon_name(monster, player, level);
 		HIT_MESSAGE = format!("{}defeated the {}", HIT_MESSAGE, mn);
 		message(&HIT_MESSAGE, 1);
 		HIT_MESSAGE.clear();
