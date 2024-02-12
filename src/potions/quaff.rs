@@ -5,7 +5,7 @@ use crate::monster::{MASH, show_monsters};
 use crate::objects::{level_objects, show_objects};
 use crate::player::Player;
 use crate::potions::kind::PotionKind;
-use crate::r#use::{confused, extra_hp, STRANGE_FEELING};
+use crate::r#use::{extra_hp, STRANGE_FEELING};
 use crate::random::get_rand;
 use crate::settings::fruit;
 
@@ -80,7 +80,7 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: 
 				"you feel confused"
 			};
 			message(msg, 0);
-			crate::r#use::confuse();
+			crate::r#use::confuse(player);
 		}
 		PotionKind::Levitation => {
 			message("you start to float in the air", 0);
@@ -132,10 +132,12 @@ unsafe fn potion_heal(extra: bool, player: &mut Player, level: &mut Level) {
 	if player.blind.is_active() {
 		crate::r#use::unblind(player, level);
 	}
-	if confused != 0 && extra {
-		crate::r#use::unconfuse(player);
-	} else if confused != 0 {
-		confused = (confused / 2) + 1;
+	if player.confused.is_active() {
+		if extra {
+			crate::r#use::unconfuse(player);
+		} else {
+			player.confused.halve();
+		}
 	}
 	if player.halluc.is_active() {
 		if extra {

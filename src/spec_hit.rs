@@ -352,7 +352,7 @@ unsafe fn drain_life(player: &mut Player) {
 	print_stats(STAT_STRENGTH | STAT_HP, player);
 }
 
-pub unsafe fn m_confuse(monster: &mut Monster, player: &Player, level: &Level) -> bool {
+pub unsafe fn m_confuse(monster: &mut Monster, player: &mut Player, level: &Level) -> bool {
 	if !rogue_can_see(monster.spot.row, monster.spot.col, player, level) {
 		return false;
 	}
@@ -365,7 +365,7 @@ pub unsafe fn m_confuse(monster: &mut Monster, player: &Player, level: &Level) -
 		monster.m_flags.confuses = false;
 		let msg = format!("the gaze of the {} has confused you", mon_name(monster, player, level));
 		message(&msg, 1);
-		confuse();
+		confuse(player);
 		return true;
 	}
 	return false;

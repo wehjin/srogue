@@ -25,7 +25,6 @@ use crate::scrolls::ScrollKind;
 use crate::settings::fruit;
 use crate::trap::is_off_screen;
 
-pub static mut confused: usize = 0;
 pub static mut extra_hp: isize = 0;
 pub const STRANGE_FEELING: &'static str = "you have a strange feeling for a moment, then it passes";
 
@@ -376,12 +375,13 @@ pub fn get_ench_color(player: &Player) -> &'static str {
 	}
 }
 
-pub unsafe fn confuse() {
-	confused += get_rand(12, 22);
+pub fn confuse(player: &mut Player) {
+	let amount = get_rand(12, 22);
+	player.confused.extend(amount);
 }
 
-pub unsafe fn unconfuse(player: &Player) {
-	confused = 0;
+pub unsafe fn unconfuse(player: &mut Player) {
+	player.confused.clear();
 	let feeling = if player.halluc.is_active() { "trippy" } else { "confused" };
 	let msg = format!("you feel less {} now", feeling);
 	message(&msg, 1);

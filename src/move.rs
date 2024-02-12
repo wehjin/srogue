@@ -18,7 +18,7 @@ use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
-use crate::r#use::{confused, hallucinate_on_screen, tele, unblind, unconfuse, unhallucinate};
+use crate::r#use::{hallucinate_on_screen, tele, unblind, unconfuse, unhallucinate};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::room::{darken_room, get_dungeon_char, get_room_number, light_passage, light_up_room};
 use crate::score::killed_by;
@@ -38,7 +38,11 @@ pub enum MoveResult {
 
 
 pub unsafe fn one_move_rogue(dirch: char, pickup: bool, player: &mut Player, level: &mut Level) -> MoveResult {
-	let dirch = if confused != 0 { Move::random8().to_char() } else { dirch };
+	let dirch = if player.confused.is_active() {
+		Move::random8().to_char()
+	} else {
+		dirch
+	};
 	let mut row = player.rogue.row;
 	let mut col = player.rogue.col;
 	get_dir_rc(dirch, &mut row, &mut col, true);
@@ -146,7 +150,11 @@ unsafe fn moved_unless_hungry_or_confused(player: &mut Player, level: &mut Level
 		/* fainted from hunger */
 		StoppedOnSomething
 	} else {
-		if confused != 0 { StoppedOnSomething } else { Moved }
+		if player.confused.is_active() {
+			StoppedOnSomething
+		} else {
+			Moved
+		}
 	}
 }
 
@@ -202,7 +210,7 @@ pub fn is_passable(row: i64, col: i64, level: &Level) -> bool {
 }
 
 pub unsafe fn next_to_something(drow: i64, dcol: i64, player: &Player, level: &Level) -> bool {
-	if confused != 0 {
+	if player.confused.is_active() {
 		return true;
 	}
 	if player.blind.is_active() {
@@ -401,9 +409,9 @@ pub unsafe fn reg_move(player: &mut Player, level: &mut Level) -> bool {
 			unblind(player, level);
 		}
 	}
-	if confused != 0 {
-		confused -= 1;
-		if confused == 0 {
+	if player.confused.is_active() {
+		player.confused.decr();
+		if player.confused.is_inactive() {
 			unconfuse(player);
 		}
 	}

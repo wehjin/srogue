@@ -26,6 +26,7 @@ pub struct Player {
 	pub blind: TimeEffect,
 	pub levitate: TimeEffect,
 	pub haste_self: TimeEffect,
+	pub confused: TimeEffect,
 }
 
 impl Player {
@@ -190,11 +191,12 @@ impl Player {
 				moves_left: 1250,
 			},
 			party_counter: 0,
-			ring_effects: RingEffects::default(),
-			halluc: TimeEffect::default(),
-			blind: TimeEffect::default(),
-			levitate: TimeEffect::default(),
-			haste_self: TimeEffect::default(),
+			ring_effects: Default::default(),
+			halluc: Default::default(),
+			blind: Default::default(),
+			levitate: Default::default(),
+			haste_self: Default::default(),
+			confused: Default::default(),
 		}
 	}
 }
