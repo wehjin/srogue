@@ -9,7 +9,7 @@ use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD, STAT_HP, STAT_STRENGTH};
-use crate::ring::effects::{maintain_armor, ring_exp, sustain_strength};
+use crate::ring::effects::{maintain_armor, ring_exp};
 
 pub static mut less_hp: isize = 0;
 pub const FLAME_NAME: &'static str = "flame";
@@ -277,7 +277,7 @@ pub unsafe fn imitating(row: i64, col: i64, level: &Level) -> bool {
 }
 
 unsafe fn sting(monster: &Monster, player: &mut Player, level: &Level) {
-	if player.rogue.str_current <= 3 || sustain_strength {
+	if player.rogue.str_current <= 3 || player.ring_effects.has_sustain_strength() {
 		return;
 	}
 
@@ -320,7 +320,7 @@ unsafe fn drain_life(player: &mut Player) {
 	}
 
 	let n = get_rand(1, 3);             /* 1 Hp, 2 Str, 3 both */
-	if n != 2 || !sustain_strength {
+	if n != 2 || !player.ring_effects.has_sustain_strength() {
 		message("you feel weaker", 0);
 	}
 	if n != 2 {
@@ -329,7 +329,7 @@ unsafe fn drain_life(player: &mut Player) {
 		less_hp += 1;
 	}
 	if n != 1 {
-		if player.rogue.str_current > 3 && !sustain_strength {
+		if player.rogue.str_current > 3 && !player.ring_effects.has_sustain_strength() {
 			player.rogue.str_current -= 1;
 			if coin_toss() {
 				player.rogue.str_max -= 1;

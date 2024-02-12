@@ -126,7 +126,7 @@ pub unsafe fn trap_player(row: usize, col: usize, player: &mut Player, level: &m
 			if player.rogue.hp_current <= 0 {
 				player.rogue.hp_current = 0;
 			}
-			if !sustain_strength && rand_percent(40) && player.rogue.str_current >= 3 {
+			if !player.ring_effects.has_sustain_strength() && rand_percent(40) && player.rogue.str_current >= 3 {
 				player.rogue.str_current -= 1;
 			}
 			print_stats(STAT_HP | STAT_STRENGTH, player);

@@ -9,7 +9,6 @@ use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll,
 use crate::prelude::object_what::PackFilter::{AllObjects, Foods, Potions, Scrolls};
 use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_HP, STAT_HUNGER, STAT_STRENGTH};
-use crate::ring::effects::*;
 use crate::scrolls::ScrollKind;
 use crate::settings::fruit;
 
@@ -59,7 +58,7 @@ pub unsafe fn quaff(player: &mut Player, level: &mut Level) {
 							potion_heal(true, player, level);
 						}
 						PotionKind::Poison => {
-							if !sustain_strength {
+							if !player.ring_effects.has_sustain_strength() {
 								player.rogue.str_current -= get_rand(1, 3);
 								if player.rogue.str_current < 1 {
 									player.rogue.str_current = 1;
