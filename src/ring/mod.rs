@@ -9,24 +9,12 @@ use crate::prelude::object_what::ObjectWhat::Ring;
 use crate::prelude::object_what::PackFilter::Rings;
 use ring_kind::RingKind;
 use crate::prelude::stat_const::STAT_STRENGTH;
+use crate::ring::effects::*;
 
 pub(crate) mod constants;
 pub(crate) mod ring_kind;
 
-#[no_mangle]
-pub static mut stealthy: libc::c_short = 0;
 pub static mut r_rings: isize = 0;
-pub static mut add_strength: isize = 0;
-#[no_mangle]
-pub static mut e_rings: libc::c_short = 0;
-pub static mut regeneration: isize = 0;
-pub static mut ring_exp: isize = 0;
-#[no_mangle]
-pub static mut auto_search: libc::c_short = 0;
-pub static mut r_teleport: bool = false;
-pub static mut r_see_invisible: bool = false;
-pub static mut sustain_strength: bool = false;
-pub static mut maintain_armor: bool = false;
 
 pub unsafe fn put_on_ring(player: &mut Player, level: &mut Level) {
 	if player.hand_usage() == HandUsage::Both {
@@ -183,7 +171,7 @@ pub unsafe fn inv_rings(player: &Player) {
 	if wizard {
 		message(
 			&format!("ste {}, r_r {}, e_r {}, r_t {}, s_s {}, a_s {}, reg {}, r_e {}, s_i {}, m_a {}, aus {}",
-			         stealthy, r_rings, e_rings, r_teleport, sustain_strength,
+			         player.ring_effects.stealthy(), r_rings, e_rings, r_teleport, sustain_strength,
 			         add_strength, regeneration, ring_exp, r_see_invisible,
 			         maintain_armor, auto_search),
 			0,
@@ -210,7 +198,11 @@ impl PlayerHand {
 	pub const ALL_HANDS: [PlayerHand; 2] = [PlayerHand::Left, PlayerHand::Right];
 }
 
+pub(crate) mod effects;
+
+
 pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
+	player.ring_effects.clear_stealthy();
 	r_rings = 0;
 	e_rings = 0;
 	r_teleport = false;
@@ -231,7 +223,7 @@ pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 				r_rings += 1;
 				e_rings += 1;
 				match RingKind::from_index(ring.which_kind as usize) {
-					RingKind::Stealth => { stealthy += 1; }
+					RingKind::Stealth => { player.ring_effects.incr_stealthy(); }
 					RingKind::RTeleport => { r_teleport = true; }
 					RingKind::Regeneration => { regeneration += 1; }
 					RingKind::SlowDigest => { e_rings -= 2; }

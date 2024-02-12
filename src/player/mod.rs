@@ -7,6 +7,7 @@ use crate::armors::ArmorKind;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::{DungeonSpot, LAST_DUNGEON, MAX_ARMOR, MAX_GOLD};
 use crate::prelude::object_what::ObjectWhat;
+use crate::ring::effects::RingEffects;
 use crate::weapons::WeaponKind;
 
 pub(crate) mod rings;
@@ -19,6 +20,7 @@ pub struct Player {
 	pub max_depth: usize,
 	pub rogue: Fighter,
 	pub party_counter: usize,
+	pub ring_effects: RingEffects,
 }
 
 impl Player {
@@ -171,6 +173,7 @@ impl Player {
 				moves_left: 1250,
 			},
 			party_counter: 0,
+			ring_effects: Default::default(),
 		}
 	}
 }

@@ -6,6 +6,7 @@ use crate::level::constants::DROWS;
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_EXP, STAT_GOLD, STAT_HP, STAT_HUNGER, STAT_LABEL, STAT_LEVEL, STAT_STRENGTH};
+use crate::ring::effects::add_strength;
 
 pub static mut msg_written: String = String::new();
 pub static mut msg_cleared: bool = true;

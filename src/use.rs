@@ -9,6 +9,7 @@ use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll,
 use crate::prelude::object_what::PackFilter::{AllObjects, Foods, Potions, Scrolls};
 use crate::prelude::potion_kind::{PotionKind, POTIONS};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_HP, STAT_HUNGER, STAT_STRENGTH};
+use crate::ring::effects::*;
 use crate::scrolls::ScrollKind;
 use crate::settings::fruit;
 

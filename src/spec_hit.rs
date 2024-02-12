@@ -9,6 +9,7 @@ use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD, STAT_HP, STAT_STRENGTH};
+use crate::ring::effects::{maintain_armor, ring_exp, sustain_strength};
 
 pub static mut less_hp: isize = 0;
 pub const FLAME_NAME: &'static str = "flame";

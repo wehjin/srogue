@@ -8,6 +8,7 @@ use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_STRENGTH};
+use crate::ring::effects::*;
 use crate::trap::trap_kind::TrapKind;
 use crate::trap::trap_kind::TrapKind::{BearTrap, DartTrap, RustTrap, SleepingGasTrap, TeleTrap, TrapDoor};
 

@@ -10,6 +10,7 @@ use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
+use crate::ring::effects::{auto_search, e_rings, r_teleport, regeneration};
 use crate::settings::jump;
 
 pub static mut m_moves: i16 = 0;
@@ -60,13 +61,13 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, player: &mut Player, lev
 		if cur_room == PASSAGE {
 			cur_room = get_room_number(row, col, level);
 			light_up_room(cur_room, player, level);
-			wake_room(cur_room, true, row, col, level);
+			wake_room(cur_room, true, row, col, player, level);
 		} else {
 			light_passage(row, col, level);
 		}
 	} else if level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_door() && level.dungeon[row as usize][col as usize].is_tunnel() {
 		light_passage(row, col, level);
-		wake_room(cur_room, false, player.rogue.row, player.rogue.col, level);
+		wake_room(cur_room, false, player.rogue.row, player.rogue.col, player, level);
 		darken_room(cur_room, level);
 		cur_room = PASSAGE;
 	} else if level.dungeon[row as usize][col as usize].is_tunnel() {

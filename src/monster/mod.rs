@@ -19,6 +19,7 @@ use crate::{odds};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::Scroll;
+use crate::ring::effects::r_see_invisible;
 use crate::scrolls::ScrollKind;
 use crate::scrolls::ScrollKind::ScareMonster;
 use crate::room::RoomType::Maze;
@@ -161,9 +162,10 @@ pub unsafe fn mv_monster(monster: &mut Monster, row: i64, col: i64, player: &mut
 			monster.do_nap();
 			return;
 		}
+		let chance = odds::WAKE_PERCENT;
 		if (monster.m_flags.wakens)
 			&& rogue_is_around(monster.spot.row, monster.spot.col, player)
-			&& rand_percent(if stealthy > 0 { odds::WAKE_PERCENT / (odds::STEALTH_FACTOR + (stealthy as usize)) } else { odds::WAKE_PERCENT }) {
+			&& rand_percent(player.ring_effects.apply_stealthy(chance)) {
 			monster.wake_up();
 		}
 		return;
@@ -325,19 +327,9 @@ pub unsafe fn mon_can_go(monster: &Monster, row: i64, col: i64, player: &Player,
 	return true;
 }
 
-pub unsafe fn wake_room(rn: i64, entering: bool, row: i64, col: i64, level: &Level) {
-	let wake_percent = {
-		let wake_percent = if Some(rn as usize) == level.party_room {
-			odds::PARTY_WAKE_PERCENT
-		} else {
-			odds::WAKE_PERCENT
-		};
-		if stealthy > 0 {
-			wake_percent / (odds::STEALTH_FACTOR + stealthy as usize)
-		} else {
-			wake_percent
-		}
-	};
+pub unsafe fn wake_room(rn: i64, entering: bool, row: i64, col: i64, player: &Player, level: &Level) {
+	let chance = level.room_wake_percent(rn);
+	let wake_percent = player.ring_effects.apply_stealthy(chance);
 	for monster in &mut MASH.monsters {
 		if monster.in_room(rn, level) {
 			if entering {

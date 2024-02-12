@@ -328,7 +328,7 @@ fn to_hit(obj: Option<&object>) -> usize {
 
 pub unsafe fn get_weapon_damage(weapon: Option<&object>, strength: isize, exp: isize) -> isize {
 	let mut damage = get_w_damage(weapon);
-	damage += damage_for_strength(strength) as isize;
+	damage += damage_for_strength(strength);
 	damage += (((exp + ring_exp) - r_rings) + 1) / 2;
 	damage
 }
@@ -350,7 +350,8 @@ use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::stat_const::STAT_HP;
 use crate::r#move::{can_move, is_direction, one_move_rogue};
 use crate::random::rand_percent;
-use crate::ring::{add_strength, r_rings, ring_exp};
+use crate::ring::{r_rings};
+use crate::ring::effects::{add_strength, ring_exp};
 use crate::room::get_dungeon_char;
 use crate::score::killed_by;
 use crate::spec_hit::{clear_gold_seeker, check_imitator, cough_up, special_hit};
