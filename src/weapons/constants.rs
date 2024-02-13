@@ -24,6 +24,7 @@ impl WeaponKind {
 		Note {
 			title: Title::WeaponName(self),
 			status: NoteStatus::Unidentified,
+			is_wood: false,
 		}
 	}
 }

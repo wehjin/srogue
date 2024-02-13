@@ -1,5 +1,46 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
+use std::clone::Clone;
+use std::string::ToString;
+
+use ncurses::{chtype, mvaddch, mvinch};
+use serde::{Deserialize, Serialize};
+
+pub use object_id::*;
+pub use object_pack::*;
+use ObjectWhat::{Armor, Potion, Scroll, Weapon};
+
+use crate::armors::ArmorKind;
+use crate::armors::constants::{ARMORS, PLATE, SPLINT};
+use crate::hit::DamageStat;
+use crate::inventory::get_obj_desc;
+use crate::level::{CellKind, Level};
+use crate::level::constants::MAX_ROOM;
+use crate::message::{CANCEL, check_message, get_input_line, message, rgetchar, sound_bell};
+use crate::monster::{MASH, party_monsters};
+use crate::objects::note_tables::NoteTables;
+use crate::odds::GOLD_PERCENT;
+use crate::pack::MAX_PACK_COUNT;
+use crate::player::Player;
+use crate::potions::colors::PotionColor;
+use crate::potions::kind::{PotionKind, POTIONS};
+use crate::potions::kind::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
+use crate::prelude::food_kind::{FRUIT, RATION};
+use crate::prelude::item_usage::{BEING_USED, BEING_WIELDED, BEING_WORN, NOT_USED, ON_EITHER_HAND, ON_LEFT_HAND, ON_RIGHT_HAND};
+use crate::prelude::object_what::ObjectWhat;
+use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
+use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::ring::constants::RINGS;
+use crate::ring::gr_ring;
+use crate::ring::ring_gem::RingGem;
+use crate::room::{get_mask_char, gr_room, gr_row_col, party_objects, RoomType};
+use crate::scrolls::constants::SCROLLS;
+use crate::scrolls::ScrollKind;
+use crate::weapons::constants::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
+use crate::weapons::kind::WeaponKind;
+use crate::zap::constants::{CANCELLATION, MAGIC_MISSILE, WANDS};
+use crate::zap::wand_materials::WandMaterial;
+
 mod object_id;
 mod object_pack;
 mod potions;
@@ -7,44 +48,6 @@ mod scrolls;
 mod weapons;
 mod armors;
 mod kinds;
-
-use std::clone::Clone;
-use std::string::ToString;
-use ncurses::{chtype, mvaddch, mvinch};
-use serde::{Deserialize, Serialize};
-use ObjectWhat::{Armor, Potion, Scroll, Weapon};
-use crate::level::constants::MAX_ROOM;
-use crate::odds::GOLD_PERCENT;
-use crate::prelude::food_kind::{FRUIT, RATION};
-use crate::prelude::item_usage::{BEING_USED, BEING_WIELDED, BEING_WORN, NOT_USED, ON_EITHER_HAND, ON_LEFT_HAND, ON_RIGHT_HAND};
-use crate::prelude::object_what::ObjectWhat;
-use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
-use crate::potions::kind::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
-use crate::ring::constants::RINGS;
-use crate::scrolls::constants::SCROLLS;
-pub use object_id::*;
-pub use object_pack::*;
-use crate::armors::ArmorKind;
-use crate::armors::constants::{ARMORS, PLATE, SPLINT};
-use crate::hit::DamageStat;
-use crate::inventory::{get_obj_desc, IS_WOOD};
-use crate::level::{CellKind, Level};
-use crate::message::{CANCEL, check_message, get_input_line, message, rgetchar, sound_bell};
-use crate::monster::{MASH, party_monsters};
-use crate::objects::note_tables::NoteTables;
-use crate::pack::MAX_PACK_COUNT;
-use crate::player::Player;
-use crate::potions::colors::PotionColor;
-use crate::potions::kind::{PotionKind, POTIONS};
-use crate::random::{coin_toss, get_rand, rand_percent};
-use crate::ring::gr_ring;
-use crate::ring::ring_gem::RingGem;
-use crate::room::{get_mask_char, gr_room, gr_row_col, party_objects, RoomType};
-use crate::scrolls::ScrollKind;
-use crate::weapons::constants::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
-use crate::weapons::kind::WeaponKind;
-use crate::zap::constants::{CANCELLATION, MAGIC_MISSILE, WANDS};
-use crate::zap::wand_materials::WandMaterial;
 
 pub(crate) mod note_tables;
 
@@ -88,6 +91,7 @@ impl Default for Title {
 pub struct Note {
 	pub title: Title,
 	pub status: NoteStatus,
+	pub is_wood: bool,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -162,10 +166,10 @@ impl obj {
 		new.id = ObjectId::random();
 		new
 	}
-	pub unsafe fn to_name_with_new_quantity(&self, quantity: i16, fruit: String, id_tables: &NoteTables) -> String {
+	pub unsafe fn to_name_with_new_quantity(&self, quantity: i16, fruit: String, notes: &NoteTables) -> String {
 		let mut temp_obj = self.clone();
 		temp_obj.quantity = quantity;
-		name_of(&temp_obj, fruit, id_tables)
+		name_of(&temp_obj, fruit, notes)
 	}
 	pub fn can_join_existing_pack_object(&self, existing_pack_obj: &Self) -> bool {
 		self.is_same_kind(existing_pack_obj) &&
@@ -299,26 +303,35 @@ impl Player {
 	pub fn object_with_letter_mut(&mut self, ch: char) -> Option<&mut obj> {
 		self.find_pack_obj_mut(|obj| obj.ichar == ch)
 	}
-	pub unsafe fn name_of(&self, obj_id: ObjectId) -> String {
+	pub fn name_of(&self, obj_id: ObjectId) -> String {
 		let obj = self.expect_object(obj_id);
 		name_of(obj, self.settings.fruit.to_string(), &self.notes)
 	}
 }
 
-pub unsafe fn name_of(obj: &object, fruit: String, id_tables: &NoteTables) -> String {
-	match obj.what_is {
+pub fn name_of(obj: &object, fruit: String, notes: &NoteTables) -> String {
+	let what = obj.what_is;
+	match what {
 		Armor => "armor ".to_string(),
-		Weapon => match obj.which_kind {
-			DART => if obj.quantity > 1 { "darts " } else { "dart " }.to_string(),
-			ARROW => if obj.quantity > 1 { "arrows " } else { "arrow " }.to_string(),
-			DAGGER => if obj.quantity > 1 { "daggers " } else { "dagger " }.to_string(),
-			SHURIKEN => if obj.quantity > 1 { "shurikens " } else { "shuriken " }.to_string(),
-			_ => obj.title(id_tables).to_string(),
-		},
+		Weapon => {
+			let kind = obj.which_kind;
+			match kind {
+				DART => if obj.quantity > 1 { "darts " } else { "dart " }.to_string(),
+				ARROW => if obj.quantity > 1 { "arrows " } else { "arrow " }.to_string(),
+				DAGGER => if obj.quantity > 1 { "daggers " } else { "dagger " }.to_string(),
+				SHURIKEN => if obj.quantity > 1 { "shurikens " } else { "shuriken " }.to_string(),
+				_ => {
+					notes.title(what, kind as usize).to_string()
+				}
+			}
+		}
 		Scroll => if obj.quantity > 1 { "scrolls " } else { "scroll " }.to_string(),
 		Potion => if obj.quantity > 1 { "potions " } else { "potion " }.to_string(),
 		Food => if obj.which_kind == RATION { "food ".to_string() } else { fruit }
-		Wand => if IS_WOOD[obj.which_kind as usize] { "staff " } else { "wand " }.to_string(),
+		Wand => {
+			let is_wood = notes.note(Wand, obj.which_kind as usize).is_wood;
+			if is_wood { "staff " } else { "wand " }.to_string()
+		}
 		Ring => "ring ".to_string(),
 		Amulet => "amulet ".to_string(),
 		_ => "unknown ".to_string(),

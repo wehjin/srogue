@@ -43,6 +43,7 @@ impl RingKind {
 		Note {
 			title: Title::None,
 			status: NoteStatus::Unidentified,
+			is_wood: false,
 		}
 	}
 }

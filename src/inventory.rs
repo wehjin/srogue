@@ -1,29 +1,26 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
+
 use crate::level::constants::{DCOLS, DROWS};
+use crate::message::{CANCEL, message};
+use crate::objects::{get_armor_class, name_of, NoteStatus, object, ObjectId};
+use crate::objects::note_tables::NoteTables;
 use crate::pack::{pack_letter, wait_for_ack};
 use crate::player::Player;
-use crate::random::get_rand;
-
-use crate::message::{CANCEL, message};
-use crate::objects::{get_armor_class, NoteStatus, name_of, obj, object, ObjectId, Title};
-use crate::objects::note_tables::NoteTables;
 use crate::potions::kind::PotionKind;
 use crate::prelude::food_kind::RATION;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_LEFT_HAND, ON_RIGHT_HAND};
-use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::ObjectWhat::{Amulet, Armor, Food, Gold, Potion, Ring, Scroll, Wand, Weapon};
+use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::PackFilter::AllObjects;
-use crate::ring::ring_kind::RingKind;
+use crate::random::get_rand;
 use crate::ring::constants::{ADD_STRENGTH, DEXTERITY};
+use crate::ring::ring_kind::RingKind;
 use crate::score::is_vowel;
 use crate::scrolls::ScrollKind;
 use crate::zap::wand_kind::WandKind;
-use crate::zap::constants::WANDS;
 use crate::zap::wizard;
-
-pub static mut IS_WOOD: [bool; WANDS] = [false; WANDS];
 
 pub unsafe fn inventory(filter: PackFilter, player: &Player) {
 	if player.pack().is_empty() {
@@ -88,16 +85,6 @@ fn get_quantity(obj: &object) -> String {
 	}
 }
 
-impl obj {
-	pub fn title(&self, id_tables: &NoteTables) -> Title {
-		id_tables.title(self.what_is, self.what_is as usize)
-	}
-}
-
-unsafe fn get_id_status(obj: &object, id_tables: &NoteTables) -> NoteStatus {
-	id_tables.note(obj.what_is, obj.which_kind as usize).status
-}
-
 fn get_id_real(obj: &object) -> &'static str {
 	match obj.what_is {
 		Scroll => ScrollKind::from_index(obj.which_kind as usize).real_name(),
@@ -108,11 +95,12 @@ fn get_id_real(obj: &object) -> &'static str {
 	}
 }
 
-unsafe fn get_identified(obj: &object, fruit: String, id_tables: &NoteTables) -> String {
-	match obj.what_is {
+unsafe fn get_identified(obj: &object, fruit: String, notes: &NoteTables) -> String {
+	let what = obj.what_is;
+	match what {
 		Scroll | Potion => {
 			let quantity = get_quantity(obj);
-			let name = name_of(obj, fruit, id_tables);
+			let name = name_of(obj, fruit, notes);
 			let real_name = get_id_real(obj);
 			format!("{}{}{}", quantity, name, real_name)
 		}
@@ -122,66 +110,79 @@ unsafe fn get_identified(obj: &object, fruit: String, id_tables: &NoteTables) ->
 			} else {
 				"".to_string()
 			};
-			let name = name_of(obj, fruit, id_tables);
+			let name = name_of(obj, fruit, notes);
 			let real_name = get_id_real(obj);
 			format!("{}{}{}{}", get_quantity(obj), more_info, name, real_name)
 		}
 		Wand => format!("{}{}{}{}",
 		                get_quantity(obj),
-		                name_of(obj, fruit, id_tables),
+		                name_of(obj, fruit, notes),
 		                get_id_real(obj),
 		                if wizard || obj.identified {
 			                format!("[{}]", obj.class)
 		                } else {
 			                "".to_string()
 		                }),
-		Armor => format!("{}{} {}[{}] ",
-		                 if obj.d_enchant >= 0 { "+" } else { "" },
-		                 obj.d_enchant,
-		                 obj.title(id_tables).as_str(),
-		                 get_armor_class(Some(obj))),
+		Armor => {
+			let armor_class = get_armor_class(Some(obj));
+			let enchantment = obj.d_enchant;
+			let plus_or_none = if enchantment >= 0 { "+" } else { "" };
+			let title = notes.title(what, obj.which_kind as usize);
+			format!("{}{} {}[{}] ", plus_or_none, enchantment, title.as_str(), armor_class)
+		}
 		Weapon => format!("{}{}{},{}{} {}",
 		                  get_quantity(obj),
 		                  if obj.hit_enchant >= 0 { "+" } else { "" }, obj.hit_enchant,
 		                  if obj.d_enchant >= 0 { "+" } else { "" }, obj.d_enchant,
-		                  name_of(obj, fruit, id_tables)
+		                  name_of(obj, fruit, notes)
 		),
 		_ => panic!("invalid identified object")
 	}
 }
 
-unsafe fn get_called(obj: &object, fruit: String, id_tables: &NoteTables) -> String {
-	match obj.what_is {
+unsafe fn get_called(obj: &object, fruit: String, notes: &NoteTables) -> String {
+	let what = obj.what_is;
+	match what {
 		Scroll | Potion | Wand | Ring => {
-			let name = name_of(obj, fruit, id_tables);
-			let title = obj.title(id_tables);
+			let name = name_of(obj, fruit, notes);
+			let title = notes.title(what, obj.which_kind as usize);
 			format!("{}{}called {}", get_quantity(obj), name, title.as_str())
 		}
 		_ => panic!("invalid called object"),
 	}
 }
 
-unsafe fn get_unidentified(obj: &object, fruit: String, id_tables: &NoteTables) -> String {
+unsafe fn get_unidentified(obj: &object, fruit: String, notes: &NoteTables) -> String {
 	let what = obj.what_is;
+	let kind = obj.which_kind as usize;
 	match what {
-		Scroll => format!("{}{}entitled: {}", get_quantity(obj), name_of(obj, fruit, id_tables), obj.title(id_tables).as_str()),
-		Potion => format!("{}{}{}", get_quantity(obj), obj.title(id_tables).as_str(), name_of(obj, fruit, id_tables)),
-		Wand | Ring => if obj.identified || get_id_status(obj, id_tables) == NoteStatus::Identified {
-			get_identified(obj, fruit, id_tables)
-		} else if get_id_status(obj, id_tables) == NoteStatus::Called {
-			get_called(obj, fruit, id_tables)
-		} else {
-			format!("{}{}{}", get_quantity(obj), obj.title(id_tables).as_str(), name_of(obj, fruit, id_tables))
-		},
+		Scroll => {
+			let title = notes.title(what, kind);
+			format!("{}{}entitled: {}", get_quantity(obj), name_of(obj, fruit, notes), title.as_str())
+		}
+		Potion => {
+			let title = notes.title(what, kind);
+			format!("{}{}{}", get_quantity(obj), title.as_str(), name_of(obj, fruit, notes))
+		}
+		Wand | Ring => {
+			if obj.identified || notes.status(what, kind) == NoteStatus::Identified {
+				get_identified(obj, fruit, notes)
+			} else if notes.status(what, kind) == NoteStatus::Called {
+				get_called(obj, fruit, notes)
+			} else {
+				let title = notes.title(what, kind);
+				format!("{}{}{}", get_quantity(obj), title.as_str(), name_of(obj, fruit, notes))
+			}
+		}
 		Armor => if obj.identified {
-			get_identified(obj, fruit, id_tables)
+			get_identified(obj, fruit, notes)
 		} else {
-			obj.title(id_tables).to_string()
+			notes.title(what, kind).to_string()
 		},
 		Weapon => if obj.identified {
-			get_identified(obj, fruit, id_tables)
+			get_identified(obj, fruit, notes)
 		} else {
-			name_of(obj, fruit, id_tables)
+			name_of(obj, fruit, notes)
 		},
 		_ => panic!("invalid unidentified object")
 	}
@@ -197,16 +198,16 @@ impl Player {
 	}
 }
 
-pub unsafe fn get_obj_desc(obj: &object, fruit: String, id_tables: &NoteTables) -> String {
-	let what_is = obj.what_is;
-	if what_is == Amulet {
+pub unsafe fn get_obj_desc(obj: &object, fruit: String, notes: &NoteTables) -> String {
+	let what = obj.what_is;
+	if what == Amulet {
 		return "the amulet of Yendor ".to_string();
 	}
-	if what_is == Gold {
+	if what == Gold {
 		return format!("{} pieces of gold", obj.quantity);
 	}
 
-	let desc = if what_is == Food {
+	let desc = if what == Food {
 		let quantity = if obj.which_kind == RATION {
 			if obj.quantity > 1 {
 				format!("{} rations of ", obj.quantity)
@@ -216,17 +217,21 @@ pub unsafe fn get_obj_desc(obj: &object, fruit: String, id_tables: &NoteTables) 
 		} else {
 			"a ".to_string()
 		};
-		format!("{}{}", quantity, name_of(obj, fruit, id_tables))
+		format!("{}{}", quantity, name_of(obj, fruit, notes))
 	} else {
 		if wizard {
-			get_identified(obj, fruit, id_tables)
+			get_identified(obj, fruit, notes)
 		} else {
-			match what_is {
-				Weapon | Armor | Wand | Ring => get_unidentified(obj, fruit, id_tables),
-				_ => match get_id_status(obj, id_tables) {
-					NoteStatus::Unidentified => get_unidentified(obj, fruit, id_tables),
-					NoteStatus::Identified => get_identified(obj, fruit, id_tables),
-					NoteStatus::Called => get_called(obj, fruit, id_tables),
+			match what {
+				Weapon | Armor | Wand | Ring => {
+					get_unidentified(obj, fruit, notes)
+				}
+				_ => {
+					match notes.status(what, obj.which_kind as usize) {
+						NoteStatus::Unidentified => get_unidentified(obj, fruit, notes),
+						NoteStatus::Identified => get_identified(obj, fruit, notes),
+						NoteStatus::Called => get_called(obj, fruit, notes),
+					}
 				}
 			}
 		}

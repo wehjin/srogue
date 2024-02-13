@@ -22,6 +22,7 @@ impl ArmorKind {
 		Note {
 			title: Title::ArmorName(self),
 			status: NoteStatus::Unidentified,
+			is_wood: false,
 		}
 	}
 }

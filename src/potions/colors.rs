@@ -25,6 +25,7 @@ impl PotionColor {
 		Note {
 			title: Title::PotionColor(self),
 			status: NoteStatus::Unidentified,
+			is_wood: false,
 		}
 	}
 	pub const fn name(&self) -> &'static str {

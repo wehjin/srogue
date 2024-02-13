@@ -12,7 +12,6 @@ pub const CANCELLATION: u16 = 8;
 pub const DO_NOTHING: u16 = 9;
 pub const WANDS: usize = 10;
 pub const MAX_WAND_MATERIAL: usize = 30;
-pub const MAX_METAL: usize = 14;
 pub const ALL_WAND_MATERIALS: [WandMaterial; MAX_WAND_MATERIAL] = [
 	WandMaterial::STEEL,
 	WandMaterial::BRONZE,

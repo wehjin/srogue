@@ -1,9 +1,9 @@
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
+
 use crate::armors::constants::ARMORS;
-use crate::inventory::IS_WOOD;
-use crate::objects::{Note, Title};
+use crate::objects::{Note, NoteStatus, Title};
 use crate::objects::NoteStatus::{Called, Identified};
 use crate::potions::kind::POTIONS;
 use crate::prelude::object_what::ObjectWhat;
@@ -12,7 +12,7 @@ use crate::random::get_rand;
 use crate::ring::constants::{ALL_RING_GEMS, MAX_GEM, RINGS};
 use crate::scrolls::constants::{MAX_SYLLABLE, SCROLLS, SYLLABLES};
 use crate::weapons::constants::WEAPONS;
-use crate::zap::constants::{ALL_WAND_MATERIALS, MAX_METAL, MAX_WAND_MATERIAL, WANDS};
+use crate::zap::constants::{ALL_WAND_MATERIALS, MAX_WAND_MATERIAL, WANDS};
 
 impl NoteTables {
 	pub unsafe fn assign_dynamic_titles(&mut self) {
@@ -55,8 +55,10 @@ impl NoteTables {
 		unused_material.shuffle(&mut thread_rng());
 		for i in 0..WANDS {
 			if let Some(j) = unused_material.pop() {
-				self.wands[i].title = Title::WandMaterial(ALL_WAND_MATERIALS[j]);
-				IS_WOOD[i] = j > MAX_METAL;
+				let wand_material = ALL_WAND_MATERIALS[j];
+				let note = &mut self.wands[i];
+				note.is_wood = wand_material.is_wood();
+				note.title = Title::WandMaterial(wand_material);
 			}
 		}
 	}
@@ -81,9 +83,6 @@ impl NoteTables {
 		}
 	}
 
-	pub fn title(&self, what: ObjectWhat, kind: usize) -> Title {
-		self.note(what, kind).title.clone()
-	}
 	pub fn identify(&mut self, what: ObjectWhat, kind: usize) {
 		let id = self.note_mut(what, kind);
 		id.status = Identified;
@@ -94,6 +93,13 @@ impl NoteTables {
 			id.status = Identified;
 		}
 	}
+	pub fn title(&self, what: ObjectWhat, kind: usize) -> Title {
+		self.note(what, kind).title.clone()
+	}
+	pub fn status(&self, what: ObjectWhat, kind: usize) -> NoteStatus {
+		self.note(what, kind).status
+	}
+
 	pub fn note(&self, what: ObjectWhat, kind: usize) -> &Note {
 		let table = self.table(what);
 		let id = &table[kind];

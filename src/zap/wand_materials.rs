@@ -35,6 +35,40 @@ pub enum WandMaterial {
 }
 
 impl WandMaterial {
+	pub const fn is_wood(&self) -> bool {
+		match self {
+			WandMaterial::STEEL => false,
+			WandMaterial::BRONZE => false,
+			WandMaterial::GOLD => false,
+			WandMaterial::SILVER => false,
+			WandMaterial::COPPER => false,
+			WandMaterial::NICKEL => false,
+			WandMaterial::COBALT => false,
+			WandMaterial::TIN => false,
+			WandMaterial::IRON => false,
+			WandMaterial::MAGNESIUM => false,
+			WandMaterial::CHROME => false,
+			WandMaterial::CARBON => false,
+			WandMaterial::PLATINUM => false,
+			WandMaterial::SILICON => false,
+			WandMaterial::TITANIUM => false,
+			WandMaterial::TEAK => true,
+			WandMaterial::OAK => true,
+			WandMaterial::CHERRY => true,
+			WandMaterial::BIRCH => true,
+			WandMaterial::PINE => true,
+			WandMaterial::CEDAR => true,
+			WandMaterial::REDWOOD => true,
+			WandMaterial::BALSA => true,
+			WandMaterial::IVORY => true,
+			WandMaterial::WALNUT => true,
+			WandMaterial::MAPLE => true,
+			WandMaterial::MAHOGANY => true,
+			WandMaterial::ELM => true,
+			WandMaterial::PALM => true,
+			WandMaterial::WOODEN => true,
+		}
+	}
 	pub const fn name(&self) -> &'static str {
 		match self {
 			WandMaterial::STEEL => "steel ",

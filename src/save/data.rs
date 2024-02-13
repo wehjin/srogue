@@ -1,8 +1,9 @@
 use std::error::Error;
 use std::fs;
+
 use serde::{Deserialize, Serialize};
+
 use crate::init::GameState;
-use crate::inventory::IS_WOOD;
 use crate::level::{cur_room, Level};
 use crate::machdep::{get_current_time, RogueTime};
 use crate::message::hunger_str;
@@ -26,7 +27,6 @@ pub struct SaveData {
 	pub level_objects: ObjectPack,
 	pub file_id: i64,
 	pub foods: i16,
-	pub is_wood: Vec<bool>,
 	pub cur_room: i64,
 	pub level: Level,
 	pub wizard: bool,
@@ -43,7 +43,6 @@ impl SaveData {
 			level_objects: level_objects.clone(),
 			file_id,
 			foods,
-			is_wood: IS_WOOD.to_vec(),
 			cur_room,
 			level: game.level.clone(),
 			wizard,
@@ -56,16 +55,8 @@ impl SaveData {
 		MASH = self.level_monsters.clone();
 		level_objects = self.level_objects.clone();
 		foods = self.foods;
-		load_array(&mut IS_WOOD, &self.is_wood);
 		cur_room = self.cur_room;
 		wizard = self.wizard;
 		m_moves = self.m_moves;
-	}
-}
-
-
-fn load_array<T: Clone, const N: usize>(dest: &mut [T; N], src: &Vec<T>) {
-	for i in 0..N {
-		dest[i] = src[i].clone()
 	}
 }
