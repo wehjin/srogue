@@ -21,30 +21,69 @@ use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
 use crate::potions::kind::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
 use crate::ring::constants::RINGS;
-use crate::scrolls::ScrollKind::{AggravateMonster, CreateMonster, EnchArmor, EnchWeapon, HoldMonster, Identify, MagicMapping, ProtectArmor, RemoveCurse, ScareMonster, Sleep, Teleport};
 use crate::scrolls::constants::SCROLLS;
 pub use object_id::*;
 pub use object_pack::*;
+use crate::armors::ArmorKind;
 use crate::armors::constants::{ARMORS, PLATE, SPLINT};
 use crate::hit::DamageStat;
-use crate::inventory::{get_obj_desc, get_title, IS_WOOD};
+use crate::inventory::{get_obj_desc, IS_WOOD};
 use crate::level::{CellKind, Level};
 use crate::message::{CANCEL, check_message, get_input_line, message, rgetchar, sound_bell};
 use crate::monster::{MASH, party_monsters};
 use crate::pack::MAX_PACK_COUNT;
 use crate::player::Player;
+use crate::potions::colors::PotionColor;
 use crate::potions::kind::{PotionKind, POTIONS};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::ring::gr_ring;
+use crate::ring::ring_gem::RingGem;
+use crate::ring::ring_kind::RingKind;
 use crate::room::{get_mask_char, gr_room, gr_row_col, party_objects, RoomType};
+use crate::scrolls::ScrollKind;
 use crate::settings::Settings;
 use crate::weapons::constants::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
+use crate::weapons::kind::WeaponKind;
 use crate::zap::constants::{CANCELLATION, MAGIC_MISSILE, WANDS};
-
+use crate::zap::wand_kind::WandKind;
+use crate::zap::wand_materials::WandMaterial;
 
 #[derive(Clone, Serialize, Deserialize)]
+pub enum Title {
+	None,
+	WeaponName(WeaponKind),
+	ArmorName(ArmorKind),
+	PotionColor(PotionColor),
+	SyllableString(String),
+	WandMaterial(WandMaterial),
+	RingGem(RingGem),
+	UserString(String),
+}
+
+impl Title {
+	pub fn as_str(&self) -> &str {
+		match self {
+			Title::None => &"",
+			Title::WeaponName(kind) => kind.name(),
+			Title::ArmorName(kind) => kind.name(),
+			Title::PotionColor(color) => color.name(),
+			Title::SyllableString(string) => string.as_str(),
+			Title::WandMaterial(mat) => mat.name(),
+			Title::RingGem(gem) => gem.name(),
+			Title::UserString(string) => string.as_str(),
+		}
+	}
+}
+
+impl Default for Title {
+	fn default() -> Self {
+		Title::None
+	}
+}
+
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct id {
-	pub title: Option<String>,
+	pub title: Title,
 	pub id_status: IdStatus,
 }
 
@@ -53,6 +92,10 @@ pub enum IdStatus {
 	Unidentified,
 	Identified,
 	Called,
+}
+
+impl Default for IdStatus {
+	fn default() -> Self { IdStatus::Unidentified }
 }
 
 
@@ -163,464 +206,82 @@ pub type object = obj;
 
 pub static mut level_objects: ObjectPack = ObjectPack::new();
 pub static mut foods: i16 = 0;
-pub static mut id_potions: [id; POTIONS] = {
-	[
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-	]
-};
-pub static mut id_scrolls: [id; SCROLLS] = {
-	[
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-	]
-};
-pub static mut id_weapons: [id; WEAPONS] = {
-	[
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-	]
-};
-pub static mut id_armors: [id; ARMORS] = {
-	[
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-	]
-};
-pub static mut id_wands: [id; WANDS] = {
-	[
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-	]
-};
-pub static mut id_rings: [id; RINGS] = {
-	[
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-		{
-			let init = id {
-				title: None,
-				id_status: IdStatus::Unidentified,
-			};
-			init
-		},
-	]
-};
+
+pub static mut id_potions: [id; POTIONS] = [
+	PotionColor::Blue.to_id(),
+	PotionColor::Red.to_id(),
+	PotionColor::Green.to_id(),
+	PotionColor::Grey.to_id(),
+	PotionColor::Brown.to_id(),
+	PotionColor::Clear.to_id(),
+	PotionColor::Pink.to_id(),
+	PotionColor::White.to_id(),
+	PotionColor::Purple.to_id(),
+	PotionColor::Black.to_id(),
+	PotionColor::Yellow.to_id(),
+	PotionColor::Plaid.to_id(),
+	PotionColor::Burgundy.to_id(),
+	PotionColor::Beige.to_id(),
+];
+
+pub static mut id_scrolls: [id; SCROLLS] = [
+	ScrollKind::ProtectArmor.to_id(),
+	ScrollKind::HoldMonster.to_id(),
+	ScrollKind::EnchWeapon.to_id(),
+	ScrollKind::EnchArmor.to_id(),
+	ScrollKind::Identify.to_id(),
+	ScrollKind::Teleport.to_id(),
+	ScrollKind::Sleep.to_id(),
+	ScrollKind::ScareMonster.to_id(),
+	ScrollKind::RemoveCurse.to_id(),
+	ScrollKind::CreateMonster.to_id(),
+	ScrollKind::AggravateMonster.to_id(),
+	ScrollKind::MagicMapping.to_id(),
+];
+pub static mut id_weapons: [id; WEAPONS] = [
+	WeaponKind::Bow.to_id(),
+	WeaponKind::Dart.to_id(),
+	WeaponKind::Arrow.to_id(),
+	WeaponKind::Dagger.to_id(),
+	WeaponKind::Shuriken.to_id(),
+	WeaponKind::Mace.to_id(),
+	WeaponKind::LongSword.to_id(),
+	WeaponKind::TwoHandedSword.to_id(),
+];
+pub static mut id_armors: [id; ARMORS] = [
+	ArmorKind::Leather.to_id(),
+	ArmorKind::Ringmail.to_id(),
+	ArmorKind::Scale.to_id(),
+	ArmorKind::Chain.to_id(),
+	ArmorKind::Banded.to_id(),
+	ArmorKind::Splint.to_id(),
+	ArmorKind::Plate.to_id(),
+];
+pub static mut id_wands: [id; WANDS] = [
+	WandKind::TeleAway.to_id(),
+	WandKind::SlowMonster.to_id(),
+	WandKind::ConfuseMonster.to_id(),
+	WandKind::Invisibility.to_id(),
+	WandKind::Polymorph.to_id(),
+	WandKind::HasteMonster.to_id(),
+	WandKind::PutToSleep.to_id(),
+	WandKind::MagicMissile.to_id(),
+	WandKind::Cancellation.to_id(),
+	WandKind::DoNothing.to_id(),
+];
+pub static mut id_rings: [id; RINGS] = [
+	RingKind::Stealth.to_id(),
+	RingKind::RTeleport.to_id(),
+	RingKind::Regeneration.to_id(),
+	RingKind::SlowDigest.to_id(),
+	RingKind::AddStrength.to_id(),
+	RingKind::SustainStrength.to_id(),
+	RingKind::Dexterity.to_id(),
+	RingKind::Adornment.to_id(),
+	RingKind::RSeeInvisible.to_id(),
+	RingKind::MaintainArmor.to_id(),
+	RingKind::Searching.to_id(),
+];
 
 pub unsafe fn put_objects(player: &mut Player, level: &mut Level) {
 	if player.cur_depth < player.max_depth {
@@ -721,7 +382,7 @@ pub unsafe fn name_of(obj: &object, settings: &Settings) -> String {
 			ARROW => if obj.quantity > 1 { "arrows " } else { "arrow " },
 			DAGGER => if obj.quantity > 1 { "daggers " } else { "dagger " },
 			SHURIKEN => if obj.quantity > 1 { "shurikens " } else { "shuriken " },
-			_ => get_title(obj),
+			_ => obj.title(),
 		}.to_string(),
 		Scroll => if obj.quantity > 1 { "scrolls " } else { "scroll " }.to_string(),
 		Potion => if obj.quantity > 1 { "potions " } else { "potion " }.to_string(),
@@ -794,29 +455,29 @@ pub fn gr_scroll(obj: &mut obj) {
 	(*obj).what_is = Scroll;
 
 	let kind = if percent <= 5 {
-		ProtectArmor
+		ScrollKind::ProtectArmor
 	} else if percent <= 11 {
-		HoldMonster
+		ScrollKind::HoldMonster
 	} else if percent <= 20 {
-		CreateMonster
+		ScrollKind::CreateMonster
 	} else if percent <= 35 {
-		Identify
+		ScrollKind::Identify
 	} else if percent <= 43 {
-		Teleport
+		ScrollKind::Teleport
 	} else if percent <= 50 {
-		Sleep
+		ScrollKind::Sleep
 	} else if percent <= 55 {
-		ScareMonster
+		ScrollKind::ScareMonster
 	} else if percent <= 64 {
-		RemoveCurse
+		ScrollKind::RemoveCurse
 	} else if percent <= 69 {
-		EnchArmor
+		ScrollKind::EnchArmor
 	} else if percent <= 74 {
-		EnchWeapon
+		ScrollKind::EnchWeapon
 	} else if percent <= 80 {
-		AggravateMonster
+		ScrollKind::AggravateMonster
 	} else {
-		MagicMapping
+		ScrollKind::MagicMapping
 	};
 	(*obj).which_kind = kind.to_index() as u16;
 }

@@ -1,11 +1,11 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
-use crate::inventory::{get_id_table, get_inv_obj_desc, get_obj_desc, get_title, inventory};
+use crate::inventory::{get_id_table, get_inv_obj_desc, get_obj_desc, inventory};
 use crate::level::{CellKind, Level};
 use crate::message::{CANCEL, LIST, check_message, get_input_line, message, print_stats, rgetchar, sound_bell};
 use crate::monster::mv_aquatars;
 use crate::objects::IdStatus::{Called, Identified, Unidentified};
-use crate::objects::{id_scrolls, level_objects, obj, object, ObjectId, ObjectPack, place_at};
+use crate::objects::{id_scrolls, level_objects, obj, object, ObjectId, ObjectPack, place_at, Title};
 use crate::player::Player;
 
 use crate::prelude::food_kind::FRUIT;
@@ -17,7 +17,7 @@ use crate::scrolls::ScrollKind::ScareMonster;
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD};
 use crate::r#move::reg_move;
 use crate::ring::un_put_hand;
-use crate::weapons::WeaponKind;
+use crate::weapons::kind::WeaponKind;
 
 pub const CURSE_MESSAGE: &'static str = "you can't, it appears to be cursed";
 pub const MAX_PACK_COUNT: usize = 24;
@@ -326,11 +326,11 @@ pub unsafe fn call_it(player: &Player) {
 					return;
 				}
 			}
-			let new_name = get_input_line::<String>("call it:", None, Some(get_title(obj)), true, true);
+			let new_name = get_input_line::<String>("call it:", None, Some(obj.title()), true, true);
 			if !new_name.is_empty() {
 				let id_table = get_id_table(obj);
 				id_table[obj.which_kind as usize].id_status = Called;
-				id_table[obj.which_kind as usize].title = Some(new_name);
+				id_table[obj.which_kind as usize].title = Title::UserString(new_name);
 			}
 		}
 	}

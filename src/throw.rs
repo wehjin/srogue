@@ -11,7 +11,7 @@ use crate::objects::{obj, ObjectId, place_at};
 use crate::pack::{CURSE_MESSAGE, pack_letter, unwear, unwield};
 use crate::player::Player;
 use crate::prelude::*;
-use crate::prelude::item_usage::{NOT_USED};
+use crate::prelude::item_usage::NOT_USED;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Weapons;
@@ -22,9 +22,9 @@ use crate::random::{get_rand, rand_percent};
 use crate::ring::un_put_hand;
 use crate::room::{get_dungeon_char, get_mask_char};
 use crate::spec_hit::{clear_gold_seeker, imitating};
-use crate::throw::Move::{Up, UpLeft, UpRight, Left, Right, Same, Down, DownLeft, DownRight};
-use crate::weapons::{WeaponKind};
+use crate::throw::Move::{Down, DownLeft, DownRight, Left, Right, Same, Up, UpLeft, UpRight};
 use crate::weapons::constants::ARROW;
+use crate::weapons::kind::WeaponKind;
 use crate::zap::zap_monster;
 
 pub unsafe fn throw(player: &mut Player, level: &mut Level) {

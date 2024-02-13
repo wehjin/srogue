@@ -1,0 +1,72 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum WandMaterial {
+	STEEL,
+	BRONZE,
+	GOLD,
+	SILVER,
+	COPPER,
+	NICKEL,
+	COBALT,
+	TIN,
+	IRON,
+	MAGNESIUM,
+	CHROME,
+	CARBON,
+	PLATINUM,
+	SILICON,
+	TITANIUM,
+	TEAK,
+	OAK,
+	CHERRY,
+	BIRCH,
+	PINE,
+	CEDAR,
+	REDWOOD,
+	BALSA,
+	IVORY,
+	WALNUT,
+	MAPLE,
+	MAHOGANY,
+	ELM,
+	PALM,
+	WOODEN,
+}
+
+impl WandMaterial {
+	pub const fn name(&self) -> &'static str {
+		match self {
+			WandMaterial::STEEL => "steel ",
+			WandMaterial::BRONZE => "bronze ",
+			WandMaterial::GOLD => "gold ",
+			WandMaterial::SILVER => "silver ",
+			WandMaterial::COPPER => "copper ",
+			WandMaterial::NICKEL => "nickel ",
+			WandMaterial::COBALT => "cobalt ",
+			WandMaterial::TIN => "tin ",
+			WandMaterial::IRON => "iron ",
+			WandMaterial::MAGNESIUM => "magnesium ",
+			WandMaterial::CHROME => "chrome ",
+			WandMaterial::CARBON => "carbon ",
+			WandMaterial::PLATINUM => "platinum ",
+			WandMaterial::SILICON => "silicon ",
+			WandMaterial::TITANIUM => "titanium ",
+			WandMaterial::TEAK => "teak ",
+			WandMaterial::OAK => "oak ",
+			WandMaterial::CHERRY => "cherry ",
+			WandMaterial::BIRCH => "birch ",
+			WandMaterial::PINE => "pine ",
+			WandMaterial::CEDAR => "cedar ",
+			WandMaterial::REDWOOD => "redwood ",
+			WandMaterial::BALSA => "balsa ",
+			WandMaterial::IVORY => "ivory ",
+			WandMaterial::WALNUT => "walnut ",
+			WandMaterial::MAPLE => "maple ",
+			WandMaterial::MAHOGANY => "mahogany ",
+			WandMaterial::ELM => "elm ",
+			WandMaterial::PALM => "palm ",
+			WandMaterial::WOODEN => "wooden "
+		}
+	}
+}

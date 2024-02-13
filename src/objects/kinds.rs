@@ -5,7 +5,7 @@ use crate::prelude::object_what::ObjectWhat::{Armor, Wand, Weapon};
 use crate::potions::kind::PotionKind;
 use crate::ring::ring_kind::RingKind;
 use crate::zap::wand_kind::WandKind;
-use crate::weapons::WeaponKind;
+use crate::weapons::kind::WeaponKind;
 
 impl obj {
 	pub fn weapon_kind(&self) -> Option<WeaponKind> {

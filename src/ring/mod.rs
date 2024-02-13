@@ -20,6 +20,7 @@ use crate::zap::wizard;
 
 pub(crate) mod constants;
 pub(crate) mod ring_kind;
+pub(crate) mod ring_gem;
 
 pub unsafe fn put_on_ring(player: &mut Player, level: &mut Level) {
 	if player.hand_usage() == HandUsage::Both {

@@ -4,7 +4,7 @@ use crate::prelude::object_what::ObjectWhat;
 use crate::potions::kind::PotionKind;
 use crate::ring::ring_kind::RingKind;
 use crate::scrolls::ScrollKind;
-use crate::weapons::WeaponKind;
+use crate::weapons::kind::WeaponKind;
 use crate::zap::wand_kind::WandKind;
 
 impl obj {

@@ -18,6 +18,7 @@ use crate::spec_hit::imitating;
 
 pub(crate) mod constants;
 pub(crate) mod wand_kind;
+pub(crate) mod wand_materials;
 
 pub static mut wizard: bool = false;
 

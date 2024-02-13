@@ -1,15 +1,15 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
+use rand::prelude::SliceRandom;
+use rand::thread_rng;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::pack::{pack_letter, wait_for_ack};
 use crate::player::Player;
 use crate::random::get_rand;
 
-use crate::prelude::*;
-use crate::armors::ArmorKind;
 use crate::message::{CANCEL, message};
-use crate::objects::{get_armor_class, id, id_armors, id_potions, id_rings, id_scrolls, id_wands, id_weapons, IdStatus, name_of, obj, object, ObjectPack};
+use crate::objects::{get_armor_class, id, id_armors, id_potions, id_rings, id_scrolls, id_wands, id_weapons, IdStatus, name_of, obj, object, ObjectPack, Title};
 use crate::potions::kind::{PotionKind, POTIONS};
 use crate::prelude::food_kind::RATION;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_LEFT_HAND, ON_RIGHT_HAND};
@@ -17,66 +17,16 @@ use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::ObjectWhat::{Amulet, Armor, Food, Gold, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::ring::ring_kind::RingKind;
-use crate::ring::constants::{ADD_STRENGTH, DEXTERITY, RINGS};
+use crate::ring::constants::{ADD_STRENGTH, ALL_RING_GEMS, DEXTERITY, MAX_GEM, RINGS};
 use crate::score::is_vowel;
 use crate::scrolls::ScrollKind;
-use crate::scrolls::constants::SCROLLS;
+use crate::scrolls::constants::{MAX_SYLLABLE, SCROLLS};
 use crate::settings::Settings;
 use crate::zap::wand_kind::WandKind;
-use crate::weapons::WeaponKind;
-use crate::zap::constants::WANDS;
+use crate::zap::constants::{ALL_WAND_MATERIALS, MAX_METAL, MAX_WAND_MATERIAL, WANDS};
 use crate::zap::wizard;
 
 pub static mut IS_WOOD: [bool; WANDS] = [false; WANDS];
-const WAND_MATERIALS: [&'static str; MAX_WAND_MATERIAL] = [
-	"steel ",
-	"bronze ",
-	"gold ",
-	"silver ",
-	"copper ",
-	"nickel ",
-	"cobalt ",
-	"tin ",
-	"iron ",
-	"magnesium ",
-	"chrome ",
-	"carbon ",
-	"platinum ",
-	"silicon ",
-	"titanium ",
-	"teak ",
-	"oak ",
-	"cherry ",
-	"birch ",
-	"pine ",
-	"cedar ",
-	"redwood ",
-	"balsa ",
-	"ivory ",
-	"walnut ",
-	"maple ",
-	"mahogany ",
-	"elm ",
-	"palm ",
-	"wooden ",
-];
-
-const GEMS: [&'static str; MAX_GEM] = [
-	"diamond ",
-	"stibotantalite ",
-	"lapi-lazuli ",
-	"ruby ",
-	"emerald ",
-	"sapphire ",
-	"amethyst ",
-	"quartz ",
-	"tiger-eye ",
-	"opal ",
-	"agate ",
-	"turquoise ",
-	"pearl ",
-	"garnet ",
-];
 const SYLLABLES: [&'static str; MAX_SYLLABLE] = [
 	"blech ",
 	"foo ",
@@ -173,25 +123,18 @@ pub unsafe fn inventory(pack: &ObjectPack, filter: PackFilter, settings: &Settin
 }
 
 pub unsafe fn mix_colors() {
-	for i in 0..POTIONS {
-		if id_potions[i].title.is_none() {
-			id_potions[i].title = Some(PotionKind::from_index(i).title().to_string());
-		}
-	}
 	for _ in 0..=32 {
 		let j = get_rand(0, POTIONS - 1);
 		let k = get_rand(0, POTIONS - 1);
-		let t = id_potions[j].title.clone();
-		id_potions[j].title = id_potions[k].title.clone();
-		id_potions[k].title = t;
+		id_potions.swap(j, k);
 	}
 }
 
 pub unsafe fn make_scroll_titles() {
 	for i in 0..SCROLLS {
 		let syllables = (0..get_rand(2, 5)).map(|_| random_syllable().to_string()).collect::<Vec<_>>();
-		let title = format!("'{}' ", syllables.join("")).trim().to_string();
-		id_scrolls[i].title = Some(title);
+		let joined = format!("'{}' ", syllables.join("")).trim().to_string();
+		id_scrolls[i].title = Title::SyllableString(joined);
 	}
 }
 
@@ -208,18 +151,11 @@ fn get_quantity(obj: &object) -> String {
 	}
 }
 
-pub unsafe fn get_title(obj: &object) -> &str {
-	let id_table = get_id_table(obj);
-	let id = &id_table[obj.which_kind as usize];
-	if let Some(title) = &id.title {
-		title
-	} else {
-		match obj.what_is {
-			Armor => ArmorKind::from_index(obj.which_kind as usize).title(),
-			Weapon => WeaponKind::from(obj.which_kind).title(),
-			Potion => PotionKind::from_index(obj.which_kind as usize).title(),
-			_ => "",
-		}
+impl obj {
+	pub unsafe fn title(&self) -> &str {
+		let id_table = get_id_table(self);
+		let id = &id_table[self.which_kind as usize];
+		id.title.as_str()
 	}
 }
 
@@ -267,7 +203,7 @@ unsafe fn get_identified(obj: &object, settings: &Settings) -> String {
 		Armor => format!("{}{} {}[{}] ",
 		                 if obj.d_enchant >= 0 { "+" } else { "" },
 		                 obj.d_enchant,
-		                 get_title(obj),
+		                 obj.title(),
 		                 get_armor_class(Some(obj))),
 		Weapon => format!("{}{}{},{}{} {}",
 		                  get_quantity(obj),
@@ -281,7 +217,7 @@ unsafe fn get_identified(obj: &object, settings: &Settings) -> String {
 
 unsafe fn get_called(obj: &object, settings: &Settings) -> String {
 	match obj.what_is {
-		Scroll | Potion | Wand | Ring => format!("{}{}called {}", get_quantity(obj), name_of(obj, settings), get_title(obj)),
+		Scroll | Potion | Wand | Ring => format!("{}{}called {}", get_quantity(obj), name_of(obj, settings), obj.title()),
 		_ => panic!("invalid called object"),
 	}
 }
@@ -289,19 +225,19 @@ unsafe fn get_called(obj: &object, settings: &Settings) -> String {
 unsafe fn get_unidentified(obj: &object, settings: &Settings) -> String {
 	let what = obj.what_is;
 	match what {
-		Scroll => format!("{}{}entitled: {}", get_quantity(obj), name_of(obj, settings), get_title(obj)),
-		Potion => format!("{}{}{}", get_quantity(obj), get_title(obj), name_of(obj, settings)),
+		Scroll => format!("{}{}entitled: {}", get_quantity(obj), name_of(obj, settings), obj.title()),
+		Potion => format!("{}{}{}", get_quantity(obj), obj.title(), name_of(obj, settings)),
 		Wand | Ring => if obj.identified || get_id_status(obj) == IdStatus::Identified {
 			get_identified(obj, settings)
 		} else if get_id_status(obj) == IdStatus::Called {
 			get_called(obj, settings)
 		} else {
-			format!("{}{}{}", get_quantity(obj), get_title(obj), name_of(obj, settings))
+			format!("{}{}{}", get_quantity(obj), obj.title(), name_of(obj, settings))
 		},
 		Armor => if obj.identified {
 			get_identified(obj, settings)
 		} else {
-			get_title(obj).to_string()
+			obj.title().to_string()
 		},
 		Weapon => if obj.identified {
 			get_identified(obj, settings)
@@ -377,18 +313,22 @@ fn get_in_use_description(obj: &object) -> &'static str {
 
 pub unsafe fn get_wand_and_ring_materials() {
 	{
-		let mut used = [false; MAX_WAND_MATERIAL];
+		let mut unused_material = (0..MAX_WAND_MATERIAL).collect::<Vec<_>>();
+		unused_material.shuffle(&mut thread_rng());
 		for i in 0..WANDS {
-			let j = take_unused(&mut used);
-			id_wands[i].title = Some(WAND_MATERIALS[j].to_string());
-			IS_WOOD[i] = j > MAX_METAL;
+			if let Some(j) = unused_material.pop() {
+				id_wands[i].title = Title::WandMaterial(ALL_WAND_MATERIALS[j]);
+				IS_WOOD[i] = j > MAX_METAL;
+			}
 		}
 	}
 	{
-		let mut used = [false; MAX_GEM];
+		let mut unused_gem = (0..MAX_GEM).collect::<Vec<_>>();
+		unused_gem.shuffle(&mut thread_rng());
 		for i in 0..RINGS {
-			let j = take_unused(&mut used);
-			id_rings[i].title = Some(GEMS[j].to_string());
+			if let Some(j) = unused_gem.pop() {
+				id_rings[i].title = Title::RingGem(ALL_RING_GEMS[j]);
+			}
 		}
 	}
 }

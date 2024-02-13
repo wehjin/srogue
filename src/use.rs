@@ -10,7 +10,8 @@ use crate::objects::IdStatus::{Called, Identified};
 use crate::objects::{id_potions, id_scrolls, level_objects, name_of, ObjectId};
 use crate::pack::{pack_letter, take_from_pack, unwear, unwield};
 use crate::player::Player;
-use crate::potions::kind::{PotionKind, POTIONS};
+use crate::potions::colors::ALL_POTION_COLORS;
+use crate::potions::kind::{POTIONS};
 use crate::potions::quaff::quaff_potion;
 use crate::prelude::*;
 use crate::prelude::food_kind::{FRUIT, RATION};
@@ -369,7 +370,7 @@ pub unsafe fn take_a_nap(player: &mut Player, level: &mut Level) {
 
 pub fn get_ench_color(player: &Player) -> &'static str {
 	if player.halluc.is_active() {
-		PotionKind::from_index(get_rand(0, POTIONS - 1)).title()
+		ALL_POTION_COLORS[get_rand(0, POTIONS - 1)].name()
 	} else {
 		"blue "
 	}

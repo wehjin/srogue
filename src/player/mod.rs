@@ -10,7 +10,7 @@ use crate::prelude::{DungeonSpot, LAST_DUNGEON, MAX_ARMOR, MAX_GOLD};
 use crate::prelude::object_what::ObjectWhat;
 use crate::ring::effects::RingEffects;
 use crate::settings::Settings;
-use crate::weapons::WeaponKind;
+use crate::weapons::kind::WeaponKind;
 
 pub(crate) mod rings;
 pub(crate) mod objects;

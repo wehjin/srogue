@@ -1,3 +1,5 @@
+use crate::ring::ring_gem::RingGem;
+
 pub const RINGS: usize = 11;
 
 pub const STEALTH: u16 = 0;
@@ -11,4 +13,38 @@ pub const ADORNMENT: u16 = 7;
 pub const R_SEE_INVISIBLE: u16 = 8;
 pub const MAINTAIN_ARMOR: u16 = 9;
 pub const SEARCHING: u16 = 10;
+pub const MAX_GEM: usize = 14;
+
+pub(crate) const GEMS: [&'static str; MAX_GEM] = [
+	"diamond ",
+	"stibotantalite ",
+	"lapi-lazuli ",
+	"ruby ",
+	"emerald ",
+	"sapphire ",
+	"amethyst ",
+	"quartz ",
+	"tiger-eye ",
+	"opal ",
+	"agate ",
+	"turquoise ",
+	"pearl ",
+	"garnet ",
+];
+pub(crate) const ALL_RING_GEMS: [RingGem; MAX_GEM] = [
+	RingGem::DIAMOND,
+	RingGem::STIBOTANTALITE,
+	RingGem::LAPI_LAZULI,
+	RingGem::RUBY,
+	RingGem::EMERALD,
+	RingGem::SAPPHIRE,
+	RingGem::AMETHYST,
+	RingGem::QUARTZ,
+	RingGem::TIGER_EYE,
+	RingGem::OPAL,
+	RingGem::AGATE,
+	RingGem::TURQUOISE,
+	RingGem::PEARL,
+	RingGem::GARNET,
+];
 
