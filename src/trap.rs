@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use TrapKind::NoTrap;
 use crate::hit::{DamageEffect, DamageStat, get_damage, get_dir_rc};
 use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
-use crate::level::{CellKind, Level, new_level_message};
+use crate::level::{CellKind, Level};
 use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
 use crate::play::interrupted;
 use crate::player::Player;
@@ -118,7 +118,7 @@ pub unsafe fn trap_player(row: usize, col: usize, player: &mut Player, level: &m
 		NoTrap => unreachable!("no trap"),
 		TrapDoor => {
 			trap_door = true;
-			new_level_message = Some(trap_message(t).to_string());
+			level.new_level_message = Some(trap_message(t).to_string());
 		}
 		BearTrap => {
 			message(trap_message(t), 1);

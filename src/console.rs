@@ -26,10 +26,12 @@ impl Drop for Console {
 	fn drop(&mut self) {
 		assert_eq!(self.stopped, false);
 		self.stopped = true;
-		{
-			ncurses::wmove(ncurses::stdscr(), (DROWS - 1) as i32, 0);
-			ncurses::refresh();
-		}
+		// Disable for now since it erases errors messages. We should discriminate
+		// between normal and error exits.
+		// {
+		// 	ncurses::wmove(ncurses::stdscr(), (DROWS - 1) as i32, 0);
+		// 	ncurses::refresh();
+		// }
 		ncurses::endwin();
 		md_control_keybord(1);
 	}

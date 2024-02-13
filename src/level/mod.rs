@@ -29,7 +29,6 @@ use crate::trap::Trap;
 use crate::zap::wizard;
 
 pub static mut cur_room: i64 = 0;
-pub static mut new_level_message: Option<String> = None;
 pub static mut r_de: Option<usize> = None;
 pub const LEVEL_POINTS: [isize; MAX_EXP_LEVEL] = [
 	10,
@@ -62,7 +61,7 @@ pub fn shuffled_rns() -> [usize; MAX_ROOM] {
 }
 
 
-#[derive(Copy, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Level {
 	pub rooms: [Room; MAX_ROOM],
 	pub traps: [Trap; MAX_TRAP],
@@ -72,6 +71,7 @@ pub struct Level {
 	pub bear_trap: usize,
 	pub being_held: bool,
 	pub party_room: Option<usize>,
+	pub new_level_message: Option<String>,
 }
 
 impl Level {
@@ -85,6 +85,7 @@ impl Level {
 			bear_trap: 0,
 			being_held: false,
 			party_room: None,
+			new_level_message: None,
 		}
 	}
 	pub fn clear(&mut self) {
@@ -595,10 +596,10 @@ pub unsafe fn put_player(nr: Option<usize>, player: &mut Player, level: &mut Lev
 	}
 	let rn = get_room_number(player.rogue.row, player.rogue.col, level);
 	wake_room(rn, true, player.rogue.row, player.rogue.col, player, level);
-	if let Some(msg) = &new_level_message {
+	if let Some(msg) = &level.new_level_message {
 		message(msg, 0);
-		new_level_message = None;
 	}
+	level.new_level_message = None;
 	ncurses::mvaddch(player.rogue.row as i32, player.rogue.col as i32, player.rogue.fchar as ncurses::chtype);
 }
 
@@ -634,7 +635,7 @@ pub unsafe fn check_up(game: &mut GameState) -> UpResult {
 			return UpResult::KeepLevel;
 		}
 	}
-	new_level_message = Some("you feel a wrenching sensation in your gut".to_string());
+	game.level.new_level_message = Some("you feel a wrenching sensation in your gut".to_string());
 	if game.player.cur_depth == 1 {
 		win(&mut game.player, &mut game.level);
 		return UpResult::WonGame;
