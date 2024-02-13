@@ -21,6 +21,7 @@ use crate::ring::constants::{ADD_STRENGTH, DEXTERITY, RINGS};
 use crate::score::is_vowel;
 use crate::scrolls::ScrollKind;
 use crate::scrolls::constants::SCROLLS;
+use crate::settings::Settings;
 use crate::zap::wand_kind::WandKind;
 use crate::weapons::WeaponKind;
 use crate::zap::constants::WANDS;
@@ -123,7 +124,7 @@ fn random_syllable() -> &'static str {
 	SYLLABLES[get_rand(1, MAX_SYLLABLE - 1)]
 }
 
-pub unsafe fn inventory(pack: &ObjectPack, filter: PackFilter) {
+pub unsafe fn inventory(pack: &ObjectPack, filter: PackFilter, settings: &Settings) {
 	if pack.is_empty() {
 		message("your pack is empty", 0);
 		return;
@@ -134,7 +135,7 @@ pub unsafe fn inventory(pack: &ObjectPack, filter: PackFilter) {
 			let what = obj.what_is;
 			if filter.includes(what) {
 				let close_char = if what == Armor && obj.is_protected != 0 { '}' } else { ')' };
-				let line = format!(" {}{} {}", obj.ichar, close_char, get_obj_desc(obj));
+				let line = format!(" {}{} {}", obj.ichar, close_char, get_obj_desc(obj, settings));
 				item_lines.push(line);
 			}
 		}
@@ -236,20 +237,27 @@ fn get_id_real(obj: &object) -> &'static str {
 	}
 }
 
-unsafe fn get_identified(obj: &object) -> String {
+unsafe fn get_identified(obj: &object, settings: &Settings) -> String {
 	match obj.what_is {
-		Scroll | Potion => format!("{}{}{}", get_quantity(obj), name_of(obj), get_id_real(obj)),
+		Scroll | Potion => {
+			let quantity = get_quantity(obj);
+			let name = name_of(obj, settings);
+			let real_name = get_id_real(obj);
+			format!("{}{}{}", quantity, name, real_name)
+		}
 		Ring => {
 			let more_info = if (wizard || obj.identified) && (obj.which_kind == DEXTERITY || obj.which_kind == ADD_STRENGTH) {
 				format!("{}{} ", if obj.class > 0 { "+" } else { "" }, obj.class)
 			} else {
 				"".to_string()
 			};
-			format!("{}{}{}{}", get_quantity(obj), more_info, name_of(obj), get_id_real(obj))
+			let name = name_of(obj, settings);
+			let real_name = get_id_real(obj);
+			format!("{}{}{}{}", get_quantity(obj), more_info, name, real_name)
 		}
 		Wand => format!("{}{}{}{}",
 		                get_quantity(obj),
-		                name_of(obj),
+		                name_of(obj, settings),
 		                get_id_real(obj),
 		                if wizard || obj.identified {
 			                format!("[{}]", obj.class)
@@ -265,51 +273,51 @@ unsafe fn get_identified(obj: &object) -> String {
 		                  get_quantity(obj),
 		                  if obj.hit_enchant >= 0 { "+" } else { "" }, obj.hit_enchant,
 		                  if obj.d_enchant >= 0 { "+" } else { "" }, obj.d_enchant,
-		                  name_of(obj)
+		                  name_of(obj, settings)
 		),
 		_ => panic!("invalid identified object")
 	}
 }
 
-unsafe fn get_called(obj: &object) -> String {
+unsafe fn get_called(obj: &object, settings: &Settings) -> String {
 	match obj.what_is {
-		Scroll | Potion | Wand | Ring => format!("{}{}called {}", get_quantity(obj), name_of(obj), get_title(obj)),
+		Scroll | Potion | Wand | Ring => format!("{}{}called {}", get_quantity(obj), name_of(obj, settings), get_title(obj)),
 		_ => panic!("invalid called object"),
 	}
 }
 
-unsafe fn get_unidentified(obj: &object) -> String {
+unsafe fn get_unidentified(obj: &object, settings: &Settings) -> String {
 	let what = obj.what_is;
 	match what {
-		Scroll => format!("{}{}entitled: {}", get_quantity(obj), name_of(obj), get_title(obj)),
-		Potion => format!("{}{}{}", get_quantity(obj), get_title(obj), name_of(obj)),
+		Scroll => format!("{}{}entitled: {}", get_quantity(obj), name_of(obj, settings), get_title(obj)),
+		Potion => format!("{}{}{}", get_quantity(obj), get_title(obj), name_of(obj, settings)),
 		Wand | Ring => if obj.identified || get_id_status(obj) == IdStatus::Identified {
-			get_identified(obj)
+			get_identified(obj, settings)
 		} else if get_id_status(obj) == IdStatus::Called {
-			get_called(obj)
+			get_called(obj, settings)
 		} else {
-			format!("{}{}{}", get_quantity(obj), get_title(obj), name_of(obj))
+			format!("{}{}{}", get_quantity(obj), get_title(obj), name_of(obj, settings))
 		},
 		Armor => if obj.identified {
-			get_identified(obj)
+			get_identified(obj, settings)
 		} else {
 			get_title(obj).to_string()
 		},
 		Weapon => if obj.identified {
-			get_identified(obj)
+			get_identified(obj, settings)
 		} else {
-			name_of(obj)
+			name_of(obj, settings)
 		},
 		_ => panic!("invalid unidentified object")
 	}
 }
 
-pub unsafe fn get_inv_obj_desc(obj: &obj) -> String {
-	let obj_desc = get_obj_desc(&obj);
+pub unsafe fn get_inv_obj_desc(obj: &obj, settings: &Settings) -> String {
+	let obj_desc = get_obj_desc(&obj, settings);
 	format!("{}({})", obj_desc, obj.ichar)
 }
 
-pub unsafe fn get_obj_desc(obj: &object) -> String {
+pub unsafe fn get_obj_desc(obj: &object, settings: &Settings) -> String {
 	let what_is = obj.what_is;
 	if what_is == Amulet {
 		return "the amulet of Yendor ".to_string();
@@ -328,17 +336,17 @@ pub unsafe fn get_obj_desc(obj: &object) -> String {
 		} else {
 			"a ".to_string()
 		};
-		format!("{}{}", quantity, name_of(obj))
+		format!("{}{}", quantity, name_of(obj, settings))
 	} else {
 		if wizard {
-			get_identified(obj)
+			get_identified(obj, settings)
 		} else {
 			match what_is {
-				Weapon | Armor | Wand | Ring => get_unidentified(obj),
+				Weapon | Armor | Wand | Ring => get_unidentified(obj, settings),
 				_ => match get_id_status(obj) {
-					IdStatus::Unidentified => get_unidentified(obj),
-					IdStatus::Identified => get_identified(obj),
-					IdStatus::Called => get_called(obj),
+					IdStatus::Unidentified => get_unidentified(obj, settings),
+					IdStatus::Identified => get_identified(obj, settings),
+					IdStatus::Called => get_called(obj, settings),
 				}
 			}
 		}
@@ -408,7 +416,7 @@ pub unsafe fn single_inv(ichar: Option<char>, player: &mut Player) {
 	}
 	if let Some(obj) = player.object_with_letter(ch) {
 		let separator = if obj.what_is == Armor && obj.is_protected != 0 { '}' } else { ')' };
-		let msg = format!("{}{} {}", ch, separator, get_obj_desc(obj));
+		let msg = format!("{}{} {}", ch, separator, get_obj_desc(obj, &player.settings));
 		message(&msg, 0);
 	} else {
 		message("no such item.", 0);

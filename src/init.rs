@@ -3,14 +3,14 @@
 use std::{io};
 use std::io::Write;
 use libc::{c_short};
-use settings::nick_name;
-use crate::{console, settings};
-use crate::level::constants::DROWS;
+use crate::console;
 use crate::player::Player;
 use crate::armors::constants::RINGMAIL;
+use crate::console::{Console, ConsoleError};
+use crate::init::InitError::NoConsole;
 use crate::inventory::{get_wand_and_ring_materials, make_scroll_titles, mix_colors};
 use crate::level::Level;
-use crate::machdep::{get_login_name, md_exit, md_get_seed, md_heed_signals, md_ignore_signals};
+use crate::machdep::{md_heed_signals, md_ignore_signals};
 use crate::message::{check_message, message};
 use crate::monster::MASH;
 use crate::objects::{alloc_object, get_food, level_objects};
@@ -18,9 +18,9 @@ use crate::pack::{do_wear, do_wield};
 use crate::prelude::object_what::ObjectWhat::{Armor, Weapon};
 use crate::random::get_rand;
 use crate::ring::ring_stats;
-use crate::save::{restore, save_into_file};
-use crate::score::{put_scores, quit};
-use crate::settings::{rest_file, score_only};
+use crate::save::restore;
+use crate::score::put_scores;
+use crate::settings::{Settings};
 use crate::weapons::constants::{ARROW, BOW, MACE};
 
 pub static mut cant_int: bool = false;
@@ -29,65 +29,46 @@ pub static mut save_is_interactive: bool = true;
 pub const ERROR_FILE: &'static str = "player.rogue.esave";
 pub const BYEBYE_STRING: &'static str = "Okay, bye bye!";
 
-pub struct GameState {
-	seed: [u8; 32],
-	pub player: Player,
-	pub level: Level,
+pub enum InitError {
+	NoConsole(ConsoleError),
+	BadRestore(Option<String>),
 }
 
-impl GameState {
-	pub fn new() -> Self {
-		GameState {
-			seed: [1u8; 32],
-			player: Player::new(),
-			level: Level::new(),
-		}
-	}
-
-	pub fn set_seed(&mut self, seed: u32) {
-		let bytes = {
-			let mut parts: [u8; 4] = [0; 4];
-			for i in 0..4 {
-				parts[i] = (seed >> (i * 8)) as u8;
-			}
-			parts
-		};
-		for i in 0..self.seed.len() {
-			self.seed[i] = bytes[i % bytes.len()]
-		}
-	}
+pub enum InitResult {
+	ScoreOnly(Player, Console, Settings),
+	Restored(GameState, Console),
+	Initialized(GameState, Console),
 }
 
-pub unsafe fn init() -> (GameState, bool) {
-	match get_login_name() {
-		None => {
-			clean_up("Hey!  Who are you?");
-		}
-		Some(name) => {
-			settings::set_login_name(&name);
-		}
-	}
-	if !score_only() && rest_file().is_none() {
-		print!("Hello {}, just a moment while I dig the dungeon...", nick_name().unwrap_or_else(|| settings::login_name()));
+pub unsafe fn init(settings: Settings) -> Result<InitResult, InitError> {
+	if !settings.score_only && settings.rest_file.is_none() {
+		print!("Hello {}, just a moment while I dig the dungeon...", settings.player_name());
 		io::stdout().flush().expect("flush stdout");
 	}
-
-	ncurses::initscr();
-	if ncurses::LINES() < 24 || ncurses::COLS() < 80 {
-		clean_up("must be played on 24 x 80 or better screen");
-	}
-	console::up();
-
-	let mut game = GameState::new();
+	let console = match console::start() {
+		Ok(console) => console,
+		Err(error) => {
+			return Err(NoConsole(error));
+		}
+	};
 	md_heed_signals();
-
-	if score_only() {
-		put_scores(None, &game.player);
+	if settings.score_only {
+		let mut player = Player::new(settings.clone());
+		put_scores(None, &mut player);
+		return Ok(InitResult::ScoreOnly(Player::new(settings.clone()), console, settings));
 	}
-	game.set_seed(md_get_seed());
-	if let Some(rest_file) = rest_file() {
-		restore(&rest_file, &mut game);
-		return (game, true);
+
+	let mut game = GameState {
+		settings: settings.clone(),
+		player: Player::new(settings.clone()),
+		level: Level::new(),
+	};
+	if let Some(rest_file) = settings.rest_file.clone() {
+		if restore(&rest_file, &mut game) {
+			return Ok(InitResult::Restored(game, console));
+		} else {
+			return Err(InitError::BadRestore(game.player.cleaned_up.clone()));
+		}
 	}
 	mix_colors();
 	get_wand_and_ring_materials();
@@ -96,7 +77,13 @@ pub unsafe fn init() -> (GameState, bool) {
 	MASH.clear();
 	player_init(&mut game.player);
 	ring_stats(false, &mut game.player, &mut game.level);
-	return (game, false);
+	return Ok(InitResult::Initialized(game, console));
+}
+
+pub struct GameState {
+	pub settings: Settings,
+	pub player: Player,
+	pub level: Level,
 }
 
 fn player_init(player: &mut Player) {
@@ -153,28 +140,19 @@ fn player_init(player: &mut Player) {
 	player.party_counter = get_rand(1, 10);
 }
 
-pub unsafe fn clean_up(estr: &str) {
-	if save_is_interactive {
-		if console::is_up() {
-			ncurses::wmove(ncurses::stdscr(), (DROWS - 1) as i32, 0);
-			ncurses::refresh();
-			console::down();
-		}
-		print!("\n{}\n", estr);
-	}
-	ncurses::endwin();
-	md_exit(0);
+pub unsafe fn clean_up(estr: &str, player: &mut Player) {
+	player.cleaned_up = Some(estr.to_string());
 }
 
-
-pub unsafe fn byebye(ask_quit: bool, player: &mut Player) {
-	md_ignore_signals();
-	if ask_quit {
-		quit(true, player);
-	} else {
-		clean_up(BYEBYE_STRING);
-	}
-	md_heed_signals();
+pub unsafe fn byebye(_ask_quit: bool, _player: &mut Player) {
+	unimplemented!("bye bye");
+	// md_ignore_signals();
+	// if ask_quit {
+	// 	ask_quit(true, player);
+	// } else {
+	// 	clean_up(BYEBYE_STRING);
+	// }
+	// md_heed_signals();
 }
 
 pub unsafe fn onintr() {
@@ -186,10 +164,4 @@ pub unsafe fn onintr() {
 		message("interrupt", 1);
 	}
 	md_heed_signals();
-}
-
-pub unsafe fn error_save(game: &GameState) {
-	save_is_interactive = false;
-	save_into_file(ERROR_FILE, game);
-	clean_up("");
 }

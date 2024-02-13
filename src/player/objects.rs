@@ -5,7 +5,7 @@ use crate::random::get_rand;
 impl Player {
 	pub unsafe fn to_object_name_with_quantity(&self, obj_id: ObjectId, quantity: i16) -> String {
 		let obj = self.object(obj_id).expect("obj in pack");
-		obj.to_name_with_new_quantity(quantity)
+		obj.to_name_with_new_quantity(quantity, &self.settings)
 	}
 	pub fn expect_object(&self, obj_id: ObjectId) -> &obj {
 		self.object(obj_id).expect("obj in pack")

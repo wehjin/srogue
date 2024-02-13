@@ -1,26 +1,36 @@
-use std::sync::RwLock;
-use crate::machdep::md_control_keybord;
+use crate::level::constants::{DCOLS, DROWS};
+use crate::machdep::{md_control_keybord};
 
-static UP: RwLock<bool> = RwLock::new(false);
-
-
-pub fn is_up() -> bool { *UP.read().unwrap() }
-
-pub fn up() {
-	if !is_up() {
-		ncurses::cbreak();
-		ncurses::noecho();
-		ncurses::nonl();
-		md_control_keybord(0);
-		*UP.write().unwrap() = true;
-	}
+pub enum ConsoleError {
+	ScreenTooSmall { min_rows: usize, min_cols: usize }
 }
 
-pub fn down() {
-	if is_up() {
+pub struct Console {
+	stopped: bool,
+}
+
+pub fn start() -> Result<Console, ConsoleError> {
+	ncurses::initscr();
+	if ncurses::LINES() < DROWS as i32 || ncurses::COLS() < DCOLS as i32 {
+		ncurses::endwin();
+		return Err(ConsoleError::ScreenTooSmall { min_rows: DROWS, min_cols: DCOLS });
+	}
+	ncurses::cbreak();
+	ncurses::noecho();
+	ncurses::nonl();
+	md_control_keybord(0);
+	return Ok(Console { stopped: false });
+}
+
+impl Drop for Console {
+	fn drop(&mut self) {
+		assert_eq!(self.stopped, false);
+		self.stopped = true;
+		{
+			ncurses::wmove(ncurses::stdscr(), (DROWS - 1) as i32, 0);
+			ncurses::refresh();
+		}
 		ncurses::endwin();
 		md_control_keybord(1);
-		*UP.write().unwrap() = false;
 	}
 }
-

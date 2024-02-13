@@ -14,7 +14,6 @@ use crate::r#move::{get_dir_or_cancel, reg_move};
 use crate::r#use::relight;
 use crate::random::get_rand;
 use crate::room::gr_row_col;
-use crate::settings::set_score_only;
 use crate::spec_hit::imitating;
 
 pub(crate) mod constants;
@@ -183,7 +182,7 @@ unsafe fn tele_away(monster: &mut Monster, player: &Player, level: &mut Level) {
 	}
 }
 
-pub unsafe fn wizardize() {
+pub unsafe fn wizardize(player: &mut Player) {
 	if wizard {
 		wizard = false;
 		message("not wizard anymore", 0);
@@ -192,7 +191,7 @@ pub unsafe fn wizardize() {
 		if !line.is_empty() {
 			if line == "\u{A7}DV\u{BA}M\u{A3}\u{17}" {
 				wizard = true;
-				set_score_only(true);
+				player.settings.score_only = true;
 				message("Welcome, mighty wizard!", 0);
 			} else {
 				message("sorry", 0);

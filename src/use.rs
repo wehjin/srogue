@@ -22,7 +22,6 @@ use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::ring::un_put_hand;
 use crate::room::{darken_room, draw_magic_map, get_dungeon_char, get_opt_room_number, light_passage, light_up_room};
 use crate::scrolls::ScrollKind;
-use crate::settings::fruit;
 use crate::trap::is_off_screen;
 
 pub const STRANGE_FEELING: &'static str = "you have a strange feeling for a moment, then it passes";
@@ -87,8 +86,9 @@ pub unsafe fn read_scroll(player: &mut Player, level: &mut Level) {
 						}
 						ScrollKind::EnchWeapon => {
 							let glow_color = get_ench_color(player);
+							let settings = player.settings.clone();
 							if let Some(weapon) = player.weapon_mut() {
-								let weapon_name = name_of(weapon);
+								let weapon_name = name_of(weapon, &settings);
 								let plural_char = if weapon.quantity <= 1 { "s" } else { "" };
 								let msg = format!("your {}glow{} {}for a moment", weapon_name, plural_char, glow_color);
 								message(&msg, 0);
@@ -195,6 +195,7 @@ unsafe fn idntfy(player: &mut Player) {
 		if ch == CANCEL {
 			return;
 		}
+		let settings = player.settings.clone();
 		match player.object_with_letter_mut(ch) {
 			None => {
 				message("no such item, try again", 0);
@@ -211,7 +212,7 @@ unsafe fn idntfy(player: &mut Player) {
 					}
 					_ => {}
 				}
-				let obj_desc = get_obj_desc(obj);
+				let obj_desc = get_obj_desc(obj, &settings);
 				message(&obj_desc, 0);
 			}
 		}
@@ -239,7 +240,7 @@ pub unsafe fn eat(player: &mut Player, level: &mut Level) {
 				let msg = if kind == RATION {
 					"yum, that tasted good".to_string()
 				} else {
-					format!("my, that was a yummy {}", &fruit())
+					format!("my, that was a yummy {}", &player.settings.fruit)
 				};
 				message(&msg, 0);
 				get_rand(900, 1100)

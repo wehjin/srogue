@@ -121,7 +121,7 @@ pub unsafe fn drop_0(player: &mut Player, level: &mut Level) {
 				obj.ichar = 'L';
 				obj
 			};
-			let obj_desc = get_obj_desc(&place_obj);
+			let obj_desc = get_obj_desc(&place_obj, &player.settings);
 			place_at(place_obj, player.rogue.row, player.rogue.col, level);
 			message(&format!("dropped {}", obj_desc), 0);
 			reg_move(player, level);
@@ -187,7 +187,7 @@ pub unsafe fn pack_letter(prompt: &str, filter: PackFilter, player: &Player) -> 
 		check_message();
 		match pack_op {
 			PackOp::List(filter) => {
-				inventory(&player.rogue.pack, filter);
+				inventory(&player.rogue.pack, filter, &player.settings);
 			}
 			PackOp::Cancel => {
 				return CANCEL;
@@ -205,8 +205,9 @@ pub unsafe fn take_off(player: &mut Player, level: &mut Level) {
 			message(CURSE_MESSAGE, 0);
 		} else {
 			mv_aquatars(player, level);
+			let settings = player.settings.clone();
 			if let Some(armor) = unwear(player) {
-				let msg = format!("was wearing {}", get_obj_desc(armor));
+				let msg = format!("was wearing {}", get_obj_desc(armor, &settings));
 				message(&msg, 0);
 			}
 			print_stats(STAT_ARMOR, player);
@@ -226,6 +227,7 @@ pub unsafe fn wear(player: &mut Player, level: &mut Level) {
 	if ch == CANCEL {
 		return;
 	}
+	let settings = player.settings.clone();
 	match player.object_with_letter_mut(ch) {
 		None => {
 			message("no such item.", 0);
@@ -237,7 +239,7 @@ pub unsafe fn wear(player: &mut Player, level: &mut Level) {
 				return;
 			}
 			obj.identified = true;
-			let msg = get_obj_desc(obj);
+			let msg = get_obj_desc(obj, &settings);
 			message(&format!("wearing {}", msg), 0);
 			do_wear(obj.id(), player);
 			print_stats(STAT_ARMOR, player);
@@ -267,6 +269,7 @@ pub unsafe fn wield(player: &mut Player, level: &mut Level) {
 	if ch == CANCEL {
 		return;
 	}
+	let settings = player.settings.clone();
 	match player.object_with_letter_mut(ch) {
 		None => {
 			message("No such item.", 0);
@@ -282,7 +285,7 @@ pub unsafe fn wield(player: &mut Player, level: &mut Level) {
 			if obj.is_being_wielded() {
 				message("in use", 0);
 			} else {
-				let obj_desc = get_obj_desc(obj);
+				let obj_desc = get_obj_desc(obj, &settings);
 				let obj_id = obj.id();
 				player.unwield_weapon();
 				message(&format!("wielding {}", obj_desc), 0);
@@ -418,16 +421,17 @@ pub unsafe fn kick_into_pack(player: &mut Player, level: &mut Level) {
 	if !level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_object() {
 		message("nothing here", 0);
 	} else {
+		let settings = player.settings.clone();
 		match pick_up(player.rogue.row, player.rogue.col, player, level) {
 			PickUpResult::TurnedToDust => {
 				reg_move(player, level);
 			}
 			PickUpResult::AddedToGold(obj) => {
-				let msg = get_obj_desc(&obj);
+				let msg = get_obj_desc(&obj, &settings);
 				message(&msg, 0);
 			}
 			PickUpResult::AddedToPack(obj) => {
-				let msg = get_inv_obj_desc(obj);
+				let msg = get_inv_obj_desc(obj, &settings);
 				message(&msg, 0);
 			}
 			PickUpResult::PackTooFull => {

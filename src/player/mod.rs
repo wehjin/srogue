@@ -9,6 +9,7 @@ use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::{DungeonSpot, LAST_DUNGEON, MAX_ARMOR, MAX_GOLD};
 use crate::prelude::object_what::ObjectWhat;
 use crate::ring::effects::RingEffects;
+use crate::settings::Settings;
 use crate::weapons::WeaponKind;
 
 pub(crate) mod rings;
@@ -18,6 +19,8 @@ pub mod constants;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
+	pub settings: Settings,
+	pub cleaned_up: Option<String>,
 	pub cur_depth: usize,
 	pub max_depth: usize,
 	pub rogue: Fighter,
@@ -170,9 +173,11 @@ impl Player {
 		self.rogue.row = -1;
 	}
 	pub fn gold(&self) -> usize { self.rogue.gold }
-	pub fn new() -> Self {
+	pub fn new(settings: Settings) -> Self {
 		const INIT_HP: isize = 12;
 		Player {
+			settings,
+			cleaned_up: None,
 			cur_depth: 0,
 			max_depth: 1,
 			rogue: Fighter {

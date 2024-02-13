@@ -12,6 +12,7 @@ pub use cells::*;
 pub use dungeon::*;
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM, MAX_TRAP};
+use crate::level::UpResult::UpLevel;
 use crate::message::{message, print_stats};
 use crate::monster::wake_room;
 use crate::objects::put_amulet;
@@ -236,6 +237,7 @@ pub unsafe fn connect_rooms(room1: usize, room2: usize, level_depth: usize, leve
 pub fn clear_level(player: &mut Player, level: &mut Level) {
 	level.clear();
 	player.reset_spot();
+	player.cleaned_up = None;
 	ncurses::clear();
 }
 
@@ -615,25 +617,31 @@ pub unsafe fn drop_check(player: &Player, level: &Level) -> bool {
 	return false;
 }
 
-pub unsafe fn check_up(game: &mut GameState) -> bool {
+pub enum UpResult {
+	KeepLevel,
+	UpLevel,
+	WonGame,
+}
+
+pub unsafe fn check_up(game: &mut GameState) -> UpResult {
 	if !wizard {
 		if !game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_kind(CellKind::Stairs) {
 			message("I see no way up", 0);
-			return false;
+			return UpResult::KeepLevel;
 		}
 		if !has_amulet(&game.player) {
 			message("Your way is magically blocked", 0);
-			return false;
+			return UpResult::KeepLevel;
 		}
 	}
 	new_level_message = Some("you feel a wrenching sensation in your gut".to_string());
 	if game.player.cur_depth == 1 {
 		win(&mut game.player, &mut game.level);
+		return UpResult::WonGame;
 	} else {
 		game.player.ascend();
-		return true;
+		return UpLevel;
 	}
-	return false;
 }
 
 pub unsafe fn add_exp(e: isize, promotion: bool, player: &mut Player) {

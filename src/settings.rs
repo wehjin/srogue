@@ -1,93 +1,49 @@
 use std::env;
-use std::sync::RwLock;
+use serde::{Deserialize, Serialize};
+use crate::machdep::get_login_name;
 
-pub static SETTINGS: RwLock<Settings> = RwLock::new(Settings {
-	score_only: false,
-	rest_file: None,
-	fruit: String::new(),
-	save_file: None,
-	jump: false,
-	nick_name: None,
-	ask_quit: false,
-	show_skull: false,
-	login_name: String::new(),
-});
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum SettingsError { LoginName }
 
-fn set(settings: Settings) {
-	*SETTINGS.write().unwrap() = settings;
-}
-
-pub fn set_login_name(login_name: &str) {
-	let mut settings = (&*SETTINGS.read().unwrap()).clone();
-	settings.login_name = login_name.to_string();
-	set(settings);
-}
-
-pub fn login_name() -> String {
-	let s = &*SETTINGS.read().unwrap();
-	s.login_name.to_string()
-}
-
-pub fn score_only() -> bool { (&*SETTINGS.read().unwrap()).score_only }
-
-pub fn set_score_only(score_only: bool) {
-	let mut settings = (&*SETTINGS.read().unwrap()).clone();
-	settings.score_only = score_only;
-	set(settings);
-}
-
-pub fn rest_file() -> Option<String> {
-	let s = &*SETTINGS.read().unwrap();
-	s.rest_file.clone()
-}
-
-pub fn nick_name() -> Option<String> {
-	let s = &*SETTINGS.read().unwrap();
-	s.nick_name.clone()
-}
-
-pub fn save_file() -> Option<String> {
-	let s = &*SETTINGS.read().unwrap();
-	s.save_file.clone()
-}
-
-pub fn fruit() -> String {
-	let s = &*SETTINGS.read().unwrap();
-	s.fruit.to_string()
-}
-
-pub fn jump() -> bool { (&*SETTINGS.read().unwrap()).jump }
-
-pub fn show_skull() -> bool { (&*SETTINGS.read().unwrap()).show_skull }
-
-pub fn load() {
+pub fn load() -> Result<Settings, SettingsError> {
+	let login_name = get_login_name().ok_or(SettingsError::LoginName)?;
 	let mut settings = Settings {
+		login_name,
+		fruit: "slime-mold ".to_string(),
 		score_only: false,
 		rest_file: None,
-		fruit: "slime-mold ".to_string(),
 		save_file: None,
 		jump: true,
 		nick_name: None,
 		ask_quit: true,
 		show_skull: true,
-		login_name: "PLACEHOLDER".to_string(),
 	};
 	settings.do_args();
 	settings.do_opts();
-	set(settings);
+	Ok(settings)
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Settings {
+	pub login_name: String,
+	pub fruit: String,
 	pub score_only: bool,
 	pub rest_file: Option<String>,
-	pub fruit: String,
 	pub save_file: Option<String>,
 	pub jump: bool,
 	pub nick_name: Option<String>,
 	pub ask_quit: bool,
 	pub show_skull: bool,
-	pub login_name: String,
+}
+
+impl Settings {
+	pub fn player_name(&self) -> &String {
+		if let Some(nick_name) = &self.nick_name {
+			nick_name
+		} else {
+			&self.login_name
+		}
+	}
 }
 
 impl Settings {

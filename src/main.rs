@@ -1,10 +1,6 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 #![feature(extern_types)]
 
-extern "C" {}
-
-use std::sync::OnceLock;
-
 mod message;
 mod level;
 mod monster;
@@ -34,54 +30,60 @@ mod weapons;
 mod armors;
 mod scrolls;
 
-use libc::{setuid, perror, geteuid, getuid, uid_t};
-use crate::init::{clean_up, init};
+use crate::console::{ConsoleError};
+use crate::init::{init, InitError, InitResult};
 use crate::level::{clear_level, make_level, put_player};
 use crate::message::print_stats;
 use crate::monster::{MASH, put_mons};
 use crate::objects::{level_objects, put_objects, put_stairs};
-use crate::play::play_level;
+use crate::play::{play_level, PlayResult};
 use crate::prelude::stat_const::STAT_ALL;
+use crate::settings::{SettingsError};
 use crate::trap::add_traps;
 
 pub mod odds;
-
-pub struct User {
-	pub saved_uid: uid_t,
-	pub true_uid: uid_t,
-}
-
-pub fn user() -> &'static User {
-	static USER: OnceLock<User> = OnceLock::new();
-	USER.get_or_init(|| unsafe {
-		User { saved_uid: geteuid(), true_uid: getuid() }
-	})
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn turn_into_games() {
-	if setuid(user().saved_uid) == -1 {
-		perror(b"setuid(restore)\0" as *const u8 as *const libc::c_char);
-		clean_up("");
-	}
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn turn_into_user() {
-	if setuid(user().true_uid) == -1 {
-		perror(b"setuid(restore)\0" as *const u8 as *const libc::c_char);
-		clean_up("");
-	}
-}
-
 pub mod console;
 pub mod settings;
-
 pub mod hunger;
+pub(crate) mod files;
 
 pub fn main() {
-	unsafe { setuid(user().true_uid); }
-	let (mut game, mut restored) = unsafe { init() };
+	let settings = match settings::load() {
+		Ok(settings) => settings,
+		Err(e) => {
+			match e {
+				SettingsError::LoginName => {
+					println!("Hey!  Who are you?");
+				}
+			}
+			return;
+		}
+	};
+	let result = match unsafe { init(settings) } {
+		Ok(result) => result,
+		Err(error) => match error {
+			InitError::NoConsole(error) => match error {
+				ConsoleError::ScreenTooSmall { min_rows, min_cols } => {
+					println!("\nmust be played on {} x {} or better screen", min_rows, min_cols);
+					return;
+				}
+			},
+			InitError::BadRestore(exit) => {
+				if let Some(exit) = exit {
+					eprintln!("\n{}", exit);
+				}
+				return;
+			}
+		}
+	};
+	let (mut game, console, mut restored) = match result {
+		InitResult::ScoreOnly(_player, _console, _settings) => {
+			return;
+		}
+		InitResult::Restored(game, console) => (game, console, true),
+		InitResult::Initialized(game, console) => (game, console, false),
+	};
+	let mut exit_line = None;
 	loop {
 		if !restored {
 			clear_level(&mut game.player, &mut game.level);
@@ -94,9 +96,24 @@ pub fn main() {
 			unsafe { put_player(game.level.party_room, &mut game.player, &mut game.level); }
 			unsafe { print_stats(STAT_ALL, &mut game.player); }
 		}
-		unsafe { play_level(&mut game); }
+		restored = false;
+		match unsafe { play_level(&mut game) } {
+			PlayResult::TrapDoorDown | PlayResult::StairsDown | PlayResult::StairsUp => {
+				// Ignore and stay in loop
+			}
+			PlayResult::ExitWon | PlayResult::ExitQuit | PlayResult::ExitSaved => {
+				break;
+			}
+			PlayResult::CleanedUp(exit) => {
+				exit_line = Some(exit);
+				break;
+			}
+		}
 		unsafe { level_objects.clear(); }
 		unsafe { MASH.clear(); }
-		restored = false;
+	}
+	drop(console);
+	if let Some(exit) = exit_line {
+		println!("\n{}", exit);
 	}
 }

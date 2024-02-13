@@ -7,7 +7,7 @@ use std::time::{Duration};
 use chrono::{Datelike, DateTime, Timelike, TimeZone, Utc};
 use libc::{c_int, stat};
 use serde::{Deserialize, Serialize};
-use crate::init::{byebye, error_save, onintr};
+use crate::init::{byebye, onintr};
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct RogueTime {
@@ -81,7 +81,10 @@ unsafe fn sig_on_quit(_: c_int) {
 }
 
 unsafe fn sig_on_hup(_: c_int) {
-	error_save(unimplemented!("Acquire game state for interrupt"))
+	unimplemented!("Acquire game state for interrupt");
+	// save_is_interactive = false;
+	// crate::save::save_into_file(ERROR_FILE, game);
+	// clean_up("");
 }
 
 

@@ -136,7 +136,7 @@ unsafe fn steal_item(monster: &mut Monster, player: &mut Player, level: &mut Lev
 					if temp_obj.what_is != Weapon {
 						temp_obj.quantity = 1;
 					}
-					get_obj_desc(&temp_obj)
+					get_obj_desc(&temp_obj, &player.settings)
 				};
 				format!("she stole {}", obj_desc)
 			};

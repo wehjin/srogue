@@ -24,7 +24,6 @@ use crate::ring::constants::RINGS;
 use crate::scrolls::ScrollKind::{AggravateMonster, CreateMonster, EnchArmor, EnchWeapon, HoldMonster, Identify, MagicMapping, ProtectArmor, RemoveCurse, ScareMonster, Sleep, Teleport};
 use crate::scrolls::constants::SCROLLS;
 pub use object_id::*;
-use crate::settings::fruit;
 pub use object_pack::*;
 use crate::armors::constants::{ARMORS, PLATE, SPLINT};
 use crate::hit::DamageStat;
@@ -38,6 +37,7 @@ use crate::potions::kind::{PotionKind, POTIONS};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::ring::gr_ring;
 use crate::room::{get_mask_char, gr_room, gr_row_col, party_objects, RoomType};
+use crate::settings::Settings;
 use crate::weapons::constants::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
 use crate::zap::constants::{CANCELLATION, MAGIC_MISSILE, WANDS};
 
@@ -116,10 +116,10 @@ impl obj {
 		new.id = ObjectId::random();
 		new
 	}
-	pub unsafe fn to_name_with_new_quantity(&self, quantity: i16) -> String {
+	pub unsafe fn to_name_with_new_quantity(&self, quantity: i16, settings: &Settings) -> String {
 		let mut temp_obj = self.clone();
 		temp_obj.quantity = quantity;
-		name_of(&temp_obj)
+		name_of(&temp_obj, settings)
 	}
 	pub fn can_join_existing_pack_object(&self, existing_pack_obj: &Self) -> bool {
 		self.is_same_kind(existing_pack_obj) &&
@@ -713,7 +713,7 @@ impl Player {
 	}
 }
 
-pub unsafe fn name_of(obj: &object) -> String {
+pub unsafe fn name_of(obj: &object, settings: &Settings) -> String {
 	match obj.what_is {
 		Armor => "armor ".to_string(),
 		Weapon => match obj.which_kind {
@@ -725,7 +725,7 @@ pub unsafe fn name_of(obj: &object) -> String {
 		}.to_string(),
 		Scroll => if obj.quantity > 1 { "scrolls " } else { "scroll " }.to_string(),
 		Potion => if obj.quantity > 1 { "potions " } else { "potion " }.to_string(),
-		Food => if obj.which_kind == RATION { "food ".to_string() } else { fruit() }
+		Food => if obj.which_kind == RATION { "food ".to_string() } else { settings.fruit.to_string() }
 		Wand => if IS_WOOD[obj.which_kind as usize] { "staff " } else { "wand " }.to_string(),
 		Ring => "ring ".to_string(),
 		Amulet => "amulet ".to_string(),
@@ -1078,7 +1078,7 @@ pub unsafe fn new_object_for_wizard(player: &mut Player) {
 			return;
 		}
 	}
-	message(&get_obj_desc(&obj), 0);
+	message(&get_obj_desc(&obj, &player.settings), 0);
 	player.combine_or_add_item_to_pack(obj);
 }
 

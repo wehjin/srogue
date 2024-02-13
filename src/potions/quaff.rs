@@ -7,7 +7,6 @@ use crate::player::Player;
 use crate::potions::kind::PotionKind;
 use crate::r#use::{STRANGE_FEELING};
 use crate::random::get_rand;
-use crate::settings::fruit;
 
 pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: &mut Level) {
 	match potion_kind {
@@ -94,7 +93,7 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: 
 			player.haste_self.ensure_half_active();
 		}
 		PotionKind::SeeInvisible => {
-			message(&format!("hmm, this potion tastes like {} juice", fruit().trim()), 0);
+			message(&format!("hmm, this potion tastes like {} juice", player.settings.fruit.trim()), 0);
 			if player.blind.is_active() {
 				crate::r#use::unblind(player, level);
 			}

@@ -22,7 +22,6 @@ use crate::r#use::{hallucinate_on_screen, tele, unblind, unconfuse, unhallucinat
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::room::{darken_room, get_dungeon_char, get_room_number, light_passage, light_up_room};
 use crate::score::killed_by;
-use crate::settings::jump;
 use crate::throw::Move;
 use crate::trap::{is_off_screen, search, trap_player};
 
@@ -92,7 +91,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, player: &mut Player, lev
 	}
 	mvaddch(player.rogue.row as i32, player.rogue.col as i32, get_dungeon_char(player.rogue.row, player.rogue.col, player, level));
 	mvaddch(row as i32, col as i32, chtype::from(player.rogue.fchar));
-	if !jump() {
+	if !player.settings.jump {
 		refresh();
 	}
 	player.rogue.row = row;
@@ -104,16 +103,17 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, player: &mut Player, lev
 			if player.levitate.is_active() {
 				StoppedOnSomething
 			} else {
+				let settings = player.settings.clone();
 				match pick_up(row, col, player, level) {
 					PickUpResult::TurnedToDust => {
 						moved_unless_hungry_or_confused(player, level)
 					}
 					PickUpResult::AddedToGold(obj) => {
-						let msg = get_obj_desc(&obj);
+						let msg = get_obj_desc(&obj, &settings);
 						stopped_on_something_with_message(&msg, player, level)
 					}
 					PickUpResult::AddedToPack(obj) => {
-						let msg = get_inv_obj_desc(obj);
+						let msg = get_inv_obj_desc(obj, &settings);
 						stopped_on_something_with_message(&msg, player, level)
 					}
 					PickUpResult::PackTooFull => {
@@ -135,7 +135,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, player: &mut Player, lev
 
 unsafe fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, player: &mut Player, level: &mut Level) -> MoveResult {
 	let obj = level_objects.find_object_at(row, col).expect("moved-on object");
-	let desc = format!("moved onto {}", get_obj_desc(obj));
+	let desc = format!("moved onto {}", get_obj_desc(obj, &player.settings));
 	return stopped_on_something_with_message(&desc, player, level);
 }
 
