@@ -4,7 +4,7 @@ use ncurses::{chtype, mvaddch, refresh};
 use MoveResult::MoveFailed;
 use crate::hit::{get_dir_rc, rogue_hit};
 use crate::hunger::{FAINT, HUNGRY, STARVE, WEAK};
-use crate::inventory::{get_inv_obj_desc, get_obj_desc};
+use crate::inventory::get_obj_desc;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::{CellKind, cur_room, Level};
 use crate::message::{CANCEL, check_message, hunger_str, message, print_stats, rgetchar, sound_bell};
@@ -109,11 +109,11 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, player: &mut Player, lev
 						moved_unless_hungry_or_confused(player, level)
 					}
 					PickUpResult::AddedToGold(obj) => {
-						let msg = get_obj_desc(&obj, &settings);
+						let msg = get_obj_desc(&obj, settings.fruit.to_string(), &player.notes);
 						stopped_on_something_with_message(&msg, player, level)
 					}
-					PickUpResult::AddedToPack(obj) => {
-						let msg = get_inv_obj_desc(obj, &settings);
+					PickUpResult::AddedToPack { added_id, .. } => {
+						let msg = player.get_obj_desc(added_id);
 						stopped_on_something_with_message(&msg, player, level)
 					}
 					PickUpResult::PackTooFull => {
@@ -135,7 +135,8 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, player: &mut Player, lev
 
 unsafe fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, player: &mut Player, level: &mut Level) -> MoveResult {
 	let obj = level_objects.find_object_at(row, col).expect("moved-on object");
-	let desc = format!("moved onto {}", get_obj_desc(obj, &player.settings));
+	let obj_desc = get_obj_desc(obj, player.settings.fruit.to_string(), &player.notes);
+	let desc = format!("moved onto {}", obj_desc);
 	return stopped_on_something_with_message(&desc, player, level);
 }
 

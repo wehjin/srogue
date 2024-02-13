@@ -131,12 +131,11 @@ unsafe fn steal_item(monster: &mut Monster, player: &mut Player, level: &mut Lev
 		Some(obj_id) => {
 			let msg = {
 				let obj_desc = {
-					let obj = player.object(obj_id).expect("unused obj is in player pack");
-					let mut temp_obj = obj.clone();
+					let mut temp_obj = player.expect_object(obj_id).clone();
 					if temp_obj.what_is != Weapon {
 						temp_obj.quantity = 1;
 					}
-					get_obj_desc(&temp_obj, &player.settings)
+					get_obj_desc(&temp_obj, player.settings.fruit.to_string(), &player.notes)
 				};
 				format!("she stole {}", obj_desc)
 			};

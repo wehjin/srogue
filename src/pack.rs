@@ -1,11 +1,11 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
-use crate::inventory::{get_id_table, get_inv_obj_desc, get_obj_desc, inventory};
+use crate::inventory::{get_obj_desc, inventory};
 use crate::level::{CellKind, Level};
 use crate::message::{CANCEL, LIST, check_message, get_input_line, message, print_stats, rgetchar, sound_bell};
 use crate::monster::mv_aquatars;
-use crate::objects::IdStatus::{Called, Identified, Unidentified};
-use crate::objects::{id_scrolls, level_objects, obj, object, ObjectId, ObjectPack, place_at, Title};
+use crate::objects::NoteStatus::{Called, Identified, Unidentified};
+use crate::objects::{level_objects, obj, object, ObjectId, ObjectPack, place_at, Title};
 use crate::player::Player;
 
 use crate::prelude::food_kind::FRUIT;
@@ -26,21 +26,21 @@ pub fn take_from_pack(obj_id: ObjectId, pack: &mut ObjectPack) -> Option<obj> {
 	pack.remove(obj_id)
 }
 
-pub enum PickUpResult<'a> {
+pub enum PickUpResult {
 	TurnedToDust,
 	AddedToGold(obj),
-	AddedToPack(&'a obj),
+	AddedToPack { added_id: ObjectId, added_kind: usize },
 	PackTooFull,
 }
 
-pub unsafe fn pick_up<'a>(row: i64, col: i64, player: &'a mut Player, level: &mut Level) -> PickUpResult<'a> {
+pub unsafe fn pick_up(row: i64, col: i64, player: &mut Player, level: &mut Level) -> PickUpResult {
 	let obj_id = level_objects.find_id_at(row, col).expect("obj_id in level-objects at pick-up spot");
 	if level_objects.check_object(obj_id, obj::is_used_scare_monster_scroll) {
 		message("the scroll turns to dust as you pick it up", 0);
 		level.dungeon[row as usize][col as usize].remove_kind(CellKind::Object);
 		level_objects.remove(obj_id);
-		if id_scrolls[ScareMonster.to_index()].id_status == Unidentified {
-			id_scrolls[ScareMonster.to_index()].id_status = Identified
+		if player.notes.scrolls[ScareMonster.to_index()].status == Unidentified {
+			player.notes.scrolls[ScareMonster.to_index()].status = Identified
 		}
 		PickUpResult::TurnedToDust
 	} else if let Some(quantity) = level_objects.try_map_object(obj_id, obj::gold_quantity) {
@@ -55,11 +55,14 @@ pub unsafe fn pick_up<'a>(row: i64, col: i64, player: &'a mut Player, level: &mu
 		PickUpResult::PackTooFull
 	} else {
 		level.dungeon[row as usize][col as usize].remove_kind(CellKind::Object);
-		let removed = take_from_pack(obj_id, &mut level_objects).expect("removed object");
-		let combined_or_added = player.combine_or_add_item_to_pack(removed);
-		let obj = player.object_mut(combined_or_added).expect("picked-up item in player's pack");
-		obj.picked_up = 1;
-		PickUpResult::AddedToPack(obj as &obj)
+		let removed_obj = take_from_pack(obj_id, &mut level_objects).expect("removed object");
+		let added_id = player.combine_or_add_item_to_pack(removed_obj);
+		let added_kind = {
+			let obj = player.object_mut(added_id).expect("picked-up item in player's pack");
+			obj.picked_up = 1;
+			obj.which_kind
+		};
+		PickUpResult::AddedToPack { added_id, added_kind: added_kind as usize }
 	}
 }
 
@@ -121,7 +124,7 @@ pub unsafe fn drop_0(player: &mut Player, level: &mut Level) {
 				obj.ichar = 'L';
 				obj
 			};
-			let obj_desc = get_obj_desc(&place_obj, &player.settings);
+			let obj_desc = get_obj_desc(&place_obj, player.settings.fruit.to_string(), &player.notes);
 			place_at(place_obj, player.rogue.row, player.rogue.col, level);
 			message(&format!("dropped {}", obj_desc), 0);
 			reg_move(player, level);
@@ -187,7 +190,7 @@ pub unsafe fn pack_letter(prompt: &str, filter: PackFilter, player: &Player) -> 
 		check_message();
 		match pack_op {
 			PackOp::List(filter) => {
-				inventory(&player.rogue.pack, filter, &player.settings);
+				inventory(filter, player);
 			}
 			PackOp::Cancel => {
 				return CANCEL;
@@ -205,9 +208,10 @@ pub unsafe fn take_off(player: &mut Player, level: &mut Level) {
 			message(CURSE_MESSAGE, 0);
 		} else {
 			mv_aquatars(player, level);
-			let settings = player.settings.clone();
 			if let Some(armor) = unwear(player) {
-				let msg = format!("was wearing {}", get_obj_desc(armor, &settings));
+				let armor_id = armor.id();
+				let obj_desc = player.get_obj_desc(armor_id);
+				let msg = format!("was wearing {}", obj_desc);
 				message(&msg, 0);
 			}
 			print_stats(STAT_ARMOR, player);
@@ -227,7 +231,6 @@ pub unsafe fn wear(player: &mut Player, level: &mut Level) {
 	if ch == CANCEL {
 		return;
 	}
-	let settings = player.settings.clone();
 	match player.object_with_letter_mut(ch) {
 		None => {
 			message("no such item.", 0);
@@ -239,9 +242,10 @@ pub unsafe fn wear(player: &mut Player, level: &mut Level) {
 				return;
 			}
 			obj.identified = true;
-			let msg = get_obj_desc(obj, &settings);
-			message(&format!("wearing {}", msg), 0);
-			do_wear(obj.id(), player);
+			let obj_id = obj.id();
+			let obj_desc = player.get_obj_desc(obj_id);
+			message(&format!("wearing {}", obj_desc), 0);
+			do_wear(obj_id, player);
 			print_stats(STAT_ARMOR, player);
 			reg_move(player, level);
 		}
@@ -269,7 +273,6 @@ pub unsafe fn wield(player: &mut Player, level: &mut Level) {
 	if ch == CANCEL {
 		return;
 	}
-	let settings = player.settings.clone();
 	match player.object_with_letter_mut(ch) {
 		None => {
 			message("No such item.", 0);
@@ -285,8 +288,8 @@ pub unsafe fn wield(player: &mut Player, level: &mut Level) {
 			if obj.is_being_wielded() {
 				message("in use", 0);
 			} else {
-				let obj_desc = get_obj_desc(obj, &settings);
 				let obj_id = obj.id();
+				let obj_desc = player.get_obj_desc(obj_id);
 				player.unwield_weapon();
 				message(&format!("wielding {}", obj_desc), 0);
 				do_wield(obj_id, player);
@@ -306,31 +309,37 @@ pub fn unwield(player: &mut Player) {
 	player.unwield_weapon();
 }
 
-pub unsafe fn call_it(player: &Player) {
+pub unsafe fn call_it(player: &mut Player) {
 	let ch = pack_letter("call what?", AnyFrom(vec![Scroll, Potion, Wand, Ring]), player);
 	if ch == CANCEL {
 		return;
 	}
-	match player.object_with_letter(ch) {
+	match player.object_id_with_letter(ch) {
 		None => {
 			message("no such item.", 0);
 			return;
 		}
-		Some(obj) => {
-			match obj.what_is {
+		Some(obj_id) => {
+			let what = player.object_what(obj_id);
+			match what {
 				Scroll | Potion | Wand | Ring => {
-					// Process these
+					let kind = player.object_kind(obj_id);
+					let new_name = get_input_line::<String>(
+						"call it:",
+						None,
+						Some(player.notes.title(what, kind as usize).as_str()),
+						true,
+						true);
+					if !new_name.is_empty() {
+						let id = player.notes.note_mut(what, kind as usize);
+						id.status = Called;
+						id.title = Title::UserString(new_name);
+					}
 				}
 				_ => {
 					message("surely you already know what that's called", 0);
 					return;
 				}
-			}
-			let new_name = get_input_line::<String>("call it:", None, Some(obj.title()), true, true);
-			if !new_name.is_empty() {
-				let id_table = get_id_table(obj);
-				id_table[obj.which_kind as usize].id_status = Called;
-				id_table[obj.which_kind as usize].title = Title::UserString(new_name);
 			}
 		}
 	}
@@ -427,11 +436,11 @@ pub unsafe fn kick_into_pack(player: &mut Player, level: &mut Level) {
 				reg_move(player, level);
 			}
 			PickUpResult::AddedToGold(obj) => {
-				let msg = get_obj_desc(&obj, &settings);
+				let msg = get_obj_desc(&obj, settings.fruit.to_string(), &player.notes);
 				message(&msg, 0);
 			}
-			PickUpResult::AddedToPack(obj) => {
-				let msg = get_inv_obj_desc(obj, &settings);
+			PickUpResult::AddedToPack { added_id: obj_id, .. } => {
+				let msg = player.get_obj_desc(obj_id);
 				message(&msg, 0);
 			}
 			PickUpResult::PackTooFull => {

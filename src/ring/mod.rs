@@ -67,8 +67,7 @@ pub unsafe fn put_on_ring(player: &mut Player, level: &mut Level) {
 			ring_stats(true, player, level);
 			check_message();
 			{
-				let ring = player.object(ring_id).expect("ring in pack");
-				let msg = get_obj_desc(ring, &player.settings);
+				let msg = player.get_obj_desc(ring_id);
 				message(&msg, 0);
 			}
 			reg_move(player, level);
@@ -125,7 +124,8 @@ pub unsafe fn remove_ring(player: &mut Player, level: &mut Level) {
 	let removed_id = un_put_hand(hand, player, level).expect("some removed_id");
 	{
 		let removed_obj = player.object(removed_id).expect("some removed_obj");
-		let msg = format!("removed {}", get_obj_desc(removed_obj, &player.settings));
+		let removed_desc = get_obj_desc(removed_obj, player.settings.fruit.to_string(), &player.notes);
+		let msg = format!("removed {}", removed_desc);
 		message(&msg, 0);
 	}
 	reg_move(player, level);
@@ -168,10 +168,9 @@ pub unsafe fn inv_rings(player: &Player) {
 	if hand_usage == HandUsage::None {
 		message("not wearing any rings", 0);
 	} else {
-		let settings = player.settings.clone();
 		for ring_hand in PlayerHand::ALL_HANDS {
-			if let Some(ring) = player.ring(ring_hand) {
-				let msg = get_obj_desc(ring, &settings);
+			if let Some(ring_id) = player.ring_id(ring_hand) {
+				let msg = player.get_obj_desc(ring_id);
 				message(&msg, 0);
 			}
 		}

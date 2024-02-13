@@ -1,6 +1,6 @@
 use crate::armors::ArmorKind;
 use crate::armors::ArmorKind::{Banded, Chain, Leather, Plate, Ringmail, Scale, Splint};
-use crate::objects::{id, IdStatus, Title};
+use crate::objects::{Note, NoteStatus, Title};
 
 pub const LEATHER: u16 = 0;
 pub const RINGMAIL: u16 = 1;
@@ -18,10 +18,10 @@ impl ArmorKind {
 	pub const ALL_KINDS: [ArmorKind; ARMORS] = [
 		Leather, Ringmail, Scale, Chain, Banded, Splint, Plate,
 	];
-	pub const fn to_id(self) -> id {
-		id {
+	pub const fn to_id(self) -> Note {
+		Note {
 			title: Title::ArmorName(self),
-			id_status: IdStatus::Unidentified,
+			status: NoteStatus::Unidentified,
 		}
 	}
 }

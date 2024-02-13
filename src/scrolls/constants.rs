@@ -1,4 +1,4 @@
-use crate::objects::{id, IdStatus, Title};
+use crate::objects::{Note, NoteStatus, Title};
 use crate::scrolls::ScrollKind;
 use crate::scrolls::ScrollKind::{AggravateMonster, CreateMonster, EnchArmor, EnchWeapon, HoldMonster, Identify, MagicMapping, ProtectArmor, RemoveCurse, ScareMonster, Sleep, Teleport};
 
@@ -18,11 +18,54 @@ impl ScrollKind {
 pub const MAX_SYLLABLE: usize = 40;
 
 impl ScrollKind {
-	pub const fn to_id(self) -> id {
-		id {
+	pub const fn to_id(self) -> Note {
+		Note {
 			title: Title::None,
-			id_status: IdStatus::Unidentified,
+			status: NoteStatus::Unidentified,
 		}
 	}
 }
+
+pub const SYLLABLES: [&'static str; MAX_SYLLABLE] = [
+	"blech ",
+	"foo ",
+	"barf ",
+	"rech ",
+	"bar ",
+	"blech ",
+	"quo ",
+	"bloto ",
+	"woh ",
+	"caca ",
+	"blorp ",
+	"erp ",
+	"festr ",
+	"rot ",
+	"slie ",
+	"snorf ",
+	"iky ",
+	"yuky ",
+	"ooze ",
+	"ah ",
+	"bahl ",
+	"zep ",
+	"druhl ",
+	"flem ",
+	"behil ",
+	"arek ",
+	"mep ",
+	"zihr ",
+	"grit ",
+	"kona ",
+	"kini ",
+	"ichi ",
+	"niah ",
+	"ogr ",
+	"ooh ",
+	"ighr ",
+	"coph ",
+	"swerr ",
+	"mihln ",
+	"poxi ",
+];
 

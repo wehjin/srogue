@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::objects::{id, IdStatus, Title};
+use crate::objects::{Note, NoteStatus, Title};
 use crate::potions::kind::POTIONS;
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
@@ -21,10 +21,10 @@ pub enum PotionColor {
 }
 
 impl PotionColor {
-	pub const fn to_id(self) -> id {
-		id {
+	pub const fn to_id(self) -> Note {
+		Note {
 			title: Title::PotionColor(self),
-			id_status: IdStatus::Unidentified,
+			status: NoteStatus::Unidentified,
 		}
 	}
 	pub const fn name(&self) -> &'static str {

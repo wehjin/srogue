@@ -1,4 +1,4 @@
-use crate::objects::{id, IdStatus, Title};
+use crate::objects::{Note, NoteStatus, Title};
 use crate::weapons::kind::WeaponKind;
 use crate::weapons::kind::WeaponKind::{Arrow, Bow, Dagger, Dart, LongSword, Mace, Shuriken, TwoHandedSword};
 
@@ -20,10 +20,10 @@ impl WeaponKind {
 		Bow, Dart, Arrow, Dagger, Shuriken, Mace, LongSword, TwoHandedSword,
 	];
 
-	pub const fn to_id(self) -> id {
-		id {
+	pub const fn to_id(self) -> Note {
+		Note {
 			title: Title::WeaponName(self),
-			id_status: IdStatus::Unidentified,
+			status: NoteStatus::Unidentified,
 		}
 	}
 }

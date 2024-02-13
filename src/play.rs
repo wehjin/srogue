@@ -9,7 +9,7 @@ use crate::inventory::{inv_armor_weapon, inventory, single_inv};
 use crate::level::{check_up, drop_check, show_average_hp, UpResult};
 use crate::message::{CANCEL, check_message, message, remessage, rgetchar};
 use crate::monster::show_monsters;
-use crate::objects::{level_objects, new_object_for_wizard, show_objects};
+use crate::objects::{new_object_for_wizard, show_objects};
 use crate::pack::{call_it, drop_0, kick_into_pack, take_off, wear, wield};
 use crate::play::PlayResult::{ExitWon, StairsDown, StairsUp, CleanedUp};
 use crate::prelude::object_what::PackFilter::AllObjects;
@@ -76,7 +76,7 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 				search(if count > 0 { count } else { 1 } as usize, false, &mut game.player, &mut game.level);
 			}
 			'i' => {
-				inventory(&mut game.player.rogue.pack, AllObjects, &mut game.player.settings);
+				inventory(AllObjects, &game.player);
 			}
 			'f' => {
 				fight(false, &mut game.player, &mut game.level);
@@ -157,7 +157,7 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 				wield(&mut game.player, &mut game.level);
 			}
 			'c' => {
-				call_it(&game.player);
+				call_it(&mut game.player);
 			}
 			'z' => {
 				zapp(&mut game.player, &mut game.level);
@@ -193,7 +193,7 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 			' ' => {}
 			'\x09' => {
 				if wizard {
-					inventory(&mut level_objects, AllObjects, &game.player.settings);
+					inventory(AllObjects, &game.player);
 				} else {
 					message(UNKNOWN_COMMAND, 0);
 				}

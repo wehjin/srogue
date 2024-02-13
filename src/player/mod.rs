@@ -4,6 +4,7 @@ use crate::monster::Fighter;
 use crate::objects::{obj, object, ObjectId, ObjectPack};
 use crate::pack::{check_duplicate, next_avail_ichar};
 use crate::armors::ArmorKind;
+use crate::objects::note_tables::NoteTables;
 use crate::player::effects::TimeEffect;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::{DungeonSpot, LAST_DUNGEON, MAX_ARMOR, MAX_GOLD};
@@ -19,6 +20,7 @@ pub mod constants;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
+	pub notes: NoteTables,
 	pub settings: Settings,
 	pub cleaned_up: Option<String>,
 	pub cur_depth: usize,
@@ -137,7 +139,6 @@ impl Player {
 	pub fn weapon_kind(&self) -> Option<WeaponKind> {
 		self.weapon().map(|it| it.weapon_kind()).flatten()
 	}
-
 	pub fn weapon(&self) -> Option<&obj> {
 		if let Some(id) = self.weapon_id() {
 			self.pack().object_if_what(id, ObjectWhat::Weapon)
@@ -145,7 +146,6 @@ impl Player {
 			None
 		}
 	}
-
 	pub fn weapon_mut(&mut self) -> Option<&mut obj> {
 		if let Some(id) = self.weapon_id() {
 			self.pack_mut().object_if_what_mut(id, ObjectWhat::Weapon)
@@ -176,6 +176,7 @@ impl Player {
 	pub fn new(settings: Settings) -> Self {
 		const INIT_HP: isize = 12;
 		Player {
+			notes: NoteTables::new(),
 			settings,
 			cleaned_up: None,
 			cur_depth: 0,

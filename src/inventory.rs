@@ -1,91 +1,44 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
-use rand::prelude::SliceRandom;
-use rand::thread_rng;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::pack::{pack_letter, wait_for_ack};
 use crate::player::Player;
 use crate::random::get_rand;
 
 use crate::message::{CANCEL, message};
-use crate::objects::{get_armor_class, id, id_armors, id_potions, id_rings, id_scrolls, id_wands, id_weapons, IdStatus, name_of, obj, object, ObjectPack, Title};
-use crate::potions::kind::{PotionKind, POTIONS};
+use crate::objects::{get_armor_class, NoteStatus, name_of, obj, object, ObjectId, Title};
+use crate::objects::note_tables::NoteTables;
+use crate::potions::kind::PotionKind;
 use crate::prelude::food_kind::RATION;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::ObjectWhat::{Amulet, Armor, Food, Gold, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::ring::ring_kind::RingKind;
-use crate::ring::constants::{ADD_STRENGTH, ALL_RING_GEMS, DEXTERITY, MAX_GEM, RINGS};
+use crate::ring::constants::{ADD_STRENGTH, DEXTERITY};
 use crate::score::is_vowel;
 use crate::scrolls::ScrollKind;
-use crate::scrolls::constants::{MAX_SYLLABLE, SCROLLS};
-use crate::settings::Settings;
 use crate::zap::wand_kind::WandKind;
-use crate::zap::constants::{ALL_WAND_MATERIALS, MAX_METAL, MAX_WAND_MATERIAL, WANDS};
+use crate::zap::constants::WANDS;
 use crate::zap::wizard;
 
 pub static mut IS_WOOD: [bool; WANDS] = [false; WANDS];
-const SYLLABLES: [&'static str; MAX_SYLLABLE] = [
-	"blech ",
-	"foo ",
-	"barf ",
-	"rech ",
-	"bar ",
-	"blech ",
-	"quo ",
-	"bloto ",
-	"woh ",
-	"caca ",
-	"blorp ",
-	"erp ",
-	"festr ",
-	"rot ",
-	"slie ",
-	"snorf ",
-	"iky ",
-	"yuky ",
-	"ooze ",
-	"ah ",
-	"bahl ",
-	"zep ",
-	"druhl ",
-	"flem ",
-	"behil ",
-	"arek ",
-	"mep ",
-	"zihr ",
-	"grit ",
-	"kona ",
-	"kini ",
-	"ichi ",
-	"niah ",
-	"ogr ",
-	"ooh ",
-	"ighr ",
-	"coph ",
-	"swerr ",
-	"mihln ",
-	"poxi ",
-];
 
-fn random_syllable() -> &'static str {
-	SYLLABLES[get_rand(1, MAX_SYLLABLE - 1)]
-}
-
-pub unsafe fn inventory(pack: &ObjectPack, filter: PackFilter, settings: &Settings) {
-	if pack.is_empty() {
+pub unsafe fn inventory(filter: PackFilter, player: &Player) {
+	if player.pack().is_empty() {
 		message("your pack is empty", 0);
 		return;
 	}
 	let item_lines = {
 		let mut item_lines = Vec::new();
-		for obj in pack.objects() {
+		for obj in player.pack().objects() {
 			let what = obj.what_is;
 			if filter.includes(what) {
 				let close_char = if what == Armor && obj.is_protected != 0 { '}' } else { ')' };
-				let line = format!(" {}{} {}", obj.ichar, close_char, get_obj_desc(obj, settings));
+				let obj_ichar = obj.ichar;
+				let obj_desc = get_obj_desc(obj, player.settings.fruit.to_string(), &player.notes);
+				let line = format!(" {}{} {}", obj_ichar, close_char, obj_desc);
 				item_lines.push(line);
 			}
 		}
@@ -122,22 +75,6 @@ pub unsafe fn inventory(pack: &ObjectPack, filter: PackFilter, settings: &Settin
 	}
 }
 
-pub unsafe fn mix_colors() {
-	for _ in 0..=32 {
-		let j = get_rand(0, POTIONS - 1);
-		let k = get_rand(0, POTIONS - 1);
-		id_potions.swap(j, k);
-	}
-}
-
-pub unsafe fn make_scroll_titles() {
-	for i in 0..SCROLLS {
-		let syllables = (0..get_rand(2, 5)).map(|_| random_syllable().to_string()).collect::<Vec<_>>();
-		let joined = format!("'{}' ", syllables.join("")).trim().to_string();
-		id_scrolls[i].title = Title::SyllableString(joined);
-	}
-}
-
 fn get_quantity(obj: &object) -> String {
 	match obj.what_is {
 		Armor => "".to_string(),
@@ -152,15 +89,13 @@ fn get_quantity(obj: &object) -> String {
 }
 
 impl obj {
-	pub unsafe fn title(&self) -> &str {
-		let id_table = get_id_table(self);
-		let id = &id_table[self.which_kind as usize];
-		id.title.as_str()
+	pub fn title(&self, id_tables: &NoteTables) -> Title {
+		id_tables.title(self.what_is, self.what_is as usize)
 	}
 }
 
-unsafe fn get_id_status(obj: &object) -> IdStatus {
-	get_id_table(obj)[obj.which_kind as usize].id_status
+unsafe fn get_id_status(obj: &object, id_tables: &NoteTables) -> NoteStatus {
+	id_tables.note(obj.what_is, obj.which_kind as usize).status
 }
 
 fn get_id_real(obj: &object) -> &'static str {
@@ -173,11 +108,11 @@ fn get_id_real(obj: &object) -> &'static str {
 	}
 }
 
-unsafe fn get_identified(obj: &object, settings: &Settings) -> String {
+unsafe fn get_identified(obj: &object, fruit: String, id_tables: &NoteTables) -> String {
 	match obj.what_is {
 		Scroll | Potion => {
 			let quantity = get_quantity(obj);
-			let name = name_of(obj, settings);
+			let name = name_of(obj, fruit, id_tables);
 			let real_name = get_id_real(obj);
 			format!("{}{}{}", quantity, name, real_name)
 		}
@@ -187,13 +122,13 @@ unsafe fn get_identified(obj: &object, settings: &Settings) -> String {
 			} else {
 				"".to_string()
 			};
-			let name = name_of(obj, settings);
+			let name = name_of(obj, fruit, id_tables);
 			let real_name = get_id_real(obj);
 			format!("{}{}{}{}", get_quantity(obj), more_info, name, real_name)
 		}
 		Wand => format!("{}{}{}{}",
 		                get_quantity(obj),
-		                name_of(obj, settings),
+		                name_of(obj, fruit, id_tables),
 		                get_id_real(obj),
 		                if wizard || obj.identified {
 			                format!("[{}]", obj.class)
@@ -203,57 +138,66 @@ unsafe fn get_identified(obj: &object, settings: &Settings) -> String {
 		Armor => format!("{}{} {}[{}] ",
 		                 if obj.d_enchant >= 0 { "+" } else { "" },
 		                 obj.d_enchant,
-		                 obj.title(),
+		                 obj.title(id_tables).as_str(),
 		                 get_armor_class(Some(obj))),
 		Weapon => format!("{}{}{},{}{} {}",
 		                  get_quantity(obj),
 		                  if obj.hit_enchant >= 0 { "+" } else { "" }, obj.hit_enchant,
 		                  if obj.d_enchant >= 0 { "+" } else { "" }, obj.d_enchant,
-		                  name_of(obj, settings)
+		                  name_of(obj, fruit, id_tables)
 		),
 		_ => panic!("invalid identified object")
 	}
 }
 
-unsafe fn get_called(obj: &object, settings: &Settings) -> String {
+unsafe fn get_called(obj: &object, fruit: String, id_tables: &NoteTables) -> String {
 	match obj.what_is {
-		Scroll | Potion | Wand | Ring => format!("{}{}called {}", get_quantity(obj), name_of(obj, settings), obj.title()),
+		Scroll | Potion | Wand | Ring => {
+			let name = name_of(obj, fruit, id_tables);
+			let title = obj.title(id_tables);
+			format!("{}{}called {}", get_quantity(obj), name, title.as_str())
+		}
 		_ => panic!("invalid called object"),
 	}
 }
 
-unsafe fn get_unidentified(obj: &object, settings: &Settings) -> String {
+unsafe fn get_unidentified(obj: &object, fruit: String, id_tables: &NoteTables) -> String {
 	let what = obj.what_is;
 	match what {
-		Scroll => format!("{}{}entitled: {}", get_quantity(obj), name_of(obj, settings), obj.title()),
-		Potion => format!("{}{}{}", get_quantity(obj), obj.title(), name_of(obj, settings)),
-		Wand | Ring => if obj.identified || get_id_status(obj) == IdStatus::Identified {
-			get_identified(obj, settings)
-		} else if get_id_status(obj) == IdStatus::Called {
-			get_called(obj, settings)
+		Scroll => format!("{}{}entitled: {}", get_quantity(obj), name_of(obj, fruit, id_tables), obj.title(id_tables).as_str()),
+		Potion => format!("{}{}{}", get_quantity(obj), obj.title(id_tables).as_str(), name_of(obj, fruit, id_tables)),
+		Wand | Ring => if obj.identified || get_id_status(obj, id_tables) == NoteStatus::Identified {
+			get_identified(obj, fruit, id_tables)
+		} else if get_id_status(obj, id_tables) == NoteStatus::Called {
+			get_called(obj, fruit, id_tables)
 		} else {
-			format!("{}{}{}", get_quantity(obj), obj.title(), name_of(obj, settings))
+			format!("{}{}{}", get_quantity(obj), obj.title(id_tables).as_str(), name_of(obj, fruit, id_tables))
 		},
 		Armor => if obj.identified {
-			get_identified(obj, settings)
+			get_identified(obj, fruit, id_tables)
 		} else {
-			obj.title().to_string()
+			obj.title(id_tables).to_string()
 		},
 		Weapon => if obj.identified {
-			get_identified(obj, settings)
+			get_identified(obj, fruit, id_tables)
 		} else {
-			name_of(obj, settings)
+			name_of(obj, fruit, id_tables)
 		},
 		_ => panic!("invalid unidentified object")
 	}
 }
 
-pub unsafe fn get_inv_obj_desc(obj: &obj, settings: &Settings) -> String {
-	let obj_desc = get_obj_desc(&obj, settings);
-	format!("{}({})", obj_desc, obj.ichar)
+impl Player {
+	pub unsafe fn get_obj_desc(&self, obj_id: ObjectId) -> String {
+		let obj = self.expect_object(obj_id);
+		let fruit = self.settings.fruit.to_string();
+		let obj_ichar = obj.ichar;
+		let obj_desc = get_obj_desc(&obj, fruit, &self.notes);
+		format!("{}({})", obj_desc, obj_ichar)
+	}
 }
 
-pub unsafe fn get_obj_desc(obj: &object, settings: &Settings) -> String {
+pub unsafe fn get_obj_desc(obj: &object, fruit: String, id_tables: &NoteTables) -> String {
 	let what_is = obj.what_is;
 	if what_is == Amulet {
 		return "the amulet of Yendor ".to_string();
@@ -272,17 +216,17 @@ pub unsafe fn get_obj_desc(obj: &object, settings: &Settings) -> String {
 		} else {
 			"a ".to_string()
 		};
-		format!("{}{}", quantity, name_of(obj, settings))
+		format!("{}{}", quantity, name_of(obj, fruit, id_tables))
 	} else {
 		if wizard {
-			get_identified(obj, settings)
+			get_identified(obj, fruit, id_tables)
 		} else {
 			match what_is {
-				Weapon | Armor | Wand | Ring => get_unidentified(obj, settings),
-				_ => match get_id_status(obj) {
-					IdStatus::Unidentified => get_unidentified(obj, settings),
-					IdStatus::Identified => get_identified(obj, settings),
-					IdStatus::Called => get_called(obj, settings),
+				Weapon | Armor | Wand | Ring => get_unidentified(obj, fruit, id_tables),
+				_ => match get_id_status(obj, id_tables) {
+					NoteStatus::Unidentified => get_unidentified(obj, fruit, id_tables),
+					NoteStatus::Identified => get_identified(obj, fruit, id_tables),
+					NoteStatus::Called => get_called(obj, fruit, id_tables),
 				}
 			}
 		}
@@ -310,29 +254,6 @@ fn get_in_use_description(obj: &object) -> &'static str {
 	}
 }
 
-
-pub unsafe fn get_wand_and_ring_materials() {
-	{
-		let mut unused_material = (0..MAX_WAND_MATERIAL).collect::<Vec<_>>();
-		unused_material.shuffle(&mut thread_rng());
-		for i in 0..WANDS {
-			if let Some(j) = unused_material.pop() {
-				id_wands[i].title = Title::WandMaterial(ALL_WAND_MATERIALS[j]);
-				IS_WOOD[i] = j > MAX_METAL;
-			}
-		}
-	}
-	{
-		let mut unused_gem = (0..MAX_GEM).collect::<Vec<_>>();
-		unused_gem.shuffle(&mut thread_rng());
-		for i in 0..RINGS {
-			if let Some(j) = unused_gem.pop() {
-				id_rings[i].title = Title::RingGem(ALL_RING_GEMS[j]);
-			}
-		}
-	}
-}
-
 fn take_unused<const N: usize>(used: &mut [bool; N]) -> usize {
 	let mut j;
 	loop {
@@ -356,22 +277,11 @@ pub unsafe fn single_inv(ichar: Option<char>, player: &mut Player) {
 	}
 	if let Some(obj) = player.object_with_letter(ch) {
 		let separator = if obj.what_is == Armor && obj.is_protected != 0 { '}' } else { ')' };
-		let msg = format!("{}{} {}", ch, separator, get_obj_desc(obj, &player.settings));
+		let obj_desc = get_obj_desc(obj, player.settings.fruit.to_string(), &player.notes);
+		let msg = format!("{}{} {}", ch, separator, obj_desc);
 		message(&msg, 0);
 	} else {
 		message("no such item.", 0);
-	}
-}
-
-pub unsafe fn get_id_table(obj: &object) -> &'static mut [id] {
-	match obj.what_is {
-		Scroll => &mut id_scrolls[..],
-		Potion => &mut id_potions[..],
-		Wand => &mut id_wands[..],
-		Ring => &mut id_rings[..],
-		Weapon => &mut id_weapons[..],
-		Armor => &mut id_armors[..],
-		_ => panic!("no id table"),
 	}
 }
 

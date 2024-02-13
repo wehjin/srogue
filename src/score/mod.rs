@@ -6,23 +6,15 @@ use std::io::{Read, Seek, Write};
 use ncurses::{mv, mvaddch, mvaddstr, mvinch, refresh, standend, standout};
 use crate::prelude::*;
 use crate::level::constants::{DCOLS, DROWS};
-use crate::objects::IdStatus::Identified;
 use crate::player::Player;
-use crate::armors::constants::ARMORS;
 use crate::init::{BYEBYE_STRING, clean_up};
-use crate::inventory::get_obj_desc;
 use crate::level::Level;
 use crate::machdep::{md_heed_signals, md_ignore_signals};
 use crate::message::{check_message, message, msg_cleared, rgetchar};
-use crate::objects::{id_armors, id_potions, id_scrolls, id_wands, id_weapons};
 use crate::pack::{has_amulet, unwear, unwield};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat;
-use crate::potions::kind::POTIONS;
 use crate::ring::{PlayerHand, un_put_hand};
-use crate::scrolls::constants::SCROLLS;
-use crate::zap::constants::WANDS;
-use crate::weapons::constants::WEAPONS;
 
 mod values;
 
@@ -97,7 +89,7 @@ pub unsafe fn win(player: &mut Player, level: &mut Level) {
 	mvaddstr(19, 11, "treasures at great profit and retire into comfort.");
 	message("", 0);
 	message("", 0);
-	id_all();
+	player.notes.identify_all();
 	sell_pack(player);
 	put_scores(Some(Ending::Win), player);
 }
@@ -304,13 +296,12 @@ pub unsafe fn sell_pack(player: &mut Player)
 	ncurses::clear();
 	mvaddstr(1, 0, "Value      Item");
 	let mut row: usize = 2;
-	let settings = player.settings.clone();
-	for id in player.object_ids() {
-		if player.object_what(id) != ObjectWhat::Food {
-			let obj = player.object_mut(id).expect("obj in player");
+	for pack_id in player.object_ids() {
+		if player.object_what(pack_id) != ObjectWhat::Food {
+			let obj = player.object_mut(pack_id).expect("obj in player");
 			obj.identified = true;
 			let obj_value = obj.sale_value();
-			let obj_desc = get_obj_desc(obj, &settings);
+			let obj_desc = player.get_obj_desc(pack_id);
 			player.rogue.gold += obj_value;
 			if row < DROWS {
 				let msg = format!("{:5}      {}", obj_value, obj_desc);
@@ -324,25 +315,6 @@ pub unsafe fn sell_pack(player: &mut Player)
 		player.rogue.gold = MAX_GOLD;
 	}
 	message("", 0);
-}
-
-pub unsafe fn id_all()
-{
-	for i in 0..SCROLLS {
-		id_scrolls[i].id_status = Identified;
-	}
-	for i in 0..WEAPONS {
-		id_weapons[i].id_status = Identified;
-	}
-	for i in 0..ARMORS {
-		id_armors[i].id_status = Identified;
-	}
-	for i in 0..WANDS {
-		id_wands[i].id_status = Identified;
-	}
-	for i in 0..POTIONS {
-		id_potions[i].id_status = Identified;
-	}
 }
 
 pub fn name_cmp(s1: &str, s2: &str) -> Ordering {

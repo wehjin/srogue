@@ -8,7 +8,6 @@ use crate::player::Player;
 use crate::armors::constants::RINGMAIL;
 use crate::console::{Console, ConsoleError};
 use crate::init::InitError::NoConsole;
-use crate::inventory::{get_wand_and_ring_materials, make_scroll_titles, mix_colors};
 use crate::level::Level;
 use crate::machdep::{md_heed_signals, md_ignore_signals};
 use crate::message::{check_message, message};
@@ -69,9 +68,7 @@ pub unsafe fn init(settings: Settings) -> Result<InitResult, InitError> {
 			return Err(InitError::BadRestore(game.player.cleaned_up.clone()));
 		}
 	}
-	mix_colors();
-	get_wand_and_ring_materials();
-	make_scroll_titles();
+	game.player.notes.assign_dynamic_titles();
 	level_objects.clear();
 	MASH.clear();
 	player_init(&mut game.player);

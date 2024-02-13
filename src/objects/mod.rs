@@ -31,6 +31,7 @@ use crate::inventory::{get_obj_desc, IS_WOOD};
 use crate::level::{CellKind, Level};
 use crate::message::{CANCEL, check_message, get_input_line, message, rgetchar, sound_bell};
 use crate::monster::{MASH, party_monsters};
+use crate::objects::note_tables::NoteTables;
 use crate::pack::MAX_PACK_COUNT;
 use crate::player::Player;
 use crate::potions::colors::PotionColor;
@@ -38,15 +39,14 @@ use crate::potions::kind::{PotionKind, POTIONS};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::ring::gr_ring;
 use crate::ring::ring_gem::RingGem;
-use crate::ring::ring_kind::RingKind;
 use crate::room::{get_mask_char, gr_room, gr_row_col, party_objects, RoomType};
 use crate::scrolls::ScrollKind;
-use crate::settings::Settings;
 use crate::weapons::constants::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
 use crate::weapons::kind::WeaponKind;
 use crate::zap::constants::{CANCELLATION, MAGIC_MISSILE, WANDS};
-use crate::zap::wand_kind::WandKind;
 use crate::zap::wand_materials::WandMaterial;
+
+pub(crate) mod note_tables;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum Title {
@@ -61,6 +61,9 @@ pub enum Title {
 }
 
 impl Title {
+	pub fn to_string(&self) -> String {
+		self.as_str().to_string()
+	}
 	pub fn as_str(&self) -> &str {
 		match self {
 			Title::None => &"",
@@ -82,20 +85,20 @@ impl Default for Title {
 }
 
 #[derive(Clone, Serialize, Deserialize, Default)]
-pub struct id {
+pub struct Note {
 	pub title: Title,
-	pub id_status: IdStatus,
+	pub status: NoteStatus,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub enum IdStatus {
+pub enum NoteStatus {
 	Unidentified,
 	Identified,
 	Called,
 }
 
-impl Default for IdStatus {
-	fn default() -> Self { IdStatus::Unidentified }
+impl Default for NoteStatus {
+	fn default() -> Self { NoteStatus::Unidentified }
 }
 
 
@@ -159,10 +162,10 @@ impl obj {
 		new.id = ObjectId::random();
 		new
 	}
-	pub unsafe fn to_name_with_new_quantity(&self, quantity: i16, settings: &Settings) -> String {
+	pub unsafe fn to_name_with_new_quantity(&self, quantity: i16, fruit: String, id_tables: &NoteTables) -> String {
 		let mut temp_obj = self.clone();
 		temp_obj.quantity = quantity;
-		name_of(&temp_obj, settings)
+		name_of(&temp_obj, fruit, id_tables)
 	}
 	pub fn can_join_existing_pack_object(&self, existing_pack_obj: &Self) -> bool {
 		self.is_same_kind(existing_pack_obj) &&
@@ -206,82 +209,6 @@ pub type object = obj;
 
 pub static mut level_objects: ObjectPack = ObjectPack::new();
 pub static mut foods: i16 = 0;
-
-pub static mut id_potions: [id; POTIONS] = [
-	PotionColor::Blue.to_id(),
-	PotionColor::Red.to_id(),
-	PotionColor::Green.to_id(),
-	PotionColor::Grey.to_id(),
-	PotionColor::Brown.to_id(),
-	PotionColor::Clear.to_id(),
-	PotionColor::Pink.to_id(),
-	PotionColor::White.to_id(),
-	PotionColor::Purple.to_id(),
-	PotionColor::Black.to_id(),
-	PotionColor::Yellow.to_id(),
-	PotionColor::Plaid.to_id(),
-	PotionColor::Burgundy.to_id(),
-	PotionColor::Beige.to_id(),
-];
-
-pub static mut id_scrolls: [id; SCROLLS] = [
-	ScrollKind::ProtectArmor.to_id(),
-	ScrollKind::HoldMonster.to_id(),
-	ScrollKind::EnchWeapon.to_id(),
-	ScrollKind::EnchArmor.to_id(),
-	ScrollKind::Identify.to_id(),
-	ScrollKind::Teleport.to_id(),
-	ScrollKind::Sleep.to_id(),
-	ScrollKind::ScareMonster.to_id(),
-	ScrollKind::RemoveCurse.to_id(),
-	ScrollKind::CreateMonster.to_id(),
-	ScrollKind::AggravateMonster.to_id(),
-	ScrollKind::MagicMapping.to_id(),
-];
-pub static mut id_weapons: [id; WEAPONS] = [
-	WeaponKind::Bow.to_id(),
-	WeaponKind::Dart.to_id(),
-	WeaponKind::Arrow.to_id(),
-	WeaponKind::Dagger.to_id(),
-	WeaponKind::Shuriken.to_id(),
-	WeaponKind::Mace.to_id(),
-	WeaponKind::LongSword.to_id(),
-	WeaponKind::TwoHandedSword.to_id(),
-];
-pub static mut id_armors: [id; ARMORS] = [
-	ArmorKind::Leather.to_id(),
-	ArmorKind::Ringmail.to_id(),
-	ArmorKind::Scale.to_id(),
-	ArmorKind::Chain.to_id(),
-	ArmorKind::Banded.to_id(),
-	ArmorKind::Splint.to_id(),
-	ArmorKind::Plate.to_id(),
-];
-pub static mut id_wands: [id; WANDS] = [
-	WandKind::TeleAway.to_id(),
-	WandKind::SlowMonster.to_id(),
-	WandKind::ConfuseMonster.to_id(),
-	WandKind::Invisibility.to_id(),
-	WandKind::Polymorph.to_id(),
-	WandKind::HasteMonster.to_id(),
-	WandKind::PutToSleep.to_id(),
-	WandKind::MagicMissile.to_id(),
-	WandKind::Cancellation.to_id(),
-	WandKind::DoNothing.to_id(),
-];
-pub static mut id_rings: [id; RINGS] = [
-	RingKind::Stealth.to_id(),
-	RingKind::RTeleport.to_id(),
-	RingKind::Regeneration.to_id(),
-	RingKind::SlowDigest.to_id(),
-	RingKind::AddStrength.to_id(),
-	RingKind::SustainStrength.to_id(),
-	RingKind::Dexterity.to_id(),
-	RingKind::Adornment.to_id(),
-	RingKind::RSeeInvisible.to_id(),
-	RingKind::MaintainArmor.to_id(),
-	RingKind::Searching.to_id(),
-];
 
 pub unsafe fn put_objects(player: &mut Player, level: &mut Level) {
 	if player.cur_depth < player.max_depth {
@@ -372,21 +299,25 @@ impl Player {
 	pub fn object_with_letter_mut(&mut self, ch: char) -> Option<&mut obj> {
 		self.find_pack_obj_mut(|obj| obj.ichar == ch)
 	}
+	pub unsafe fn name_of(&self, obj_id: ObjectId) -> String {
+		let obj = self.expect_object(obj_id);
+		name_of(obj, self.settings.fruit.to_string(), &self.notes)
+	}
 }
 
-pub unsafe fn name_of(obj: &object, settings: &Settings) -> String {
+pub unsafe fn name_of(obj: &object, fruit: String, id_tables: &NoteTables) -> String {
 	match obj.what_is {
 		Armor => "armor ".to_string(),
 		Weapon => match obj.which_kind {
-			DART => if obj.quantity > 1 { "darts " } else { "dart " },
-			ARROW => if obj.quantity > 1 { "arrows " } else { "arrow " },
-			DAGGER => if obj.quantity > 1 { "daggers " } else { "dagger " },
-			SHURIKEN => if obj.quantity > 1 { "shurikens " } else { "shuriken " },
-			_ => obj.title(),
-		}.to_string(),
+			DART => if obj.quantity > 1 { "darts " } else { "dart " }.to_string(),
+			ARROW => if obj.quantity > 1 { "arrows " } else { "arrow " }.to_string(),
+			DAGGER => if obj.quantity > 1 { "daggers " } else { "dagger " }.to_string(),
+			SHURIKEN => if obj.quantity > 1 { "shurikens " } else { "shuriken " }.to_string(),
+			_ => obj.title(id_tables).to_string(),
+		},
 		Scroll => if obj.quantity > 1 { "scrolls " } else { "scroll " }.to_string(),
 		Potion => if obj.quantity > 1 { "potions " } else { "potion " }.to_string(),
-		Food => if obj.which_kind == RATION { "food ".to_string() } else { settings.fruit.to_string() }
+		Food => if obj.which_kind == RATION { "food ".to_string() } else { fruit }
 		Wand => if IS_WOOD[obj.which_kind as usize] { "staff " } else { "wand " }.to_string(),
 		Ring => "ring ".to_string(),
 		Amulet => "amulet ".to_string(),
@@ -739,7 +670,8 @@ pub unsafe fn new_object_for_wizard(player: &mut Player) {
 			return;
 		}
 	}
-	message(&get_obj_desc(&obj, &player.settings), 0);
+	let obj_desc = get_obj_desc(&obj, player.settings.fruit.to_string(), &player.notes);
+	message(&obj_desc, 0);
 	player.combine_or_add_item_to_pack(obj);
 }
 

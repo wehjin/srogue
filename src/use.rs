@@ -1,13 +1,12 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use ncurses::{addch, chtype, mvaddch, mvinch};
-use crate::inventory::{get_id_table, get_obj_desc};
 use crate::level::{add_exp, cur_room, Level, put_player};
 use crate::machdep::md_sleep;
 use crate::message::{CANCEL, check_message, hunger_str, message, print_stats};
 use crate::monster::{aggravate, create_monster, gr_obj_char, MASH, mv_mons, show_monsters};
-use crate::objects::IdStatus::{Called, Identified};
-use crate::objects::{id_potions, id_scrolls, level_objects, name_of, ObjectId};
+use crate::objects::NoteStatus::Identified;
+use crate::objects::{level_objects, ObjectId};
 use crate::pack::{pack_letter, take_from_pack, unwear, unwield};
 use crate::player::Player;
 use crate::potions::colors::ALL_POTION_COLORS;
@@ -46,9 +45,7 @@ pub unsafe fn quaff(player: &mut Player, level: &mut Level) {
 				Some(potion_kind) => {
 					quaff_potion(potion_kind, player, level);
 					print_stats(STAT_STRENGTH | STAT_HP, player);
-					if id_potions[potion_kind.to_index()].id_status != Called {
-						id_potions[potion_kind.to_index()].id_status = Identified;
-					}
+					player.notes.identify_if_un_called(Potion, potion_kind.to_index());
 					vanish(obj_id, true, player, level);
 				}
 			}
@@ -87,9 +84,9 @@ pub unsafe fn read_scroll(player: &mut Player, level: &mut Level) {
 						}
 						ScrollKind::EnchWeapon => {
 							let glow_color = get_ench_color(player);
-							let settings = player.settings.clone();
-							if let Some(weapon) = player.weapon_mut() {
-								let weapon_name = name_of(weapon, &settings);
+							if let Some(weapon_id) = player.weapon_id() {
+								let weapon_name = player.name_of(obj_id);
+								let weapon = player.expect_object_mut(weapon_id);
 								let plural_char = if weapon.quantity <= 1 { "s" } else { "" };
 								let msg = format!("your {}glow{} {}for a moment", weapon_name, plural_char, glow_color);
 								message(&msg, 0);
@@ -119,7 +116,7 @@ pub unsafe fn read_scroll(player: &mut Player, level: &mut Level) {
 							message("this is a scroll of identify", 0);
 							let obj = player.expect_object_mut(obj_id);
 							obj.identified = true;
-							id_scrolls[obj.which_kind as usize].id_status = Identified;
+							player.notes.note_mut(Scroll, scroll_kind.to_index()).status = Identified;
 							idntfy(player);
 						}
 						ScrollKind::Teleport => {
@@ -158,9 +155,7 @@ pub unsafe fn read_scroll(player: &mut Player, level: &mut Level) {
 							draw_magic_map(level);
 						}
 					}
-					if id_scrolls[scroll_kind.to_index()].id_status != Called {
-						id_scrolls[scroll_kind.to_index()].id_status = Identified;
-					}
+					player.notes.identify_if_un_called(Scroll, scroll_kind.to_index());
 					vanish(obj_id, scroll_kind != ScrollKind::Sleep, player, level);
 				}
 			}
@@ -196,25 +191,26 @@ unsafe fn idntfy(player: &mut Player) {
 		if ch == CANCEL {
 			return;
 		}
-		let settings = player.settings.clone();
-		match player.object_with_letter_mut(ch) {
+		match player.object_id_with_letter(ch) {
 			None => {
 				message("no such item, try again", 0);
 				message("", 0);
 				check_message();
 				continue;
 			}
-			Some(obj) => {
+			Some(obj_id) => {
+				let obj = player.expect_object_mut(obj_id);
 				obj.identified = true;
-				match obj.what_is {
+				let what = obj.what_is;
+				match what {
 					Scroll | Potion | Weapon | Armor | Wand | Ring => {
-						let id_table = get_id_table(obj);
-						id_table[obj.which_kind as usize].id_status = Identified;
+						let kind = obj.which_kind as usize;
+						player.notes.identify(what, kind);
 					}
 					_ => {}
 				}
-				let obj_desc = get_obj_desc(obj, &settings);
-				message(&obj_desc, 0);
+				let msg = player.get_obj_desc(obj_id);
+				message(&msg, 0);
 			}
 		}
 	}

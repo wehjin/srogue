@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::objects::{id, IdStatus, Title};
+use crate::objects::{Note, NoteStatus, Title};
 use crate::ring::constants::RINGS;
 use crate::ring::ring_kind::RingKind::{AddStrength, Adornment, Dexterity, MaintainArmor, Regeneration, RSeeInvisible, RTeleport, Searching, SlowDigest, Stealth, SustainStrength};
 
@@ -39,10 +39,10 @@ impl RingKind {
 		"of stealth ", "of teleportation ", "of regeneration ", "of slow digestion ", "of add strength ", "of sustain strength ",
 		"of dexterity ", "of adornment ", "of see invisible ", "of maintain armor ", "of searching ",
 	];
-	pub const fn to_id(self) -> id {
-		id {
+	pub const fn to_id(self) -> Note {
+		Note {
 			title: Title::None,
-			id_status: IdStatus::Unidentified,
+			status: NoteStatus::Unidentified,
 		}
 	}
 }
