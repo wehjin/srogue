@@ -78,7 +78,6 @@ impl Trap {
 	}
 }
 
-pub static mut trap_door: bool = false;
 
 pub fn trap_message(trap: TrapKind) -> &'static str {
 	match trap {
@@ -117,7 +116,7 @@ pub unsafe fn trap_player(row: usize, col: usize, player: &mut Player, level: &m
 	match t {
 		NoTrap => unreachable!("no trap"),
 		TrapDoor => {
-			trap_door = true;
+			level.trap_door = true;
 			level.new_level_message = Some(trap_message(t).to_string());
 		}
 		BearTrap => {

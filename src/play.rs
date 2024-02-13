@@ -20,7 +20,7 @@ use crate::room::draw_magic_map;
 use crate::save::{save_game};
 use crate::score::{ask_quit};
 use crate::throw::throw;
-use crate::trap::{id_trap, search, show_traps, trap_door};
+use crate::trap::{id_trap, search, show_traps};
 use crate::zap::{wizard, wizardize, zapp};
 
 
@@ -53,8 +53,8 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 				message(&HIT_MESSAGE, 1);
 				HIT_MESSAGE.clear();
 			}
-			if trap_door {
-				trap_door = false;
+			if game.level.trap_door {
+				game.level.trap_door = false;
 				return PlayResult::TrapDoorDown;
 			}
 			mv(game.player.rogue.row as i32, game.player.rogue.col as i32);

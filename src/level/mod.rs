@@ -72,6 +72,7 @@ pub struct Level {
 	pub being_held: bool,
 	pub party_room: Option<usize>,
 	pub new_level_message: Option<String>,
+	pub trap_door: bool,
 }
 
 impl Level {
@@ -86,6 +87,7 @@ impl Level {
 			being_held: false,
 			party_room: None,
 			new_level_message: None,
+			trap_door: false,
 		}
 	}
 	pub fn clear(&mut self) {
