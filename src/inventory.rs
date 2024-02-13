@@ -175,7 +175,7 @@ pub unsafe fn inventory(pack: &ObjectPack, filter: PackFilter, settings: &Settin
 pub unsafe fn mix_colors() {
 	for i in 0..POTIONS {
 		if id_potions[i].title.is_none() {
-			id_potions[i].title = Some(PotionKind::from_index(i).to_index().to_string());
+			id_potions[i].title = Some(PotionKind::from_index(i).title().to_string());
 		}
 	}
 	for _ in 0..=32 {
