@@ -12,11 +12,9 @@ use crate::ring::ring_stats;
 use crate::save::data::SaveData;
 
 pub unsafe fn save_game(game: &mut GameState) -> bool {
-	let file_name = get_input_line("file name?",
-	                               game.settings.save_file.clone(),
-	                               Some("game not saved"),
-	                               false,
-	                               true,
+	let save_file = game.player.settings.save_file.clone();
+	let cancellation_prompt = Some("game not saved");
+	let file_name = get_input_line("file name?", save_file, cancellation_prompt, false, true,
 	);
 	if file_name.is_empty() {
 		return false;

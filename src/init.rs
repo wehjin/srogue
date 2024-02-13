@@ -59,11 +59,10 @@ pub unsafe fn init(settings: Settings) -> Result<InitResult, InitError> {
 	}
 
 	let mut game = GameState {
-		settings: settings.clone(),
-		player: Player::new(settings.clone()),
+		player: Player::new(settings),
 		level: Level::new(),
 	};
-	if let Some(rest_file) = settings.rest_file.clone() {
+	if let Some(rest_file) = game.player.settings.rest_file.clone() {
 		if restore(&rest_file, &mut game) {
 			return Ok(InitResult::Restored(game, console));
 		} else {
@@ -81,7 +80,6 @@ pub unsafe fn init(settings: Settings) -> Result<InitResult, InitError> {
 }
 
 pub struct GameState {
-	pub settings: Settings,
 	pub player: Player,
 	pub level: Level,
 }
