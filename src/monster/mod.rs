@@ -2,32 +2,31 @@
 
 use ncurses::chtype;
 use serde::{Deserialize, Serialize};
+
+pub use flags::MonsterFlags;
+pub use kind::*;
+pub use mash::*;
+
+use crate::hit::mon_hit;
+use crate::level::{CellKind, Level};
+use crate::level::constants::{DCOLS, DROWS};
 use crate::message::message;
+use crate::objects::{level_objects, ObjectId, ObjectPack};
+use crate::odds;
+use crate::player::Player;
+use crate::prelude::*;
+use crate::prelude::object_what::ObjectWhat::Scroll;
+use crate::r#move::is_passable;
 use crate::random::{coin_toss, get_rand, get_rand_indices, rand_percent};
 use crate::room::{dr_course, get_room_number, gr_row_col, random_spot_with_flag};
-
+use crate::scrolls::ScrollKind;
+use crate::scrolls::ScrollKind::ScareMonster;
+use crate::spec_hit::{flame_broil, m_confuse, seek_gold};
+use crate::throw::RandomWalk;
 
 pub mod flags;
 mod kind;
 mod mash;
-
-use crate::prelude::*;
-pub use flags::MonsterFlags;
-pub use kind::*;
-pub use mash::*;
-use crate::odds;
-use crate::hit::mon_hit;
-use crate::level::constants::{DCOLS, DROWS};
-use crate::level::{CellKind, cur_room, Level};
-use crate::objects::{level_objects, ObjectId, ObjectPack};
-use crate::player::Player;
-use crate::prelude::object_what::ObjectWhat::Scroll;
-use crate::r#move::is_passable;
-use crate::scrolls::ScrollKind;
-use crate::scrolls::ScrollKind::ScareMonster;
-use crate::room::RoomType::Maze;
-use crate::spec_hit::{flame_broil, m_confuse, seek_gold};
-use crate::throw::RandomWalk;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Fighter {
@@ -168,8 +167,10 @@ pub unsafe fn mv_monster(monster: &mut Monster, row: i64, col: i64, player: &mut
 			return;
 		}
 		let chance = odds::WAKE_PERCENT;
+		let row1 = monster.spot.row;
+		let col1 = monster.spot.col;
 		if (monster.m_flags.wakens)
-			&& rogue_is_around(monster.spot.row, monster.spot.col, player)
+			&& player.is_near(row1, col1)
 			&& rand_percent(player.ring_effects.apply_stealthy(chance)) {
 			monster.wake_up();
 		}
@@ -229,7 +230,9 @@ pub unsafe fn mv_monster(monster: &mut Monster, row: i64, col: i64, player: &mut
 	// No possible moves
 	monster.stuck_counter.log_row_col(monster.spot.row, monster.spot.col);
 	if monster.stuck_counter.count > 4 {
-		if monster.target_spot.is_none() && !mon_sees(monster, player.rogue.row, player.rogue.col, level) {
+		let row1 = player.rogue.row;
+		let col1 = player.rogue.col;
+		if monster.target_spot.is_none() && !monster.sees(row1, col1, level) {
 			monster.set_target_spot(
 				get_rand(1, (DROWS - 2) as i64),
 				get_rand(0, (DCOLS - 1) as i64),
@@ -259,7 +262,7 @@ pub unsafe fn move_mon_to(monster: &mut Monster, row: i64, col: i64, player: &Pl
 		let exit_trail_char = if !level.detect_monster {
 			monster.trail_char
 		} else {
-			if rogue_can_see(mrow, mcol, player, level) {
+			if player.can_see(mrow, mcol, level) {
 				monster.trail_char
 			} else {
 				if monster.trail_char == chtype::from('.') {
@@ -273,13 +276,13 @@ pub unsafe fn move_mon_to(monster: &mut Monster, row: i64, col: i64, player: &Pl
 	// Set the screen appearance at the newly occupied spot
 	monster.trail_char = ncurses::mvinch(row as i32, col as i32);
 	if player.blind.is_inactive()
-		&& (level.detect_monster || rogue_can_see(row, col, player, level)) {
+		&& (level.detect_monster || player.can_see(row, col, level)) {
 		if !monster.m_flags.invisible || player_defeats_invisibility(player, level) {
 			ncurses::mvaddch(row as i32, col as i32, gmc(monster, player, level));
 		}
 	}
 	if level.dungeon[row as usize][col as usize].is_door()
-		&& !in_current_room(row, col, level)
+		&& !player.in_room(row, col, level)
 		&& level.dungeon[mrow as usize][mcol as usize].is_floor()
 		&& player.blind.is_inactive() {
 		ncurses::mvaddch(mrow as i32, mcol as i32, chtype::from(' '));
@@ -333,9 +336,9 @@ pub unsafe fn mon_can_go(monster: &Monster, row: i64, col: i64, player: &Player,
 	return true;
 }
 
-pub unsafe fn wake_room(rn: i64, entering: bool, row: i64, col: i64, player: &Player, level: &Level) {
-	let chance = level.room_wake_percent(rn);
-	let wake_percent = player.ring_effects.apply_stealthy(chance);
+pub unsafe fn wake_room(rn: usize, entering: bool, row: i64, col: i64, player: &Player, level: &Level) {
+	let normal_chance = level.room_wake_percent(rn);
+	let buffed_chance = player.ring_effects.apply_stealthy(normal_chance);
 	for monster in &mut MASH.monsters {
 		if monster.in_room(rn, level) {
 			if entering {
@@ -343,10 +346,10 @@ pub unsafe fn wake_room(rn: i64, entering: bool, row: i64, col: i64, player: &Pl
 			} else {
 				monster.set_target_spot(row, col);
 			}
-		}
-		if monster.m_flags.wakens && monster.in_room(rn, level) {
-			if rand_percent(wake_percent) {
-				monster.wake_up();
+			if monster.m_flags.wakens {
+				if rand_percent(buffed_chance) {
+					monster.wake_up();
+				}
 			}
 		}
 	}
@@ -367,12 +370,6 @@ pub fn player_defeats_invisibility(player: &Player, level: &Level) -> bool {
 	level.detect_monster || level.see_invisible || player.ring_effects.has_see_invisible()
 }
 
-pub unsafe fn rogue_is_around(row: i64, col: i64, player: &Player) -> bool {
-	let row_diff = row - player.rogue.row;
-	let col_diff = col - player.rogue.col;
-	(row_diff >= -1) && (row_diff <= 1) && (col_diff >= -1) && (col_diff <= 1)
-}
-
 fn random_wanderer(level_depth: usize) -> Option<Monster> {
 	for _i in 0..15 {
 		let monster = gr_monster(level_depth, 0, None);
@@ -388,7 +385,7 @@ unsafe fn random_spot_for_wanderer(player: &Player, level: &Level) -> Option<Dun
 	let mut col = 0;
 	for _ in 0..25 {
 		gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel, CellKind::Stairs, CellKind::Object], player, level);
-		if !rogue_can_see(row, col, player, level) {
+		if !player.can_see(row, col, level) {
 			return Some(DungeonSpot { row, col });
 		}
 	}
@@ -458,23 +455,6 @@ pub unsafe fn put_m_at(row: i64, col: i64, mut monster: Monster, level: &mut Lev
 	if let Some(monster) = MASH.monster_at_spot_mut(row, col) {
 		aim_monster(monster, level);
 	}
-}
-
-pub unsafe fn rogue_can_see(row: i64, col: i64, player: &Player, level: &Level) -> bool {
-	player.blind.is_inactive()
-		&& ((in_current_room(row, col, level) && not_in_maze(level)) || is_very_close(row, col, player))
-}
-
-unsafe fn is_very_close(row: i64, col: i64, player: &Player) -> bool {
-	rogue_is_around(row, col, player)
-}
-
-unsafe fn not_in_maze(level: &Level) -> bool {
-	level.rooms[cur_room as usize].room_type != Maze
-}
-
-unsafe fn in_current_room(row: i64, col: i64, level: &Level) -> bool {
-	get_room_number(row, col, level) == cur_room
 }
 
 pub unsafe fn move_confused(monster: &mut Monster, player: &Player, level: &mut Level) -> bool {
@@ -562,21 +542,10 @@ pub unsafe fn aggravate(player: &Player, level: &Level) {
 	for monster in &mut MASH.monsters {
 		monster.wake_up();
 		monster.m_flags.imitates = false;
-		if rogue_can_see(monster.spot.row, monster.spot.col, player, level) {
+		if player.can_see(monster.spot.row, monster.spot.col, level) {
 			ncurses::mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.m_char());
 		}
 	}
-}
-
-pub unsafe fn mon_sees(monster: &Monster, row: i64, col: i64, level: &Level) -> bool {
-	if let Some(rn) = monster.in_same_room_as_spot(row, col, level) {
-		if level.rooms[rn].room_type != Maze {
-			return true;
-		}
-	}
-	let row_diff = row - monster.spot.row;
-	let ool_diff = col - monster.spot.col;
-	row_diff >= -1 && row_diff <= 1 && ool_diff >= -1 && ool_diff <= 1
 }
 
 pub unsafe fn mv_aquatars(player: &mut Player, level: &mut Level) {

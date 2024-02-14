@@ -4,12 +4,10 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 
-pub mod constants;
-mod cells;
-mod dungeon;
-
 pub use cells::*;
 pub use dungeon::*;
+use UpResult::{KeepLevel, WonGame};
+
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM, MAX_TRAP};
 use crate::level::UpResult::UpLevel;
@@ -17,18 +15,21 @@ use crate::message::{message, print_stats};
 use crate::monster::wake_room;
 use crate::objects::put_amulet;
 use crate::pack::has_amulet;
+use crate::player::{Player, RoomMark};
 use crate::player::constants::INIT_HP;
-use crate::player::Player;
-use crate::random::{coin_toss, get_rand, rand_percent};
-use crate::room::{DoorDirection, get_opt_room_number, get_room_number, gr_row_col, is_all_connected, light_passage, light_up_room, Room, RoomBounds, RoomType};
-use crate::score::win;
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
+use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::room::{DoorDirection, gr_row_col, is_all_connected, light_passage, light_up_room, Room, RoomBounds, RoomType};
 use crate::room::RoomType::Nothing;
+use crate::score::win;
 use crate::trap::Trap;
 use crate::zap::wizard;
 
-pub static mut cur_room: i64 = 0;
+pub mod constants;
+mod cells;
+mod dungeon;
+
 pub static mut r_de: Option<usize> = None;
 pub const LEVEL_POINTS: [isize; MAX_EXP_LEVEL] = [
 	10,
@@ -58,6 +59,23 @@ pub fn shuffled_rns() -> [usize; MAX_ROOM] {
 	let mut room_indices: [usize; MAX_ROOM] = [3, 7, 5, 2, 0, 6, 1, 4, 8];
 	room_indices.shuffle(&mut thread_rng());
 	room_indices
+}
+
+impl Level {
+	pub fn expect_room(&self, row: i64, col: i64) -> usize {
+		self.room(row, col).rn().expect("not an area")
+	}
+	pub fn room(&self, row: i64, col: i64) -> RoomMark {
+		for i in 0..MAX_ROOM {
+			if self.rooms[i].contains_spot(row, col) {
+				return RoomMark::Area(i);
+			}
+		}
+		return RoomMark::None;
+	}
+	pub fn cell(&self, row: i64, col: i64) -> &DungeonCell {
+		&self.dungeon[row as usize][col as usize]
+	}
 }
 
 
@@ -474,7 +492,7 @@ unsafe fn get_tunnel_dir(rn: usize, de: usize, level: &Level) -> DoorDirection {
 }
 
 pub fn find_tunnel_in_room(rn: usize, row: &mut i64, col: &mut i64, level: &Level) -> bool {
-	let bounds = level.rooms[rn].to_bounds();
+	let bounds = level.rooms[rn].to_wall_bounds();
 	for room_row in bounds.rows() {
 		for room_col in bounds.cols() {
 			if level.dungeon[room_row as usize][room_col as usize].is_kind(CellKind::Tunnel) {
@@ -572,32 +590,37 @@ pub unsafe fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: 
 	}
 }
 
-pub unsafe fn put_player(nr: Option<usize>, player: &mut Player, level: &mut Level) {
-	let mut row: i64 = 0;
-	let mut col: i64 = 0;
-	let mut rn = nr;
-	for _misses in 0..2 {
-		if rn != nr {
-			break;
+pub unsafe fn put_player(avoid_room: RoomMark, player: &mut Player, level: &mut Level) {
+	{
+		let mut row: i64 = 0;
+		let mut col: i64 = 0;
+		let mut to_room = avoid_room;
+		for _misses in 0..2 {
+			if to_room != avoid_room {
+				break;
+			}
+			const GOOD_CELL_KINDS: [CellKind; 4] = [CellKind::Floor, CellKind::Tunnel, CellKind::Object, CellKind::Stairs];
+			gr_row_col(&mut row, &mut col, &GOOD_CELL_KINDS, player, level);
+			to_room = level.room(row, col);
 		}
-		gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel, CellKind::Object, CellKind::Stairs], player, level);
-		rn = get_opt_room_number(row, col, level);
+		player.rogue.row = row;
+		player.rogue.col = col;
+		player.cur_room = if level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_kind(CellKind::Tunnel) {
+			RoomMark::Passage
+		} else {
+			to_room
+		};
 	}
-	let rn = rn.expect("room number to put player") as i64;
-	player.rogue.row = row;
-	player.rogue.col = col;
-	cur_room = if level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_kind(CellKind::Tunnel) {
-		PASSAGE
-	} else {
-		rn
-	};
-	if cur_room != PASSAGE {
-		light_up_room(cur_room, player, level);
-	} else {
-		light_passage(player.rogue.row, player.rogue.col, player, level);
+	match player.cur_room {
+		RoomMark::None => {}
+		RoomMark::Passage => {
+			light_passage(player.rogue.row, player.rogue.col, player, level);
+		}
+		RoomMark::Area(cur_room) => {
+			light_up_room(cur_room, player, level);
+			wake_room(cur_room, true, player.rogue.row, player.rogue.col, player, level);
+		}
 	}
-	let rn = get_room_number(player.rogue.row, player.rogue.col, level);
-	wake_room(rn, true, player.rogue.row, player.rogue.col, player, level);
 	if let Some(msg) = &level.new_level_message {
 		message(msg, 0);
 	}
@@ -630,20 +653,20 @@ pub unsafe fn check_up(game: &mut GameState) -> UpResult {
 	if !wizard {
 		if !game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_kind(CellKind::Stairs) {
 			message("I see no way up", 0);
-			return UpResult::KeepLevel;
+			return KeepLevel;
 		}
 		if !has_amulet(&game.player) {
 			message("Your way is magically blocked", 0);
-			return UpResult::KeepLevel;
+			return KeepLevel;
 		}
 	}
 	game.level.new_level_message = Some("you feel a wrenching sensation in your gut".to_string());
 	if game.player.cur_depth == 1 {
 		win(&mut game.player, &mut game.level);
-		return UpResult::WonGame;
+		WonGame
 	} else {
 		game.player.ascend();
-		return UpLevel;
+		UpLevel
 	}
 }
 

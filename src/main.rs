@@ -1,6 +1,18 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 #![feature(extern_types)]
 
+use crate::console::ConsoleError;
+use crate::init::{init, InitError, InitResult};
+use crate::level::{clear_level, make_level, put_player};
+use crate::message::print_stats;
+use crate::monster::{MASH, put_mons};
+use crate::objects::{level_objects, put_objects, put_stairs};
+use crate::play::{play_level, PlayResult};
+use crate::player::RoomMark;
+use crate::prelude::stat_const::STAT_ALL;
+use crate::settings::SettingsError;
+use crate::trap::add_traps;
+
 mod message;
 mod level;
 mod monster;
@@ -29,17 +41,6 @@ mod prelude;
 mod weapons;
 mod armors;
 mod scrolls;
-
-use crate::console::{ConsoleError};
-use crate::init::{init, InitError, InitResult};
-use crate::level::{clear_level, make_level, put_player};
-use crate::message::print_stats;
-use crate::monster::{MASH, put_mons};
-use crate::objects::{level_objects, put_objects, put_stairs};
-use crate::play::{play_level, PlayResult};
-use crate::prelude::stat_const::STAT_ALL;
-use crate::settings::{SettingsError};
-use crate::trap::add_traps;
 
 pub mod odds;
 pub mod console;
@@ -93,7 +94,13 @@ pub fn main() {
 			unsafe { put_stairs(&mut game.player, &mut game.level); }
 			unsafe { add_traps(&game.player, &mut game.level); }
 			unsafe { put_mons(&game.player, &mut game.level); }
-			unsafe { put_player(game.level.party_room, &mut game.player, &mut game.level); }
+			unsafe {
+				let avoid_room = match game.level.party_room {
+					None => RoomMark::None,
+					Some(rn) => RoomMark::Area(rn),
+				};
+				put_player(avoid_room, &mut game.player, &mut game.level);
+			}
 			unsafe { print_stats(STAT_ALL, &mut game.player); }
 		}
 		restored = false;

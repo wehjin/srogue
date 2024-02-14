@@ -1,15 +1,19 @@
 use ncurses::chtype;
 use serde::{Deserialize, Serialize};
+
+use crate::armors::ArmorKind;
+use crate::level::{DungeonCell, Level};
 use crate::monster::Fighter;
 use crate::objects::{obj, object, ObjectId, ObjectPack};
-use crate::pack::{check_duplicate, next_avail_ichar};
-use crate::armors::ArmorKind;
 use crate::objects::note_tables::NoteTables;
+use crate::pack::{check_duplicate, next_avail_ichar};
 use crate::player::effects::TimeEffect;
-use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::{DungeonSpot, LAST_DUNGEON, MAX_ARMOR, MAX_GOLD};
+use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::object_what::ObjectWhat;
 use crate::ring::effects::RingEffects;
+use crate::room::RoomType;
+use crate::room::RoomType::Maze;
 use crate::settings::Settings;
 use crate::weapons::kind::WeaponKind;
 
@@ -18,8 +22,64 @@ pub(crate) mod objects;
 pub mod effects;
 pub mod constants;
 
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum RoomMark {
+	None,
+	Passage,
+	Area(usize),
+}
+
+impl RoomMark {
+	pub fn is_none(&self) -> bool { self == &Self::None }
+	pub fn is_area(&self) -> bool {
+		if let RoomMark::Area(_) = self { true } else { false }
+	}
+	pub fn rn(&self) -> Option<usize> {
+		if let RoomMark::Area(rn) = self { Some(*rn) } else { None }
+	}
+	pub fn is_maze(&self, level: &Level) -> bool {
+		self.is_type(&[Maze], level)
+	}
+	pub fn is_type<T: AsRef<[RoomType]>>(&self, room_type: T, level: &Level) -> bool {
+		match self {
+			RoomMark::None => false,
+			RoomMark::Passage => false,
+			RoomMark::Area(rn) => {
+				level.rooms[*rn].room_type.is_type(room_type)
+			}
+		}
+	}
+	pub fn is_room(&self, room: RoomMark) -> bool {
+		self == &room
+	}
+}
+
+impl Player {
+	pub fn in_room(&self, row: i64, col: i64, level: &Level) -> bool {
+		self.cur_room == level.room(row, col)
+	}
+	pub fn is_near(&self, row: i64, col: i64) -> bool {
+		let row_diff = row - self.rogue.row;
+		let col_diff = col - self.rogue.col;
+		(row_diff >= -1) && (row_diff <= 1) && (col_diff >= -1) && (col_diff <= 1)
+	}
+	pub fn can_see(&self, row: i64, col: i64, level: &Level) -> bool {
+		if self.blind.is_active() {
+			false
+		} else if self.cur_room.is_room(level.room(row, col)) && !self.cur_room.is_maze(level) {
+			true
+		} else {
+			self.is_near(row, col)
+		}
+	}
+	pub fn cur_cell<'a>(&self, level: &'a Level) -> &'a DungeonCell {
+		&level.dungeon[self.rogue.row as usize][self.rogue.col as usize]
+	}
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
+	pub cur_room: RoomMark,
 	pub notes: NoteTables,
 	pub settings: Settings,
 	pub cleaned_up: Option<String>,
@@ -176,6 +236,7 @@ impl Player {
 	pub fn new(settings: Settings) -> Self {
 		const INIT_HP: isize = 12;
 		Player {
+			cur_room: RoomMark::None,
 			notes: NoteTables::new(),
 			settings,
 			cleaned_up: None,

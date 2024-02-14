@@ -1,13 +1,14 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use ncurses::{chtype, mvaddch, refresh, standend, standout};
+
 use crate::armors::ArmorKind;
 use crate::hit::mon_hit;
 use crate::inventory::get_obj_desc;
-use crate::level::constants::{DCOLS, DROWS};
 use crate::level::{add_exp, CellKind, hp_raise, Level, LEVEL_POINTS};
+use crate::level::constants::{DCOLS, DROWS};
 use crate::message::{check_message, message, print_stats};
-use crate::monster::{MASH, mon_can_go, mon_disappeared, mon_name, mon_sees, Monster, move_mon_to, mv_mons, mv_monster, rogue_can_see, rogue_is_around};
+use crate::monster::{MASH, mon_can_go, mon_disappeared, mon_name, Monster, move_mon_to, mv_mons, mv_monster};
 use crate::objects::{alloc_object, get_armor_class, gr_object, level_objects, obj, place_at};
 use crate::player::Player;
 use crate::prelude::*;
@@ -148,7 +149,9 @@ unsafe fn steal_item(monster: &mut Monster, player: &mut Player, level: &mut Lev
 
 unsafe fn disappear(monster: &mut Monster, player: &Player, level: &mut Level) {
 	level.dungeon[monster.spot.row as usize][monster.spot.col as usize].remove_kind(CellKind::Monster);
-	if rogue_can_see(monster.spot.row, monster.spot.col, player, level) {
+	let row = monster.spot.row;
+	let col = monster.spot.col;
+	if player.can_see(row, col, level) {
 		let dungeon_char = get_dungeon_char(monster.spot.row, monster.spot.col, player, level);
 		mvaddch(monster.spot.row as i32, monster.spot.col as i32, dungeon_char);
 	}
@@ -351,7 +354,9 @@ unsafe fn drain_life(player: &mut Player) {
 }
 
 pub unsafe fn m_confuse(monster: &mut Monster, player: &mut Player, level: &Level) -> bool {
-	if !rogue_can_see(monster.spot.row, monster.spot.col, player, level) {
+	let row = monster.spot.row;
+	let col = monster.spot.col;
+	if !player.can_see(row, col, level) {
 		return false;
 	}
 	if rand_percent(45) {
@@ -370,7 +375,7 @@ pub unsafe fn m_confuse(monster: &mut Monster, player: &mut Player, level: &Leve
 }
 
 pub unsafe fn flame_broil(monster: &mut Monster, player: &mut Player, level: &mut Level) -> bool {
-	if !mon_sees(monster, player.rogue.row, player.rogue.col, level) || coin_toss() {
+	if !monster.sees(player.rogue.row, player.rogue.col, level) || coin_toss() {
 		return false;
 	}
 	{
@@ -386,7 +391,9 @@ pub unsafe fn flame_broil(monster: &mut Monster, player: &mut Player, level: &mu
 			return false;
 		}
 	}
-	if player.blind.is_inactive() && !rogue_is_around(monster.spot.row, monster.spot.col, player) {
+	let row = monster.spot.row;
+	let col = monster.spot.col;
+	if player.blind.is_inactive() && !player.is_near(row, col) {
 		let mut row = monster.spot.row;
 		let mut col = monster.spot.col;
 		get_closer(&mut row, &mut col, player.rogue.row, player.rogue.col);

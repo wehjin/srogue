@@ -8,8 +8,8 @@ pub const R_TELE_PERCENT: usize = 8;
 pub const GOLD_PERCENT: usize = 46;
 
 impl Level {
-	pub fn room_wake_percent(&self, rn: i64) -> usize {
-		if Some(rn as usize) == self.party_room {
+	pub fn room_wake_percent(&self, rn: usize) -> usize {
+		if Some(rn) == self.party_room {
 			PARTY_WAKE_PERCENT
 		} else {
 			WAKE_PERCENT

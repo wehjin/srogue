@@ -8,7 +8,7 @@ use wand_kind::WandKind;
 use crate::hit::{FIGHT_MONSTER, get_dir_rc, rogue_hit};
 use crate::level::{CellKind, Level};
 use crate::message::{CANCEL, check_message, get_input_line, message};
-use crate::monster::{gmc, gr_monster, MASH, Monster, MonsterKind, rogue_can_see};
+use crate::monster::{gmc, gr_monster, MASH, Monster, MonsterKind};
 use crate::pack::pack_letter;
 use crate::r#move::{get_dir_or_cancel, reg_move};
 use crate::r#use::relight;
@@ -178,7 +178,7 @@ unsafe fn tele_away(monster: &mut Monster, player: &Player, level: &mut Level) {
 	level.dungeon[row as usize][col as usize].add_kind(CellKind::Monster);
 	monster.trail_char = mvinch(row as i32, col as i32);
 
-	if level.detect_monster || rogue_can_see(row, col, player, level) {
+	if level.detect_monster || player.can_see(row, col, level) {
 		mvaddch(row as i32, col as i32, gmc(monster, player, level));
 	}
 }

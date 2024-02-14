@@ -1,5 +1,6 @@
 use libc::c_ushort;
 use serde::{Deserialize, Serialize};
+
 use crate::level::constants::{DCOLS, DROWS};
 
 pub const NO_ROOM: i64 = -1;
@@ -30,6 +31,12 @@ pub struct DungeonSpot {
 }
 
 impl DungeonSpot {
+	pub fn from_usize(row: usize, col: usize) -> Self {
+		DungeonSpot { row: row as i64, col: col as i64 }
+	}
+	pub fn shares_axis(&self, other: &Self) -> bool {
+		self.row == other.row || self.col == other.col
+	}
 	fn new_closest_value(value: i64, target: i64) -> i64 {
 		if value > target {
 			value - 1

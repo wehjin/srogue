@@ -4,7 +4,7 @@ use std::fs;
 use serde::{Deserialize, Serialize};
 
 use crate::init::GameState;
-use crate::level::{cur_room, Level};
+use crate::level::Level;
 use crate::machdep::{get_current_time, RogueTime};
 use crate::message::hunger_str;
 use crate::monster::{MASH, MonsterMash};
@@ -27,7 +27,6 @@ pub struct SaveData {
 	pub level_objects: ObjectPack,
 	pub file_id: i64,
 	pub foods: i16,
-	pub cur_room: i64,
 	pub level: Level,
 	pub wizard: bool,
 	pub m_moves: i16,
@@ -43,7 +42,6 @@ impl SaveData {
 			level_objects: level_objects.clone(),
 			file_id,
 			foods,
-			cur_room,
 			level: game.level.clone(),
 			wizard,
 			m_moves,
@@ -55,7 +53,6 @@ impl SaveData {
 		MASH = self.level_monsters.clone();
 		level_objects = self.level_objects.clone();
 		foods = self.foods;
-		cur_room = self.cur_room;
 		wizard = self.wizard;
 		m_moves = self.m_moves;
 	}

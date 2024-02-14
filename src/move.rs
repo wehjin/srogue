@@ -1,26 +1,28 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use ncurses::{chtype, mvaddch, refresh};
+
 use MoveResult::MoveFailed;
+
 use crate::hit::{get_dir_rc, rogue_hit};
 use crate::hunger::{FAINT, HUNGRY, STARVE, WEAK};
 use crate::inventory::get_obj_desc;
+use crate::level::{CellKind, Level};
 use crate::level::constants::{DCOLS, DROWS};
-use crate::level::{CellKind, cur_room, Level};
 use crate::message::{CANCEL, check_message, hunger_str, message, print_stats, rgetchar, sound_bell};
 use crate::monster::{MASH, mv_mons, put_wanderer, wake_room};
 use crate::objects::level_objects;
 use crate::odds::R_TELE_PERCENT;
 use crate::pack::{pick_up, PickUpResult};
 use crate::play::interrupted;
-use crate::player::Player;
+use crate::player::{Player, RoomMark};
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
 use crate::r#use::{hallucinate_on_screen, tele, unblind, unconfuse, unhallucinate};
 use crate::random::{coin_toss, get_rand, rand_percent};
-use crate::room::{darken_room, get_dungeon_char, get_room_number, light_passage, light_up_room};
+use crate::room::{darken_room, get_dungeon_char, light_passage, light_up_room};
 use crate::score::killed_by;
 use crate::throw::Move;
 use crate::trap::{is_off_screen, search, trap_player};
@@ -73,21 +75,35 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, player: &mut Player, lev
 		reg_move(player, level);
 		return MoveFailed;
 	}
-	if level.dungeon[row as usize][col as usize].is_door() {
-		if cur_room == PASSAGE {
-			cur_room = get_room_number(row, col, level);
-			light_up_room(cur_room, player, level);
-			wake_room(cur_room, true, row, col, player, level);
-		} else {
-			light_passage(row, col, player, level);
+
+	let to_cell = level.cell(row, col);
+	if to_cell.is_door() {
+		match player.cur_room {
+			RoomMark::None => {}
+			RoomMark::Passage => {
+				// tunnel to door
+				player.cur_room = level.room(row, col);
+				let cur_rn = player.cur_room.rn().expect("current room should be the room at rol,col");
+				light_up_room(cur_rn, player, level);
+				wake_room(cur_rn, true, row, col, player, level);
+			}
+			RoomMark::Area(_) => {
+				// room to door
+				light_passage(row, col, player, level);
+			}
 		}
-	} else if level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_door() && level.dungeon[row as usize][col as usize].is_tunnel() {
+	} else if player.cur_cell(level).is_door() && to_cell.is_tunnel() {
+		// door to tunnel
 		light_passage(row, col, player, level);
-		wake_room(cur_room, false, player.rogue.row, player.rogue.col, player, level);
-		darken_room(cur_room, player, level);
-		cur_room = PASSAGE;
-	} else if level.dungeon[row as usize][col as usize].is_tunnel() {
+		let rn = player.cur_room.rn().expect("player room not an area moving from door to passage");
+		wake_room(rn, false, player.rogue.row, player.rogue.col, player, level);
+		darken_room(rn, player, level);
+		player.cur_room = RoomMark::Passage;
+	} else if to_cell.is_tunnel() {
+		// tunnel to tunnel.
 		light_passage(row, col, player, level);
+	} else {
+		// room to room, door to room
 	}
 	mvaddch(player.rogue.row as i32, player.rogue.col as i32, get_dungeon_char(player.rogue.row, player.rogue.col, player, level));
 	mvaddch(row as i32, col as i32, chtype::from(player.rogue.fchar));

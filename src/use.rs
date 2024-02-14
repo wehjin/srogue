@@ -1,18 +1,18 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use ncurses::{addch, chtype, mvaddch, mvinch};
-use crate::level::{add_exp, cur_room, Level, put_player};
+
+use crate::level::{add_exp, Level, put_player};
 use crate::machdep::md_sleep;
 use crate::message::{CANCEL, check_message, hunger_str, message, print_stats};
 use crate::monster::{aggravate, create_monster, gr_obj_char, MASH, mv_mons, show_monsters};
-use crate::objects::NoteStatus::Identified;
 use crate::objects::{level_objects, ObjectId};
+use crate::objects::NoteStatus::Identified;
 use crate::pack::{pack_letter, take_from_pack, unwear, unwield};
-use crate::player::Player;
+use crate::player::{Player, RoomMark};
 use crate::potions::colors::ALL_POTION_COLORS;
-use crate::potions::kind::{POTIONS};
+use crate::potions::kind::POTIONS;
 use crate::potions::quaff::quaff_potion;
-use crate::prelude::*;
 use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::{AllObjects, Foods, Potions, Scrolls};
@@ -20,7 +20,7 @@ use crate::prelude::stat_const::{STAT_ARMOR, STAT_HP, STAT_HUNGER, STAT_STRENGTH
 use crate::r#move::{reg_move, YOU_CAN_MOVE_AGAIN};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::ring::un_put_hand;
-use crate::room::{darken_room, draw_magic_map, get_dungeon_char, get_opt_room_number, light_passage, light_up_room};
+use crate::room::{darken_room, draw_magic_map, get_dungeon_char, light_passage, light_up_room};
 use crate::scrolls::ScrollKind;
 use crate::trap::is_off_screen;
 
@@ -283,11 +283,11 @@ unsafe fn hold_monster(player: &Player, level: &Level) {
 
 pub unsafe fn tele(player: &mut Player, level: &mut Level) {
 	mvaddch(player.rogue.row as i32, player.rogue.col as i32, get_dungeon_char(player.rogue.row, player.rogue.col, player, level));
-
-	if cur_room >= 0 {
+	if let RoomMark::Area(cur_room) = player.cur_room {
 		darken_room(cur_room, player, level);
 	}
-	put_player(get_opt_room_number(player.rogue.row, player.rogue.col, level), player, level);
+	let avoid_room = player.cur_room;
+	put_player(avoid_room, player, level);
 	level.being_held = false;
 	level.bear_trap = 0;
 }
@@ -345,10 +345,14 @@ pub unsafe fn unblind(player: &mut Player, level: &mut Level) {
 }
 
 pub unsafe fn relight(player: &Player, level: &mut Level) {
-	if cur_room == PASSAGE {
-		light_passage(player.rogue.row, player.rogue.col, player, level);
-	} else {
-		light_up_room(cur_room, player, level);
+	match player.cur_room {
+		RoomMark::None => {}
+		RoomMark::Passage => {
+			light_passage(player.rogue.row, player.rogue.col, player, level);
+		}
+		RoomMark::Area(cur_room) => {
+			light_up_room(cur_room, player, level);
+		}
 	}
 	mvaddch(player.rogue.row as i32, player.rogue.col as i32, chtype::from(player.rogue.fchar));
 }

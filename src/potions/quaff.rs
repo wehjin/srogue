@@ -1,11 +1,12 @@
 use ncurses::{chtype, mvaddch};
-use crate::level::{add_exp, cur_room, Level, LEVEL_POINTS};
+
+use crate::level::{add_exp, Level, LEVEL_POINTS};
 use crate::message::message;
 use crate::monster::{MASH, show_monsters};
 use crate::objects::{level_objects, show_objects};
-use crate::player::Player;
+use crate::player::{Player, RoomMark};
 use crate::potions::kind::PotionKind;
-use crate::r#use::{STRANGE_FEELING};
+use crate::r#use::STRANGE_FEELING;
 use crate::random::get_rand;
 
 pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: &mut Level) {
@@ -152,10 +153,12 @@ unsafe fn show_blind(player: &Player, level: &Level) {
 			mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.trail_char);
 		}
 	}
-	if cur_room >= 0 {
-		for i in (level.rooms[cur_room as usize].top_row as usize + 1)..level.rooms[cur_room as usize].bottom_row as usize {
-			for j in (level.rooms[cur_room as usize].left_col as usize + 1)..level.rooms[cur_room as usize].right_col as usize {
-				mvaddch(i as i32, j as i32, chtype::from(' '));
+	if let RoomMark::Area(cur_room) = player.cur_room {
+		const BLACK_FLOOR: char = ' ';
+		let floor_bounds = level.rooms[cur_room].to_floor_bounds();
+		for i in floor_bounds.rows() {
+			for j in floor_bounds.cols() {
+				mvaddch(i as i32, j as i32, chtype::from(BLACK_FLOOR));
 			}
 		}
 	}

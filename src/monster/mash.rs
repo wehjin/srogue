@@ -1,11 +1,12 @@
 use ncurses::chtype;
 use rand::{RngCore, thread_rng};
 use serde::{Deserialize, Serialize};
+
 use crate::hit::DamageStat;
-use crate::level::Level;
+use crate::level::{DungeonCell, Level};
 use crate::monster::{MonsterFlags, MonsterKind};
-use crate::prelude::{DungeonSpot};
-use crate::room::get_opt_room_number;
+use crate::player::RoomMark;
+use crate::prelude::DungeonSpot;
 
 pub static mut MASH: MonsterMash = MonsterMash::new();
 
@@ -134,6 +135,9 @@ impl Monster {
 			drop_percent: kind.drop_percent(),
 		}
 	}
+	pub fn cell_mut<'a>(&self, level: &'a mut Level) -> &'a mut DungeonCell {
+		&mut level.dungeon[self.spot.row as usize][self.spot.col as usize]
+	}
 	pub fn do_nap(&mut self) {
 		self.nap_length -= 1;
 		if self.nap_length <= 0 {
@@ -163,15 +167,19 @@ impl Monster {
 			self.m_flags.confuses = false;
 		}
 	}
-	pub fn in_same_room_as_spot(&self, row: i64, col: i64, level: &Level) -> Option<usize> {
-		if let Some(rn) = get_opt_room_number(row, col, level) {
-			if let Some(mon_rn) = get_opt_room_number(self.spot.row, self.spot.col, level) {
-				if rn == mon_rn {
-					return Some(rn);
-				}
-			}
+	pub fn cur_room(&self, level: &Level) -> RoomMark {
+		level.room(self.spot.row, self.spot.col)
+	}
+	pub fn sees(&self, row: i64, col: i64, level: &Level) -> bool {
+		let spot_room = level.room(row, col);
+		if spot_room == self.cur_room(level)
+			&& spot_room.is_area()
+			&& !spot_room.is_maze(level) {
+			return true;
 		}
-		None
+		let row_diff = row - self.spot.row;
+		let col_diff = col - self.spot.col;
+		row_diff >= -1 && row_diff <= 1 && col_diff >= -1 && col_diff <= 1
 	}
 	pub fn id(&self) -> u64 { self.id }
 	pub fn kill_exp(&self) -> isize { self.kind.kill_exp() }
@@ -182,10 +190,9 @@ impl Monster {
 	pub fn wanders_or_wakens(&self) -> bool { self.m_flags.wakens || self.m_flags.wanders }
 	pub fn is_invisible(&self) -> bool { self.m_flags.invisible }
 	pub fn name(&self) -> &'static str { self.kind.name() }
-	pub fn in_room(&self, rn: i64, level: &Level) -> bool {
-		let monster_rn = get_opt_room_number(self.spot.row, self.spot.col, level);
-		if let Some(monster_rn) = monster_rn {
-			monster_rn == (rn as usize)
+	pub fn in_room(&self, rn: usize, level: &Level) -> bool {
+		if let RoomMark::Area(mon_room) = self.cur_room(level) {
+			mon_room == rn
 		} else {
 			false
 		}

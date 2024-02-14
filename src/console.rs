@@ -1,5 +1,5 @@
 use crate::level::constants::{DCOLS, DROWS};
-use crate::machdep::{md_control_keybord};
+use crate::machdep::md_control_keybord;
 
 pub enum ConsoleError {
 	ScreenTooSmall { min_rows: usize, min_cols: usize }
@@ -26,12 +26,10 @@ impl Drop for Console {
 	fn drop(&mut self) {
 		assert_eq!(self.stopped, false);
 		self.stopped = true;
-		// Disable for now since it erases errors messages. We should discriminate
-		// between normal and error exits.
-		// {
-		// 	ncurses::wmove(ncurses::stdscr(), (DROWS - 1) as i32, 0);
-		// 	ncurses::refresh();
-		// }
+		{
+			ncurses::wmove(ncurses::stdscr(), (DROWS - 1) as i32, 0);
+			ncurses::refresh();
+		}
 		ncurses::endwin();
 		md_control_keybord(1);
 	}

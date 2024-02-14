@@ -6,7 +6,7 @@ use rand::thread_rng;
 use crate::hit::{get_dir_rc, get_hit_chance, get_weapon_damage, HIT_MESSAGE, mon_damage};
 use crate::level::{CellKind, Level};
 use crate::message::{CANCEL, check_message, message, print_stats};
-use crate::monster::{MASH, Monster, mv_aquatars, rogue_can_see};
+use crate::monster::{MASH, Monster, mv_aquatars};
 use crate::objects::{obj, ObjectId, place_at};
 use crate::pack::{CURSE_MESSAGE, pack_letter, unwear, unwield};
 use crate::player::Player;
@@ -70,7 +70,9 @@ pub unsafe fn throw(player: &mut Player, level: &mut Level) {
 			mvaddch(rogue_spot.row as i32, rogue_spot.col as i32, rogue_char);
 			refresh();
 
-			if rogue_can_see(spot.row, spot.col, player, level)
+			let row = spot.row;
+			let col = spot.col;
+			if player.can_see(row, col, level)
 				&& !(spot == rogue_spot) {
 				mvaddch(spot.row as i32, spot.col as i32, get_dungeon_char(spot.row, spot.col, player, level));
 			}
@@ -153,10 +155,10 @@ pub unsafe fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i
 			return None;
 		}
 
-		if i != 0 && rogue_can_see(orow, ocol, player, level) {
+		if i != 0 && player.can_see(orow, ocol, level) {
 			mvaddch(orow as i32, ocol as i32, get_dungeon_char(orow, ocol, player, level));
 		}
-		if rogue_can_see(*row, *col, player, level) {
+		if player.can_see(*row, *col, level) {
 			if !cell.is_monster() {
 				mvaddch(*row as i32, *col as i32, chtype::from(obj_char));
 			}
@@ -203,7 +205,7 @@ unsafe fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, player: &Player, lev
 		new_obj.quantity = 1;
 		new_obj.ichar = 'L';
 		place_at(new_obj, row, col, level);
-		if rogue_can_see(row, col, player, level) && !player.is_at(row, col) {
+		if player.can_see(row, col, level) && !player.is_at(row, col) {
 			let was_monster = level.dungeon[row as usize][col as usize].is_monster();
 			level.dungeon[row as usize][col as usize].remove_kind(CellKind::Monster);
 			let dungeon_char = get_dungeon_char(row, col, player, level);
