@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::level::{CellMaterial, DungeonCell, Level, same_col, same_row};
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM};
 use crate::monster::{gmc_row_col, Monster, MonsterMash};
-use crate::objects::{gr_object, LEVEL_OBJECTS, place_at};
+use crate::objects::{gr_object, place_at};
 use crate::player::{Player, RoomMark};
 use crate::prelude::*;
 use crate::prelude::object_what::ObjectWhat;
@@ -268,14 +268,13 @@ pub unsafe fn darken_room(rn: usize, mash: &mut MonsterMash, player: &Player, le
 	}
 }
 
-pub unsafe fn get_dungeon_char(row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &Level) -> chtype {
+pub fn get_dungeon_char(row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &Level) -> chtype {
 	let cell = level.dungeon[row as usize][col as usize];
 	if cell.has_monster() {
 		return gmc_row_col(row, col, mash, player, level);
 	}
 	if cell.has_object() {
-		let obj = LEVEL_OBJECTS.find_object_at(row, col).expect("obj at row,col in level object");
-		return get_mask_char(obj.what_is) as chtype;
+		return get_mask_char(cell.object_what()) as chtype;
 	}
 	if cell.is_stairs() {
 		return if cell.is_hidden() {

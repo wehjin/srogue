@@ -110,6 +110,16 @@ pub mod object_what {
 		None,
 	}
 
+	impl ObjectWhat {
+		pub fn is_object(&self) -> bool {
+			self != &ObjectWhat::None
+		}
+	}
+
+	impl Default for ObjectWhat {
+		fn default() -> Self { Self::None }
+	}
+
 	#[derive(Clone, Eq, PartialEq)]
 	pub enum PackFilter {
 		AllObjects,

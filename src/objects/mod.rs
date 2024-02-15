@@ -262,7 +262,7 @@ pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: isize, le
 	if is_maze {
 		obj.quantity += obj.quantity / 2;
 	}
-	level.dungeon[row as usize][col as usize].set_object(true);
+	level.dungeon[row as usize][col as usize].set_object(Gold);
 	LEVEL_OBJECTS.add(obj);
 }
 
@@ -270,7 +270,7 @@ pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: isize, le
 pub unsafe fn place_at(mut obj: Object, row: i64, col: i64, level: &mut Level) {
 	obj.row = row;
 	obj.col = col;
-	level.dungeon[row as usize][col as usize].set_object(true);
+	level.dungeon[row as usize][col as usize].set_object(obj.what_is);
 	LEVEL_OBJECTS.add(obj);
 }
 

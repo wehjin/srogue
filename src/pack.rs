@@ -36,7 +36,7 @@ pub unsafe fn pick_up(row: i64, col: i64, player: &mut Player, level: &mut Level
 	let obj_id = LEVEL_OBJECTS.find_id_at(row, col).expect("obj_id in level-objects at pick-up spot");
 	if LEVEL_OBJECTS.check_object(obj_id, Object::is_used_scare_monster_scroll) {
 		message("the scroll turns to dust as you pick it up", 0);
-		level.dungeon[row as usize][col as usize].set_object(false);
+		level.dungeon[row as usize][col as usize].clear_object();
 		LEVEL_OBJECTS.remove(obj_id);
 		if player.notes.scrolls[ScareMonster.to_index()].status == Unidentified {
 			player.notes.scrolls[ScareMonster.to_index()].status = Identified
@@ -44,7 +44,7 @@ pub unsafe fn pick_up(row: i64, col: i64, player: &mut Player, level: &mut Level
 		PickUpResult::TurnedToDust
 	} else if let Some(quantity) = LEVEL_OBJECTS.try_map_object(obj_id, Object::gold_quantity) {
 		player.rogue.gold += quantity;
-		level.dungeon[row as usize][col as usize].set_object(false);
+		level.dungeon[row as usize][col as usize].clear_object();
 		let removed = LEVEL_OBJECTS.remove(obj_id).expect("remove level object");
 		print_stats(STAT_GOLD, player);
 		PickUpResult::AddedToGold(removed)
@@ -53,7 +53,7 @@ pub unsafe fn pick_up(row: i64, col: i64, player: &mut Player, level: &mut Level
 		message("pack too full", 1);
 		PickUpResult::PackTooFull
 	} else {
-		level.dungeon[row as usize][col as usize].set_object(false);
+		level.dungeon[row as usize][col as usize].clear_object();
 		let removed_obj = take_from_pack(obj_id, &mut LEVEL_OBJECTS).expect("removed object");
 		let added_id = player.combine_or_add_item_to_pack(removed_obj);
 		let added_kind = {

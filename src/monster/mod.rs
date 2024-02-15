@@ -147,8 +147,7 @@ pub unsafe fn party_monsters(rn: usize, n: usize, level_depth: isize, mash: &mut
 }
 
 pub fn gmc_row_col(row: i64, col: i64, mash: &MonsterMash, player: &Player, level: &Level) -> chtype {
-	let monster = mash.monster_at_spot(row, col);
-	if let Some(monster) = monster {
+	if let Some(monster) = mash.monster_at_spot(row, col) {
 		gmc(monster, player, level)
 	} else {
 		ncurses::chtype::from('&')
