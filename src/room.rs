@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::level::{CellKind, Level, same_col, same_row};
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM};
-use crate::monster::{gmc_row_col, MASH, Monster};
+use crate::monster::{gmc_row_col, Monster, MonsterMash};
 use crate::objects::{gr_object, level_objects, place_at};
 use crate::player::{Player, RoomMark};
 use crate::prelude::*;
@@ -191,7 +191,7 @@ impl Room {
 	}
 }
 
-pub unsafe fn light_up_room(rn: usize, player: &Player, level: &mut Level) {
+pub unsafe fn light_up_room(rn: usize, mash: &mut MonsterMash, player: &Player, level: &mut Level) {
 	if player.blind.is_active() {
 		return;
 	}
@@ -199,20 +199,28 @@ pub unsafe fn light_up_room(rn: usize, player: &Player, level: &mut Level) {
 	for i in wall_bounds.rows() {
 		for j in wall_bounds.cols() {
 			if level.cell(i, j).is_monster() {
-				if let Some(monster) = MASH.monster_at_spot_mut(i, j) {
-					monster.cell_mut(level).remove_kind(CellKind::Monster);
-					monster.trail_char = get_dungeon_char(monster.spot.row, monster.spot.col, player, level);
-					monster.cell_mut(level).add_kind(CellKind::Monster);
+				if let Some(mon_id) = mash.monster_id_at_spot(i, j) {
+					let monster_spot = {
+						let monster = mash.monster_mut(mon_id);
+						monster.cell_mut(level).remove_kind(CellKind::Monster);
+						monster.spot
+					};
+					let dungeon_char = get_dungeon_char(monster_spot.row, monster_spot.col, mash, player, level);
+					{
+						let monster = mash.monster_mut(mon_id);
+						monster.trail_char = dungeon_char;
+						monster.cell_mut(level).add_kind(CellKind::Monster);
+					}
 				}
 			}
-			mvaddch(i as i32, j as i32, get_dungeon_char(i, j, player, level));
+			mvaddch(i as i32, j as i32, get_dungeon_char(i, j, mash, player, level));
 		}
 	}
 	mvaddch(player.rogue.row as i32, player.rogue.col as i32, player.rogue.fchar as chtype);
 }
 
 
-pub unsafe fn light_passage(row: i64, col: i64, player: &Player, level: &Level) {
+pub unsafe fn light_passage(row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &Level) {
 	if player.blind.is_active() {
 		return;
 	}
@@ -223,13 +231,13 @@ pub unsafe fn light_passage(row: i64, col: i64, player: &Player, level: &Level) 
 	for i in i_start..=i_end {
 		for j in j_start..=j_end {
 			if can_move(row, col, row + i, col + j, level) {
-				mvaddch((row + i) as i32, (col + j) as i32, get_dungeon_char(row + i, col + j, player, level));
+				mvaddch((row + i) as i32, (col + j) as i32, get_dungeon_char(row + i, col + j, mash, player, level));
 			}
 		}
 	}
 }
 
-pub unsafe fn darken_room(rn: usize, player: &Player, level: &Level) {
+pub unsafe fn darken_room(rn: usize, mash: &mut MonsterMash, player: &Player, level: &Level) {
 	let floor_bounds = level.rooms[rn].to_floor_bounds();
 	for i in floor_bounds.rows_usize() {
 		for j in floor_bounds.cols_usize() {
@@ -243,7 +251,7 @@ pub unsafe fn darken_room(rn: usize, player: &Player, level: &Level) {
 					cell_is_detected_monster || cell.is_any_kind(&OBJECT_OR_STAIRS)
 				};
 				if !cell_remains_lit {
-					if !imitating(i as i64, j as i64, level) {
+					if !imitating(i as i64, j as i64, mash, level) {
 						mvaddch(i as i32, j as i32, chtype::from(' '));
 					}
 					if cell.is_trap() && !level.dungeon[i][j].is_hidden() {
@@ -255,10 +263,10 @@ pub unsafe fn darken_room(rn: usize, player: &Player, level: &Level) {
 	}
 }
 
-pub unsafe fn get_dungeon_char(row: i64, col: i64, player: &Player, level: &Level) -> chtype {
+pub unsafe fn get_dungeon_char(row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &Level) -> chtype {
 	let mask = level.dungeon[row as usize][col as usize];
 	if mask.is_monster() {
-		return gmc_row_col(row, col, player, level);
+		return gmc_row_col(row, col, mash, player, level);
 	}
 	if mask.is_object() {
 		let obj = level_objects.find_object_at(row, col).expect("obj at row,col in level object");
@@ -350,7 +358,7 @@ pub fn gr_room(level: &Level) -> usize {
 	}
 }
 
-pub unsafe fn party_objects(rn: usize, level_depth: usize, level: &mut Level) -> usize {
+pub unsafe fn party_objects(rn: usize, level_depth: isize, level: &mut Level) -> usize {
 	let N = (level.rooms[rn].bottom_row - level.rooms[rn].top_row - 1) * (level.rooms[rn].right_col - level.rooms[rn].left_col - 1);
 	let mut n = get_rand(5, 10);
 	if n > N {
@@ -449,7 +457,7 @@ pub unsafe fn is_all_connected(rooms: &[Room; MAX_ROOM]) -> bool {
 	RoomVisitor::new(rooms).visit_rooms().to_is_all_connected()
 }
 
-pub unsafe fn draw_magic_map(level: &mut Level) {
+pub unsafe fn draw_magic_map(mash: &mut MonsterMash, level: &mut Level) {
 	let mask = [
 		CellKind::HorizontalWall, CellKind::VerticalWall, CellKind::Door,
 		CellKind::Tunnel, CellKind::Trap, CellKind::Stairs,
@@ -482,7 +490,7 @@ pub unsafe fn draw_magic_map(level: &mut Level) {
 						addch(chtype::from(ch));
 					}
 					if s.is_monster() {
-						if let Some(monster) = MASH.monster_at_spot_mut(i as i64, j as i64) {
+						if let Some(monster) = mash.monster_at_spot_mut(i as i64, j as i64) {
 							monster.trail_char = chtype::from(ch);
 						}
 					}

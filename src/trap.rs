@@ -2,11 +2,14 @@
 
 use ncurses::{chtype, mvaddch};
 use serde::{Deserialize, Serialize};
+
 use TrapKind::NoTrap;
+
 use crate::hit::{DamageEffect, DamageStat, get_damage, get_dir_rc};
-use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
 use crate::level::{CellKind, Level};
+use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
 use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
+use crate::monster::MonsterMash;
 use crate::play::interrupted;
 use crate::player::Player;
 use crate::prelude::*;
@@ -23,6 +26,7 @@ use crate::trap::trap_kind::TrapKind::{BearTrap, DartTrap, RustTrap, SleepingGas
 
 pub mod trap_kind {
 	use serde::{Deserialize, Serialize};
+
 	use crate::random::get_rand;
 	use crate::trap::trap_kind::TrapKind::{BearTrap, DartTrap, NoTrap, RustTrap, SleepingGasTrap, TeleTrap, TrapDoor};
 
@@ -103,7 +107,7 @@ pub unsafe fn trap_at(row: usize, col: usize, level: &Level) -> TrapKind {
 	return NoTrap;
 }
 
-pub unsafe fn trap_player(row: usize, col: usize, player: &mut Player, level: &mut Level) {
+pub unsafe fn trap_player(row: usize, col: usize, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	let t = trap_at(row, col, level);
 	if t == NoTrap {
 		return;
@@ -125,7 +129,7 @@ pub unsafe fn trap_player(row: usize, col: usize, player: &mut Player, level: &m
 		}
 		TeleTrap => {
 			mvaddch(player.rogue.row as i32, player.rogue.col as i32, chtype::from('^'));
-			tele(player, level);
+			tele(mash, player, level);
 		}
 		DartTrap => {
 			message(trap_message(t), 1);
@@ -144,7 +148,7 @@ pub unsafe fn trap_player(row: usize, col: usize, player: &mut Player, level: &m
 		}
 		SleepingGasTrap => {
 			message(trap_message(t), 1);
-			take_a_nap(player, level);
+			take_a_nap(mash, player, level);
 		}
 		RustTrap => {
 			message(trap_message(t), 1);
@@ -245,7 +249,7 @@ pub unsafe fn show_traps(level: &Level) {
 	}
 }
 
-pub unsafe fn search(n: usize, is_auto: bool, player: &mut Player, level: &mut Level) {
+pub unsafe fn search(n: usize, is_auto: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	static mut reg_search: bool = false;
 
 	let mut found = 0;
@@ -275,7 +279,7 @@ pub unsafe fn search(n: usize, is_auto: bool, player: &mut Player, level: &mut L
 					if rand_percent(17 + player.buffed_exp() as usize) {
 						level.dungeon[row as usize][col as usize].remove_kind(CellKind::Hidden);
 						if player.blind.is_inactive() && !player.is_at(row, col) {
-							mvaddch(row as i32, col as i32, get_dungeon_char(row, col, player, level));
+							mvaddch(row as i32, col as i32, get_dungeon_char(row, col, mash, player, level));
 						}
 						shown += 1;
 						if level.dungeon[row as usize][col as usize].is_trap() {
@@ -291,7 +295,7 @@ pub unsafe fn search(n: usize, is_auto: bool, player: &mut Player, level: &mut L
 		if !is_auto {
 			reg_search = !reg_search;
 			if reg_search {
-				reg_move(player, level);
+				reg_move(mash, player, level);
 			}
 		}
 	}

@@ -1,17 +1,19 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use constants::{ADD_STRENGTH, ADORNMENT, DEXTERITY, R_TELEPORT, RINGS};
+use ring_kind::RingKind;
+
+use crate::inventory::get_obj_desc;
+use crate::level::Level;
+use crate::message::{CANCEL, check_message, message, print_stats, rgetchar};
+use crate::monster::MonsterMash;
+use crate::objects::{obj, object, ObjectId};
+use crate::pack::{CURSE_MESSAGE, pack_letter};
 use crate::player::Player;
 use crate::player::rings::HandUsage;
 use crate::prelude::item_usage::{ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat::Ring;
 use crate::prelude::object_what::PackFilter::Rings;
-use ring_kind::RingKind;
-use crate::inventory::get_obj_desc;
-use crate::level::Level;
-use crate::message::{CANCEL, check_message, message, print_stats, rgetchar};
-use crate::objects::{obj, object, ObjectId};
-use crate::pack::{CURSE_MESSAGE, pack_letter};
 use crate::prelude::stat_const::STAT_STRENGTH;
 use crate::r#move::reg_move;
 use crate::r#use::relight;
@@ -22,7 +24,7 @@ pub(crate) mod constants;
 pub(crate) mod ring_kind;
 pub(crate) mod ring_gem;
 
-pub unsafe fn put_on_ring(player: &mut Player, level: &mut Level) {
+pub unsafe fn put_on_ring(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	if player.hand_usage() == HandUsage::Both {
 		message("wearing two rings already", 0);
 		return;
@@ -64,13 +66,13 @@ pub unsafe fn put_on_ring(player: &mut Player, level: &mut Level) {
 				return;
 			}
 			player.put_ring(ring_id, hand);
-			ring_stats(true, player, level);
+			ring_stats(true, mash, player, level);
 			check_message();
 			{
 				let msg = player.get_obj_desc(ring_id);
 				message(&msg, 0);
 			}
-			reg_move(player, level);
+			reg_move(mash, player, level);
 		}
 	}
 }
@@ -96,7 +98,7 @@ unsafe fn ask_left_or_right() -> char {
 	ch
 }
 
-pub unsafe fn remove_ring(player: &mut Player, level: &mut Level) {
+pub unsafe fn remove_ring(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	let hand = match player.hand_usage() {
 		HandUsage::None => {
 			inv_rings(player);
@@ -121,19 +123,19 @@ pub unsafe fn remove_ring(player: &mut Player, level: &mut Level) {
 		message(CURSE_MESSAGE, 0);
 		return;
 	}
-	let removed_id = un_put_hand(hand, player, level).expect("some removed_id");
+	let removed_id = un_put_hand(hand, mash, player, level).expect("some removed_id");
 	{
 		let removed_obj = player.object(removed_id).expect("some removed_obj");
 		let removed_desc = get_obj_desc(removed_obj, player.settings.fruit.to_string(), &player.notes);
 		let msg = format!("removed {}", removed_desc);
 		message(&msg, 0);
 	}
-	reg_move(player, level);
+	reg_move(mash, player, level);
 }
 
-pub unsafe fn un_put_hand(hand: PlayerHand, player: &mut Player, level: &mut Level) -> Option<ObjectId> {
+pub unsafe fn un_put_hand(hand: PlayerHand, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) -> Option<ObjectId> {
 	let un_put_id = player.un_put_ring(hand);
-	ring_stats(true, player, level);
+	ring_stats(true, mash, player, level);
 	un_put_id
 }
 
@@ -211,7 +213,7 @@ impl PlayerHand {
 pub(crate) mod effects;
 
 
-pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
+pub unsafe fn ring_stats(print: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	player.ring_effects.clear_stealthy();
 	player.ring_effects.clear_calorie_burn();
 	player.ring_effects.set_teleport(false);
@@ -272,6 +274,6 @@ pub unsafe fn ring_stats(print: bool, player: &mut Player, level: &mut Level) {
 	}
 	if print {
 		print_stats(STAT_STRENGTH, player);
-		relight(player, level);
+		relight(mash, player, level);
 	}
 }

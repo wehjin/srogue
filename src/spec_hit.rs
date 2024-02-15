@@ -8,7 +8,7 @@ use crate::inventory::get_obj_desc;
 use crate::level::{add_exp, CellKind, hp_raise, Level, LEVEL_POINTS};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::message::{check_message, message, print_stats};
-use crate::monster::{MASH, mon_can_go, mon_disappeared, mon_name, Monster, move_mon_to, mv_mons, mv_monster};
+use crate::monster::{mon_can_go, mon_disappeared, mon_name, Monster, MonsterMash, move_mon_to, mv_mons, mv_monster};
 use crate::objects::{alloc_object, get_armor_class, gr_object, level_objects, obj, place_at};
 use crate::player::Player;
 use crate::prelude::*;
@@ -23,32 +23,32 @@ use crate::score::killed_by;
 
 pub const FLAME_NAME: &'static str = "flame";
 
-pub unsafe fn special_hit(monster: &mut Monster, player: &mut Player, level: &mut Level) {
-	if monster.m_flags.confused && rand_percent(66) {
+pub unsafe fn special_hit(mon_id: u64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+	if mash.monster_flags(mon_id).confused && rand_percent(66) {
 		return;
 	}
-	if monster.m_flags.rusts {
-		rust(Some(monster), player);
+	if mash.monster_flags(mon_id).rusts {
+		rust(Some(mash.monster_mut(mon_id)), player);
 	}
-	if monster.m_flags.holds && player.levitate.is_inactive() {
+	if mash.monster_flags(mon_id).holds && player.levitate.is_inactive() {
 		level.being_held = true;
 	}
-	if monster.m_flags.freezes {
-		freeze(monster, player, level);
+	if mash.monster_flags(mon_id).freezes {
+		freeze(mon_id, mash, player, level);
 	}
-	if monster.m_flags.stings {
-		sting(monster, player, level);
+	if mash.monster_flags(mon_id).stings {
+		sting(mash.monster(mon_id), player, level);
 	}
-	if monster.m_flags.drains_life {
+	if mash.monster_flags(mon_id).drains_life {
 		drain_life(player);
 	}
-	if monster.m_flags.drops_level {
+	if mash.monster_flags(mon_id).drops_level {
 		drop_level(player);
 	}
-	if monster.m_flags.steals_gold {
-		steal_gold(monster, player, level);
-	} else if monster.m_flags.steals_item {
-		steal_item(monster, player, level);
+	if mash.monster_flags(mon_id).steals_gold {
+		steal_gold(mon_id, mash, player, level);
+	} else if mash.monster_flags(mon_id).steals_item {
+		steal_item(mon_id, mash, player, level);
 	}
 }
 
@@ -76,7 +76,7 @@ pub unsafe fn rust(monster: Option<&mut Monster>, player: &mut Player) {
 	}
 }
 
-unsafe fn freeze(monster: &mut Monster, player: &mut Player, level: &mut Level) {
+unsafe fn freeze(mon_id: u64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	if rand_percent(12) {
 		return;
 	}
@@ -86,47 +86,48 @@ unsafe fn freeze(monster: &mut Monster, player: &mut Player, level: &mut Level) 
 	freeze_percent -= get_armor_class(player.armor()) * 5;
 	freeze_percent -= player.rogue.hp_max / 3;
 	if freeze_percent > 10 {
-		monster.m_flags.freezing_rogue = true;
+		mash.monster_flags_mut(mon_id).freezing_rogue = true;
 		message("you are frozen", 1);
 
 		let n = get_rand(4, 8);
 		for _ in 0..n {
-			mv_mons(player, level);
+			mv_mons(mash, player, level);
 		}
 		if rand_percent(freeze_percent as usize) {
 			for _ in 0..50 {
-				mv_mons(player, level);
+				mv_mons(mash, player, level);
 			}
 			killed_by(Ending::Hypothermia, player);
 		}
 		message(YOU_CAN_MOVE_AGAIN, 1);
-		monster.m_flags.freezing_rogue = false;
+		mash.monster_flags_mut(mon_id).freezing_rogue = false;
 	}
 }
 
-unsafe fn steal_gold(monster: &mut Monster, player: &mut Player, level: &mut Level) {
+unsafe fn steal_gold(mon_id: u64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	if player.rogue.gold <= 0 || rand_percent(10) {
 		return;
 	}
 
-	let amount = get_rand(player.cur_depth * 10, player.cur_depth * 30).min(player.rogue.gold);
+	let cur_depth = player.cur_depth as usize;
+	let amount = get_rand(cur_depth * 10, cur_depth * 30).min(player.rogue.gold);
 	player.rogue.gold -= amount;
 	message("your purse feels lighter", 0);
 	print_stats(STAT_GOLD, player);
-	disappear(monster, player, level);
+	disappear(mon_id, mash, player, level);
 }
 
-unsafe fn steal_item(monster: &mut Monster, player: &mut Player, level: &mut Level) {
+unsafe fn steal_item(mon_id: u64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	if rand_percent(15) {
 		return;
 	}
 	if player.pack().len() == 0 {
-		disappear(monster, player, level);
+		disappear(mon_id, mash, player, level);
 		return;
 	}
 	match player.random_unused_object_id() {
 		None => {
-			disappear(monster, player, level);
+			disappear(mon_id, mash, player, level);
 			return;
 		}
 		Some(obj_id) => {
@@ -141,65 +142,69 @@ unsafe fn steal_item(monster: &mut Monster, player: &mut Player, level: &mut Lev
 				format!("she stole {}", obj_desc)
 			};
 			message(&msg, 0);
-			vanish(obj_id, false, player, level);
-			disappear(monster, player, level);
+			vanish(obj_id, false, mash, player, level);
+			disappear(mon_id, mash, player, level);
 		}
 	}
 }
 
-unsafe fn disappear(monster: &mut Monster, player: &Player, level: &mut Level) {
-	level.dungeon[monster.spot.row as usize][monster.spot.col as usize].remove_kind(CellKind::Monster);
-	let row = monster.spot.row;
-	let col = monster.spot.col;
+unsafe fn disappear(mon_id: u64, mash: &mut MonsterMash, player: &Player, level: &mut Level) {
+	let monster_spot = {
+		let monster = mash.monster(mon_id);
+		level.dungeon[monster.spot.row as usize][monster.spot.col as usize].remove_kind(CellKind::Monster);
+		monster.spot
+	};
+	let DungeonSpot { row, col } = monster_spot;
 	if player.can_see(row, col, level) {
-		let dungeon_char = get_dungeon_char(monster.spot.row, monster.spot.col, player, level);
-		mvaddch(monster.spot.row as i32, monster.spot.col as i32, dungeon_char);
+		let dungeon_char = get_dungeon_char(row, col, mash, player, level);
+		mvaddch(row as i32, col as i32, dungeon_char);
 	}
-	MASH.remove_monster(monster.id());
+	mash.remove_monster(mon_id);
 	mon_disappeared = true;
 }
 
 
-pub unsafe fn cough_up(monster: &mut Monster, player: &Player, level: &mut Level) {
+pub unsafe fn cough_up(mon_id: u64, mash: &mut MonsterMash, player: &Player, level: &mut Level) {
 	if player.cur_depth < player.max_depth {
 		return;
 	}
-	let obj = if monster.m_flags.steals_gold {
+	let obj = if mash.monster_flags(mon_id).steals_gold {
 		let mut obj = alloc_object();
 		obj.what_is = Gold;
 		obj.quantity = get_rand((player.cur_depth * 15) as i16, (player.cur_depth * 30) as i16);
 		obj
 	} else {
-		if !rand_percent(monster.drop_percent) {
+		if !rand_percent(mash.monster(mon_id).drop_percent) {
 			return;
 		}
 		gr_object(player.cur_depth)
 	};
+	let monster = mash.monster(mon_id);
 	let row = monster.spot.row;
 	let col = monster.spot.col;
 	for n in 0..=5 {
 		for i in -n..=n {
 			let cough_col = col + i;
-			if try_to_cough(row + n, cough_col, &obj, player, level) {
+			if try_to_cough(row + n, cough_col, &obj, mash, player, level) {
 				return;
 			}
-			if try_to_cough(row - n, cough_col, &obj, player, level) {
+			if try_to_cough(row - n, cough_col, &obj, mash, player, level) {
 				return;
 			}
 		}
 		for i in -n..=n {
 			let cough_row = row + i;
-			if try_to_cough(cough_row, col - n, &obj, player, level) {
+			if try_to_cough(cough_row, col - n, &obj, mash, player, level) {
 				return;
 			}
-			if try_to_cough(cough_row, col + n, &obj, player, level) {
+			if try_to_cough(cough_row, col + n, &obj, mash, player, level) {
 				return;
 			}
 		}
 	}
 }
 
-unsafe fn try_to_cough(row: i64, col: i64, obj: &obj, player: &Player, level: &mut Level) -> bool {
+unsafe fn try_to_cough(row: i64, col: i64, obj: &obj, mash: &mut MonsterMash, player: &Player, level: &mut Level) -> bool {
 	if row < MIN_ROW || row > (DROWS - 2) as i64 || col < 0 || col > (DCOLS - 1) as i64 {
 		return false;
 	}
@@ -209,15 +214,18 @@ unsafe fn try_to_cough(row: i64, col: i64, obj: &obj, player: &Player, level: &m
 		place_at(obj.clone(), row, col, level);
 		if (row != player.rogue.row || col != player.rogue.col)
 			&& !dungeon_cell.is_monster() {
-			mvaddch(row as i32, col as i32, get_dungeon_char(row, col, player, level));
+			mvaddch(row as i32, col as i32, get_dungeon_char(row, col, mash, player, level));
 		}
 		return true;
 	}
 	return false;
 }
 
-pub unsafe fn seek_gold(monster: &mut Monster, player: &mut Player, level: &mut Level) -> bool {
-	let rn = get_room_number(monster.spot.row, monster.spot.col, level);
+pub unsafe fn seek_gold(mon_id: u64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) -> bool {
+	let rn = {
+		let monster = mash.monster(mon_id);
+		get_room_number(monster.spot.row, monster.spot.col, level)
+	};
 	if rn < 0 {
 		return false;
 	}
@@ -226,21 +234,22 @@ pub unsafe fn seek_gold(monster: &mut Monster, player: &mut Player, level: &mut 
 	for i in (level.rooms[rn].top_row + 1)..level.rooms[rn].bottom_row {
 		for j in (level.rooms[rn].left_col + 1)..level.rooms[rn].right_col {
 			if gold_at(i, j, level) && !level.dungeon[i as usize][j as usize].is_monster() {
-				monster.m_flags.can_flit = true;
-				let can_go_if_while_can_flit = mon_can_go(monster, i, j, player, level);
-				monster.m_flags.can_flit = false;
+				mash.monster_flags_mut(mon_id).can_flit = true;
+				let can_go_if_while_can_flit = mon_can_go(mash.monster(mon_id), i, j, player, level);
+				mash.monster_flags_mut(mon_id).can_flit = false;
 				if can_go_if_while_can_flit {
+					let monster = mash.monster_mut(mon_id);
 					move_mon_to(monster, i, j, player, level);
 					monster.m_flags.asleep = true;
 					monster.m_flags.wakens = false;
 					monster.m_flags.seeks_gold = false;
 					return true;
 				}
-				monster.m_flags.seeks_gold = false;
-				monster.m_flags.can_flit = true;
-				mv_monster(monster, i, j, player, level);
-				monster.m_flags.can_flit = false;
-				monster.m_flags.seeks_gold = true;
+				mash.monster_flags_mut(mon_id).seeks_gold = false;
+				mash.monster_flags_mut(mon_id).can_flit = true;
+				mv_monster(mon_id, i, j, mash, player, level);
+				mash.monster_flags_mut(mon_id).can_flit = false;
+				mash.monster_flags_mut(mon_id).seeks_gold = true;
 				return true;
 			}
 		}
@@ -263,23 +272,28 @@ pub fn clear_gold_seeker(monster: &mut Monster) {
 	monster.m_flags.seeks_gold = false;
 }
 
-pub unsafe fn check_imitator(monster: &mut Monster, player: &Player, level: &Level) -> bool {
-	if monster.m_flags.imitates {
-		monster.wake_up();
+pub unsafe fn check_imitator(mon_id: u64, mash: &mut MonsterMash, player: &Player, level: &Level) -> bool {
+	if mash.monster_flags_mut(mon_id).imitates {
+		mash.monster_mut(mon_id).wake_up();
 		if player.blind.is_inactive() {
-			mvaddch(monster.spot.row as i32, monster.spot.col as i32, get_dungeon_char(monster.spot.row, monster.spot.col, player, level));
-			check_message();
-			let msg = format!("wait, that's a {}!", mon_name(monster, player, level));
-			message(&msg, 1);
+			let monster = mash.monster(mon_id);
+			let dungeon_char = get_dungeon_char(monster.spot.row, monster.spot.col, mash, player, level);
+			{
+				let monster = mash.monster(mon_id);
+				mvaddch(monster.spot.row as i32, monster.spot.col as i32, dungeon_char);
+				check_message();
+				let msg = format!("wait, that's a {}!", mon_name(monster, player, level));
+				message(&msg, 1);
+			}
 		}
 		return true;
 	}
 	return false;
 }
 
-pub unsafe fn imitating(row: i64, col: i64, level: &Level) -> bool {
+pub unsafe fn imitating(row: i64, col: i64, mash: &mut MonsterMash, level: &Level) -> bool {
 	if level.dungeon[row as usize][col as usize].is_monster() {
-		if let Some(monster) = MASH.monster_at_spot(row, col) {
+		if let Some(monster) = mash.monster_at_spot(row, col) {
 			if monster.m_flags.imitates {
 				return true;
 			}
@@ -374,11 +388,12 @@ pub unsafe fn m_confuse(monster: &mut Monster, player: &mut Player, level: &Leve
 	return false;
 }
 
-pub unsafe fn flame_broil(monster: &mut Monster, player: &mut Player, level: &mut Level) -> bool {
-	if !monster.sees(player.rogue.row, player.rogue.col, level) || coin_toss() {
+pub unsafe fn flame_broil(mon_id: u64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) -> bool {
+	if !mash.monster(mon_id).sees(player.rogue.row, player.rogue.col, level) || coin_toss() {
 		return false;
 	}
 	{
+		let monster = mash.monster(mon_id);
 		let mut delta_row = player.rogue.row - monster.spot.row;
 		let mut delta_col = player.rogue.col - monster.spot.col;
 		if delta_row < 0 {
@@ -391,6 +406,7 @@ pub unsafe fn flame_broil(monster: &mut Monster, player: &mut Player, level: &mu
 			return false;
 		}
 	}
+	let monster = mash.monster(mon_id);
 	let row = monster.spot.row;
 	let col = monster.spot.col;
 	if player.blind.is_inactive() && !player.is_near(row, col) {
@@ -412,7 +428,7 @@ pub unsafe fn flame_broil(monster: &mut Monster, player: &mut Player, level: &mu
 		col = monster.spot.col;
 		get_closer(&mut row, &mut col, player.rogue.row, player.rogue.col);
 		loop {
-			mvaddch(row as i32, col as i32, get_dungeon_char(row, col, player, level));
+			mvaddch(row as i32, col as i32, get_dungeon_char(row, col, mash, player, level));
 			refresh();
 			get_closer(&mut row, &mut col, player.rogue.row, player.rogue.col);
 			let stay_looping = row != player.rogue.row || col != player.rogue.col;
@@ -421,7 +437,7 @@ pub unsafe fn flame_broil(monster: &mut Monster, player: &mut Player, level: &mu
 			}
 		}
 	}
-	mon_hit(monster, Some(FLAME_NAME), true, player, level);
+	mon_hit(mon_id, Some(FLAME_NAME), true, mash, player, level);
 	return true;
 }
 

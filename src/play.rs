@@ -1,7 +1,8 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
-use libc::{c_int};
+use libc::c_int;
 use ncurses::{mv, refresh};
+
 use crate::hit::{fight, HIT_MESSAGE};
 use crate::init::GameState;
 use crate::instruct::Instructions;
@@ -11,18 +12,17 @@ use crate::message::{CANCEL, check_message, message, remessage, rgetchar};
 use crate::monster::show_monsters;
 use crate::objects::{new_object_for_wizard, show_objects};
 use crate::pack::{call_it, drop_0, kick_into_pack, take_off, wear, wield};
-use crate::play::PlayResult::{ExitWon, StairsDown, StairsUp, CleanedUp};
+use crate::play::PlayResult::{CleanedUp, ExitWon, StairsDown, StairsUp};
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::r#move::{move_onto, multiple_move_rogue, one_move_rogue, rest};
 use crate::r#use::{eat, quaff, read_scroll};
 use crate::ring::{inv_rings, put_on_ring, remove_ring};
 use crate::room::draw_magic_map;
-use crate::save::{save_game};
-use crate::score::{ask_quit};
+use crate::save::save_game;
+use crate::score::ask_quit;
 use crate::throw::throw;
 use crate::trap::{id_trap, search, show_traps};
 use crate::zap::{wizard, wizardize, zapp};
-
 
 pub static mut interrupted: bool = false;
 
@@ -70,46 +70,46 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 				Instructions();
 			}
 			'.' => {
-				rest(if count > 0 { count } else { 1 } as c_int, &mut game.player, &mut game.level);
+				rest(if count > 0 { count } else { 1 } as c_int, &mut game.mash, &mut game.player, &mut game.level);
 			}
 			's' => {
-				search(if count > 0 { count } else { 1 } as usize, false, &mut game.player, &mut game.level);
+				search(if count > 0 { count } else { 1 } as usize, false, &mut game.mash, &mut game.player, &mut game.level);
 			}
 			'i' => {
 				inventory(AllObjects, &game.player);
 			}
 			'f' => {
-				fight(false, &mut game.player, &mut game.level);
+				fight(false, &mut game.mash, &mut game.player, &mut game.level);
 			}
 			'F' => {
-				fight(true, &mut game.player, &mut game.level);
+				fight(true, &mut game.mash, &mut game.player, &mut game.level);
 			}
 			'h' | 'j' | 'k' | 'l' | 'y' | 'u' | 'n' | 'b' => {
-				one_move_rogue(ch, true, &mut game.player, &mut game.level);
+				one_move_rogue(ch, true, &mut game.mash, &mut game.player, &mut game.level);
 			}
 			'H' | 'J' | 'K' | 'L' | 'B' | 'Y' | 'U' | 'N' | '\x08' | '\x0a' | '\x0b' | '\x0c' | '\x19' | '\x15' | '\x0e' | '\x02' => {
-				multiple_move_rogue(ch as i64, &mut game.player, &mut game.level);
+				multiple_move_rogue(ch as i64, &mut game.mash, &mut game.player, &mut game.level);
 			}
 			'e' => {
-				eat(&mut game.player, &mut game.level);
+				eat(&mut game.mash, &mut game.player, &mut game.level);
 			}
 			'q' => {
-				quaff(&mut game.player, &mut game.level);
+				quaff(&mut game.mash, &mut game.player, &mut game.level);
 			}
 			'r' => {
-				read_scroll(&mut game.player, &mut game.level);
+				read_scroll(&mut game.mash, &mut game.player, &mut game.level);
 			}
 			'm' => {
-				move_onto(&mut game.player, &mut game.level);
+				move_onto(&mut game.mash, &mut game.player, &mut game.level);
 			}
 			'd' => {
-				drop_0(&mut game.player, &mut game.level);
+				drop_0(&mut game.mash, &mut game.player, &mut game.level);
 			}
 			'P' => {
-				put_on_ring(&mut game.player, &mut game.level);
+				put_on_ring(&mut game.mash, &mut game.player, &mut game.level);
 			}
 			'R' => {
-				remove_ring(&mut game.player, &mut game.level);
+				remove_ring(&mut game.mash, &mut game.player, &mut game.level);
 			}
 			'\x10' => {
 				remessage();
@@ -148,22 +148,22 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 				single_inv(None, &mut game.player);
 			}
 			'T' => {
-				take_off(&mut game.player, &mut game.level);
+				take_off(&mut game.mash, &mut game.player, &mut game.level);
 			}
 			'W' => {
-				wear(&mut game.player, &mut game.level);
+				wear(&mut game.mash, &mut game.player, &mut game.level);
 			}
 			'w' => {
-				wield(&mut game.player, &mut game.level);
+				wield(&mut game.mash, &mut game.player, &mut game.level);
 			}
 			'c' => {
 				call_it(&mut game.player);
 			}
 			'z' => {
-				zapp(&mut game.player, &mut game.level);
+				zapp(&mut game.mash, &mut game.player, &mut game.level);
 			}
 			't' => {
-				throw(&mut game.player, &mut game.level);
+				throw(&mut game.mash, &mut game.player, &mut game.level);
 			}
 			'v' => {
 				message("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims", 0);
@@ -200,7 +200,7 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 			}
 			'\x13' => {
 				if wizard {
-					draw_magic_map(&mut game.level);
+					draw_magic_map(&mut game.mash, &mut game.level);
 				} else {
 					message(UNKNOWN_COMMAND, 0);
 				}
@@ -214,7 +214,7 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 			}
 			'\x0f' => {
 				if wizard {
-					show_objects(&game.player, &game.level);
+					show_objects(&mut game.mash, &game.player, &game.level);
 				} else {
 					message(UNKNOWN_COMMAND, 0);
 				}
@@ -231,7 +231,7 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 			}
 			'\x0d' => {
 				if wizard {
-					show_monsters(&game.player, &mut game.level);
+					show_monsters(&mut game.mash, &game.player, &mut game.level);
 				} else {
 					message(UNKNOWN_COMMAND, 0);
 				}
@@ -242,7 +242,7 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 				}
 			}
 			',' => {
-				kick_into_pack(&mut game.player, &mut game.level);
+				kick_into_pack(&mut game.mash, &mut game.player, &mut game.level);
 			}
 			_ => {
 				message(UNKNOWN_COMMAND, 0);

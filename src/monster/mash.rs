@@ -8,8 +8,6 @@ use crate::monster::{MonsterFlags, MonsterKind};
 use crate::player::RoomMark;
 use crate::prelude::DungeonSpot;
 
-pub static mut MASH: MonsterMash = MonsterMash::new();
-
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct MonsterMash {
 	pub monsters: Vec<Monster>,
@@ -21,17 +19,40 @@ impl MonsterMash {
 	pub fn clear(&mut self) {
 		self.monsters.clear();
 	}
+}
+
+impl MonsterMash {
+	pub fn is_empty(&self) -> bool { self.monsters.is_empty() }
+	pub fn monster_ids(&self) -> Vec<u64> {
+		self.monsters.iter().map(Monster::id).collect()
+	}
 	pub fn add_monster(&mut self, monster: Monster) {
 		self.monsters.push(monster);
 	}
-	pub fn remove_monster(&mut self, id: u64) {
+	pub fn remove_monster(&mut self, id: u64) -> Monster {
 		let index = self.monsters.iter().position(|m| m.id == id);
-		if let Some(index) = index {
-			self.monsters.remove(index);
+		let index = index.expect("monster to remove must be in the list");
+		self.monsters.remove(index)
+	}
+	pub fn monster_id_at_spot(&self, row: i64, col: i64) -> Option<u64> {
+		match self.monster_index_at_spot(row, col) {
+			Some(index) => Some(self.monsters[index].id),
+			None => None,
 		}
 	}
-	pub fn is_empty(&self) -> bool { self.monsters.is_empty() }
-	fn monsters_index_at_spot(&self, row: i64, col: i64) -> Option<usize> {
+	pub fn monster_at_spot(&self, row: i64, col: i64) -> Option<&Monster> {
+		match self.monster_index_at_spot(row, col) {
+			Some(index) => Some(&self.monsters[index]),
+			None => None,
+		}
+	}
+	pub fn monster_at_spot_mut(&mut self, row: i64, col: i64) -> Option<&mut Monster> {
+		match self.monster_index_at_spot(row, col) {
+			Some(index) => Some(&mut self.monsters[index]),
+			None => None,
+		}
+	}
+	fn monster_index_at_spot(&self, row: i64, col: i64) -> Option<usize> {
 		for i in 0..self.monsters.len() {
 			if self.monsters[i].spot.is_at(row, col) {
 				return Some(i);
@@ -39,38 +60,36 @@ impl MonsterMash {
 		}
 		return None;
 	}
-	pub fn monster_at_spot(&self, row: i64, col: i64) -> Option<&Monster> {
-		match self.monsters_index_at_spot(row, col) {
-			Some(index) => Some(&self.monsters[index]),
-			None => None,
-		}
+	pub fn monster_flags(&self, id: u64) -> &MonsterFlags {
+		let monster = self.monster(id);
+		let flags = &monster.m_flags;
+		flags
 	}
-	pub fn monster_at_spot_mut(&mut self, row: i64, col: i64) -> Option<&mut Monster> {
-		match self.monsters_index_at_spot(row, col) {
-			Some(index) => Some(&mut self.monsters[index]),
-			None => None,
-		}
+	pub fn monster_flags_mut(&mut self, id: u64) -> &mut MonsterFlags {
+		let monster = self.monster_mut(id);
+		let flags = &mut monster.m_flags;
+		flags
 	}
-	fn monsters_index_with_id(&self, id: u64) -> Option<usize> {
-		for i in 0..self.monsters.len() {
-			if self.monsters[i].id == id {
-				return Some(i);
-			}
-		}
-		return None;
+	pub fn test_monster(&self, id: u64, f: impl Fn(&Monster) -> bool) -> bool {
+		let monster = self.monster(id);
+		f(monster)
+	}
+	pub fn monster(&self, id: u64) -> &Monster {
+		let index = self.monster_index(id);
+		&self.monsters[index]
 	}
 
-	pub fn monster_with_id(&self, id: u64) -> Option<&Monster> {
-		match self.monsters_index_with_id(id) {
-			Some(index) => Some(&self.monsters[index]),
-			None => None,
-		}
+	pub fn monster_mut(&mut self, id: u64) -> &mut Monster {
+		let index = self.monster_index(id);
+		&mut self.monsters[index]
 	}
-	pub fn monster_with_id_mut(&mut self, id: u64) -> Option<&mut Monster> {
-		match self.monsters_index_with_id(id) {
-			Some(index) => Some(&mut self.monsters[index]),
-			None => None,
+	fn monster_index(&self, id: u64) -> usize {
+		for i in 0..self.monsters.len() {
+			if self.monsters[i].id == id {
+				return i;
+			}
 		}
+		panic!("id not in monsters")
 	}
 }
 
@@ -113,6 +132,16 @@ pub struct Monster {
 	pub hp_to_kill: isize,
 	pub killed: bool,
 	pub drop_percent: usize,
+}
+
+impl Monster {
+	pub fn flies(&self) -> bool { self.m_flags.flies }
+	pub fn is_napping(&self) -> bool { self.m_flags.napping }
+	pub fn is_asleep(&self) -> bool { self.m_flags.asleep }
+	pub fn is_invisible(&self) -> bool { self.m_flags.invisible }
+	pub fn is_hasted(&self) -> bool { self.m_flags.hasted }
+	pub fn is_slowed(&self) -> bool { self.m_flags.slowed }
+	pub fn is_confused(&self) -> bool { self.m_flags.confused }
 }
 
 impl Monster {
@@ -188,7 +217,6 @@ impl Monster {
 		self.kind.damage()
 	}
 	pub fn wanders_or_wakens(&self) -> bool { self.m_flags.wakens || self.m_flags.wanders }
-	pub fn is_invisible(&self) -> bool { self.m_flags.invisible }
 	pub fn name(&self) -> &'static str { self.kind.name() }
 	pub fn in_room(&self, rn: usize, level: &Level) -> bool {
 		if let RoomMark::Area(mon_room) = self.cur_room(level) {

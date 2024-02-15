@@ -1,15 +1,17 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use ncurses::{mvaddch, mvinch};
-use crate::player::Player;
-use crate::prelude::object_what::ObjectWhat::Wand;
-use crate::prelude::object_what::PackFilter::Wands;
+
 use wand_kind::WandKind;
+
 use crate::hit::{FIGHT_MONSTER, get_dir_rc, rogue_hit};
 use crate::level::{CellKind, Level};
 use crate::message::{CANCEL, check_message, get_input_line, message};
-use crate::monster::{gmc, gr_monster, MASH, Monster, MonsterKind};
+use crate::monster::{gmc, gr_monster, Monster, MonsterKind, MonsterMash};
 use crate::pack::pack_letter;
+use crate::player::Player;
+use crate::prelude::object_what::ObjectWhat::Wand;
+use crate::prelude::object_what::PackFilter::Wands;
 use crate::r#move::{get_dir_or_cancel, reg_move};
 use crate::r#use::relight;
 use crate::random::get_rand;
@@ -22,7 +24,7 @@ pub(crate) mod wand_materials;
 
 pub static mut wizard: bool = false;
 
-pub unsafe fn zapp(player: &mut Player, level: &mut Level) {
+pub unsafe fn zapp(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	let dir = get_dir_or_cancel();
 	check_message();
 	if dir == CANCEL {
@@ -50,21 +52,20 @@ pub unsafe fn zapp(player: &mut Player, level: &mut Level) {
 				player.expect_object_mut(obj_id).class -= 1;
 				let mut row = player.rogue.row;
 				let mut col = player.rogue.col;
-				if let Some(monster_id) = get_zapped_monster(dir, &mut row, &mut col, level) {
-					if let Some(monster) = MASH.monster_with_id_mut(monster_id) {
-						let obj_kind = player.object_kind(obj_id);
-						monster.wake_up();
-						zap_monster(monster, obj_kind, player, level);
-						relight(player, level);
-					}
+				if let Some(mon_id) = get_zapped_monster(dir, &mut row, &mut col, mash, level) {
+					let monster = mash.monster_mut(mon_id);
+					let obj_kind = player.object_kind(obj_id);
+					monster.wake_up();
+					zap_monster(monster.id(), obj_kind, mash, player, level);
+					relight(mash, player, level);
 				}
 			}
-			reg_move(player, level);
+			reg_move(mash, player, level);
 		}
 	}
 }
 
-pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, level: &Level) -> Option<u64> {
+pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, mash: &mut MonsterMash, level: &Level) -> Option<u64> {
 	loop {
 		let orow = *row;
 		let ocol = *col;
@@ -75,18 +76,20 @@ pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, level:
 			return None;
 		}
 		if level.dungeon[*row as usize][*col as usize].is_monster() {
-			if !imitating(*row, *col, level) {
-				return MASH.monster_at_spot(*row, *col).map(|m| m.id());
+			if !imitating(*row, *col, mash, level) {
+				return mash.monster_at_spot(*row, *col).map(|m| m.id());
 			}
 		}
 	}
 }
 
-pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, player: &mut Player, level: &mut Level) {
+pub unsafe fn zap_monster(mon_id: u64, which_kind: u16, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+	let monster = mash.monster(mon_id);
 	let row = monster.spot.row;
 	let col = monster.spot.col;
 	match WandKind::from_index(which_kind as usize) {
 		WandKind::SlowMonster => {
+			let monster = mash.monster_mut(mon_id);
 			if monster.m_flags.hasted {
 				monster.m_flags.hasted = false;
 			} else {
@@ -95,6 +98,7 @@ pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, player: &mut P
 			}
 		}
 		WandKind::HasteMonster => {
+			let monster = mash.monster_mut(mon_id);
 			if monster.m_flags.slowed {
 				monster.m_flags.slowed = false;
 			} else {
@@ -102,13 +106,16 @@ pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, player: &mut P
 			}
 		}
 		WandKind::TeleAway => {
+			let monster = mash.monster_mut(mon_id);
 			tele_away(monster, player, level);
 		}
 		WandKind::ConfuseMonster => {
+			let monster = mash.monster_mut(mon_id);
 			monster.m_flags.confused = true;
 			monster.moves_confused += get_rand(12, 22);
 		}
 		WandKind::Invisibility => {
+			let monster = mash.monster_mut(mon_id);
 			monster.m_flags.invisible = true;
 		}
 		WandKind::Polymorph => unsafe {
@@ -126,24 +133,27 @@ pub unsafe fn zap_monster(monster: &mut Monster, which_kind: u16, player: &mut P
 					FIGHT_MONSTER = Some(morph_monster.id());
 				}
 			}
-			MASH.remove_monster(monster.id());
-			MASH.add_monster(morph_monster);
+			mash.remove_monster(monster.id());
+			mash.add_monster(morph_monster);
 		}
 		WandKind::PutToSleep => {
+			let monster = mash.monster_mut(mon_id);
 			monster.m_flags.asleep = true;
 			monster.m_flags.napping = true;
 			monster.nap_length = get_rand(3, 6);
 		}
 		WandKind::MagicMissile => {
-			rogue_hit(monster, true, player, level);
+			rogue_hit(mon_id, true, mash, player, level);
 		}
 		WandKind::Cancellation => {
 			if monster.m_flags.holds {
 				level.being_held = false;
 			}
 			if monster.m_flags.steals_item {
+				let monster = mash.monster_mut(mon_id);
 				monster.drop_percent = 0;
 			}
+			let monster = mash.monster_mut(mon_id);
 			monster.m_flags.flies = false;
 			monster.m_flags.flits = false;
 			monster.m_flags.set_special_hit(false);

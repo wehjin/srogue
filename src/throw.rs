@@ -3,10 +3,11 @@
 use ncurses::{chtype, mvaddch, mvinch, refresh};
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
+
 use crate::hit::{get_dir_rc, get_hit_chance, get_weapon_damage, HIT_MESSAGE, mon_damage};
 use crate::level::{CellKind, Level};
 use crate::message::{CANCEL, check_message, message, print_stats};
-use crate::monster::{MASH, Monster, mv_aquatars};
+use crate::monster::{MonsterMash, mv_aquatars};
 use crate::objects::{obj, ObjectId, place_at};
 use crate::pack::{CURSE_MESSAGE, pack_letter, unwear, unwield};
 use crate::player::Player;
@@ -27,7 +28,7 @@ use crate::weapons::constants::ARROW;
 use crate::weapons::kind::WeaponKind;
 use crate::zap::zap_monster;
 
-pub unsafe fn throw(player: &mut Player, level: &mut Level) {
+pub unsafe fn throw(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	let dir = get_dir_or_cancel();
 	check_message();
 	if dir == CANCEL {
@@ -51,11 +52,11 @@ pub unsafe fn throw(player: &mut Player, level: &mut Level) {
 			if player.check_object(obj_id, |it| it.is_being_wielded() && it.quantity <= 1) {
 				unwield(player);
 			} else if player.check_object(obj_id, |it| it.is_being_worn()) {
-				mv_aquatars(player, level);
+				mv_aquatars(mash, player, level);
 				unwear(player);
 				print_stats(STAT_ARMOR, player);
 			} else if let Some(hand) = player.ring_hand(obj_id) {
-				un_put_hand(hand, player, level);
+				un_put_hand(hand, mash, player, level);
 			}
 
 			let obj_what = player.object_what(obj_id);
@@ -64,7 +65,7 @@ pub unsafe fn throw(player: &mut Player, level: &mut Level) {
 			let (monster_id, spot) = {
 				let mut row = rogue_spot.row;
 				let mut col = rogue_spot.col;
-				let monster_id = get_thrown_at_monster(obj_what, dir, &mut row, &mut col, player, level);
+				let monster_id = get_thrown_at_monster(obj_what, dir, &mut row, &mut col, mash, player, level);
 				(monster_id, DungeonSpot { row, col })
 			};
 			mvaddch(rogue_spot.row as i32, rogue_spot.col as i32, rogue_char);
@@ -74,24 +75,26 @@ pub unsafe fn throw(player: &mut Player, level: &mut Level) {
 			let col = spot.col;
 			if player.can_see(row, col, level)
 				&& !(spot == rogue_spot) {
-				mvaddch(spot.row as i32, spot.col as i32, get_dungeon_char(spot.row, spot.col, player, level));
+				mvaddch(spot.row as i32, spot.col as i32, get_dungeon_char(spot.row, spot.col, mash, player, level));
 			}
-			if let Some(monster_id) = monster_id {
-				let monster = MASH.monster_with_id_mut(monster_id).expect("monster with id");
-				monster.wake_up();
-				clear_gold_seeker(monster);
-				if !throw_at_monster(monster, obj_id, player, level) {
-					flop_weapon(obj_id, spot.row, spot.col, player, level);
+			if let Some(mon_id) = monster_id {
+				{
+					let monster = mash.monster_mut(mon_id);
+					monster.wake_up();
+					clear_gold_seeker(monster);
+				}
+				if !throw_at_monster(mon_id, obj_id, mash, player, level) {
+					flop_weapon(obj_id, spot.row, spot.col, mash, player, level);
 				}
 			} else {
-				flop_weapon(obj_id, spot.row, spot.col, player, level);
+				flop_weapon(obj_id, spot.row, spot.col, mash, player, level);
 			}
-			vanish(obj_id, true, player, level);
+			vanish(obj_id, true, mash, player, level);
 		}
 	}
 }
 
-unsafe fn throw_at_monster(monster: &mut Monster, obj_id: ObjectId, player: &mut Player, level: &mut Level) -> bool {
+unsafe fn throw_at_monster(mon_id: u64, obj_id: ObjectId, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) -> bool {
 	let hit_chance = {
 		let player_exp = player.buffed_exp();
 		let player_debuf = player.debuf_exp();
@@ -114,7 +117,7 @@ unsafe fn throw_at_monster(monster: &mut Monster, obj_id: ObjectId, player: &mut
 
 	HIT_MESSAGE += " hit  ";
 	if player.object_what(obj_id) == Wand && rand_percent(75) {
-		zap_monster(monster, player.object_kind(obj_id), player, level);
+		zap_monster(mon_id, player.object_kind(obj_id), mash, player, level);
 	} else {
 		let player_str = player.buffed_strength();
 		let player_exp = player.buffed_exp();
@@ -129,7 +132,7 @@ unsafe fn throw_at_monster(monster: &mut Monster, obj_id: ObjectId, player: &mut
 			}
 			damage
 		};
-		mon_damage(monster, damage, player, level);
+		mon_damage(mon_id, damage, mash, player, level);
 	}
 	return true;
 }
@@ -139,7 +142,7 @@ fn rogue_weapon_is_bow(player: &Player) -> bool {
 }
 
 
-pub unsafe fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i64, col: &mut i64, player: &Player, level: &Level) -> Option<u64> {
+pub unsafe fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i64, col: &mut i64, mash: &mut MonsterMash, player: &Player, level: &Level) -> Option<u64> {
 	let mut orow = *row;
 	let mut ocol = *col;
 	let obj_char = get_mask_char(obj_what);
@@ -156,7 +159,7 @@ pub unsafe fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i
 		}
 
 		if i != 0 && player.can_see(orow, ocol, level) {
-			mvaddch(orow as i32, ocol as i32, get_dungeon_char(orow, ocol, player, level));
+			mvaddch(orow as i32, ocol as i32, get_dungeon_char(orow, ocol, mash, player, level));
 		}
 		if player.can_see(*row, *col, level) {
 			if !cell.is_monster() {
@@ -165,8 +168,8 @@ pub unsafe fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i
 			refresh();
 		}
 		if cell.is_monster() {
-			if !imitating(*row, *col, level) {
-				return MASH.monster_at_spot(*row, *col).map(|m| m.id());
+			if !imitating(*row, *col, mash, level) {
+				return mash.monster_at_spot(*row, *col).map(|m| m.id());
 			}
 		}
 		if cell.is_tunnel() {
@@ -179,7 +182,7 @@ pub unsafe fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i
 	return None;
 }
 
-unsafe fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, player: &Player, level: &mut Level) {
+unsafe fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &mut Level) {
 	let mut found = false;
 	let mut walk = RandomWalk::new(row, col);
 	for _ in 0..9 {
@@ -208,10 +211,10 @@ unsafe fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, player: &Player, lev
 		if player.can_see(row, col, level) && !player.is_at(row, col) {
 			let was_monster = level.dungeon[row as usize][col as usize].is_monster();
 			level.dungeon[row as usize][col as usize].remove_kind(CellKind::Monster);
-			let dungeon_char = get_dungeon_char(row, col, player, level);
+			let dungeon_char = get_dungeon_char(row, col, mash, player, level);
 			if was_monster {
 				let monster_char = mvinch(row as i32, col as i32) as u8 as char;
-				if let Some(monster) = MASH.monster_at_spot_mut(row, col) {
+				if let Some(monster) = mash.monster_at_spot_mut(row, col) {
 					monster.trail_char = dungeon_char;
 				}
 				if (monster_char < 'A') || (monster_char > 'Z') {

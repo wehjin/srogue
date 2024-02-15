@@ -17,7 +17,7 @@ use crate::inventory::get_obj_desc;
 use crate::level::{CellKind, Level};
 use crate::level::constants::MAX_ROOM;
 use crate::message::{CANCEL, check_message, get_input_line, message, rgetchar, sound_bell};
-use crate::monster::{MASH, party_monsters};
+use crate::monster::{MonsterMash, party_monsters};
 use crate::objects::note_tables::NoteTables;
 use crate::odds::GOLD_PERCENT;
 use crate::pack::MAX_PACK_COUNT;
@@ -214,7 +214,7 @@ pub type object = obj;
 pub static mut level_objects: ObjectPack = ObjectPack::new();
 pub static mut foods: i16 = 0;
 
-pub unsafe fn put_objects(player: &mut Player, level: &mut Level) {
+pub unsafe fn put_objects(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	if player.cur_depth < player.max_depth {
 		return;
 	}
@@ -224,7 +224,7 @@ pub unsafe fn put_objects(player: &mut Player, level: &mut Level) {
 		n += 1;
 	}
 	if player.cur_depth == player.party_counter {
-		make_party(player.cur_depth, level);
+		make_party(player.cur_depth, mash, level);
 		player.party_counter = next_party(player.cur_depth);
 	}
 	for _i in 0..n {
@@ -234,7 +234,7 @@ pub unsafe fn put_objects(player: &mut Player, level: &mut Level) {
 	put_gold(player.cur_depth, level);
 }
 
-pub unsafe fn put_gold(level_depth: usize, level: &mut Level) {
+pub unsafe fn put_gold(level_depth: isize, level: &mut Level) {
 	for i in 0..MAX_ROOM {
 		let is_maze = level.rooms[i].room_type == RoomType::Maze;
 		let is_room = level.rooms[i].room_type == RoomType::Room;
@@ -255,7 +255,7 @@ pub unsafe fn put_gold(level_depth: usize, level: &mut Level) {
 	}
 }
 
-pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: usize, level: &mut Level) {
+pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: isize, level: &mut Level) {
 	let mut obj = alloc_object();
 	obj.row = row;
 	obj.col = col;
@@ -338,7 +338,7 @@ pub fn name_of(obj: &object, fruit: String, notes: &NoteTables) -> String {
 	}
 }
 
-pub unsafe fn gr_object(cur_level: usize) -> object {
+pub unsafe fn gr_object(cur_level: isize) -> object {
 	let mut obj = alloc_object();
 	if foods < (cur_level / 2) as i16 {
 		obj.what_is = Food;
@@ -566,22 +566,22 @@ pub fn alloc_object() -> object {
 	return obj;
 }
 
-pub unsafe fn make_party(level_depth: usize, level: &mut Level) {
+pub unsafe fn make_party(level_depth: isize, mash: &mut MonsterMash, level: &mut Level) {
 	let party_room = gr_room(level);
 	level.party_room = Some(party_room);
 	let n = if rand_percent(99) { party_objects(party_room, level_depth, level) } else { 11 };
 	if rand_percent(99) {
-		party_monsters(party_room, n, level_depth, level);
+		party_monsters(party_room, n, level_depth, mash, level);
 	}
 }
 
-pub unsafe fn show_objects(player: &Player, level: &Level) {
+pub unsafe fn show_objects(mash: &mut MonsterMash, player: &Player, level: &Level) {
 	for obj in level_objects.objects() {
 		let row = (*obj).row;
 		let col = (*obj).col;
 		let rc = get_mask_char((*obj).what_is) as chtype;
 		if level.dungeon[row as usize][col as usize].is_monster() {
-			let monster = MASH.monster_at_spot_mut(row, col);
+			let monster = mash.monster_at_spot_mut(row, col);
 			if let Some(monster) = monster {
 				monster.trail_char = rc;
 			}
@@ -591,7 +591,7 @@ pub unsafe fn show_objects(player: &Player, level: &Level) {
 			mvaddch(row as i32, col as i32, rc);
 		}
 	}
-	for monster in &MASH.monsters {
+	for monster in &mash.monsters {
 		if monster.m_flags.imitates {
 			mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.disguise_char);
 		}
@@ -715,8 +715,8 @@ unsafe fn get_kind(max_kind: usize) -> Option<usize> {
 	good_kind
 }
 
-fn next_party(cur_level: usize) -> usize {
-	const PARTY_TIME: usize = 10;   /* one party somewhere in each 10 level span */
+fn next_party(cur_level: isize) -> isize {
+	const PARTY_TIME: isize = 10;   /* one party somewhere in each 10 level span */
 	let mut n = cur_level;
 	while (n % PARTY_TIME) > 0 {
 		n += 1;

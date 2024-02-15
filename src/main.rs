@@ -5,7 +5,7 @@ use crate::console::ConsoleError;
 use crate::init::{init, InitError, InitResult};
 use crate::level::{clear_level, make_level, put_player};
 use crate::message::print_stats;
-use crate::monster::{MASH, put_mons};
+use crate::monster::put_mons;
 use crate::objects::{level_objects, put_objects, put_stairs};
 use crate::play::{play_level, PlayResult};
 use crate::player::RoomMark;
@@ -65,7 +65,8 @@ pub fn main() {
 		Err(error) => match error {
 			InitError::NoConsole(error) => match error {
 				ConsoleError::ScreenTooSmall { min_rows, min_cols } => {
-					println!("\nmust be played on {} x {} or better screen", min_rows, min_cols);
+					println!();
+					println!("must be played on {} x {} or better screen", min_rows, min_cols);
 					return;
 				}
 			},
@@ -87,19 +88,19 @@ pub fn main() {
 	let mut exit_line = None;
 	loop {
 		if !restored {
-			clear_level(&mut game.player, &mut game.level);
+			clear_level(&mut game);
 			game.player.descend();
 			unsafe { make_level(&game.player, &mut game.level) };
-			unsafe { put_objects(&mut game.player, &mut game.level); }
+			unsafe { put_objects(&mut game.mash, &mut game.player, &mut game.level); }
 			unsafe { put_stairs(&mut game.player, &mut game.level); }
 			unsafe { add_traps(&game.player, &mut game.level); }
-			unsafe { put_mons(&game.player, &mut game.level); }
+			unsafe { put_mons(&mut game.mash, &game.player, &mut game.level); }
 			unsafe {
 				let avoid_room = match game.level.party_room {
 					None => RoomMark::None,
 					Some(rn) => RoomMark::Area(rn),
 				};
-				put_player(avoid_room, &mut game.player, &mut game.level);
+				put_player(avoid_room, &mut game.mash, &mut game.player, &mut game.level);
 			}
 			unsafe { print_stats(STAT_ALL, &mut game.player); }
 		}
@@ -117,7 +118,6 @@ pub fn main() {
 			}
 		}
 		unsafe { level_objects.clear(); }
-		unsafe { MASH.clear(); }
 	}
 	drop(console);
 	if let Some(exit) = exit_line {

@@ -2,14 +2,14 @@ use ncurses::{chtype, mvaddch};
 
 use crate::level::{add_exp, Level, LEVEL_POINTS};
 use crate::message::message;
-use crate::monster::{MASH, show_monsters};
+use crate::monster::{MonsterMash, show_monsters};
 use crate::objects::{level_objects, show_objects};
 use crate::player::{Player, RoomMark};
 use crate::potions::kind::PotionKind;
 use crate::r#use::STRANGE_FEELING;
 use crate::random::get_rand;
 
-pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: &mut Level) {
+pub unsafe fn quaff_potion(potion_kind: PotionKind, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	match potion_kind {
 		PotionKind::IncreaseStrength => {
 			message("you feel stronger now, what bulging muscles!", 0);
@@ -24,11 +24,11 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: 
 		}
 		PotionKind::Healing => {
 			message("you begin to feel better", 0);
-			potion_heal(false, player, level);
+			potion_heal(false, mash, player, level);
 		}
 		PotionKind::ExtraHealing => {
 			message("you begin to feel much better", 0);
-			potion_heal(true, player, level);
+			potion_heal(true, mash, player, level);
 		}
 		PotionKind::Poison => {
 			if !player.ring_effects.has_sustain_strength() {
@@ -39,7 +39,7 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: 
 			}
 			message("you feel very sick now", 0);
 			if player.halluc.is_active() {
-				crate::r#use::unhallucinate(player, level);
+				crate::r#use::unhallucinate(mash, player, level);
 			}
 		}
 		PotionKind::RaiseLevel => {
@@ -51,7 +51,7 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: 
 				message("a cloak of darkness falls around you", 0);
 			}
 			player.blind.extend(get_rand(500, 800));
-			show_blind(player, level);
+			show_blind(mash, player, level);
 		}
 		PotionKind::Hallucination => {
 			message("oh wow, everything seems so cosmic", 0);
@@ -59,8 +59,8 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: 
 			player.halluc.extend(amount);
 		}
 		PotionKind::DetectMonster => {
-			show_monsters(player, level);
-			if MASH.is_empty() {
+			show_monsters(mash, player, level);
+			if mash.is_empty() {
 				message(STRANGE_FEELING, 0);
 			}
 		}
@@ -69,7 +69,7 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: 
 				message(STRANGE_FEELING, 0);
 			} else {
 				if player.blind.is_inactive() {
-					show_objects(player, level);
+					show_objects(mash, player, level);
 				}
 			}
 		}
@@ -96,15 +96,15 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, player: &mut Player, level: 
 		PotionKind::SeeInvisible => {
 			message(&format!("hmm, this potion tastes like {} juice", player.settings.fruit.trim()), 0);
 			if player.blind.is_active() {
-				crate::r#use::unblind(player, level);
+				crate::r#use::unblind(mash, player, level);
 			}
 			level.see_invisible = true;
-			crate::r#use::relight(player, level);
+			crate::r#use::relight(mash, player, level);
 		}
 	}
 }
 
-unsafe fn potion_heal(extra: bool, player: &mut Player, level: &mut Level) {
+unsafe fn potion_heal(extra: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	player.rogue.hp_current += player.rogue.exp;
 
 	let mut ratio = player.rogue.hp_current as f32 / player.rogue.hp_max as f32;
@@ -129,7 +129,7 @@ unsafe fn potion_heal(extra: bool, player: &mut Player, level: &mut Level) {
 		player.rogue.hp_current = player.rogue.hp_current.min(player.rogue.hp_max);
 	}
 	if player.blind.is_active() {
-		crate::r#use::unblind(player, level);
+		crate::r#use::unblind(mash, player, level);
 	}
 	if player.confused.is_active() {
 		if extra {
@@ -140,16 +140,16 @@ unsafe fn potion_heal(extra: bool, player: &mut Player, level: &mut Level) {
 	}
 	if player.halluc.is_active() {
 		if extra {
-			crate::r#use::unhallucinate(player, level);
+			crate::r#use::unhallucinate(mash, player, level);
 		} else {
 			player.halluc.halve();
 		}
 	}
 }
 
-unsafe fn show_blind(player: &Player, level: &Level) {
+unsafe fn show_blind(mash: &mut MonsterMash, player: &Player, level: &Level) {
 	if level.detect_monster {
-		for monster in &MASH.monsters {
+		for monster in &mash.monsters {
 			mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.trail_char);
 		}
 	}

@@ -7,7 +7,7 @@ use crate::init::GameState;
 use crate::level::Level;
 use crate::machdep::{get_current_time, RogueTime};
 use crate::message::hunger_str;
-use crate::monster::{MASH, MonsterMash};
+use crate::monster::MonsterMash;
 use crate::objects::{foods, level_objects, ObjectPack};
 use crate::player::Player;
 use crate::r#move::m_moves;
@@ -23,7 +23,7 @@ pub fn from_file(path: &str) -> Result<SaveData, Box<dyn Error>> {
 pub struct SaveData {
 	pub player: Player,
 	pub hunger_str: String,
-	pub level_monsters: MonsterMash,
+	pub mash: MonsterMash,
 	pub level_objects: ObjectPack,
 	pub file_id: i64,
 	pub foods: i16,
@@ -38,7 +38,7 @@ impl SaveData {
 		SaveData {
 			player: game.player.clone(),
 			hunger_str: hunger_str.clone(),
-			level_monsters: MASH.clone(),
+			mash: game.mash.clone(),
 			level_objects: level_objects.clone(),
 			file_id,
 			foods,
@@ -50,7 +50,6 @@ impl SaveData {
 	}
 	pub unsafe fn write_to_statics(&self) {
 		hunger_str = self.hunger_str.clone();
-		MASH = self.level_monsters.clone();
 		level_objects = self.level_objects.clone();
 		foods = self.foods;
 		wizard = self.wizard;

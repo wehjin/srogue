@@ -1,25 +1,27 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
-use std::{io};
+use std::io;
 use std::io::Write;
-use libc::{c_short};
-use crate::console;
-use crate::player::Player;
+
+use libc::c_short;
+
 use crate::armors::constants::RINGMAIL;
+use crate::console;
 use crate::console::{Console, ConsoleError};
 use crate::init::InitError::NoConsole;
 use crate::level::Level;
 use crate::machdep::{md_heed_signals, md_ignore_signals};
 use crate::message::{check_message, message};
-use crate::monster::MASH;
+use crate::monster::MonsterMash;
 use crate::objects::{alloc_object, get_food, level_objects};
 use crate::pack::{do_wear, do_wield};
+use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::{Armor, Weapon};
 use crate::random::get_rand;
 use crate::ring::ring_stats;
 use crate::save::restore;
 use crate::score::put_scores;
-use crate::settings::{Settings};
+use crate::settings::Settings;
 use crate::weapons::constants::{ARROW, BOW, MACE};
 
 pub static mut cant_int: bool = false;
@@ -60,25 +62,26 @@ pub unsafe fn init(settings: Settings) -> Result<InitResult, InitError> {
 	let mut game = GameState {
 		player: Player::new(settings),
 		level: Level::new(),
+		mash: MonsterMash::new(),
 	};
 	if let Some(rest_file) = game.player.settings.rest_file.clone() {
-		if restore(&rest_file, &mut game) {
-			return Ok(InitResult::Restored(game, console));
+		return if restore(&rest_file, &mut game) {
+			Ok(InitResult::Restored(game, console))
 		} else {
-			return Err(InitError::BadRestore(game.player.cleaned_up.clone()));
-		}
+			Err(InitError::BadRestore(game.player.cleaned_up.clone()))
+		};
 	}
 	game.player.notes.assign_dynamic_titles();
 	level_objects.clear();
-	MASH.clear();
 	player_init(&mut game.player);
-	ring_stats(false, &mut game.player, &mut game.level);
+	ring_stats(false, &mut game.mash, &mut game.player, &mut game.level);
 	return Ok(InitResult::Initialized(game, console));
 }
 
 pub struct GameState {
 	pub player: Player,
 	pub level: Level,
+	pub mash: MonsterMash,
 }
 
 fn player_init(player: &mut Player) {
@@ -139,16 +142,16 @@ pub unsafe fn clean_up(estr: &str, player: &mut Player) {
 	player.cleaned_up = Some(estr.to_string());
 }
 
-pub unsafe fn byebye(_ask_quit: bool, _player: &mut Player) {
-	unimplemented!("bye bye");
-	// md_ignore_signals();
-	// if ask_quit {
-	// 	ask_quit(true, player);
-	// } else {
-	// 	clean_up(BYEBYE_STRING);
-	// }
-	// md_heed_signals();
-}
+// pub unsafe fn byebye(_ask_quit: bool, _player: &mut Player) {
+// 	unimplemented!("bye bye");
+// 	// md_ignore_signals();
+// 	// if ask_quit {
+// 	// 	ask_quit(true, player);
+// 	// } else {
+// 	// 	clean_up(BYEBYE_STRING);
+// 	// }
+// 	// md_heed_signals();
+// }
 
 pub unsafe fn onintr() {
 	md_ignore_signals();

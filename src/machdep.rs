@@ -2,12 +2,14 @@
 
 use std::{fs, process, thread};
 use std::error::Error;
-use std::ffi::{CString};
-use std::time::{Duration};
+use std::ffi::CString;
+use std::time::Duration;
+
 use chrono::{Datelike, DateTime, Timelike, TimeZone, Utc};
 use libc::{c_int, stat};
 use serde::{Deserialize, Serialize};
-use crate::init::{byebye, onintr};
+
+use crate::init::onintr;
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct RogueTime {
@@ -76,9 +78,9 @@ pub fn md_control_keybord(_mode: libc::c_short) {
 
 unsafe fn sig_on_intr(_: c_int) { onintr(); }
 
-unsafe fn sig_on_quit(_: c_int) {
-	byebye(true, unimplemented!("Acquire max_level for quit"));
-}
+// unsafe fn sig_on_quit(_: c_int) {
+// 	byebye(true, unimplemented!("Acquire max_level for quit"));
+// }
 
 unsafe fn sig_on_hup(_: c_int) {
 	unimplemented!("Acquire game state for interrupt");

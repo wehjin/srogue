@@ -26,11 +26,11 @@ impl Drop for Console {
 	fn drop(&mut self) {
 		assert_eq!(self.stopped, false);
 		self.stopped = true;
-		{
-			ncurses::wmove(ncurses::stdscr(), (DROWS - 1) as i32, 0);
-			ncurses::refresh();
-		}
-		ncurses::endwin();
+		// {
+		// 	ncurses::wmove(ncurses::stdscr(), (DROWS - 1) as i32, 0);
+		// 	ncurses::refresh();
+		// }
+		// ncurses::endwin();
 		md_control_keybord(1);
 	}
 }

@@ -8,7 +8,7 @@ use crate::objects::{obj, object, ObjectId, ObjectPack};
 use crate::objects::note_tables::NoteTables;
 use crate::pack::{check_duplicate, next_avail_ichar};
 use crate::player::effects::TimeEffect;
-use crate::prelude::{DungeonSpot, LAST_DUNGEON, MAX_ARMOR, MAX_GOLD};
+use crate::prelude::{DungeonSpot, MAX_ARMOR, MAX_GOLD};
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::object_what::ObjectWhat;
 use crate::ring::effects::RingEffects;
@@ -83,10 +83,10 @@ pub struct Player {
 	pub notes: NoteTables,
 	pub settings: Settings,
 	pub cleaned_up: Option<String>,
-	pub cur_depth: usize,
-	pub max_depth: usize,
+	pub cur_depth: isize,
+	pub max_depth: isize,
 	pub rogue: Fighter,
-	pub party_counter: usize,
+	pub party_counter: isize,
 	pub ring_effects: RingEffects,
 	pub halluc: TimeEffect,
 	pub blind: TimeEffect,
@@ -147,6 +147,8 @@ impl Player {
 		return obj_id;
 	}
 }
+
+pub const LAST_DUNGEON: isize = 99;
 
 impl Player {
 	pub fn armor_id(&self) -> Option<ObjectId> { self.rogue.armor }
@@ -218,15 +220,13 @@ impl Player {
 			self.rogue.gold = MAX_GOLD;
 		}
 	}
+
 	pub fn descend(&mut self) {
-		let cur = (self.cur_depth + 1).min(LAST_DUNGEON);
-		let max = self.max_depth.max(cur);
-		self.cur_depth = cur;
-		self.max_depth = max;
+		self.cur_depth = (self.cur_depth + 1).min(LAST_DUNGEON);
+		self.max_depth = self.max_depth.max(self.cur_depth);
 	}
 	pub fn ascend(&mut self) {
-		let cur = if self.cur_depth < 3 { 1 } else { self.cur_depth - 2 };
-		self.cur_depth = cur;
+		self.cur_depth -= 2;
 	}
 	pub fn reset_spot(&mut self) {
 		self.rogue.col = -1;

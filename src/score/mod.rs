@@ -3,15 +3,18 @@
 use std::cmp::Ordering;
 use std::fs::File;
 use std::io::{Read, Seek, Write};
+
 use ncurses::{mv, mvaddch, mvaddstr, mvinch, refresh, standend, standout};
-use crate::prelude::*;
-use crate::level::constants::{DCOLS, DROWS};
-use crate::player::Player;
+
 use crate::init::{BYEBYE_STRING, clean_up};
+use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
 use crate::machdep::{md_heed_signals, md_ignore_signals};
 use crate::message::{check_message, message, msg_cleared, rgetchar};
+use crate::monster::MonsterMash;
 use crate::pack::{has_amulet, unwear, unwield};
+use crate::player::Player;
+use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat;
 use crate::ring::{PlayerHand, un_put_hand};
@@ -72,11 +75,11 @@ unsafe fn ending_string(ending: &Ending) -> String {
 	}
 }
 
-pub unsafe fn win(player: &mut Player, level: &mut Level) {
+pub unsafe fn win(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	unwield(player);          /* disarm and relax */
 	unwear(player);
 	for hand in PlayerHand::ALL_HANDS {
-		un_put_hand(hand, player, level);
+		un_put_hand(hand, mash, player, level);
 	}
 	ncurses::clear();
 	mvaddstr(10, 11, "@   @  @@@   @   @      @  @  @   @@@   @   @   @");

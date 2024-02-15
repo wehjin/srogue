@@ -1,10 +1,12 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 
-use std::{env};
+use std::env;
 use std::fs::File;
-use std::io::{Write};
+use std::io::Write;
+
 use ncurses::clear;
+
 use crate::init::{clean_up, GameState};
 use crate::machdep::{delete_file, get_file_modification_time, md_get_file_id, md_ignore_signals, md_link_count, RogueTime};
 use crate::message::{check_message, get_input_line, message, msg_cleared, sound_bell};
@@ -54,13 +56,13 @@ unsafe fn save_into_file(save_path: &str, game: &mut GameState) -> bool {
 		false
 	};
 	drop(file);
-	if write_failed {
+	return if write_failed {
 		delete_file(&save_path);
-		return false;
+		false
 	} else {
 		clean_up("", &mut game.player);
-		return true;
-	}
+		true
+	};
 }
 
 fn expand_tilde(file: &str) -> String {
@@ -115,6 +117,7 @@ pub unsafe fn restore(file_path: &str, game: &mut GameState) -> bool {
 		}
 	}
 	save_data.write_to_statics();
+	game.mash = save_data.mash;
 	game.player = save_data.player;
 	game.level = save_data.level;
 
@@ -124,7 +127,7 @@ pub unsafe fn restore(file_path: &str, game: &mut GameState) -> bool {
 	}
 
 	msg_cleared = false;
-	ring_stats(false, &mut game.player, &mut game.level);
+	ring_stats(false, &mut game.mash, &mut game.player, &mut game.level);
 	return true;
 }
 

@@ -1,7 +1,8 @@
 use ncurses::chtype;
 use serde::{Deserialize, Serialize};
+
 use crate::hit::DamageStat;
-use crate::monster::{MonsterFlags};
+use crate::monster::MonsterFlags;
 use crate::random::get_rand;
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -42,7 +43,7 @@ impl MonsterKind {
 	pub fn random_any() -> Self {
 		Self::LIST[get_rand(0, MONSTERS - 1)]
 	}
-	pub fn random(level_depth: usize, level_boost: usize) -> Self {
+	pub fn random(level_depth: isize, level_boost: isize) -> Self {
 		loop {
 			let mn = get_rand(0, MonsterKind::LIST.len() - 1);
 			let kind = MonsterKind::from(mn);
@@ -278,7 +279,7 @@ impl MonsterKind {
 			MonsterKind::Zombie => 8,
 		}
 	}
-	pub fn first_level(&self) -> usize {
+	pub fn first_level(&self) -> isize {
 		match self {
 			MonsterKind::Aquator => 9,
 			MonsterKind::Bat => 1,
@@ -308,7 +309,7 @@ impl MonsterKind {
 			MonsterKind::Zombie => 5,
 		}
 	}
-	pub fn last_level(&self) -> usize {
+	pub fn last_level(&self) -> isize {
 		match self {
 			MonsterKind::Aquator => 18,
 			MonsterKind::Bat => 8,

@@ -5,7 +5,7 @@ use ncurses::{addch, chtype, mvaddch, mvinch};
 use crate::level::{add_exp, Level, put_player};
 use crate::machdep::md_sleep;
 use crate::message::{CANCEL, check_message, hunger_str, message, print_stats};
-use crate::monster::{aggravate, create_monster, gr_obj_char, MASH, mv_mons, show_monsters};
+use crate::monster::{aggravate, create_monster, gr_obj_char, MonsterMash, mv_mons, show_monsters};
 use crate::objects::{level_objects, ObjectId};
 use crate::objects::NoteStatus::Identified;
 use crate::pack::{pack_letter, take_from_pack, unwear, unwield};
@@ -26,7 +26,7 @@ use crate::trap::is_off_screen;
 
 pub const STRANGE_FEELING: &'static str = "you have a strange feeling for a moment, then it passes";
 
-pub unsafe fn quaff(player: &mut Player, level: &mut Level) {
+pub unsafe fn quaff(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	let ch = pack_letter("quaff what?", Potions, player);
 	if ch == CANCEL {
 		return;
@@ -43,17 +43,17 @@ pub unsafe fn quaff(player: &mut Player, level: &mut Level) {
 					return;
 				}
 				Some(potion_kind) => {
-					quaff_potion(potion_kind, player, level);
+					quaff_potion(potion_kind, mash, player, level);
 					print_stats(STAT_STRENGTH | STAT_HP, player);
 					player.notes.identify_if_un_called(Potion, potion_kind.to_index());
-					vanish(obj_id, true, player, level);
+					vanish(obj_id, true, mash, player, level);
 				}
 			}
 		}
 	}
 }
 
-pub unsafe fn read_scroll(player: &mut Player, level: &mut Level) {
+pub unsafe fn read_scroll(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	if player.blind.is_active() {
 		message("You can't see to read the scroll.", 0);
 		return;
@@ -80,7 +80,7 @@ pub unsafe fn read_scroll(player: &mut Player, level: &mut Level) {
 							message("you hear a maniacal laughter in the distance", 0);
 						}
 						ScrollKind::HoldMonster => {
-							hold_monster(player, level);
+							hold_monster(mash, player, level);
 						}
 						ScrollKind::EnchWeapon => {
 							let glow_color = get_ench_color(player);
@@ -120,11 +120,11 @@ pub unsafe fn read_scroll(player: &mut Player, level: &mut Level) {
 							idntfy(player);
 						}
 						ScrollKind::Teleport => {
-							tele(player, level);
+							tele(mash, player, level);
 						}
 						ScrollKind::Sleep => {
 							message("you fall asleep", 0);
-							take_a_nap(player, level);
+							take_a_nap(mash, player, level);
 						}
 						ScrollKind::ProtectArmor => {
 							if let Some(armor) = player.armor_mut() {
@@ -145,25 +145,25 @@ pub unsafe fn read_scroll(player: &mut Player, level: &mut Level) {
 							uncurse_all(player);
 						}
 						ScrollKind::CreateMonster => {
-							create_monster(player, level);
+							create_monster(mash, player, level);
 						}
 						ScrollKind::AggravateMonster => {
-							aggravate(player, level);
+							aggravate(mash, player, level);
 						}
 						ScrollKind::MagicMapping => {
 							message("this scroll seems to have a map on it", 0);
-							draw_magic_map(level);
+							draw_magic_map(mash, level);
 						}
 					}
 					player.notes.identify_if_un_called(Scroll, scroll_kind.to_index());
-					vanish(obj_id, scroll_kind != ScrollKind::Sleep, player, level);
+					vanish(obj_id, scroll_kind != ScrollKind::Sleep, mash, player, level);
 				}
 			}
 		}
 	}
 }
 
-pub unsafe fn vanish(obj_id: ObjectId, do_regular_move: bool, player: &mut Player, level: &mut Level) {
+pub unsafe fn vanish(obj_id: ObjectId, do_regular_move: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	/* vanish() does NOT handle a quiver of weapons with more than one
 	   arrow (or whatever) in the quiver.  It will only decrement the count.
 	*/
@@ -176,12 +176,12 @@ pub unsafe fn vanish(obj_id: ObjectId, do_regular_move: bool, player: &mut Playe
 		} else if obj.is_being_worn() {
 			unwear(player);
 		} else if let Some(hand) = player.ring_hand(obj_id) {
-			un_put_hand(hand, player, level);
+			un_put_hand(hand, mash, player, level);
 		}
 		take_from_pack(obj_id, &mut player.rogue.pack);
 	}
 	if do_regular_move {
-		reg_move(player, level);
+		reg_move(mash, player, level);
 	}
 }
 
@@ -217,7 +217,7 @@ unsafe fn idntfy(player: &mut Player) {
 }
 
 
-pub unsafe fn eat(player: &mut Player, level: &mut Level) {
+pub unsafe fn eat(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	let ch = pack_letter("eat what?", Foods, player);
 	if ch == CANCEL {
 		return;
@@ -250,12 +250,12 @@ pub unsafe fn eat(player: &mut Player, level: &mut Level) {
 			player.rogue.moves_left += moves;
 			hunger_str.clear();
 			print_stats(STAT_HUNGER, player);
-			vanish(obj_id, true, player, level);
+			vanish(obj_id, true, mash, player, level);
 		}
 	}
 }
 
-unsafe fn hold_monster(player: &Player, level: &Level) {
+unsafe fn hold_monster(mash: &mut MonsterMash, player: &Player, level: &Level) {
 	let mut mcount = 0;
 	for i in -2..=2 {
 		for j in -2..=2 {
@@ -265,7 +265,7 @@ unsafe fn hold_monster(player: &Player, level: &Level) {
 				continue;
 			}
 			if level.dungeon[row as usize][col as usize].is_monster() {
-				let monster = MASH.monster_at_spot_mut(row, col).expect("monster at spot");
+				let monster = mash.monster_at_spot_mut(row, col).expect("monster at spot");
 				monster.m_flags.asleep = true;
 				monster.m_flags.wakens = false;
 				mcount += 1;
@@ -281,18 +281,18 @@ unsafe fn hold_monster(player: &Player, level: &Level) {
 	}
 }
 
-pub unsafe fn tele(player: &mut Player, level: &mut Level) {
-	mvaddch(player.rogue.row as i32, player.rogue.col as i32, get_dungeon_char(player.rogue.row, player.rogue.col, player, level));
+pub unsafe fn tele(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+	mvaddch(player.rogue.row as i32, player.rogue.col as i32, get_dungeon_char(player.rogue.row, player.rogue.col, mash, player, level));
 	if let RoomMark::Area(cur_room) = player.cur_room {
-		darken_room(cur_room, player, level);
+		darken_room(cur_room, mash, player, level);
 	}
 	let avoid_room = player.cur_room;
-	put_player(avoid_room, player, level);
+	put_player(avoid_room, mash, player, level);
 	level.being_held = false;
 	level.bear_trap = 0;
 }
 
-pub unsafe fn hallucinate_on_screen(player: &Player) {
+pub unsafe fn hallucinate_on_screen(mash: &mut MonsterMash, player: &Player) {
 	if player.blind.is_active() {
 		return;
 	}
@@ -311,7 +311,7 @@ pub unsafe fn hallucinate_on_screen(player: &Player) {
 			}
 		}
 	}
-	for monster in &MASH.monsters {
+	for monster in &mash.monsters {
 		let ch = mvinch(monster.spot.row as i32, monster.spot.col as i32);
 		if is_monster_char(ch) {
 			addch(get_rand(chtype::from('A'), chtype::from('Z')));
@@ -326,43 +326,43 @@ pub fn is_monster_char(ch: chtype) -> bool {
 	}
 }
 
-pub unsafe fn unhallucinate(player: &mut Player, level: &mut Level) {
+pub unsafe fn unhallucinate(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	player.halluc.clear();
-	relight(player, level);
+	relight(mash, player, level);
 	message("everything looks SO boring now", 1);
 }
 
-pub unsafe fn unblind(player: &mut Player, level: &mut Level) {
+pub unsafe fn unblind(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	player.blind.clear();
 	message("the veil of darkness lifts", 1);
-	relight(player, level);
+	relight(mash, player, level);
 	if player.halluc.is_active() {
-		hallucinate_on_screen(player);
+		hallucinate_on_screen(mash, player);
 	}
 	if level.detect_monster {
-		show_monsters(player, level);
+		show_monsters(mash, player, level);
 	}
 }
 
-pub unsafe fn relight(player: &Player, level: &mut Level) {
+pub unsafe fn relight(mash: &mut MonsterMash, player: &Player, level: &mut Level) {
 	match player.cur_room {
 		RoomMark::None => {}
 		RoomMark::Passage => {
-			light_passage(player.rogue.row, player.rogue.col, player, level);
+			light_passage(player.rogue.row, player.rogue.col, mash, player, level);
 		}
 		RoomMark::Area(cur_room) => {
-			light_up_room(cur_room, player, level);
+			light_up_room(cur_room, mash, player, level);
 		}
 	}
 	mvaddch(player.rogue.row as i32, player.rogue.col as i32, chtype::from(player.rogue.fchar));
 }
 
-pub unsafe fn take_a_nap(player: &mut Player, level: &mut Level) {
+pub unsafe fn take_a_nap(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	let mut i = get_rand(2, 5);
 	md_sleep(1);
 	while i > 0 {
 		i -= 1;
-		mv_mons(player, level);
+		mv_mons(mash, player, level);
 	}
 	md_sleep(1);
 	message(YOU_CAN_MOVE_AGAIN, 0);

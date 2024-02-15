@@ -12,7 +12,7 @@ use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM, MAX_TRAP};
 use crate::level::UpResult::UpLevel;
 use crate::message::{message, print_stats};
-use crate::monster::wake_room;
+use crate::monster::{MonsterMash, wake_room};
 use crate::objects::put_amulet;
 use crate::pack::has_amulet;
 use crate::player::{Player, RoomMark};
@@ -233,7 +233,7 @@ pub unsafe fn make_room(rn: i64, r1: i64, r2: i64, r3: i64, level: &mut Level) {
 	level.rooms[rn].set_bounds(&room_bounds);
 }
 
-pub unsafe fn connect_rooms(room1: usize, room2: usize, level_depth: usize, level: &mut Level) -> bool {
+pub unsafe fn connect_rooms(room1: usize, room2: usize, level_depth: isize, level: &mut Level) -> bool {
 	if !level.rooms[room1].room_type.is_type(&vec![RoomType::Room, RoomType::Maze])
 		|| !level.rooms[room2].room_type.is_type(&vec![RoomType::Room, RoomType::Maze]) {
 		return false;
@@ -255,14 +255,21 @@ pub unsafe fn connect_rooms(room1: usize, room2: usize, level_depth: usize, leve
 	}
 }
 
-pub fn clear_level(player: &mut Player, level: &mut Level) {
-	level.clear();
-	player.reset_spot();
-	player.cleaned_up = None;
+impl GameState {
+	pub fn clear_level(&mut self) {
+		self.level.clear();
+		self.player.reset_spot();
+		self.player.cleaned_up = None;
+		self.mash.clear()
+	}
+}
+
+pub fn clear_level(game: &mut GameState) {
+	game.clear_level();
 	ncurses::clear();
 }
 
-pub unsafe fn put_door(rn: usize, door_dir: DoorDirection, level_depth: usize, level: &mut Level) -> DungeonSpot {
+pub unsafe fn put_door(rn: usize, door_dir: DoorDirection, level_depth: isize, level: &mut Level) -> DungeonSpot {
 	let room = &mut level.rooms[rn];
 	let wall_width = if RoomType::Maze == room.room_type { 0 } else { 1 };
 	let door_spot = match door_dir {
@@ -301,7 +308,7 @@ pub unsafe fn put_door(rn: usize, door_dir: DoorDirection, level_depth: usize, l
 	door_spot
 }
 
-pub unsafe fn draw_simple_passage(spot1: &DungeonSpot, spot2: &DungeonSpot, dir: DoorDirection, level_depth: usize, level: &mut Level) {
+pub unsafe fn draw_simple_passage(spot1: &DungeonSpot, spot2: &DungeonSpot, dir: DoorDirection, level_depth: isize, level: &mut Level) {
 	let (col1, row1, col2, row2) =
 		match dir {
 			DoorDirection::Left | DoorDirection::Right => {
@@ -360,7 +367,7 @@ pub fn same_col(room1: usize, room2: usize) -> bool {
 	room1 % 3 == room2 % 3
 }
 
-pub unsafe fn add_mazes(level_depth: usize, level: &mut Level) {
+pub unsafe fn add_mazes(level_depth: isize, level: &mut Level) {
 	if level_depth > 1 {
 		let start = get_rand(0, MAX_ROOM - 1);
 		let maze_percent = {
@@ -370,7 +377,7 @@ pub unsafe fn add_mazes(level_depth: usize, level: &mut Level) {
 			} else {
 				nominal_percent
 			}
-		};
+		} as usize;
 
 		for i in 0..MAX_ROOM {
 			let j = (start + i) % MAX_ROOM;
@@ -392,7 +399,7 @@ pub unsafe fn add_mazes(level_depth: usize, level: &mut Level) {
 	}
 }
 
-pub unsafe fn fill_out_level(level: &mut Level, level_depth: usize) {
+pub unsafe fn fill_out_level(level: &mut Level, level_depth: isize) {
 	let shuffled_rns = shuffled_rns();
 	r_de = None;
 	for i in 0..MAX_ROOM {
@@ -407,7 +414,7 @@ pub unsafe fn fill_out_level(level: &mut Level, level_depth: usize) {
 	}
 }
 
-pub unsafe fn fill_it(rn: usize, do_rec_de: bool, level_depth: usize, level: &mut Level) {
+pub unsafe fn fill_it(rn: usize, do_rec_de: bool, level_depth: isize, level: &mut Level) {
 	let mut did_this = false;
 	let mut srow: i64 = 0;
 	let mut scol: i64 = 0;
@@ -458,7 +465,7 @@ pub unsafe fn fill_it(rn: usize, do_rec_de: bool, level_depth: usize, level: &mu
 	}
 }
 
-pub unsafe fn recursive_deadend(rn: usize, offsets: &[isize; 4], s_spot: &DungeonSpot, level_depth: usize, level: &mut Level)
+pub unsafe fn recursive_deadend(rn: usize, offsets: &[isize; 4], s_spot: &DungeonSpot, level_depth: isize, level: &mut Level)
 {
 	level.rooms[rn].room_type = RoomType::DeadEnd;
 	level.dungeon[s_spot.row as usize][s_spot.col as usize].set_only_kind(CellKind::Tunnel);
@@ -560,7 +567,7 @@ pub unsafe fn make_maze(r: usize, c: usize, tr: usize, br: usize, lc: usize, rc:
 	}
 }
 
-pub unsafe fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: i64, level_depth: usize, level: &mut Level) {
+pub unsafe fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: i64, level_depth: isize, level: &mut Level) {
 	if level_depth > 2 {
 		let (row1, row2) = if row1 > row2 { (row2, row1) } else { (row1, row2) };
 		let (col1, col2) = if col1 > col2 { (col2, col1) } else { (col1, col2) };
@@ -590,7 +597,7 @@ pub unsafe fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: 
 	}
 }
 
-pub unsafe fn put_player(avoid_room: RoomMark, player: &mut Player, level: &mut Level) {
+pub unsafe fn put_player(avoid_room: RoomMark, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	{
 		let mut row: i64 = 0;
 		let mut col: i64 = 0;
@@ -614,11 +621,11 @@ pub unsafe fn put_player(avoid_room: RoomMark, player: &mut Player, level: &mut 
 	match player.cur_room {
 		RoomMark::None => {}
 		RoomMark::Passage => {
-			light_passage(player.rogue.row, player.rogue.col, player, level);
+			light_passage(player.rogue.row, player.rogue.col, mash, player, level);
 		}
 		RoomMark::Area(cur_room) => {
-			light_up_room(cur_room, player, level);
-			wake_room(cur_room, true, player.rogue.row, player.rogue.col, player, level);
+			light_up_room(cur_room, mash, player, level);
+			wake_room(cur_room, true, player.rogue.row, player.rogue.col, mash, player, level);
 		}
 	}
 	if let Some(msg) = &level.new_level_message {
@@ -662,7 +669,7 @@ pub unsafe fn check_up(game: &mut GameState) -> UpResult {
 	}
 	game.level.new_level_message = Some("you feel a wrenching sensation in your gut".to_string());
 	if game.player.cur_depth == 1 {
-		win(&mut game.player, &mut game.level);
+		win(&mut game.mash, &mut game.player, &mut game.level);
 		WonGame
 	} else {
 		game.player.ascend();

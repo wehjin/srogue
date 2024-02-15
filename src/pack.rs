@@ -2,21 +2,20 @@
 
 use crate::inventory::{get_obj_desc, inventory};
 use crate::level::{CellKind, Level};
-use crate::message::{CANCEL, LIST, check_message, get_input_line, message, print_stats, rgetchar, sound_bell};
-use crate::monster::mv_aquatars;
-use crate::objects::NoteStatus::{Called, Identified, Unidentified};
+use crate::message::{CANCEL, check_message, get_input_line, LIST, message, print_stats, rgetchar, sound_bell};
+use crate::monster::{MonsterMash, mv_aquatars};
 use crate::objects::{level_objects, obj, object, ObjectId, ObjectPack, place_at, Title};
+use crate::objects::NoteStatus::{Called, Identified, Unidentified};
 use crate::player::Player;
-
 use crate::prelude::food_kind::FRUIT;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
-use crate::prelude::object_what::{PackFilter};
 use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll, Wand, Weapon};
+use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
-use crate::scrolls::ScrollKind::ScareMonster;
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD};
 use crate::r#move::reg_move;
 use crate::ring::un_put_hand;
+use crate::scrolls::ScrollKind::ScareMonster;
 use crate::weapons::kind::WeaponKind;
 
 pub const CURSE_MESSAGE: &'static str = "you can't, it appears to be cursed";
@@ -75,7 +74,7 @@ impl obj {
 	}
 }
 
-pub unsafe fn drop_0(player: &mut Player, level: &mut Level) {
+pub unsafe fn drop_0(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	if level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_any_kind(&[CellKind::Object, CellKind::Stairs, CellKind::Trap]) {
 		message("there's already something there", 0);
 		return;
@@ -104,7 +103,7 @@ pub unsafe fn drop_0(player: &mut Player, level: &mut Level) {
 					message(CURSE_MESSAGE, 0);
 					return;
 				}
-				mv_aquatars(player, level);
+				mv_aquatars(mash, player, level);
 				unwear(player);
 				print_stats(STAT_ARMOR, player);
 			} else if let Some(hand) = player.ring_hand(obj_id) {
@@ -112,7 +111,7 @@ pub unsafe fn drop_0(player: &mut Player, level: &mut Level) {
 					message(CURSE_MESSAGE, 0);
 					return;
 				}
-				un_put_hand(hand, player, level);
+				un_put_hand(hand, mash, player, level);
 			}
 			let place_obj = if let Some(obj) = player.pack_mut().object_if_mut(obj_id, |obj| obj.quantity > 1 && obj.what_is != Weapon) {
 				obj.quantity -= 1;
@@ -127,7 +126,7 @@ pub unsafe fn drop_0(player: &mut Player, level: &mut Level) {
 			let obj_desc = get_obj_desc(&place_obj, player.settings.fruit.to_string(), &player.notes);
 			place_at(place_obj, player.rogue.row, player.rogue.col, level);
 			message(&format!("dropped {}", obj_desc), 0);
-			reg_move(player, level);
+			reg_move(mash, player, level);
 		}
 	}
 }
@@ -202,12 +201,12 @@ pub unsafe fn pack_letter(prompt: &str, filter: PackFilter, player: &Player) -> 
 	}
 }
 
-pub unsafe fn take_off(player: &mut Player, level: &mut Level) {
+pub unsafe fn take_off(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	if let Some(armor_id) = player.armor_id() {
 		if player.pack().check_object(armor_id, obj::is_cursed) {
 			message(CURSE_MESSAGE, 0);
 		} else {
-			mv_aquatars(player, level);
+			mv_aquatars(mash, player, level);
 			if let Some(armor) = unwear(player) {
 				let armor_id = armor.id();
 				let obj_desc = player.get_obj_desc(armor_id);
@@ -215,14 +214,14 @@ pub unsafe fn take_off(player: &mut Player, level: &mut Level) {
 				message(&msg, 0);
 			}
 			print_stats(STAT_ARMOR, player);
-			reg_move(player, level);
+			reg_move(mash, player, level);
 		}
 	} else {
 		message("not wearing any", 0);
 	}
 }
 
-pub unsafe fn wear(player: &mut Player, level: &mut Level) {
+pub unsafe fn wear(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	if player.armor_id().is_some() {
 		message("your already wearing some", 0);
 		return;
@@ -247,7 +246,7 @@ pub unsafe fn wear(player: &mut Player, level: &mut Level) {
 			message(&format!("wearing {}", obj_desc), 0);
 			do_wear(obj_id, player);
 			print_stats(STAT_ARMOR, player);
-			reg_move(player, level);
+			reg_move(mash, player, level);
 		}
 	};
 }
@@ -264,7 +263,7 @@ pub fn unwear(player: &mut Player) -> Option<&obj> {
 }
 
 
-pub unsafe fn wield(player: &mut Player, level: &mut Level) {
+pub unsafe fn wield(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	if player.wields_cursed_weapon() {
 		message(CURSE_MESSAGE, 0);
 		return;
@@ -293,7 +292,7 @@ pub unsafe fn wield(player: &mut Player, level: &mut Level) {
 				player.unwield_weapon();
 				message(&format!("wielding {}", obj_desc), 0);
 				do_wield(obj_id, player);
-				reg_move(player, level);
+				reg_move(mash, player, level);
 			}
 		}
 	}
@@ -426,14 +425,14 @@ pub unsafe fn has_amulet(player: &Player) -> bool {
 	mask_pack(&player.rogue.pack, Amulets)
 }
 
-pub unsafe fn kick_into_pack(player: &mut Player, level: &mut Level) {
+pub unsafe fn kick_into_pack(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	if !level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_object() {
 		message("nothing here", 0);
 	} else {
 		let settings = player.settings.clone();
 		match pick_up(player.rogue.row, player.rogue.col, player, level) {
 			PickUpResult::TurnedToDust => {
-				reg_move(player, level);
+				reg_move(mash, player, level);
 			}
 			PickUpResult::AddedToGold(obj) => {
 				let msg = get_obj_desc(&obj, settings.fruit.to_string(), &player.notes);
