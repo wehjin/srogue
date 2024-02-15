@@ -3,7 +3,7 @@ use ncurses::{chtype, mvaddch};
 use crate::level::{add_exp, Level, LEVEL_POINTS};
 use crate::message::message;
 use crate::monster::{MonsterMash, show_monsters};
-use crate::objects::{level_objects, show_objects};
+use crate::objects::{LEVEL_OBJECTS, show_objects};
 use crate::player::{Player, RoomMark};
 use crate::potions::kind::PotionKind;
 use crate::r#use::STRANGE_FEELING;
@@ -65,7 +65,7 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, mash: &mut MonsterMash, play
 			}
 		}
 		PotionKind::DetectObjects => {
-			if level_objects.is_empty() {
+			if LEVEL_OBJECTS.is_empty() {
 				message(STRANGE_FEELING, 0);
 			} else {
 				if player.blind.is_inactive() {

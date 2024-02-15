@@ -7,11 +7,11 @@ use MoveResult::MoveFailed;
 use crate::hit::{get_dir_rc, rogue_hit};
 use crate::hunger::{FAINT, HUNGRY, STARVE, WEAK};
 use crate::inventory::get_obj_desc;
-use crate::level::{CellKind, Level};
 use crate::level::constants::{DCOLS, DROWS};
+use crate::level::Level;
 use crate::message::{CANCEL, check_message, hunger_str, message, print_stats, rgetchar, sound_bell};
 use crate::monster::{MonsterMash, mv_mons, put_wanderer, wake_room};
-use crate::objects::level_objects;
+use crate::objects::LEVEL_OBJECTS;
 use crate::odds::R_TELE_PERCENT;
 use crate::pack::{pick_up, PickUpResult};
 use crate::play::interrupted;
@@ -51,7 +51,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, mash: &mut MonsterMash, 
 		return MoveFailed;
 	}
 	if level.being_held || level.bear_trap > 0 {
-		if !level.dungeon[row as usize][col as usize].is_monster() {
+		if !level.dungeon[row as usize][col as usize].has_monster() {
 			if level.being_held {
 				message("you are being held", 1);
 			} else {
@@ -65,7 +65,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, mash: &mut MonsterMash, 
 		tele(mash, player, level);
 		return StoppedOnSomething;
 	}
-	if level.dungeon[row as usize][col as usize].is_monster() {
+	if level.dungeon[row as usize][col as usize].has_monster() {
 		let mon_id = mash.monster_id_at_spot(row, col).expect("monster in mash at monster spot one_move_rogue");
 		rogue_hit(mon_id, false, mash, player, level);
 		reg_move(mash, player, level);
@@ -106,22 +106,23 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, mash: &mut MonsterMash, 
 	if !player.settings.jump {
 		refresh();
 	}
+
 	player.rogue.row = row;
 	player.rogue.col = col;
-	if level.dungeon[row as usize][col as usize].is_object() {
+	let player_cell = level.dungeon[row as usize][col as usize];
+	if player_cell.has_object() {
 		if !pickup {
 			stopped_on_something_with_moved_onto_message(row, col, mash, player, level)
 		} else {
 			if player.levitate.is_active() {
 				StoppedOnSomething
 			} else {
-				let settings = player.settings.clone();
 				match pick_up(row, col, player, level) {
 					PickUpResult::TurnedToDust => {
 						moved_unless_hungry_or_confused(mash, player, level)
 					}
 					PickUpResult::AddedToGold(obj) => {
-						let msg = get_obj_desc(&obj, settings.fruit.to_string(), &player.notes);
+						let msg = get_obj_desc(&obj, player.settings.fruit.to_string(), &player.notes);
 						stopped_on_something_with_message(&msg, mash, player, level)
 					}
 					PickUpResult::AddedToPack { added_id, .. } => {
@@ -134,8 +135,8 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, mash: &mut MonsterMash, 
 				}
 			}
 		}
-	} else if level.dungeon[row as usize][col as usize].is_any_kind(&[CellKind::Door, CellKind::Stairs, CellKind::Trap]) {
-		if player.levitate.is_inactive() && level.dungeon[row as usize][col as usize].is_trap() {
+	} else if player_cell.is_door() || player_cell.is_stairs() || player_cell.is_trap() {
+		if player.levitate.is_inactive() && player_cell.is_trap() {
 			trap_player(row as usize, col as usize, mash, player, level);
 		}
 		reg_move(mash, player, level);
@@ -146,7 +147,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, mash: &mut MonsterMash, 
 }
 
 unsafe fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) -> MoveResult {
-	let obj = level_objects.find_object_at(row, col).expect("moved-on object");
+	let obj = LEVEL_OBJECTS.find_object_at(row, col).expect("moved-on object");
 	let obj_desc = get_obj_desc(obj, player.settings.fruit.to_string(), &player.notes);
 	let desc = format!("moved onto {}", obj_desc);
 	return stopped_on_something_with_message(&desc, mash, player, level);
@@ -213,11 +214,11 @@ pub fn is_passable(row: i64, col: i64, level: &Level) -> bool {
 	if is_off_screen(row, col) {
 		false
 	} else {
-		if level.dungeon[row as usize][col as usize].is_hidden() {
-			level.dungeon[row as usize][col as usize].is_trap()
+		let cell = level.dungeon[row as usize][col as usize];
+		if cell.is_hidden() {
+			cell.is_trap()
 		} else {
-			let PASSABLE_CELL_KINDS = [CellKind::Floor, CellKind::Tunnel, CellKind::Door, CellKind::Stairs, CellKind::Trap];
-			level.dungeon[row as usize][col as usize].is_any_kind(&PASSABLE_CELL_KINDS)
+			cell.is_floor() || cell.is_tunnel() || cell.is_door() || cell.is_stairs() || cell.is_trap()
 		}
 	}
 }
@@ -252,7 +253,7 @@ pub unsafe fn next_to_something(drow: i64, dcol: i64, player: &Player, level: &L
 			}
 			/* If the rogue used to be right, up, left, down, or right of
 			 * row,col, and now isn't, then don't stop */
-			if s.is_any_kind(&[CellKind::Monster, CellKind::Object, CellKind::Stairs]) {
+			if s.has_monster() || s.has_object() || s.is_stairs() {
 				if ((row == drow) || (col == dcol)) &&
 					(!((row == player.rogue.row) || (col == player.rogue.col))) {
 					continue;

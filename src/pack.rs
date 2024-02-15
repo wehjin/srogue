@@ -1,10 +1,10 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
 use crate::inventory::{get_obj_desc, inventory};
-use crate::level::{CellKind, Level};
+use crate::level::Level;
 use crate::message::{CANCEL, check_message, get_input_line, LIST, message, print_stats, rgetchar, sound_bell};
 use crate::monster::{MonsterMash, mv_aquatars};
-use crate::objects::{level_objects, Object, ObjectId, ObjectPack, place_at, Title};
+use crate::objects::{LEVEL_OBJECTS, Object, ObjectId, ObjectPack, place_at, Title};
 use crate::objects::NoteStatus::{Called, Identified, Unidentified};
 use crate::player::Player;
 use crate::prelude::food_kind::FRUIT;
@@ -33,28 +33,28 @@ pub enum PickUpResult {
 }
 
 pub unsafe fn pick_up(row: i64, col: i64, player: &mut Player, level: &mut Level) -> PickUpResult {
-	let obj_id = level_objects.find_id_at(row, col).expect("obj_id in level-objects at pick-up spot");
-	if level_objects.check_object(obj_id, Object::is_used_scare_monster_scroll) {
+	let obj_id = LEVEL_OBJECTS.find_id_at(row, col).expect("obj_id in level-objects at pick-up spot");
+	if LEVEL_OBJECTS.check_object(obj_id, Object::is_used_scare_monster_scroll) {
 		message("the scroll turns to dust as you pick it up", 0);
-		level.dungeon[row as usize][col as usize].remove_kind(CellKind::Object);
-		level_objects.remove(obj_id);
+		level.dungeon[row as usize][col as usize].set_object(false);
+		LEVEL_OBJECTS.remove(obj_id);
 		if player.notes.scrolls[ScareMonster.to_index()].status == Unidentified {
 			player.notes.scrolls[ScareMonster.to_index()].status = Identified
 		}
 		PickUpResult::TurnedToDust
-	} else if let Some(quantity) = level_objects.try_map_object(obj_id, Object::gold_quantity) {
+	} else if let Some(quantity) = LEVEL_OBJECTS.try_map_object(obj_id, Object::gold_quantity) {
 		player.rogue.gold += quantity;
-		level.dungeon[row as usize][col as usize].remove_kind(CellKind::Object);
-		let removed = level_objects.remove(obj_id).expect("remove level object");
+		level.dungeon[row as usize][col as usize].set_object(false);
+		let removed = LEVEL_OBJECTS.remove(obj_id).expect("remove level object");
 		print_stats(STAT_GOLD, player);
 		PickUpResult::AddedToGold(removed)
-	} else if player.pack_weight_with_new_object(level_objects.object(obj_id))
+	} else if player.pack_weight_with_new_object(LEVEL_OBJECTS.object(obj_id))
 		>= MAX_PACK_COUNT {
 		message("pack too full", 1);
 		PickUpResult::PackTooFull
 	} else {
-		level.dungeon[row as usize][col as usize].remove_kind(CellKind::Object);
-		let removed_obj = take_from_pack(obj_id, &mut level_objects).expect("removed object");
+		level.dungeon[row as usize][col as usize].set_object(false);
+		let removed_obj = take_from_pack(obj_id, &mut LEVEL_OBJECTS).expect("removed object");
 		let added_id = player.combine_or_add_item_to_pack(removed_obj);
 		let added_kind = {
 			let obj = player.object_mut(added_id).expect("picked-up item in player's pack");
@@ -75,7 +75,8 @@ impl Object {
 }
 
 pub unsafe fn drop_0(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
-	if level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_any_kind(&[CellKind::Object, CellKind::Stairs, CellKind::Trap]) {
+	let player_cell = level.dungeon[player.rogue.row as usize][player.rogue.col as usize];
+	if player_cell.has_object() || player_cell.is_stairs() || player_cell.is_trap() {
 		message("there's already something there", 0);
 		return;
 	}
@@ -426,7 +427,7 @@ pub unsafe fn has_amulet(player: &Player) -> bool {
 }
 
 pub unsafe fn kick_into_pack(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
-	if !level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_object() {
+	if !level.dungeon[player.rogue.row as usize][player.rogue.col as usize].has_object() {
 		message("nothing here", 0);
 	} else {
 		let settings = player.settings.clone();

@@ -5,7 +5,7 @@ use rand::prelude::SliceRandom;
 use rand::thread_rng;
 
 use crate::hit::{get_dir_rc, get_hit_chance, get_weapon_damage, HIT_MESSAGE, mon_damage};
-use crate::level::{CellKind, Level};
+use crate::level::{DungeonCell, Level};
 use crate::message::{CANCEL, check_message, message, print_stats};
 use crate::monster::{MonsterMash, mv_aquatars};
 use crate::objects::{Object, ObjectId, place_at};
@@ -149,10 +149,8 @@ pub unsafe fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i
 	let mut i = 0;
 	while i < 24 {
 		get_dir_rc(dir, row, col, false);
-		const WALL_OR_HIDDEN: [CellKind; 3] = [CellKind::HorizontalWall, CellKind::VerticalWall, CellKind::Hidden];
 		let cell = &level.dungeon[*row as usize][*col as usize];
-		if cell.is_nothing()
-			|| (cell.is_any_kind(&WALL_OR_HIDDEN) && !cell.is_trap()) {
+		if cell.is_nothing() || ((cell.is_wall() || cell.is_hidden()) && !cell.is_trap()) {
 			*row = orow;
 			*col = ocol;
 			return None;
@@ -162,12 +160,12 @@ pub unsafe fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i
 			mvaddch(orow as i32, ocol as i32, get_dungeon_char(orow, ocol, mash, player, level));
 		}
 		if player.can_see(*row, *col, level) {
-			if !cell.is_monster() {
+			if !cell.has_monster() {
 				mvaddch(*row as i32, *col as i32, chtype::from(obj_char));
 			}
 			refresh();
 		}
-		if cell.is_monster() {
+		if cell.has_monster() {
 			if !imitating(*row, *col, mash, level) {
 				return mash.monster_at_spot(*row, *col).map(|m| m.id());
 			}
@@ -185,16 +183,19 @@ pub unsafe fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i
 unsafe fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &mut Level) {
 	let mut found = false;
 	let mut walk = RandomWalk::new(row, col);
+	fn good_cell(cell: DungeonCell) -> bool {
+		!(cell.has_object() || cell.is_trap() || cell.is_stairs() || cell.is_hidden())
+			&& (cell.is_floor() || cell.is_tunnel() || cell.is_door() || cell.has_monster())
+	}
 	for _ in 0..9 {
-		const GOOD_CELL_KINDS: [CellKind; 4] = [CellKind::Floor, CellKind::Tunnel, CellKind::Door, CellKind::Monster];
-		if level.dungeon[walk.spot().row as usize][walk.spot().col as usize].is_other_kind(&GOOD_CELL_KINDS) {
+		let cell = level.dungeon[walk.spot().row as usize][walk.spot().col as usize];
+		if good_cell(cell) {
 			break;
 		}
 		walk.step();
 		let spot = walk.spot();
-		if spot.is_out_of_bounds()
-			|| level.dungeon[spot.row as usize][spot.col as usize].is_nothing()
-			|| level.dungeon[spot.row as usize][spot.col as usize].is_other_kind(&GOOD_CELL_KINDS) {
+		let spot_cell = level.dungeon[spot.row as usize][spot.col as usize];
+		if spot.is_out_of_bounds() || spot_cell.is_nothing() || !good_cell(spot_cell) {
 			continue;
 		}
 		found = true;
@@ -209,8 +210,8 @@ unsafe fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, mash: &mut MonsterMa
 		new_obj.ichar = 'L';
 		place_at(new_obj, row, col, level);
 		if player.can_see(row, col, level) && !player.is_at(row, col) {
-			let was_monster = level.dungeon[row as usize][col as usize].is_monster();
-			level.dungeon[row as usize][col as usize].remove_kind(CellKind::Monster);
+			let was_monster = level.dungeon[row as usize][col as usize].has_monster();
+			level.dungeon[row as usize][col as usize].set_monster(false);
 			let dungeon_char = get_dungeon_char(row, col, mash, player, level);
 			if was_monster {
 				let monster_char = mvinch(row as i32, col as i32) as u8 as char;
@@ -220,7 +221,7 @@ unsafe fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, mash: &mut MonsterMa
 				if (monster_char < 'A') || (monster_char > 'Z') {
 					mvaddch(row as i32, col as i32, dungeon_char);
 				}
-				level.dungeon[row as usize][col as usize].add_kind(CellKind::Monster)
+				level.dungeon[row as usize][col as usize].set_monster(true);
 			} else {
 				mvaddch(row as i32, col as i32, dungeon_char);
 			}

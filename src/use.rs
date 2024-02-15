@@ -6,7 +6,7 @@ use crate::level::{add_exp, Level, put_player};
 use crate::machdep::md_sleep;
 use crate::message::{CANCEL, check_message, hunger_str, message, print_stats};
 use crate::monster::{aggravate, create_monster, gr_obj_char, MonsterMash, mv_mons, show_monsters};
-use crate::objects::{level_objects, ObjectId};
+use crate::objects::{LEVEL_OBJECTS, ObjectId};
 use crate::objects::NoteStatus::Identified;
 use crate::pack::{pack_letter, take_from_pack, unwear, unwield};
 use crate::player::{Player, RoomMark};
@@ -264,7 +264,7 @@ unsafe fn hold_monster(mash: &mut MonsterMash, player: &Player, level: &Level) {
 			if is_off_screen(row, col) {
 				continue;
 			}
-			if level.dungeon[row as usize][col as usize].is_monster() {
+			if level.dungeon[row as usize][col as usize].has_monster() {
 				let monster = mash.monster_at_spot_mut(row, col).expect("monster at spot");
 				monster.m_flags.asleep = true;
 				monster.m_flags.wakens = false;
@@ -297,7 +297,7 @@ pub unsafe fn hallucinate_on_screen(mash: &mut MonsterMash, player: &Player) {
 		return;
 	}
 
-	for obj in level_objects.objects() {
+	for obj in LEVEL_OBJECTS.objects() {
 		let ch = mvinch(obj.row as i32, obj.col as i32);
 		let row = obj.row;
 		let col = obj.col;

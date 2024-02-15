@@ -1,84 +1,102 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Eq, PartialEq)]
-pub enum CellKind {
-	Object,
-	Monster,
-	Stairs,
+use crate::room::DoorDirection;
+
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum CellMaterial {
+	None,
 	HorizontalWall,
 	VerticalWall,
-	Door,
+	Door(DoorDirection),
 	Floor,
 	Tunnel,
-	Trap,
-	Hidden,
 }
 
+impl CellMaterial {
+	pub fn is_door(&self) -> bool {
+		match self {
+			Self::Door(_) => true,
+			_ => false,
+		}
+	}
+	pub fn is_wall(&self) -> bool {
+		match self {
+			Self::HorizontalWall | Self::VerticalWall => true,
+			_ => false,
+		}
+	}
+}
 
-#[derive(Copy, Clone, Serialize, Deserialize, Default)]
-pub struct DungeonCell(u16);
+impl Default for CellMaterial {
+	fn default() -> Self { Self::None }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum CellFixture {
+	None,
+	Trap,
+	Stairs,
+}
+
+impl Default for CellFixture {
+	fn default() -> Self { Self::None }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
+pub struct DungeonCell {
+	material: CellMaterial,
+	fixture: CellFixture,
+	hidden: bool,
+	object: bool,
+	monster: bool,
+}
 
 impl DungeonCell {
-	pub fn set_nothing(&mut self) {
-		self.0 = 0;
+	const NOTHING: Self = Self {
+		material: CellMaterial::None,
+		fixture: CellFixture::None,
+		hidden: false,
+		object: false,
+		monster: false,
+	};
+	pub fn reset_to_nothing(&mut self) {
+		*self = Self::NOTHING;
 	}
-	pub fn set_only_kind(&mut self, kind: CellKind) {
-		self.0 = Self::flag_for_kind(kind);
+	pub fn set_material_and_clear_others(&mut self, mat: CellMaterial) {
+		self.material = mat;
+		self.fixture = CellFixture::None;
+		self.object = false;
+		self.monster = false;
+		self.hidden = false;
 	}
-	pub fn add_kind(&mut self, kind: CellKind) {
-		self.0 |= Self::flag_for_kind(kind);
+	pub fn set_monster(&mut self, value: bool) {
+		self.monster = value;
 	}
-	pub fn remove_kind(&mut self, kind: CellKind) {
-		self.0 &= !Self::flag_for_kind(kind);
+	pub fn set_object(&mut self, value: bool) {
+		self.object = value
 	}
-
-	pub fn add_hidden(&mut self) {
-		self.add_kind(CellKind::Hidden);
+	pub fn set_hidden(&mut self, value: bool) {
+		self.hidden = value;
 	}
-	pub fn is_nothing(&self) -> bool {
-		self.0 == 0
+	pub fn set_fixture(&mut self, value: CellFixture) {
+		self.fixture = value;
 	}
-	pub fn is_door(&self) -> bool { self.is_kind(CellKind::Door) }
-	pub fn is_floor(&self) -> bool { self.is_kind(CellKind::Floor) }
-	pub fn is_tunnel(&self) -> bool { self.is_kind(CellKind::Tunnel) }
-	pub fn is_monster(&self) -> bool { self.is_kind(CellKind::Monster) }
-	pub fn is_stairs(&self) -> bool { self.is_kind(CellKind::Stairs) }
-	pub fn is_hidden(&self) -> bool { self.is_kind(CellKind::Hidden) }
-	pub fn is_trap(&self) -> bool { self.is_kind(CellKind::Trap) }
-	pub fn is_object(&self) -> bool { self.is_kind(CellKind::Object) }
-	pub fn is_kind(&self, kind: CellKind) -> bool {
-		(self.0 & Self::flag_for_kind(kind)) != 0
+	pub fn is_nothing(&self) -> bool { self == &Self::NOTHING }
+	pub fn material(&self) -> &CellMaterial { &self.material }
+	pub fn is_wall(&self) -> bool { self.material.is_wall() }
+	pub fn is_door(&self) -> bool { self.material.is_door() }
+	pub fn is_floor(&self) -> bool { self.material == CellMaterial::Floor }
+	pub fn is_tunnel(&self) -> bool { self.material == CellMaterial::Tunnel }
+	pub fn is_stairs(&self) -> bool { self.fixture == CellFixture::Stairs }
+	pub fn is_trap(&self) -> bool { self.fixture == CellFixture::Trap }
+	pub fn has_monster(&self) -> bool { self.monster }
+	pub fn has_object(&self) -> bool { self.object }
+	pub fn is_hidden(&self) -> bool { self.hidden }
+	pub fn is_material(&self, mat: CellMaterial) -> bool { self.material == mat }
+	pub fn is_not_material(&self, mat: CellMaterial) -> bool {
+		!self.is_material(mat)
 	}
-	pub fn is_only_kind(&self, kind: CellKind) -> bool {
-		self.0 == Self::flag_for_kind(kind)
-	}
-	pub fn is_not_kind(&self, kind: CellKind) -> bool {
-		!self.is_kind(kind)
-	}
-	pub fn is_any_kind(&self, kinds: &[CellKind]) -> bool {
-		kinds.iter().position(|kind| self.is_kind(*kind)).is_some()
-	}
-	pub fn is_other_kind(&self, kinds: &[CellKind]) -> bool {
-		let mask = kinds.iter().fold(
-			0u16,
-			|all, next| {
-				all | Self::flag_for_kind(*next)
-			},
-		);
-		(self.0 & !mask) != 0
-	}
-	fn flag_for_kind(kind: CellKind) -> u16 {
-		match kind {
-			CellKind::Object => 0o1,
-			CellKind::Monster => 0o2,
-			CellKind::Stairs => 0o4,
-			CellKind::HorizontalWall => 0o10,
-			CellKind::VerticalWall => 0o20,
-			CellKind::Door => 0o40,
-			CellKind::Floor => 0o100,
-			CellKind::Tunnel => 0o200,
-			CellKind::Trap => 0o400,
-			CellKind::Hidden => 0o1000,
-		}
+	pub fn is_material_only(&self, mat: CellMaterial) -> bool {
+		self.material == mat && self.fixture == CellFixture::None && !self.object && !self.monster && !self.hidden
 	}
 }

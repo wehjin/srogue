@@ -4,10 +4,9 @@ use libc::c_char;
 
 pub use damage_stat::*;
 
-use crate::level::{add_exp, CellKind, Level};
+use crate::level::{add_exp, Level};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
-use crate::monster;
 use crate::monster::{mon_name, Monster, MonsterMash};
 use crate::objects::{get_armor_class, Object};
 use crate::play::interrupted;
@@ -136,7 +135,7 @@ pub unsafe fn rogue_hit(mon_id: u64, force_hit: bool, mash: &mut MonsterMash, pl
 	monster.wake_up();
 }
 
-pub unsafe fn rogue_damage(d: isize, monster: &monster::Monster, player: &mut Player) {
+pub unsafe fn rogue_damage(d: isize, monster: &Monster, player: &mut Player) {
 	if d >= player.rogue.hp_current {
 		player.rogue.hp_current = 0;
 		print_stats(STAT_HP, player);
@@ -215,7 +214,7 @@ pub unsafe fn mon_damage(mon_id: u64, damage: isize, mash: &mut MonsterMash, pla
 			let monster = mash.monster(mon_id);
 			let row = monster.spot.row;
 			let col = monster.spot.col;
-			level.dungeon[row as usize][col as usize].remove_kind(CellKind::Monster);
+			level.dungeon[row as usize][col as usize].set_monster(false);
 			ncurses::mvaddch(row as i32, col as i32, get_dungeon_char(row, col, mash, player, level));
 		}
 		FIGHT_MONSTER = None;
@@ -285,7 +284,7 @@ pub unsafe fn fight(to_the_death: bool, mash: &mut MonsterMash, player: &mut Pla
 		one_move_rogue(ch, false, mash, player, level);
 		if (!to_the_death && player.rogue.hp_current <= possible_damage)
 			|| interrupted
-			|| !level.dungeon[row as usize][col as usize].is_monster() {
+			|| !level.dungeon[row as usize][col as usize].has_monster() {
 			FIGHT_MONSTER = None;
 		} else {
 			let monster_id = mash.monster_at_spot(row, col).map(|m| m.id());

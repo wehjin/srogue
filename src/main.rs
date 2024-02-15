@@ -6,7 +6,7 @@ use crate::init::{init, InitError, InitResult};
 use crate::level::{clear_level, make_level, put_player};
 use crate::message::print_stats;
 use crate::monster::put_mons;
-use crate::objects::{level_objects, put_objects, put_stairs};
+use crate::objects::{LEVEL_OBJECTS, put_objects, put_stairs};
 use crate::play::{play_level, PlayResult};
 use crate::player::RoomMark;
 use crate::prelude::stat_const::STAT_ALL;
@@ -117,7 +117,7 @@ pub fn main() {
 				break;
 			}
 		}
-		unsafe { level_objects.clear(); }
+		unsafe { LEVEL_OBJECTS.clear(); }
 	}
 	drop(console);
 	if let Some(exit) = exit_line {

@@ -8,10 +8,10 @@ pub use kind::*;
 pub use mash::*;
 
 use crate::hit::mon_hit;
-use crate::level::{CellKind, Level};
 use crate::level::constants::{DCOLS, DROWS};
+use crate::level::Level;
 use crate::message::message;
-use crate::objects::{level_objects, ObjectId, ObjectPack};
+use crate::objects::{LEVEL_OBJECTS, ObjectId, ObjectPack};
 use crate::odds;
 use crate::player::Player;
 use crate::prelude::*;
@@ -56,7 +56,11 @@ pub unsafe fn put_mons(mash: &mut MonsterMash, player: &Player, level: &mut Leve
 		if monster.m_flags.wanders && coin_toss() {
 			monster.wake_up();
 		}
-		let DungeonSpot { row, col } = random_spot_with_flag(&[CellKind::Floor, CellKind::Tunnel, CellKind::Stairs, CellKind::Object], player, level);
+		let DungeonSpot { row, col } = random_spot_with_flag(
+			|cell| cell.is_floor() || cell.is_tunnel() || cell.is_stairs() || cell.has_object(),
+			player,
+			level,
+		);
 		put_m_at(row, col, monster, mash, level);
 	}
 }
@@ -127,7 +131,7 @@ pub unsafe fn party_monsters(rn: usize, n: usize, level_depth: isize, mash: &mut
 			let row = get_rand(level.rooms[rn].top_row + 1, level.rooms[rn].bottom_row - 1);
 			let col = get_rand(level.rooms[rn].left_col + 1, level.rooms[rn].right_col - 1);
 			let dungeon_spot = level.dungeon[row as usize][col as usize];
-			if !dungeon_spot.is_kind(CellKind::Monster) && dungeon_spot.is_any_kind(&[CellKind::Floor, CellKind::Tunnel]) {
+			if !dungeon_spot.has_monster() && (dungeon_spot.is_floor() || dungeon_spot.is_tunnel()) {
 				found = Some((row, col));
 				break;
 			}
@@ -258,8 +262,8 @@ pub unsafe fn mtry(monster: &mut Monster, row: i64, col: i64, player: &Player, l
 
 pub unsafe fn move_mon_to(monster: &mut Monster, row: i64, col: i64, player: &Player, level: &mut Level) {
 	let (mrow, mcol) = (monster.spot.row, monster.spot.col);
-	level.dungeon[mrow as usize][mcol as usize].remove_kind(CellKind::Monster);
-	level.dungeon[row as usize][col as usize].add_kind(CellKind::Monster);
+	level.dungeon[mrow as usize][mcol as usize].set_monster(false);
+	level.dungeon[row as usize][col as usize].set_monster(true);
 
 	let c = ncurses::mvinch(mrow as i32, mcol as i32);
 	if (c >= chtype::from('A')) && (c <= chtype::from('Z')) {
@@ -313,7 +317,7 @@ pub unsafe fn mon_can_go(monster: &Monster, row: i64, col: i64, player: &Player,
 		|| level.dungeon[row as usize][monster.spot.col as usize].is_nothing() {
 		return false;
 	}
-	if !is_passable(row, col, level) || level.dungeon[row as usize][col as usize].is_monster() {
+	if !is_passable(row, col, level) || level.dungeon[row as usize][col as usize].has_monster() {
 		return false;
 	}
 	if (monster.spot.row != row) && (monster.spot.col != col)
@@ -329,9 +333,9 @@ pub unsafe fn mon_can_go(monster: &Monster, row: i64, col: i64, player: &Player,
 		if (monster.spot.col < player.rogue.col) && (col < monster.spot.col) { return false; }
 		if (monster.spot.col > player.rogue.col) && (col > monster.spot.col) { return false; }
 	}
-	if level.dungeon[row as usize][col as usize].is_object() {
-		if let Some(obj_id) = level_objects.find_id_at(row, col) {
-			let obj = level_objects.object(obj_id).expect("object in level_object");
+	if level.dungeon[row as usize][col as usize].has_object() {
+		if let Some(obj_id) = LEVEL_OBJECTS.find_id_at(row, col) {
+			let obj = LEVEL_OBJECTS.object(obj_id).expect("object in level_object");
 			if obj.what_is == Scroll
 				&& ScrollKind::from_index(obj.which_kind as usize) == ScareMonster {
 				return false;
@@ -385,11 +389,17 @@ fn random_wanderer(level_depth: isize) -> Option<Monster> {
 	return None;
 }
 
-unsafe fn random_spot_for_wanderer(player: &Player, level: &Level) -> Option<DungeonSpot> {
+fn random_spot_for_wanderer(player: &Player, level: &Level) -> Option<DungeonSpot> {
 	let mut row = 0;
 	let mut col = 0;
 	for _ in 0..25 {
-		gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel, CellKind::Stairs, CellKind::Object], player, level);
+		gr_row_col(
+			&mut row,
+			&mut col,
+			|cell| cell.is_floor() || cell.is_tunnel() || cell.is_stairs() || cell.has_object(),
+			player,
+			level,
+		);
 		if !player.can_see(row, col, level) {
 			return Some(DungeonSpot { row, col });
 		}
@@ -420,7 +430,7 @@ pub unsafe fn show_monsters(mash: &mut MonsterMash, player: &Player, level: &mut
 	}
 }
 
-unsafe fn random_spot_for_monster(start_row: i64, start_col: i64, level: &Level) -> Option<DungeonSpot> {
+fn random_spot_for_monster(start_row: i64, start_col: i64, level: &Level) -> Option<DungeonSpot> {
 	let mut walk = RandomWalk::new(start_row, start_col);
 	for _ in 0..9 {
 		walk.step();
@@ -428,9 +438,8 @@ unsafe fn random_spot_for_monster(start_row: i64, start_col: i64, level: &Level)
 		if spot.is_at(start_row, start_col) || spot.is_out_of_bounds() {
 			continue;
 		}
-		const GOOD_CELL_KINDS_FOR_MONSTER: [CellKind; 4] = [CellKind::Floor, CellKind::Tunnel, CellKind::Stairs, CellKind::Door];
-		if !level.dungeon[spot.row as usize][spot.col as usize].is_monster()
-			&& level.dungeon[spot.row as usize][spot.col as usize].is_any_kind(&GOOD_CELL_KINDS_FOR_MONSTER) {
+		let cell = level.dungeon[spot.row as usize][spot.col as usize];
+		if !cell.has_monster() && (cell.is_floor() || cell.is_tunnel() || cell.is_stairs() || cell.is_door()) {
 			return Some(spot.clone());
 		}
 	}
@@ -454,7 +463,7 @@ pub unsafe fn create_monster(mash: &mut MonsterMash, player: &Player, level: &mu
 
 pub unsafe fn put_m_at(row: i64, col: i64, mut monster: Monster, mash: &mut MonsterMash, level: &mut Level) {
 	monster.set_spot(row, col);
-	level.dungeon[row as usize][col as usize].add_kind(CellKind::Monster);
+	level.dungeon[row as usize][col as usize].set_monster(true);
 	monster.trail_char = ncurses::mvinch(row as i32, col as i32);
 	mash.add_monster(monster);
 	if let Some(monster) = mash.monster_at_spot_mut(row, col) {
@@ -533,7 +542,7 @@ pub fn no_spot_for_monster(rn: usize, level: &Level) -> bool {
 	let floor_bounds = room.to_floor_bounds();
 	for row in floor_bounds.rows() {
 		for col in floor_bounds.cols() {
-			if !level.dungeon[row as usize][col as usize].is_monster() {
+			if !level.dungeon[row as usize][col as usize].has_monster() {
 				// Found a spot for the monster
 				return false;
 			}

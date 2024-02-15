@@ -5,11 +5,11 @@ use ncurses::{chtype, mvaddch, refresh, standend, standout};
 use crate::armors::ArmorKind;
 use crate::hit::mon_hit;
 use crate::inventory::get_obj_desc;
-use crate::level::{add_exp, CellKind, hp_raise, Level, LEVEL_POINTS};
+use crate::level::{add_exp, hp_raise, Level, LEVEL_POINTS};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::message::{check_message, message, print_stats};
 use crate::monster::{mon_can_go, mon_disappeared, mon_name, Monster, MonsterMash, move_mon_to, mv_mons, mv_monster};
-use crate::objects::{alloc_object, get_armor_class, gr_object, level_objects, Object, place_at};
+use crate::objects::{alloc_object, get_armor_class, gr_object, LEVEL_OBJECTS, Object, place_at};
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
@@ -151,7 +151,7 @@ unsafe fn steal_item(mon_id: u64, mash: &mut MonsterMash, player: &mut Player, l
 unsafe fn disappear(mon_id: u64, mash: &mut MonsterMash, player: &Player, level: &mut Level) {
 	let monster_spot = {
 		let monster = mash.monster(mon_id);
-		level.dungeon[monster.spot.row as usize][monster.spot.col as usize].remove_kind(CellKind::Monster);
+		level.dungeon[monster.spot.row as usize][monster.spot.col as usize].set_monster(false);
 		monster.spot
 	};
 	let DungeonSpot { row, col } = monster_spot;
@@ -209,11 +209,11 @@ unsafe fn try_to_cough(row: i64, col: i64, obj: &Object, mash: &mut MonsterMash,
 		return false;
 	}
 	let dungeon_cell = level.dungeon[row as usize][col as usize];
-	if !dungeon_cell.is_any_kind(&[CellKind::Object, CellKind::Stairs, CellKind::Trap])
-		&& dungeon_cell.is_any_kind(&[CellKind::Tunnel, CellKind::Floor, CellKind::Door]) {
+	if !(dungeon_cell.has_object() || dungeon_cell.is_stairs() || dungeon_cell.is_trap())
+		&& (dungeon_cell.is_tunnel() || dungeon_cell.is_floor() || dungeon_cell.is_door()) {
 		place_at(obj.clone(), row, col, level);
 		if (row != player.rogue.row || col != player.rogue.col)
-			&& !dungeon_cell.is_monster() {
+			&& !dungeon_cell.has_monster() {
 			mvaddch(row as i32, col as i32, get_dungeon_char(row, col, mash, player, level));
 		}
 		return true;
@@ -233,7 +233,7 @@ pub unsafe fn seek_gold(mon_id: u64, mash: &mut MonsterMash, player: &mut Player
 	let rn = rn as usize;
 	for i in (level.rooms[rn].top_row + 1)..level.rooms[rn].bottom_row {
 		for j in (level.rooms[rn].left_col + 1)..level.rooms[rn].right_col {
-			if gold_at(i, j, level) && !level.dungeon[i as usize][j as usize].is_monster() {
+			if gold_at(i, j, level) && !level.dungeon[i as usize][j as usize].has_monster() {
 				mash.monster_flags_mut(mon_id).can_flit = true;
 				let can_go_if_while_can_flit = mon_can_go(mash.monster(mon_id), i, j, player, level);
 				mash.monster_flags_mut(mon_id).can_flit = false;
@@ -258,8 +258,8 @@ pub unsafe fn seek_gold(mon_id: u64, mash: &mut MonsterMash, player: &mut Player
 }
 
 unsafe fn gold_at(row: i64, col: i64, level: &Level) -> bool {
-	if level.dungeon[row as usize][col as usize].is_object() {
-		if let Some(obj) = level_objects.find_object_at(row, col) {
+	if level.dungeon[row as usize][col as usize].has_object() {
+		if let Some(obj) = LEVEL_OBJECTS.find_object_at(row, col) {
 			if obj.what_is == Gold {
 				return true;
 			}
@@ -273,7 +273,7 @@ pub fn clear_gold_seeker(monster: &mut Monster) {
 }
 
 pub unsafe fn check_imitator(mon_id: u64, mash: &mut MonsterMash, player: &Player, level: &Level) -> bool {
-	if mash.monster_flags_mut(mon_id).imitates {
+	if mash.monster_flags(mon_id).imitates {
 		mash.monster_mut(mon_id).wake_up();
 		if player.blind.is_inactive() {
 			let monster = mash.monster(mon_id);
@@ -292,7 +292,7 @@ pub unsafe fn check_imitator(mon_id: u64, mash: &mut MonsterMash, player: &Playe
 }
 
 pub unsafe fn imitating(row: i64, col: i64, mash: &mut MonsterMash, level: &Level) -> bool {
-	if level.dungeon[row as usize][col as usize].is_monster() {
+	if level.dungeon[row as usize][col as usize].has_monster() {
 		if let Some(monster) = mash.monster_at_spot(row, col) {
 			if monster.m_flags.imitates {
 				return true;

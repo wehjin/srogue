@@ -5,10 +5,10 @@ use std::ops::RangeInclusive;
 use ncurses::{addch, chtype, mvaddch, mvinch};
 use serde::{Deserialize, Serialize};
 
-use crate::level::{CellKind, Level, same_col, same_row};
+use crate::level::{CellMaterial, DungeonCell, Level, same_col, same_row};
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM};
 use crate::monster::{gmc_row_col, Monster, MonsterMash};
-use crate::objects::{gr_object, level_objects, place_at};
+use crate::objects::{gr_object, LEVEL_OBJECTS, place_at};
 use crate::player::{Player, RoomMark};
 use crate::prelude::*;
 use crate::prelude::object_what::ObjectWhat;
@@ -62,7 +62,7 @@ impl RoomType {
 	}
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum DoorDirection {
 	Up,
 	Down,
@@ -71,6 +71,12 @@ pub enum DoorDirection {
 }
 
 impl DoorDirection {
+	pub fn is_up_or_down(&self) -> bool {
+		match self {
+			Up | Down => true,
+			Left | Right => false,
+		}
+	}
 	pub fn from_room_to_room(start_room: usize, end_room: usize, level: &Level) -> Option<Self> {
 		if same_row(start_room, end_room) && (level.rooms[start_room].left_col > level.rooms[end_room].right_col) {
 			Some(Left)
@@ -111,13 +117,13 @@ pub struct RoomBounds {
 }
 
 impl RoomBounds {
-	pub fn cell_kind_for_spot(&self, spot: &DungeonSpot) -> CellKind {
+	pub fn cell_kind_for_spot(&self, spot: &DungeonSpot) -> CellMaterial {
 		if spot.row == self.top || spot.row == self.bottom {
-			CellKind::HorizontalWall
+			CellMaterial::HorizontalWall
 		} else if spot.col == self.left || spot.col == self.right {
-			CellKind::VerticalWall
+			CellMaterial::VerticalWall
 		} else {
-			CellKind::Floor
+			CellMaterial::Floor
 		}
 	}
 	pub fn rows(&self) -> RangeInclusive<i64> {
@@ -198,18 +204,18 @@ pub unsafe fn light_up_room(rn: usize, mash: &mut MonsterMash, player: &Player, 
 	let wall_bounds = level.rooms[rn].to_wall_bounds();
 	for i in wall_bounds.rows() {
 		for j in wall_bounds.cols() {
-			if level.cell(i, j).is_monster() {
+			if level.cell(i, j).has_monster() {
 				if let Some(mon_id) = mash.monster_id_at_spot(i, j) {
 					let monster_spot = {
 						let monster = mash.monster_mut(mon_id);
-						monster.cell_mut(level).remove_kind(CellKind::Monster);
+						monster.cell_mut(level).set_monster(false);
 						monster.spot
 					};
 					let dungeon_char = get_dungeon_char(monster_spot.row, monster_spot.col, mash, player, level);
 					{
 						let monster = mash.monster_mut(mon_id);
 						monster.trail_char = dungeon_char;
-						monster.cell_mut(level).add_kind(CellKind::Monster);
+						monster.cell_mut(level).set_monster(true);
 					}
 				}
 			}
@@ -244,11 +250,10 @@ pub unsafe fn darken_room(rn: usize, mash: &mut MonsterMash, player: &Player, le
 			if player.blind.is_active() {
 				mvaddch(i as i32, j as i32, chtype::from(' '));
 			} else {
-				const OBJECT_OR_STAIRS: [CellKind; 2] = [CellKind::Object, CellKind::Stairs];
 				let cell = &level.dungeon[i][j];
 				let cell_remains_lit = {
-					let cell_is_detected_monster = level.detect_monster && cell.is_monster();
-					cell_is_detected_monster || cell.is_any_kind(&OBJECT_OR_STAIRS)
+					let cell_is_detected_monster = level.detect_monster && cell.has_monster();
+					cell_is_detected_monster || cell.has_object() || cell.is_stairs()
 				};
 				if !cell_remains_lit {
 					if !imitating(i as i64, j as i64, mash, level) {
@@ -264,47 +269,49 @@ pub unsafe fn darken_room(rn: usize, mash: &mut MonsterMash, player: &Player, le
 }
 
 pub unsafe fn get_dungeon_char(row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &Level) -> chtype {
-	let mask = level.dungeon[row as usize][col as usize];
-	if mask.is_monster() {
+	let cell = level.dungeon[row as usize][col as usize];
+	if cell.has_monster() {
 		return gmc_row_col(row, col, mash, player, level);
 	}
-	if mask.is_object() {
-		let obj = level_objects.find_object_at(row, col).expect("obj at row,col in level object");
+	if cell.has_object() {
+		let obj = LEVEL_OBJECTS.find_object_at(row, col).expect("obj at row,col in level object");
 		return get_mask_char(obj.what_is) as chtype;
 	}
-	let CHAR_CELL_KINDS = [CellKind::Tunnel, CellKind::Stairs, CellKind::HorizontalWall, CellKind::VerticalWall, CellKind::Floor, CellKind::Door];
-	if mask.is_any_kind(&CHAR_CELL_KINDS) {
-		if mask.is_any_kind(&[CellKind::Tunnel, CellKind::Stairs]) && !mask.is_hidden() {
-			return if mask.is_stairs() { chtype::from('%') } else { chtype::from('#') };
-		}
-		if mask.is_kind(CellKind::HorizontalWall) {
-			return chtype::from('-');
-		}
-		if mask.is_kind(CellKind::VerticalWall) {
-			return chtype::from('|');
-		}
-		if mask.is_floor() {
-			if mask.is_trap() {
-				if !mask.is_hidden() {
-					return chtype::from('^');
-				}
-			}
-			return chtype::from('.');
-		}
-		if mask.is_door() {
-			return if mask.is_hidden() {
-				if (col > 0 && level.dungeon[row as usize][col as usize - 1].is_kind(CellKind::HorizontalWall))
-					|| (col < (DCOLS - 1) as i64 && level.dungeon[row as usize][col as usize + 1].is_kind(CellKind::HorizontalWall)) {
+	if cell.is_stairs() {
+		return if cell.is_hidden() {
+			chtype::from(' ')
+		} else {
+			chtype::from('%')
+		};
+	}
+	match cell.material() {
+		CellMaterial::None => chtype::from(' '),
+		CellMaterial::HorizontalWall => chtype::from('-'),
+		CellMaterial::VerticalWall => chtype::from('|'),
+		CellMaterial::Door(dir) => {
+			if cell.is_hidden() {
+				if dir.is_up_or_down() {
 					chtype::from('-')
 				} else {
 					chtype::from('|')
 				}
 			} else {
 				chtype::from('+')
-			};
+			}
 		}
+		CellMaterial::Floor => {
+			if cell.is_trap() && !cell.is_hidden() {
+				chtype::from('^')
+			} else {
+				chtype::from('.')
+			}
+		}
+		CellMaterial::Tunnel => if cell.is_hidden() {
+			chtype::from(' ')
+		} else {
+			chtype::from('#')
+		},
 	}
-	return chtype::from(' ');
 }
 
 pub fn get_mask_char(mask: ObjectWhat) -> char {
@@ -322,14 +329,14 @@ pub fn get_mask_char(mask: ObjectWhat) -> char {
 	}
 }
 
-pub unsafe fn random_spot_with_flag(flags: &[CellKind], player: &Player, level: &Level) -> DungeonSpot {
+pub fn random_spot_with_flag(is_good_cell: impl Fn(&DungeonCell) -> bool, player: &Player, level: &Level) -> DungeonSpot {
 	let mut row: i64 = 0;
 	let mut col: i64 = 0;
-	gr_row_col(&mut row, &mut col, flags, player, level);
+	gr_row_col(&mut row, &mut col, is_good_cell, player, level);
 	DungeonSpot { row, col }
 }
 
-pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, kinds: &[CellKind], player: &Player, level: &Level) {
+pub fn gr_row_col(row: &mut i64, col: &mut i64, is_good_cell: impl Fn(&DungeonCell) -> bool, player: &Player, level: &Level) {
 	let mut r;
 	let mut c;
 	loop {
@@ -337,8 +344,7 @@ pub unsafe fn gr_row_col(row: &mut i64, col: &mut i64, kinds: &[CellKind], playe
 		c = get_rand(0, DCOLS as i64 - 1);
 		let rn = get_room_number(r, c, level);
 		let keep_looking = rn == NO_ROOM
-			|| !level.dungeon[r as usize][c as usize].is_any_kind(kinds)
-			|| level.dungeon[r as usize][c as usize].is_other_kind(&kinds)
+			|| !is_good_cell(&level.dungeon[r as usize][c as usize])
 			|| !(level.rooms[rn as usize].room_type == RoomType::Room || level.rooms[rn as usize].room_type == RoomType::Maze)
 			|| ((r == player.rogue.row) && (c == player.rogue.col));
 		if !keep_looking {
@@ -370,8 +376,8 @@ pub unsafe fn party_objects(rn: usize, level_depth: isize, level: &mut Level) ->
 		for _j in 0..250 {
 			let row = get_rand(level.rooms[rn].top_row + 1, level.rooms[rn].bottom_row - 1);
 			let col = get_rand(level.rooms[rn].left_col + 1, level.rooms[rn].right_col - 1);
-			if level.dungeon[row as usize][col as usize].is_only_kind(CellKind::Floor)
-				|| level.dungeon[row as usize][col as usize].is_only_kind(CellKind::Tunnel) {
+			if level.dungeon[row as usize][col as usize].is_material_only(CellMaterial::Floor)
+				|| level.dungeon[row as usize][col as usize].is_material_only(CellMaterial::Tunnel) {
 				found = Some(DungeonSpot { row, col });
 				break;
 			}
@@ -458,22 +464,27 @@ pub unsafe fn is_all_connected(rooms: &[Room; MAX_ROOM]) -> bool {
 }
 
 pub unsafe fn draw_magic_map(mash: &mut MonsterMash, level: &mut Level) {
-	let mask = [
-		CellKind::HorizontalWall, CellKind::VerticalWall, CellKind::Door,
-		CellKind::Tunnel, CellKind::Trap, CellKind::Stairs,
-		CellKind::Monster
-	];
 	for i in 0..DROWS {
 		for j in 0..DCOLS {
 			let s = level.dungeon[i][j];
-			if s.is_any_kind(&mask) {
+			let s_is_magic_material = match s.material() {
+				CellMaterial::HorizontalWall |
+				CellMaterial::VerticalWall |
+				CellMaterial::Door(_) |
+				CellMaterial::Tunnel => true,
+				_ => false,
+			};
+			if s_is_magic_material || s.is_trap() || s.has_monster() || s.is_stairs() {
 				let mut ch = mvinch(i as i32, j as i32) as u8 as char;
-				if ch == ' ' || ch.is_ascii_uppercase() || s.is_any_kind(&[CellKind::Trap, CellKind::Hidden]) {
+				if ch == ' '
+					|| ch.is_ascii_uppercase()
+					|| s.is_trap()
+					|| s.is_hidden() {
 					let och = ch;
-					level.dungeon[i][j].remove_kind(CellKind::Hidden);
-					if s.is_kind(CellKind::HorizontalWall) {
+					level.dungeon[i][j].set_hidden(false);
+					if s.is_material(CellMaterial::HorizontalWall) {
 						ch = '-';
-					} else if s.is_kind(CellKind::VerticalWall) {
+					} else if s.is_material(CellMaterial::VerticalWall) {
 						ch = '|';
 					} else if s.is_door() {
 						ch = '+';
@@ -486,10 +497,10 @@ pub unsafe fn draw_magic_map(mash: &mut MonsterMash, level: &mut Level) {
 					} else {
 						continue;
 					}
-					if !s.is_monster() || och == ' ' {
+					if !s.has_monster() || och == ' ' {
 						addch(chtype::from(ch));
 					}
-					if s.is_monster() {
+					if s.has_monster() {
 						if let Some(monster) = mash.monster_at_spot_mut(i as i64, j as i64) {
 							monster.trail_char = chtype::from(ch);
 						}

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use TrapKind::NoTrap;
 
 use crate::hit::{DamageEffect, DamageStat, get_damage, get_dir_rc};
-use crate::level::{CellKind, Level};
+use crate::level::{CellFixture, Level};
 use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
 use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
 use crate::monster::MonsterMash;
@@ -112,7 +112,7 @@ pub unsafe fn trap_player(row: usize, col: usize, mash: &mut MonsterMash, player
 	if t == NoTrap {
 		return;
 	}
-	level.dungeon[row][col].remove_kind(CellKind::Hidden);
+	level.dungeon[row][col].set_hidden(false);
 	if rand_percent(player.buffed_exp() as usize) {
 		message("the trap failed", 1);
 		return;
@@ -182,17 +182,19 @@ pub unsafe fn add_traps(player: &Player, level: &mut Level) {
 			let mut row: usize;
 			let mut col: usize;
 			let mut tries = 0;
+			const MAX_TRIES: i32 = 15;
 			loop {
 				row = get_rand((level.rooms[cur_party_room].top_row + 1) as usize, (level.rooms[cur_party_room].bottom_row - 1) as usize);
 				col = get_rand((level.rooms[cur_party_room].left_col + 1) as usize, (level.rooms[cur_party_room].right_col - 1) as usize);
 				tries += 1;
-				const REPEAT_KINDS: [CellKind; 4] = [CellKind::Object, CellKind::Stairs, CellKind::Trap, CellKind::Tunnel];
-				let repeat_loop = (level.dungeon[row][col].is_any_kind(&REPEAT_KINDS) || level.dungeon[row][col].is_nothing()) && tries < 15;
-				if !repeat_loop {
+				let cell = level.dungeon[row][col];
+				let keep_looking = (cell.has_object() || cell.is_stairs() || cell.is_trap() || cell.is_tunnel() || cell.is_nothing())
+					&& tries < MAX_TRIES;
+				if !keep_looking {
 					break;
 				}
 			}
-			if tries < 15 {
+			if tries < MAX_TRIES {
 				(row, col)
 			} else {
 				random_spot_with_floor_or_monster(player, level)
@@ -201,15 +203,15 @@ pub unsafe fn add_traps(player: &Player, level: &mut Level) {
 			random_spot_with_floor_or_monster(player, level)
 		};
 		level.traps[i].set_spot(row, col);
-		level.dungeon[row][col].add_kind(CellKind::Trap);
-		level.dungeon[row][col].add_kind(CellKind::Hidden);
+		level.dungeon[row][col].set_fixture(CellFixture::Trap);
+		level.dungeon[row][col].set_hidden(true);
 	}
 }
 
-unsafe fn random_spot_with_floor_or_monster(player: &Player, level: &mut Level) -> (usize, usize) {
+fn random_spot_with_floor_or_monster(player: &Player, level: &mut Level) -> (usize, usize) {
 	let mut row = 0;
 	let mut col = 0;
-	gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Monster], player, level);
+	gr_row_col(&mut row, &mut col, |cell| cell.is_floor() || cell.has_monster(), player, level);
 	(row as usize, col as usize)
 }
 
@@ -277,7 +279,7 @@ pub unsafe fn search(n: usize, is_auto: bool, mash: &mut MonsterMash, player: &m
 				}
 				if level.dungeon[row as usize][col as usize].is_hidden() {
 					if rand_percent(17 + player.buffed_exp() as usize) {
-						level.dungeon[row as usize][col as usize].remove_kind(CellKind::Hidden);
+						level.dungeon[row as usize][col as usize].set_hidden(false);
 						if player.blind.is_inactive() && !player.is_at(row, col) {
 							mvaddch(row as i32, col as i32, get_dungeon_char(row, col, mash, player, level));
 						}

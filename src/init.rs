@@ -13,7 +13,7 @@ use crate::level::Level;
 use crate::machdep::{md_heed_signals, md_ignore_signals};
 use crate::message::{check_message, message};
 use crate::monster::MonsterMash;
-use crate::objects::{alloc_object, get_food, level_objects};
+use crate::objects::{alloc_object, get_food, LEVEL_OBJECTS};
 use crate::pack::{do_wear, do_wield};
 use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::{Armor, Weapon};
@@ -72,7 +72,7 @@ pub unsafe fn init(settings: Settings) -> Result<InitResult, InitError> {
 		};
 	}
 	game.player.notes.assign_dynamic_titles();
-	level_objects.clear();
+	LEVEL_OBJECTS.clear();
 	player_init(&mut game.player);
 	ring_stats(false, &mut game.mash, &mut game.player, &mut game.level);
 	return Ok(InitResult::Initialized(game, console));

@@ -5,7 +5,7 @@ use ncurses::{mvaddch, mvinch};
 use wand_kind::WandKind;
 
 use crate::hit::{FIGHT_MONSTER, get_dir_rc, rogue_hit};
-use crate::level::{CellKind, Level};
+use crate::level::Level;
 use crate::message::{CANCEL, check_message, get_input_line, message};
 use crate::monster::{gmc, gr_monster, Monster, MonsterKind, MonsterMash};
 use crate::pack::pack_letter;
@@ -71,11 +71,11 @@ pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, mash: 
 		let ocol = *col;
 		get_dir_rc(dir, row, col, false);
 		if (*row == orow && *col == ocol)
-			|| level.dungeon[*row as usize][*col as usize].is_any_kind(&[CellKind::HorizontalWall, CellKind::VerticalWall])
+			|| level.dungeon[*row as usize][*col as usize].is_wall()
 			|| level.dungeon[*row as usize][*col as usize].is_nothing() {
 			return None;
 		}
-		if level.dungeon[*row as usize][*col as usize].is_monster() {
+		if level.dungeon[*row as usize][*col as usize].has_monster() {
 			if !imitating(*row, *col, mash, level) {
 				return mash.monster_at_spot(*row, *col).map(|m| m.id());
 			}
@@ -177,15 +177,17 @@ unsafe fn tele_away(monster: &mut Monster, player: &Player, level: &mut Level) {
 	let (row, col) = {
 		let mut row = 0;
 		let mut col = 0;
-		gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel, CellKind::Stairs, CellKind::Object], player, level);
+		gr_row_col(&mut row, &mut col,
+		           |cell| cell.is_floor() || cell.is_tunnel() || cell.is_stairs() || cell.has_object(),
+		           player, level);
 		(row, col)
 	};
 
 	mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.trail_char);
-	level.dungeon[monster.spot.row as usize][monster.spot.col as usize].remove_kind(CellKind::Monster);
+	level.dungeon[monster.spot.row as usize][monster.spot.col as usize].set_monster(false);
 	monster.spot.row = row;
 	monster.spot.col = col;
-	level.dungeon[row as usize][col as usize].add_kind(CellKind::Monster);
+	level.dungeon[row as usize][col as usize].set_monster(true);
 	monster.trail_char = mvinch(row as i32, col as i32);
 
 	if level.detect_monster || player.can_see(row, col, level) {
