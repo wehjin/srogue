@@ -1,5 +1,5 @@
 use crate::armors::ArmorKind;
-use crate::objects::obj;
+use crate::objects::Object;
 use crate::prelude::object_what::ObjectWhat;
 use crate::potions::kind::PotionKind;
 use crate::ring::ring_kind::RingKind;
@@ -7,7 +7,7 @@ use crate::scrolls::ScrollKind;
 use crate::weapons::kind::WeaponKind;
 use crate::zap::wand_kind::WandKind;
 
-impl obj {
+impl Object {
 	/// From score.c
 	pub fn sale_value(&self) -> usize {
 		let mut value = match self.what_is {

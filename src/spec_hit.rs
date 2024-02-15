@@ -9,7 +9,7 @@ use crate::level::{add_exp, CellKind, hp_raise, Level, LEVEL_POINTS};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::message::{check_message, message, print_stats};
 use crate::monster::{mon_can_go, mon_disappeared, mon_name, Monster, MonsterMash, move_mon_to, mv_mons, mv_monster};
-use crate::objects::{alloc_object, get_armor_class, gr_object, level_objects, obj, place_at};
+use crate::objects::{alloc_object, get_armor_class, gr_object, level_objects, Object, place_at};
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
@@ -204,7 +204,7 @@ pub unsafe fn cough_up(mon_id: u64, mash: &mut MonsterMash, player: &Player, lev
 	}
 }
 
-unsafe fn try_to_cough(row: i64, col: i64, obj: &obj, mash: &mut MonsterMash, player: &Player, level: &mut Level) -> bool {
+unsafe fn try_to_cough(row: i64, col: i64, obj: &Object, mash: &mut MonsterMash, player: &Player, level: &mut Level) -> bool {
 	if row < MIN_ROW || row > (DROWS - 2) as i64 || col < 0 || col > (DCOLS - 1) as i64 {
 		return false;
 	}

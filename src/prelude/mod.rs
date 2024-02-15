@@ -64,7 +64,7 @@ impl DungeonSpot {
 }
 
 pub mod item_usage {
-	use crate::objects::obj;
+	use crate::objects::Object;
 
 	pub const NOT_USED: u16 = 0o0;
 	pub const BEING_WIELDED: u16 = 0o1;
@@ -74,19 +74,19 @@ pub mod item_usage {
 	pub const ON_EITHER_HAND: u16 = ON_LEFT_HAND | ON_RIGHT_HAND;
 	pub const BEING_USED: u16 = BEING_WIELDED | BEING_WORN | ON_EITHER_HAND;
 
-	pub fn being_worn(obj: &obj) -> bool {
+	pub fn being_worn(obj: &Object) -> bool {
 		(obj.in_use_flags & BEING_WORN) != 0
 	}
 
-	pub fn being_wielded(obj: &obj) -> bool {
+	pub fn being_wielded(obj: &Object) -> bool {
 		(obj.in_use_flags & BEING_WIELDED) != 0
 	}
 
-	pub fn on_either_hand(obj: &obj) -> bool {
+	pub fn on_either_hand(obj: &Object) -> bool {
 		(obj.in_use_flags & ON_EITHER_HAND) != 0
 	}
 
-	pub fn on_left_hand(obj: &obj) -> bool {
+	pub fn on_left_hand(obj: &Object) -> bool {
 		(obj.in_use_flags & ON_LEFT_HAND) != 0
 	}
 }

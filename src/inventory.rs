@@ -4,7 +4,7 @@ use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
 
 use crate::level::constants::{DCOLS, DROWS};
 use crate::message::{CANCEL, message};
-use crate::objects::{get_armor_class, name_of, NoteStatus, object, ObjectId};
+use crate::objects::{get_armor_class, name_of, NoteStatus, Object, ObjectId};
 use crate::objects::note_tables::NoteTables;
 use crate::pack::{pack_letter, wait_for_ack};
 use crate::player::Player;
@@ -72,7 +72,7 @@ pub unsafe fn inventory(filter: PackFilter, player: &Player) {
 	}
 }
 
-fn get_quantity(obj: &object) -> String {
+fn get_quantity(obj: &Object) -> String {
 	match obj.what_is {
 		Armor => "".to_string(),
 		_ => {
@@ -85,7 +85,7 @@ fn get_quantity(obj: &object) -> String {
 	}
 }
 
-fn get_id_real(obj: &object) -> &'static str {
+fn get_id_real(obj: &Object) -> &'static str {
 	match obj.what_is {
 		Scroll => ScrollKind::from_index(obj.which_kind as usize).real_name(),
 		Potion => PotionKind::from_index(obj.which_kind as usize).real_name(),
@@ -95,7 +95,7 @@ fn get_id_real(obj: &object) -> &'static str {
 	}
 }
 
-unsafe fn get_identified(obj: &object, fruit: String, notes: &NoteTables) -> String {
+unsafe fn get_identified(obj: &Object, fruit: String, notes: &NoteTables) -> String {
 	let what = obj.what_is;
 	match what {
 		Scroll | Potion => {
@@ -140,7 +140,7 @@ unsafe fn get_identified(obj: &object, fruit: String, notes: &NoteTables) -> Str
 	}
 }
 
-unsafe fn get_called(obj: &object, fruit: String, notes: &NoteTables) -> String {
+unsafe fn get_called(obj: &Object, fruit: String, notes: &NoteTables) -> String {
 	let what = obj.what_is;
 	match what {
 		Scroll | Potion | Wand | Ring => {
@@ -152,7 +152,7 @@ unsafe fn get_called(obj: &object, fruit: String, notes: &NoteTables) -> String 
 	}
 }
 
-unsafe fn get_unidentified(obj: &object, fruit: String, notes: &NoteTables) -> String {
+unsafe fn get_unidentified(obj: &Object, fruit: String, notes: &NoteTables) -> String {
 	let what = obj.what_is;
 	let kind = obj.which_kind as usize;
 	match what {
@@ -198,7 +198,7 @@ impl Player {
 	}
 }
 
-pub unsafe fn get_obj_desc(obj: &object, fruit: String, notes: &NoteTables) -> String {
+pub unsafe fn get_obj_desc(obj: &Object, fruit: String, notes: &NoteTables) -> String {
 	let what = obj.what_is;
 	if what == Amulet {
 		return "the amulet of Yendor ".to_string();
@@ -245,7 +245,7 @@ pub unsafe fn get_obj_desc(obj: &object, fruit: String, notes: &NoteTables) -> S
 	format!("{}{}", desc, get_in_use_description(obj))
 }
 
-fn get_in_use_description(obj: &object) -> &'static str {
+fn get_in_use_description(obj: &Object) -> &'static str {
 	if obj.in_use_flags & BEING_WIELDED != 0 {
 		"in hand"
 	} else if obj.in_use_flags & BEING_WORN != 0 {

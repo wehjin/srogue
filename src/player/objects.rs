@@ -1,4 +1,4 @@
-use crate::objects::{obj, ObjectId};
+use crate::objects::{Object, ObjectId};
 use crate::player::Player;
 use crate::random::get_rand;
 
@@ -7,22 +7,22 @@ impl Player {
 		let obj = self.object(obj_id).expect("obj in pack");
 		obj.to_name_with_new_quantity(quantity, self.settings.fruit.to_string(), &self.notes)
 	}
-	pub fn expect_object(&self, obj_id: ObjectId) -> &obj {
+	pub fn expect_object(&self, obj_id: ObjectId) -> &Object {
 		self.object(obj_id).expect("obj in pack")
 	}
-	pub fn expect_object_mut(&mut self, obj_id: ObjectId) -> &mut obj {
+	pub fn expect_object_mut(&mut self, obj_id: ObjectId) -> &mut Object {
 		self.object_mut(obj_id).expect("obj in pack")
 	}
-	pub fn object(&self, obj_id: ObjectId) -> Option<&obj> {
+	pub fn object(&self, obj_id: ObjectId) -> Option<&Object> {
 		self.rogue.pack.object(obj_id)
 	}
-	pub fn object_mut(&mut self, obj_id: ObjectId) -> Option<&mut obj> {
+	pub fn object_mut(&mut self, obj_id: ObjectId) -> Option<&mut Object> {
 		self.rogue.pack.object_mut(obj_id)
 	}
 	pub fn object_ids(&self) -> Vec<ObjectId> {
 		self.rogue.pack.object_ids()
 	}
-	pub fn object_ids_when(&self, f: impl Fn(&obj) -> bool) -> Vec<ObjectId> {
+	pub fn object_ids_when(&self, f: impl Fn(&Object) -> bool) -> Vec<ObjectId> {
 		self.rogue.pack.object_ids_when(f)
 	}
 	pub fn random_unused_object_id(&self) -> Option<ObjectId> {

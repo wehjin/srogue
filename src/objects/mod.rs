@@ -108,7 +108,7 @@ impl Default for NoteStatus {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct
-obj {
+Object {
 	id: ObjectId,
 	pub quantity: i16,
 	pub ichar: char,
@@ -133,8 +133,8 @@ obj {
 	pub in_use_flags: u16,
 }
 
-pub fn empty_obj() -> obj {
-	obj {
+pub fn empty_obj() -> Object {
+	Object {
 		id: ObjectId::random(),
 		quantity: 0,
 		ichar: '\x00',
@@ -160,7 +160,7 @@ pub fn empty_obj() -> obj {
 	}
 }
 
-impl obj {
+impl Object {
 	pub fn clone_with_new_id(&self) -> Self {
 		let mut new = self.clone();
 		new.id = ObjectId::random();
@@ -208,8 +208,6 @@ impl obj {
 	}
 	pub fn id(&self) -> ObjectId { self.id }
 }
-
-pub type object = obj;
 
 pub static mut level_objects: ObjectPack = ObjectPack::new();
 pub static mut foods: i16 = 0;
@@ -269,7 +267,7 @@ pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: isize, le
 }
 
 
-pub unsafe fn place_at(mut obj: object, row: i64, col: i64, level: &mut Level) {
+pub unsafe fn place_at(mut obj: Object, row: i64, col: i64, level: &mut Level) {
 	obj.row = row;
 	obj.col = col;
 	level.dungeon[row as usize][col as usize].add_kind(CellKind::Object);
@@ -289,18 +287,18 @@ impl Player {
 	pub fn object_kind(&self, obj_id: ObjectId) -> u16 {
 		if let Some(obj) = self.object(obj_id) { obj.which_kind } else { 0 }
 	}
-	pub fn check_object(&self, obj_id: ObjectId, f: impl Fn(&obj) -> bool) -> bool {
+	pub fn check_object(&self, obj_id: ObjectId, f: impl Fn(&Object) -> bool) -> bool {
 		self.pack().check_object(obj_id, f)
 	}
-	pub fn obj_id_if(&self, f: impl Fn(&obj) -> bool) -> Option<ObjectId> {
+	pub fn obj_id_if(&self, f: impl Fn(&Object) -> bool) -> Option<ObjectId> {
 		self.pack().find_id(f)
 	}
 	pub fn pack(&self) -> &ObjectPack { &self.rogue.pack }
 
-	pub fn object_with_letter(&self, ch: char) -> Option<&obj> {
+	pub fn object_with_letter(&self, ch: char) -> Option<&Object> {
 		self.find_pack_obj(|obj| obj.ichar == ch)
 	}
-	pub fn object_with_letter_mut(&mut self, ch: char) -> Option<&mut obj> {
+	pub fn object_with_letter_mut(&mut self, ch: char) -> Option<&mut Object> {
 		self.find_pack_obj_mut(|obj| obj.ichar == ch)
 	}
 	pub fn name_of(&self, obj_id: ObjectId) -> String {
@@ -309,7 +307,7 @@ impl Player {
 	}
 }
 
-pub fn name_of(obj: &object, fruit: String, notes: &NoteTables) -> String {
+pub fn name_of(obj: &Object, fruit: String, notes: &NoteTables) -> String {
 	let what = obj.what_is;
 	match what {
 		Armor => "armor ".to_string(),
@@ -338,7 +336,7 @@ pub fn name_of(obj: &object, fruit: String, notes: &NoteTables) -> String {
 	}
 }
 
-pub unsafe fn gr_object(cur_level: isize) -> object {
+pub unsafe fn gr_object(cur_level: isize) -> Object {
 	let mut obj = alloc_object();
 	if foods < (cur_level / 2) as i16 {
 		obj.what_is = Food;
@@ -394,7 +392,7 @@ pub unsafe fn gr_what_is() -> ObjectWhat {
 }
 
 
-pub fn gr_scroll(obj: &mut obj) {
+pub fn gr_scroll(obj: &mut Object) {
 	let percent = get_rand(0, 85);
 	(*obj).what_is = Scroll;
 
@@ -426,7 +424,7 @@ pub fn gr_scroll(obj: &mut obj) {
 	(*obj).which_kind = kind.to_index() as u16;
 }
 
-pub fn gr_potion(obj: &mut obj) {
+pub fn gr_potion(obj: &mut Object) {
 	(*obj).what_is = Potion;
 	(*obj).which_kind = gr_potion_kind().to_index() as u16;
 }
@@ -465,7 +463,7 @@ fn gr_potion_kind() -> PotionKind {
 	kind
 }
 
-pub fn gr_weapon(obj: &mut obj, assign_wk: bool) {
+pub fn gr_weapon(obj: &mut Object, assign_wk: bool) {
 	(*obj).what_is = Weapon;
 	if assign_wk {
 		(*obj).which_kind = get_rand(0, (WEAPONS - 1) as u16);
@@ -500,7 +498,7 @@ pub fn gr_weapon(obj: &mut obj, assign_wk: bool) {
 	}
 }
 
-pub fn gr_armor(obj: &mut obj) {
+pub fn gr_armor(obj: &mut Object) {
 	(*obj).what_is = Armor;
 	(*obj).which_kind = get_rand(0, (ARMORS - 1) as u16);
 	(*obj).class = ((*obj).which_kind + 2) as isize;
@@ -521,7 +519,7 @@ pub fn gr_armor(obj: &mut obj) {
 	}
 }
 
-pub fn gr_wand(obj: &mut obj) {
+pub fn gr_wand(obj: &mut Object) {
 	(*obj).what_is = Wand;
 	(*obj).which_kind = get_rand(0, (WANDS - 1) as u16);
 	if (*obj).which_kind == MAGIC_MISSILE {
@@ -533,7 +531,7 @@ pub fn gr_wand(obj: &mut obj) {
 	}
 }
 
-pub fn get_food(obj: &mut obj, force_ration: bool) {
+pub fn get_food(obj: &mut Object, force_ration: bool) {
 	obj.what_is = Food;
 	if force_ration || rand_percent(80) {
 		obj.which_kind = RATION;
@@ -549,13 +547,13 @@ pub unsafe fn put_stairs(player: &Player, level: &mut Level) {
 	level.dungeon[row as usize][col as usize].add_kind(CellKind::Stairs);
 }
 
-pub fn get_armor_class(obj: Option<&obj>) -> isize {
+pub fn get_armor_class(obj: Option<&Object>) -> isize {
 	if let Some(armor) = obj {
 		armor.class + armor.d_enchant
 	} else { 0 }
 }
 
-pub fn alloc_object() -> object {
+pub fn alloc_object() -> Object {
 	let mut obj = empty_obj();
 	obj.quantity = 1;
 	obj.ichar = 'L';
@@ -604,7 +602,7 @@ pub unsafe fn put_amulet(player: &Player, level: &mut Level) {
 	rand_place(obj, player, level);
 }
 
-pub unsafe fn rand_place(obj: obj, player: &Player, level: &mut Level) {
+pub unsafe fn rand_place(obj: Object, player: &Player, level: &mut Level) {
 	let mut row = 0;
 	let mut col = 0;
 	gr_row_col(&mut row, &mut col, &[CellKind::Floor, CellKind::Tunnel], player, level);

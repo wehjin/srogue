@@ -9,7 +9,7 @@ use crate::level::constants::{DCOLS, DROWS};
 use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
 use crate::monster;
 use crate::monster::{mon_name, Monster, MonsterMash};
-use crate::objects::{get_armor_class, object};
+use crate::objects::{get_armor_class, Object};
 use crate::play::interrupted;
 use crate::player::Player;
 use crate::prelude::{AMULET_LEVEL, MIN_ROW};
@@ -155,7 +155,7 @@ pub fn get_damage(damage_stats: &[DamageStat], effect: DamageEffect) -> isize {
 	return total as isize;
 }
 
-pub fn get_w_damage(obj: Option<&object>) -> isize {
+pub fn get_w_damage(obj: Option<&Object>) -> isize {
 	if let Some(obj) = obj {
 		if obj.what_is == Weapon {
 			return get_damage(&[obj.enhanced_damage()], DamageEffect::Roll);
@@ -346,20 +346,20 @@ pub fn get_dir_rc(dir: char, row: &mut i64, col: &mut i64, allow_off_screen: boo
 	}
 }
 
-pub unsafe fn get_hit_chance_player(weapon: Option<&object>, player: &Player) -> usize {
+pub unsafe fn get_hit_chance_player(weapon: Option<&Object>, player: &Player) -> usize {
 	let player_exp = player.buffed_exp();
 	let player_debuf = player.debuf_exp();
 	get_hit_chance(weapon, player_exp, player_debuf)
 }
 
-pub unsafe fn get_hit_chance(obj: Option<&object>, buffed_exp: isize, debuf_exp: isize) -> usize {
+pub unsafe fn get_hit_chance(obj: Option<&Object>, buffed_exp: isize, debuf_exp: isize) -> usize {
 	let mut hit_chance = 40isize;
 	hit_chance += 3 * to_hit(obj) as isize;
 	hit_chance += (2 * buffed_exp) - debuf_exp;
 	hit_chance as usize
 }
 
-fn to_hit(obj: Option<&object>) -> usize {
+fn to_hit(obj: Option<&Object>) -> usize {
 	if let Some(obj) = obj {
 		obj.enhanced_damage().hits
 	} else {
@@ -367,7 +367,7 @@ fn to_hit(obj: Option<&object>) -> usize {
 	}
 }
 
-pub unsafe fn get_weapon_damage(weapon: Option<&object>, buffed_str: isize, buffed_exp: isize, debuf_exp: isize) -> isize {
+pub unsafe fn get_weapon_damage(weapon: Option<&Object>, buffed_str: isize, buffed_exp: isize, debuf_exp: isize) -> isize {
 	let mut damage = get_w_damage(weapon);
 	damage += damage_for_strength(buffed_str);
 	damage += (buffed_exp - debuf_exp + 1) / 2;

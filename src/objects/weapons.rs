@@ -1,7 +1,7 @@
-use crate::objects::obj;
+use crate::objects::Object;
 use crate::prelude::item_usage::BEING_WIELDED;
 
-impl obj {
+impl Object {
 	pub fn is_wielded_throwing_weapon(&self) -> bool {
 		self.is_wielded() && self.is_throwing_weapon()
 	}

@@ -7,7 +7,7 @@ use crate::inventory::get_obj_desc;
 use crate::level::Level;
 use crate::message::{CANCEL, check_message, message, print_stats, rgetchar};
 use crate::monster::MonsterMash;
-use crate::objects::{obj, object, ObjectId};
+use crate::objects::{Object, ObjectId};
 use crate::pack::{CURSE_MESSAGE, pack_letter};
 use crate::player::Player;
 use crate::player::rings::HandUsage;
@@ -44,7 +44,7 @@ pub unsafe fn put_on_ring(mash: &mut MonsterMash, player: &mut Player, level: &m
 				return;
 			}
 			let ring_id = obj_id;
-			if player.check_object(ring_id, obj::is_on_either_hand) {
+			if player.check_object(ring_id, Object::is_on_either_hand) {
 				message("that ring is already being worn", 0);
 				return;
 			}
@@ -119,7 +119,7 @@ pub unsafe fn remove_ring(mash: &mut MonsterMash, player: &mut Player, level: &m
 		message("there's no ring on that hand", 0);
 		return;
 	}
-	if player.check_ring(hand, obj::is_cursed) {
+	if player.check_ring(hand, Object::is_cursed) {
 		message(CURSE_MESSAGE, 0);
 		return;
 	}
@@ -139,7 +139,7 @@ pub unsafe fn un_put_hand(hand: PlayerHand, mash: &mut MonsterMash, player: &mut
 	un_put_id
 }
 
-pub fn gr_ring(ring: &mut object, assign_wk: bool) {
+pub fn gr_ring(ring: &mut Object, assign_wk: bool) {
 	ring.what_is = Ring;
 	if assign_wk {
 		ring.which_kind = get_rand(0, (RINGS - 1) as u16);

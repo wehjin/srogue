@@ -8,7 +8,7 @@ use crate::hit::{get_dir_rc, get_hit_chance, get_weapon_damage, HIT_MESSAGE, mon
 use crate::level::{CellKind, Level};
 use crate::message::{CANCEL, check_message, message, print_stats};
 use crate::monster::{MonsterMash, mv_aquatars};
-use crate::objects::{obj, ObjectId, place_at};
+use crate::objects::{Object, ObjectId, place_at};
 use crate::pack::{CURSE_MESSAGE, pack_letter, unwear, unwield};
 use crate::player::Player;
 use crate::prelude::*;
@@ -127,7 +127,7 @@ unsafe fn throw_at_monster(mon_id: u64, obj_id: ObjectId, mash: &mut MonsterMash
 			if player.object_kind(obj_id) == ARROW && rogue_weapon_is_bow(player) {
 				damage += get_weapon_damage(player.weapon(), player_str, player_exp, player_debuf);
 				damage = (damage * 2) / 3;
-			} else if player.check_object(obj_id, obj::is_wielded_throwing_weapon) {
+			} else if player.check_object(obj_id, Object::is_wielded_throwing_weapon) {
 				damage = (damage * 3) / 2;
 			}
 			damage

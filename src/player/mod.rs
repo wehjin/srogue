@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::armors::ArmorKind;
 use crate::level::{DungeonCell, Level};
 use crate::monster::Fighter;
-use crate::objects::{obj, object, ObjectId, ObjectPack};
+use crate::objects::{Object, ObjectId, ObjectPack};
 use crate::objects::note_tables::NoteTables;
 use crate::pack::{check_duplicate, next_avail_ichar};
 use crate::player::effects::TimeEffect;
@@ -127,17 +127,17 @@ impl Player {
 			Some(obj) => obj.is_cursed()
 		}
 	}
-	pub fn find_pack_obj(&self, f: impl Fn(&obj) -> bool) -> Option<&obj> {
+	pub fn find_pack_obj(&self, f: impl Fn(&Object) -> bool) -> Option<&Object> {
 		self.pack().find_object(f)
 	}
-	pub fn find_pack_obj_mut(&mut self, f: impl Fn(&obj) -> bool) -> Option<&mut obj> {
+	pub fn find_pack_obj_mut(&mut self, f: impl Fn(&Object) -> bool) -> Option<&mut Object> {
 		self.pack_mut().find_object_mut(f)
 	}
-	pub fn pack_objects(&self) -> &Vec<obj> { self.rogue.pack.objects() }
+	pub fn pack_objects(&self) -> &Vec<Object> { self.rogue.pack.objects() }
 
 	pub fn pack_mut(&mut self) -> &mut ObjectPack { &mut self.rogue.pack }
 
-	pub fn combine_or_add_item_to_pack(&mut self, mut obj: object) -> ObjectId {
+	pub fn combine_or_add_item_to_pack(&mut self, mut obj: Object) -> ObjectId {
 		if let Some(id) = check_duplicate(&obj, &mut self.rogue.pack) {
 			return id;
 		}
@@ -155,14 +155,14 @@ impl Player {
 	pub fn armor_kind(&self) -> Option<ArmorKind> {
 		self.armor().map(|it| ArmorKind::from_index(it.which_kind as usize))
 	}
-	pub fn armor(&self) -> Option<&obj> {
+	pub fn armor(&self) -> Option<&Object> {
 		if let Some(id) = self.rogue.armor {
 			self.pack().object_if_what(id, ObjectWhat::Armor)
 		} else {
 			None
 		}
 	}
-	pub fn armor_mut(&mut self) -> Option<&mut obj> {
+	pub fn armor_mut(&mut self) -> Option<&mut Object> {
 		if let Some(id) = self.rogue.armor {
 			self.pack_mut().object_if_what_mut(id, ObjectWhat::Armor)
 		} else {
@@ -170,7 +170,7 @@ impl Player {
 		}
 	}
 
-	pub fn unwear_armor(&mut self) -> Option<&obj> {
+	pub fn unwear_armor(&mut self) -> Option<&Object> {
 		let mut unworn_id = None;
 		if let Some(armor) = self.armor_mut() {
 			armor.in_use_flags &= !BEING_WORN;
@@ -201,14 +201,14 @@ impl Player {
 	pub fn weapon_kind(&self) -> Option<WeaponKind> {
 		self.weapon().map(|it| it.weapon_kind()).flatten()
 	}
-	pub fn weapon(&self) -> Option<&obj> {
+	pub fn weapon(&self) -> Option<&Object> {
 		if let Some(id) = self.weapon_id() {
 			self.pack().object_if_what(id, ObjectWhat::Weapon)
 		} else {
 			None
 		}
 	}
-	pub fn weapon_mut(&mut self) -> Option<&mut obj> {
+	pub fn weapon_mut(&mut self) -> Option<&mut Object> {
 		if let Some(id) = self.weapon_id() {
 			self.pack_mut().object_if_what_mut(id, ObjectWhat::Weapon)
 		} else {

@@ -1,4 +1,4 @@
-use crate::objects::{obj, ObjectId};
+use crate::objects::{Object, ObjectId};
 use crate::player::Player;
 use crate::ring::PlayerHand;
 
@@ -42,21 +42,21 @@ impl Player {
 		}
 		None
 	}
-	pub fn check_ring(&self, hand: PlayerHand, f: impl Fn(&obj) -> bool) -> bool {
+	pub fn check_ring(&self, hand: PlayerHand, f: impl Fn(&Object) -> bool) -> bool {
 		if let Some(ring) = self.ring(hand) {
 			f(ring)
 		} else {
 			false
 		}
 	}
-	pub fn ring(&self, hand: PlayerHand) -> Option<&obj> {
+	pub fn ring(&self, hand: PlayerHand) -> Option<&Object> {
 		if let Some(id) = self.ring_id(hand) {
 			self.object(id)
 		} else {
 			None
 		}
 	}
-	pub fn ring_mut(&mut self, hand: PlayerHand) -> Option<&mut obj> {
+	pub fn ring_mut(&mut self, hand: PlayerHand) -> Option<&mut Object> {
 		if let Some(id) = self.ring_id(hand) {
 			self.object_mut(id)
 		} else {

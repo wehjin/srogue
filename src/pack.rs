@@ -4,7 +4,7 @@ use crate::inventory::{get_obj_desc, inventory};
 use crate::level::{CellKind, Level};
 use crate::message::{CANCEL, check_message, get_input_line, LIST, message, print_stats, rgetchar, sound_bell};
 use crate::monster::{MonsterMash, mv_aquatars};
-use crate::objects::{level_objects, obj, object, ObjectId, ObjectPack, place_at, Title};
+use crate::objects::{level_objects, Object, ObjectId, ObjectPack, place_at, Title};
 use crate::objects::NoteStatus::{Called, Identified, Unidentified};
 use crate::player::Player;
 use crate::prelude::food_kind::FRUIT;
@@ -21,20 +21,20 @@ use crate::weapons::kind::WeaponKind;
 pub const CURSE_MESSAGE: &'static str = "you can't, it appears to be cursed";
 pub const MAX_PACK_COUNT: usize = 24;
 
-pub fn take_from_pack(obj_id: ObjectId, pack: &mut ObjectPack) -> Option<obj> {
+pub fn take_from_pack(obj_id: ObjectId, pack: &mut ObjectPack) -> Option<Object> {
 	pack.remove(obj_id)
 }
 
 pub enum PickUpResult {
 	TurnedToDust,
-	AddedToGold(obj),
+	AddedToGold(Object),
 	AddedToPack { added_id: ObjectId, added_kind: usize },
 	PackTooFull,
 }
 
 pub unsafe fn pick_up(row: i64, col: i64, player: &mut Player, level: &mut Level) -> PickUpResult {
 	let obj_id = level_objects.find_id_at(row, col).expect("obj_id in level-objects at pick-up spot");
-	if level_objects.check_object(obj_id, obj::is_used_scare_monster_scroll) {
+	if level_objects.check_object(obj_id, Object::is_used_scare_monster_scroll) {
 		message("the scroll turns to dust as you pick it up", 0);
 		level.dungeon[row as usize][col as usize].remove_kind(CellKind::Object);
 		level_objects.remove(obj_id);
@@ -42,7 +42,7 @@ pub unsafe fn pick_up(row: i64, col: i64, player: &mut Player, level: &mut Level
 			player.notes.scrolls[ScareMonster.to_index()].status = Identified
 		}
 		PickUpResult::TurnedToDust
-	} else if let Some(quantity) = level_objects.try_map_object(obj_id, obj::gold_quantity) {
+	} else if let Some(quantity) = level_objects.try_map_object(obj_id, Object::gold_quantity) {
 		player.rogue.gold += quantity;
 		level.dungeon[row as usize][col as usize].remove_kind(CellKind::Object);
 		let removed = level_objects.remove(obj_id).expect("remove level object");
@@ -65,7 +65,7 @@ pub unsafe fn pick_up(row: i64, col: i64, player: &mut Player, level: &mut Level
 	}
 }
 
-impl obj {
+impl Object {
 	pub fn is_scare_monster_scroll(&self) -> bool {
 		self.what_is == Scroll && ScareMonster.is_kind(self.which_kind)
 	}
@@ -92,14 +92,14 @@ pub unsafe fn drop_0(mash: &mut MonsterMash, player: &mut Player, level: &mut Le
 			message("no such item.", 0)
 		}
 		Some(obj_id) => {
-			if player.check_object(obj_id, obj::is_being_wielded) {
-				if player.check_object(obj_id, obj::is_cursed) {
+			if player.check_object(obj_id, Object::is_being_wielded) {
+				if player.check_object(obj_id, Object::is_cursed) {
 					message(CURSE_MESSAGE, 0);
 					return;
 				}
 				unwield(player);
-			} else if player.check_object(obj_id, obj::is_being_worn) {
-				if player.check_object(obj_id, obj::is_cursed) {
+			} else if player.check_object(obj_id, Object::is_being_worn) {
+				if player.check_object(obj_id, Object::is_cursed) {
 					message(CURSE_MESSAGE, 0);
 					return;
 				}
@@ -107,7 +107,7 @@ pub unsafe fn drop_0(mash: &mut MonsterMash, player: &mut Player, level: &mut Le
 				unwear(player);
 				print_stats(STAT_ARMOR, player);
 			} else if let Some(hand) = player.ring_hand(obj_id) {
-				if player.check_ring(hand, obj::is_cursed) {
+				if player.check_ring(hand, Object::is_cursed) {
 					message(CURSE_MESSAGE, 0);
 					return;
 				}
@@ -131,7 +131,7 @@ pub unsafe fn drop_0(mash: &mut MonsterMash, player: &mut Player, level: &mut Le
 	}
 }
 
-pub fn check_duplicate(obj: &object, pack: &mut ObjectPack) -> Option<ObjectId> {
+pub fn check_duplicate(obj: &Object, pack: &mut ObjectPack) -> Option<ObjectId> {
 	let combinable = match obj.what_is {
 		Weapon | Food | Scroll | Potion => true,
 		_ => false,
@@ -203,7 +203,7 @@ pub unsafe fn pack_letter(prompt: &str, filter: PackFilter, player: &Player) -> 
 
 pub unsafe fn take_off(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
 	if let Some(armor_id) = player.armor_id() {
-		if player.pack().check_object(armor_id, obj::is_cursed) {
+		if player.pack().check_object(armor_id, Object::is_cursed) {
 			message(CURSE_MESSAGE, 0);
 		} else {
 			mv_aquatars(mash, player, level);
@@ -258,7 +258,7 @@ pub fn do_wear(obj_id: ObjectId, player: &mut Player) {
 	obj.identified = true;
 }
 
-pub fn unwear(player: &mut Player) -> Option<&obj> {
+pub fn unwear(player: &mut Player) -> Option<&Object> {
 	player.unwear_armor()
 }
 
@@ -344,8 +344,8 @@ pub unsafe fn call_it(player: &mut Player) {
 	}
 }
 
-impl obj {
-	fn can_combine_weapon(old_kind: WeaponKind, old_quiver: i16, new_obj: &obj) -> bool {
+impl Object {
+	fn can_combine_weapon(old_kind: WeaponKind, old_quiver: i16, new_obj: &Object) -> bool {
 		if let Some(new_kind) = new_obj.weapon_kind() {
 			new_kind == old_kind
 				&& new_kind.is_arrow_or_throwing_weapon()
@@ -354,7 +354,7 @@ impl obj {
 			false
 		}
 	}
-	pub fn pack_weight_with_new_obj(&self, new_obj: Option<&obj>) -> usize {
+	pub fn pack_weight_with_new_obj(&self, new_obj: Option<&Object>) -> usize {
 		if let Some(weapon_kind) = self.weapon_kind() {
 			if let Some(new_obj) = new_obj {
 				if Self::can_combine_weapon(weapon_kind, self.quantity, new_obj) {
@@ -376,7 +376,7 @@ impl obj {
 }
 
 impl Player {
-	pub fn pack_weight_with_new_object(&self, new_obj: Option<&obj>) -> usize {
+	pub fn pack_weight_with_new_object(&self, new_obj: Option<&Object>) -> usize {
 		let mut weight = 0;
 		for obj in self.rogue.pack.objects() {
 			weight += obj.pack_weight_with_new_obj(new_obj);
