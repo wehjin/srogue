@@ -9,7 +9,7 @@ use crate::objects::NoteStatus::{Called, Identified, Unidentified};
 use crate::player::Player;
 use crate::prelude::food_kind::FRUIT;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
-use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll, Wand, Weapon};
+use crate::prelude::object_what::ObjectWhat::{Food, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD};
@@ -202,55 +202,6 @@ pub unsafe fn pack_letter(prompt: &str, filter: PackFilter, player: &Player) -> 
 	}
 }
 
-pub unsafe fn take_off(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
-	if let Some(armor_id) = player.armor_id() {
-		if player.pack().check_object(armor_id, Object::is_cursed) {
-			message(CURSE_MESSAGE, 0);
-		} else {
-			mv_aquatars(mash, player, level, ground);
-			if let Some(armor) = unwear(player) {
-				let armor_id = armor.id();
-				let obj_desc = player.get_obj_desc(armor_id);
-				let msg = format!("was wearing {}", obj_desc);
-				message(&msg, 0);
-			}
-			print_stats(STAT_ARMOR, player);
-			reg_move(mash, player, level, ground);
-		}
-	} else {
-		message("not wearing any", 0);
-	}
-}
-
-pub unsafe fn wear(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
-	if player.armor_id().is_some() {
-		message("your already wearing some", 0);
-		return;
-	}
-	let ch = pack_letter("wear what?", Armors, player);
-	if ch == CANCEL {
-		return;
-	}
-	match player.object_with_letter_mut(ch) {
-		None => {
-			message("no such item.", 0);
-			return;
-		}
-		Some(obj) => {
-			if obj.what_is != Armor {
-				message("you can't wear that", 0);
-				return;
-			}
-			obj.identified = true;
-			let obj_id = obj.id();
-			let obj_desc = player.get_obj_desc(obj_id);
-			message(&format!("wearing {}", obj_desc), 0);
-			do_wear(obj_id, player);
-			print_stats(STAT_ARMOR, player);
-			reg_move(mash, player, level, ground);
-		}
-	};
-}
 
 pub fn do_wear(obj_id: ObjectId, player: &mut Player) {
 	player.rogue.armor = Some(obj_id);
@@ -263,41 +214,6 @@ pub fn unwear(player: &mut Player) -> Option<&Object> {
 	player.unwear_armor()
 }
 
-
-pub unsafe fn wield(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
-	if player.wields_cursed_weapon() {
-		message(CURSE_MESSAGE, 0);
-		return;
-	}
-	let ch = pack_letter("wield what?", Weapons, player);
-	if ch == CANCEL {
-		return;
-	}
-	match player.object_with_letter_mut(ch) {
-		None => {
-			message("No such item.", 0);
-			return;
-		}
-		Some(obj) => {
-			if obj.what_is == Armor || obj.what_is == Ring {
-				let item_name = if obj.what_is == Armor { "armor" } else { "rings" };
-				let msg = format!("you can't wield {}", item_name);
-				message(&msg, 0);
-				return;
-			}
-			if obj.is_being_wielded() {
-				message("in use", 0);
-			} else {
-				let obj_id = obj.id();
-				let obj_desc = player.get_obj_desc(obj_id);
-				player.unwield_weapon();
-				message(&format!("wielding {}", obj_desc), 0);
-				do_wield(obj_id, player);
-				reg_move(mash, player, level, ground);
-			}
-		}
-	}
-}
 
 pub fn do_wield(obj_id: ObjectId, player: &mut Player) {
 	player.rogue.weapon = Some(obj_id);

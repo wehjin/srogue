@@ -24,7 +24,7 @@ pub unsafe extern "C" fn Instructions() {
 			let ch = mvinch(row as c_int, col as c_int);
 			chars.push(ch as u8);
 		}
-		// Rewrite the chars into the same row?
+		// Rewrite the chars into the same r
 		let string = String::from_utf8(chars).expect("valid utf8");
 		mvaddstr(row as c_int, 0, &string);
 		clrtoeol();

@@ -47,6 +47,7 @@ pub mod console;
 pub mod settings;
 pub mod hunger;
 pub(crate) mod files;
+pub mod actions;
 
 pub fn main() {
 	let settings = match settings::load() {

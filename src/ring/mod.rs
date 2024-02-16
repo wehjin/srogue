@@ -2,20 +2,15 @@
 
 use constants::{ADD_STRENGTH, ADORNMENT, DEXTERITY, R_TELEPORT, RINGS};
 use ring_kind::RingKind;
-
-use crate::inventory::get_obj_desc;
 use crate::level::Level;
-use crate::message::{CANCEL, check_message, message, print_stats, rgetchar};
+use crate::message::{CANCEL, message, print_stats, rgetchar};
 use crate::monster::MonsterMash;
-use crate::objects::{Object, ObjectId, ObjectPack};
-use crate::pack::{CURSE_MESSAGE, pack_letter};
+use crate::objects::{Object, ObjectId};
 use crate::player::Player;
 use crate::player::rings::HandUsage;
 use crate::prelude::item_usage::{ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat::Ring;
-use crate::prelude::object_what::PackFilter::Rings;
 use crate::prelude::stat_const::STAT_STRENGTH;
-use crate::r#move::reg_move;
 use crate::r#use::relight;
 use crate::random::{coin_toss, get_rand};
 use crate::zap::wizard;
@@ -24,60 +19,8 @@ pub(crate) mod constants;
 pub(crate) mod ring_kind;
 pub(crate) mod ring_gem;
 
-pub unsafe fn put_on_ring(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
-	if player.hand_usage() == HandUsage::Both {
-		message("wearing two rings already", 0);
-		return;
-	}
-	let ch = pack_letter("put on what?", Rings, player);
-	if ch == CANCEL {
-		return;
-	}
-	match player.object_id_with_letter(ch) {
-		None => {
-			message("no such item.", 0);
-			return;
-		}
-		Some(obj_id) => {
-			if player.object_what(obj_id) != Ring {
-				message("that's not a ring", 0);
-				return;
-			}
-			let ring_id = obj_id;
-			if player.check_object(ring_id, Object::is_on_either_hand) {
-				message("that ring is already being worn", 0);
-				return;
-			}
-			let hand = match player.hand_usage() {
-				HandUsage::None => match ask_ring_hand() {
-					None => {
-						check_message();
-						return;
-					}
-					Some(ring_hand) => ring_hand,
-				},
-				HandUsage::Left => PlayerHand::Right,
-				HandUsage::Right => PlayerHand::Left,
-				HandUsage::Both => unreachable!("both hands checked at top of put_on_ring")
-			};
-			if !player.hand_is_free(hand) {
-				check_message();
-				message("there's already a ring on that hand", 0);
-				return;
-			}
-			player.put_ring(ring_id, hand);
-			ring_stats(true, mash, player, level);
-			check_message();
-			{
-				let msg = player.get_obj_desc(ring_id);
-				message(&msg, 0);
-			}
-			reg_move(mash, player, level, ground);
-		}
-	}
-}
 
-unsafe fn ask_ring_hand() -> Option<PlayerHand> {
+pub(crate) unsafe fn ask_ring_hand() -> Option<PlayerHand> {
 	match ask_left_or_right() {
 		'l' => Some(PlayerHand::Left),
 		'r' => Some(PlayerHand::Right),
@@ -96,41 +39,6 @@ unsafe fn ask_left_or_right() -> char {
 		}
 	}
 	ch
-}
-
-pub unsafe fn remove_ring(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
-	let hand = match player.hand_usage() {
-		HandUsage::None => {
-			inv_rings(player);
-			return;
-		}
-		HandUsage::Left => PlayerHand::Left,
-		HandUsage::Right => PlayerHand::Right,
-		HandUsage::Both => {
-			let asked = ask_ring_hand();
-			check_message();
-			match asked {
-				None => { return; }
-				Some(hand) => hand
-			}
-		}
-	};
-	if player.ring_id(hand).is_none() {
-		message("there's no ring on that hand", 0);
-		return;
-	}
-	if player.check_ring(hand, Object::is_cursed) {
-		message(CURSE_MESSAGE, 0);
-		return;
-	}
-	let removed_id = un_put_hand(hand, mash, player, level).expect("some removed_id");
-	{
-		let removed_obj = player.object(removed_id).expect("some removed_obj");
-		let removed_desc = get_obj_desc(removed_obj, player.settings.fruit.to_string(), &player.notes);
-		let msg = format!("removed {}", removed_desc);
-		message(&msg, 0);
-	}
-	reg_move(mash, player, level, ground);
 }
 
 pub unsafe fn un_put_hand(hand: PlayerHand, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) -> Option<ObjectId> {

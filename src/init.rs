@@ -64,6 +64,7 @@ pub unsafe fn init(settings: Settings) -> Result<InitResult, InitError> {
 		level: Level::new(),
 		mash: MonsterMash::new(),
 		ground: ObjectPack::new(),
+		next_system: GameSystem::PlayerActions,
 	};
 	if let Some(rest_file) = game.player.settings.rest_file.clone() {
 		return if restore(&rest_file, &mut game) {
@@ -78,11 +79,27 @@ pub unsafe fn init(settings: Settings) -> Result<InitResult, InitError> {
 	return Ok(InitResult::Initialized(game, console));
 }
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum GameSystem {
+	PlayerActions,
+	MonsterActions,
+}
+
 pub struct GameState {
 	pub player: Player,
 	pub level: Level,
 	pub mash: MonsterMash,
 	pub ground: ObjectPack,
+	pub next_system: GameSystem,
+}
+
+impl GameState {
+	pub fn start_player_actions(&mut self) {
+		self.next_system = GameSystem::PlayerActions;
+	}
+	pub fn commit_player_turn(&mut self) {
+		self.next_system = GameSystem::MonsterActions;
+	}
 }
 
 fn player_init(player: &mut Player) {

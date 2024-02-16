@@ -1,0 +1,45 @@
+use crate::actions::PlayerAction;
+use crate::init::{GameState, GameSystem};
+use crate::message::{CANCEL, message};
+use crate::pack::{CURSE_MESSAGE, do_wield, pack_letter};
+use crate::prelude::object_what::ObjectWhat::{Armor, Ring};
+use crate::prelude::object_what::PackFilter::Weapons;
+
+pub struct Wield;
+
+impl PlayerAction for Wield {
+	fn commit(&self, game: &mut GameState) {
+		if game.player.wields_cursed_weapon() {
+			unsafe { message(CURSE_MESSAGE, 0); }
+			return;
+		}
+		let ch = unsafe { pack_letter("wield what?", Weapons, &game.player) };
+		if ch == CANCEL {
+			return;
+		}
+		match game.player.object_with_letter_mut(ch) {
+			None => unsafe {
+				message("No such item.", 0);
+				return;
+			}
+			Some(obj) => unsafe {
+				if obj.what_is == Armor || obj.what_is == Ring {
+					let item_name = if obj.what_is == Armor { "armor" } else { "rings" };
+					let msg = format!("you can't wield {}", item_name);
+					message(&msg, 0);
+					return;
+				}
+				if obj.is_being_wielded() {
+					message("in use", 0);
+				} else {
+					let obj_id = obj.id();
+					let obj_desc = game.player.get_obj_desc(obj_id);
+					game.player.unwield_weapon();
+					message(&format!("wielding {}", obj_desc), 0);
+					do_wield(obj_id, &mut game.player);
+					game.next_system = GameSystem::MonsterActions;
+				}
+			}
+		}
+	}
+}
