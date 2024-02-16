@@ -85,7 +85,7 @@ pub unsafe fn read_scroll(mash: &mut MonsterMash, player: &mut Player, level: &m
 						ScrollKind::EnchWeapon => {
 							let glow_color = get_ench_color(player);
 							if let Some(weapon_id) = player.weapon_id() {
-								let weapon_name = player.name_of(obj_id);
+								let weapon_name = player.name_of(weapon_id);
 								let weapon = player.expect_object_mut(weapon_id);
 								let plural_char = if weapon.quantity <= 1 { "s" } else { "" };
 								let msg = format!("your {}glow{} {}for a moment", weapon_name, plural_char, glow_color);
