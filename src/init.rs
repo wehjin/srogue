@@ -26,7 +26,7 @@ use crate::weapons::constants::{ARROW, BOW, MACE};
 
 pub static mut cant_int: bool = false;
 pub static mut did_int: bool = false;
-pub static mut save_is_interactive: bool = true;
+//pub static mut save_is_interactive: bool = true;
 pub const ERROR_FILE: &'static str = "player.rogue.esave";
 pub const BYEBYE_STRING: &'static str = "Okay, bye bye!";
 
@@ -181,4 +181,10 @@ pub unsafe fn onintr() {
 	//   game.diary.message("interrupt", 1);
 	// }
 	// md_heed_signals();
+}
+
+pub fn error_save() {
+	// save_is_interactive = false;
+	// save_into_file(error_file);
+	// clean_up("");
 }

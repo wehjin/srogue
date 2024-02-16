@@ -1,7 +1,7 @@
 use ncurses::chtype;
 use serde::{Deserialize, Serialize};
 
-use crate::init::{cant_int, did_int, onintr, save_is_interactive};
+use crate::init::{cant_int, did_int, onintr, };
 use crate::machdep::md_slurp;
 use crate::pack::wait_for_ack;
 use crate::play::interrupted;
@@ -32,9 +32,9 @@ impl PlayerDialog {
 		self.msg_cleared = true;
 	}
 	pub unsafe fn message(&mut self, msg: &str, intrpt: i64) {
-		if !save_is_interactive {
-			return;
-		}
+		// if !save_is_interactive {
+		// 	return;
+		// }
 		if intrpt != 0 {
 			interrupted = true;
 			md_slurp();
