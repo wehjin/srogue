@@ -80,6 +80,7 @@ impl Player {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
+	pub fight_monster: Option<u64>,
 	pub hunger: HungerLevel,
 	pub foods: isize,
 	pub wizard: bool,
@@ -240,6 +241,7 @@ impl Player {
 	pub fn new(settings: Settings) -> Self {
 		const INIT_HP: isize = 12;
 		Player {
+			fight_monster: None,
 			hunger: HungerLevel::default(),
 			foods: 0,
 			wizard: false,

@@ -21,7 +21,6 @@ use crate::room::get_dungeon_char;
 use crate::score::killed_by;
 use crate::spec_hit::{check_imitator, clear_gold_seeker, cough_up, special_hit};
 
-pub static mut FIGHT_MONSTER: Option<u64> = None;
 pub static mut HIT_MESSAGE: String = String::new();
 
 fn reduce_chance(chance: usize, reduction: isize) -> usize {
@@ -30,9 +29,9 @@ fn reduce_chance(chance: usize, reduction: isize) -> usize {
 }
 
 pub unsafe fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
-	if let Some(fight_id) = FIGHT_MONSTER {
+	if let Some(fight_id) = player.fight_monster {
 		if mon_id == fight_id {
-			FIGHT_MONSTER = None;
+			player.fight_monster = None;
 		}
 	}
 	mash.monster_mut(mon_id).clear_target_spot();
@@ -45,7 +44,7 @@ pub unsafe fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, mash: &mut 
 	if player.wizard {
 		hit_chance /= 2;
 	}
-	if FIGHT_MONSTER.is_none() {
+	if player.fight_monster.is_none() {
 		interrupted = true;
 	}
 
@@ -56,14 +55,14 @@ pub unsafe fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, mash: &mut 
 	let base_monster_name = mon_name(mash.monster(mon_id), player, level);
 	let monster_name = if let Some(name) = other { name } else { &base_monster_name };
 	if !rand_percent(hit_chance) {
-		if FIGHT_MONSTER.is_none() {
+		if player.fight_monster.is_none() {
 			HIT_MESSAGE = format!("{}the {} misses", HIT_MESSAGE, monster_name);
 			message(&HIT_MESSAGE, 1);
 			HIT_MESSAGE.clear();
 		}
 		return;
 	}
-	if FIGHT_MONSTER.is_none() {
+	if player.fight_monster.is_none() {
 		HIT_MESSAGE = format!("{}the {} hit", HIT_MESSAGE, monster_name);
 		message(&HIT_MESSAGE, 1);
 		HIT_MESSAGE.clear();
@@ -108,7 +107,7 @@ pub unsafe fn rogue_hit(mon_id: u64, force_hit: bool, mash: &mut MonsterMash, pl
 	let hit_chance = if force_hit { 100 } else { get_hit_chance_player(player.weapon(), player) };
 	let hit_chance = if player.wizard { hit_chance * 2 } else { hit_chance };
 	if !rand_percent(hit_chance) {
-		if FIGHT_MONSTER.is_none() {
+		if player.fight_monster.is_none() {
 			HIT_MESSAGE = "you miss  ".to_string();
 		}
 	} else {
@@ -123,7 +122,7 @@ pub unsafe fn rogue_hit(mon_id: u64, force_hit: bool, mash: &mut MonsterMash, pl
 				return;
 			}
 			MonDamageEffect::MonsterSurvives => {
-				if FIGHT_MONSTER.is_none() {
+				if player.fight_monster.is_none() {
 					HIT_MESSAGE = "you hit  ".to_string();
 				}
 			}
@@ -216,7 +215,7 @@ pub unsafe fn mon_damage(mon_id: u64, damage: isize, mash: &mut MonsterMash, pla
 			level.dungeon[row as usize][col as usize].set_monster(false);
 			ncurses::mvaddch(row as i32, col as i32, get_dungeon_char(row, col, mash, player, level));
 		}
-		FIGHT_MONSTER = None;
+		player.fight_monster = None;
 		cough_up(mon_id, mash, player, level, ground);
 		{
 			let monster = mash.monster(mon_id);
@@ -266,12 +265,12 @@ pub unsafe fn fight(to_the_death: bool, mash: &mut MonsterMash, player: &mut Pla
 			return;
 		}
 	}
-	FIGHT_MONSTER = mash.monster_at_spot(row, col).map(|m| m.id());
-	if FIGHT_MONSTER.is_none() {
+	player.fight_monster = mash.monster_at_spot(row, col).map(|m| m.id());
+	if player.fight_monster.is_none() {
 		return;
 	}
 	let possible_damage = {
-		let fight_id = FIGHT_MONSTER.expect("some fight-monster id");
+		let fight_id = player.fight_monster.expect("some fight-monster id");
 		let fight_monster = mash.monster_mut(fight_id);
 		if !fight_monster.m_flags.stationary {
 			get_damage(fight_monster.m_damage(), DamageEffect::None) * 2 / 3
@@ -279,16 +278,16 @@ pub unsafe fn fight(to_the_death: bool, mash: &mut MonsterMash, player: &mut Pla
 			fight_monster.stationary_damage - 1
 		}
 	};
-	while FIGHT_MONSTER.is_some() {
+	while player.fight_monster.is_some() {
 		one_move_rogue(ch, false, mash, player, level, ground);
 		if (!to_the_death && player.rogue.hp_current <= possible_damage)
 			|| interrupted
 			|| !level.dungeon[row as usize][col as usize].has_monster() {
-			FIGHT_MONSTER = None;
+			player.fight_monster = None;
 		} else {
 			let monster_id = mash.monster_at_spot(row, col).map(|m| m.id());
-			if monster_id != FIGHT_MONSTER {
-				FIGHT_MONSTER = None;
+			if monster_id != player.fight_monster {
+				player.fight_monster = None;
 			}
 		}
 	}

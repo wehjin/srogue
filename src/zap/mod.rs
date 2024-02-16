@@ -4,7 +4,7 @@ use ncurses::{mvaddch, mvinch};
 
 use wand_kind::WandKind;
 
-use crate::hit::{FIGHT_MONSTER, get_dir_rc, rogue_hit};
+use crate::hit::{get_dir_rc, rogue_hit};
 use crate::level::Level;
 use crate::message::{CANCEL, check_message, get_input_line, message};
 use crate::monster::{gmc, gr_monster, Monster, MonsterKind, MonsterMash};
@@ -117,7 +117,7 @@ pub unsafe fn zap_monster(mon_id: u64, which_kind: u16, mash: &mut MonsterMash, 
 			let monster = mash.monster_mut(mon_id);
 			monster.m_flags.invisible = true;
 		}
-		WandKind::Polymorph => unsafe {
+		WandKind::Polymorph => {
 			if monster.m_flags.holds {
 				level.being_held = false;
 			}
@@ -127,9 +127,9 @@ pub unsafe fn zap_monster(mon_id: u64, which_kind: u16, mash: &mut MonsterMash, 
 			if !morph_monster.m_flags.imitates {
 				morph_monster.wake_up();
 			}
-			if let Some(id) = FIGHT_MONSTER {
-				if id == monster.id() {
-					FIGHT_MONSTER = Some(morph_monster.id());
+			if let Some(fight_id) = player.fight_monster {
+				if fight_id == monster.id() {
+					player.fight_monster = Some(morph_monster.id());
 				}
 			}
 			mash.remove_monster(monster.id());
