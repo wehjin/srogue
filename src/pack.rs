@@ -1,9 +1,9 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
+use crate::init::GameState;
 use crate::inventory::{get_obj_desc, inventory};
-use crate::level::Level;
-use crate::message::{CANCEL, check_message, get_input_line, LIST, message, print_stats, rgetchar, sound_bell};
-use crate::monster::{MonsterMash, mv_aquatars};
+use crate::message::{CANCEL, get_input_line, LIST, print_stats, rgetchar, sound_bell};
+use crate::monster::mv_aquatars;
 use crate::objects::{Object, ObjectId, ObjectPack, place_at, Title};
 use crate::objects::NoteStatus::{Called, Identified, Unidentified};
 use crate::player::Player;
@@ -32,32 +32,32 @@ pub enum PickUpResult {
 	PackTooFull,
 }
 
-pub unsafe fn pick_up(row: i64, col: i64, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) -> PickUpResult {
-	let obj_id = ground.find_id_at(row, col).expect("obj_id in level-objects at pick-up spot");
-	if ground.check_object(obj_id, Object::is_used_scare_monster_scroll) {
-		message("the scroll turns to dust as you pick it up", 0);
-		level.dungeon[row as usize][col as usize].clear_object();
-		ground.remove(obj_id);
-		if player.notes.scrolls[ScareMonster.to_index()].status == Unidentified {
-			player.notes.scrolls[ScareMonster.to_index()].status = Identified
+pub unsafe fn pick_up(row: i64, col: i64, game: &mut GameState) -> PickUpResult {
+	let obj_id = game.ground.find_id_at(row, col).expect("obj_id in level-objects at pick-up spot");
+	if game.ground.check_object(obj_id, Object::is_used_scare_monster_scroll) {
+		game.dialog.message("the scroll turns to dust as you pick it up", 0);
+		game.level.dungeon[row as usize][col as usize].clear_object();
+		game.ground.remove(obj_id);
+		if game.player.notes.scrolls[ScareMonster.to_index()].status == Unidentified {
+			game.player.notes.scrolls[ScareMonster.to_index()].status = Identified
 		}
 		PickUpResult::TurnedToDust
-	} else if let Some(quantity) = ground.try_map_object(obj_id, Object::gold_quantity) {
-		player.rogue.gold += quantity;
-		level.dungeon[row as usize][col as usize].clear_object();
-		let removed = ground.remove(obj_id).expect("remove level object");
-		print_stats(STAT_GOLD, player);
+	} else if let Some(quantity) = game.ground.try_map_object(obj_id, Object::gold_quantity) {
+		game.player.rogue.gold += quantity;
+		game.level.dungeon[row as usize][col as usize].clear_object();
+		let removed = game.ground.remove(obj_id).expect("remove level object");
+		print_stats(STAT_GOLD, &mut game.player);
 		PickUpResult::AddedToGold(removed)
-	} else if player.pack_weight_with_new_object(ground.object(obj_id))
+	} else if game.player.pack_weight_with_new_object(game.ground.object(obj_id))
 		>= MAX_PACK_COUNT {
-		message("pack too full", 1);
+		game.dialog.message("pack too full", 1);
 		PickUpResult::PackTooFull
 	} else {
-		level.dungeon[row as usize][col as usize].clear_object();
-		let removed_obj = take_from_pack(obj_id, ground).expect("removed object");
-		let added_id = player.combine_or_add_item_to_pack(removed_obj);
+		game.level.dungeon[row as usize][col as usize].clear_object();
+		let removed_obj = take_from_pack(obj_id, &mut game.ground).expect("removed object");
+		let added_id = game.player.combine_or_add_item_to_pack(removed_obj);
 		let added_kind = {
-			let obj = player.object_mut(added_id).expect("picked-up item in player's pack");
+			let obj = game.player.object_mut(added_id).expect("picked-up item in player's pack");
 			obj.picked_up = 1;
 			obj.which_kind
 		};
@@ -74,60 +74,60 @@ impl Object {
 	}
 }
 
-pub unsafe fn drop_0(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
-	let player_cell = level.dungeon[player.rogue.row as usize][player.rogue.col as usize];
+pub unsafe fn drop_0(game: &mut GameState) {
+	let player_cell = game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize];
 	if player_cell.has_object() || player_cell.is_stairs() || player_cell.is_trap() {
-		message("there's already something there", 0);
+		game.dialog.message("there's already something there", 0);
 		return;
 	}
-	if player.pack().is_empty() {
-		message("you have nothing to drop", 0);
+	if game.player.pack().is_empty() {
+		game.dialog.message("you have nothing to drop", 0);
 		return;
 	}
-	let ch = pack_letter("drop what?", AllObjects, player);
+	let ch = pack_letter("drop what?", AllObjects, game);
 	if ch == CANCEL {
 		return;
 	}
-	match player.object_id_with_letter(ch) {
+	match game.player.object_id_with_letter(ch) {
 		None => {
-			message("no such item.", 0)
+			game.dialog.message("no such item.", 0)
 		}
 		Some(obj_id) => {
-			if player.check_object(obj_id, Object::is_being_wielded) {
-				if player.check_object(obj_id, Object::is_cursed) {
-					message(CURSE_MESSAGE, 0);
+			if game.player.check_object(obj_id, Object::is_being_wielded) {
+				if game.player.check_object(obj_id, Object::is_cursed) {
+					game.dialog.message(CURSE_MESSAGE, 0);
 					return;
 				}
-				unwield(player);
-			} else if player.check_object(obj_id, Object::is_being_worn) {
-				if player.check_object(obj_id, Object::is_cursed) {
-					message(CURSE_MESSAGE, 0);
+				unwield(&mut game.player);
+			} else if game.player.check_object(obj_id, Object::is_being_worn) {
+				if game.player.check_object(obj_id, Object::is_cursed) {
+					game.dialog.message(CURSE_MESSAGE, 0);
 					return;
 				}
-				mv_aquatars(mash, player, level, ground);
-				unwear(player);
-				print_stats(STAT_ARMOR, player);
-			} else if let Some(hand) = player.ring_hand(obj_id) {
-				if player.check_ring(hand, Object::is_cursed) {
-					message(CURSE_MESSAGE, 0);
+				mv_aquatars(game);
+				unwear(&mut game.player);
+				print_stats(STAT_ARMOR, &mut game.player);
+			} else if let Some(hand) = game.player.ring_hand(obj_id) {
+				if game.player.check_ring(hand, Object::is_cursed) {
+					game.dialog.message(CURSE_MESSAGE, 0);
 					return;
 				}
-				un_put_hand(hand, mash, player, level);
+				un_put_hand(hand, game);
 			}
-			let place_obj = if let Some(obj) = player.pack_mut().object_if_mut(obj_id, |obj| obj.quantity > 1 && obj.what_is != Weapon) {
+			let place_obj = if let Some(obj) = game.player.pack_mut().object_if_mut(obj_id, |obj| obj.quantity > 1 && obj.what_is != Weapon) {
 				obj.quantity -= 1;
 				let mut new = obj.clone_with_new_id();
 				new.quantity = 1;
 				new
 			} else {
-				let mut obj = take_from_pack(obj_id, &mut player.rogue.pack).expect("take from pack");
+				let mut obj = take_from_pack(obj_id, &mut game.player.rogue.pack).expect("take from pack");
 				obj.ichar = 'L';
 				obj
 			};
-			let obj_desc = get_obj_desc(&place_obj, player.settings.fruit.to_string(), player);
-			place_at(place_obj, player.rogue.row, player.rogue.col, level, ground);
-			message(&format!("dropped {}", obj_desc), 0);
-			reg_move(mash, player, level, ground);
+			let obj_desc = get_obj_desc(&place_obj, game.player.settings.fruit.to_string(), &game.player);
+			place_at(place_obj, game.player.rogue.row, game.player.rogue.col, &mut game.level, &mut game.ground);
+			game.dialog.message(&format!("dropped {}", obj_desc), 0);
+			reg_move(game);
 		}
 	}
 }
@@ -162,18 +162,22 @@ pub fn next_avail_ichar(player: &Player) -> char {
 	} else { '?' }
 }
 
-pub unsafe fn wait_for_ack() {
-	while rgetchar() != ' ' {}
+pub fn wait_for_ack() {
+	loop {
+		if rgetchar() == ' ' {
+			break;
+		}
+	}
 }
 
-pub unsafe fn pack_letter(prompt: &str, filter: PackFilter, player: &Player) -> char {
-	if !mask_pack(&player.rogue.pack, filter.clone()) {
-		message("nothing appropriate", 0);
+pub unsafe fn pack_letter(prompt: &str, filter: PackFilter, game: &mut GameState) -> char {
+	if !mask_pack(&game.player.rogue.pack, filter.clone()) {
+		game.dialog.message("nothing appropriate", 0);
 		return CANCEL;
 	}
 
 	loop {
-		message(prompt, 0);
+		game.dialog.message(prompt, 0);
 		let pack_op = {
 			let mut pack_op;
 			loop {
@@ -187,10 +191,10 @@ pub unsafe fn pack_letter(prompt: &str, filter: PackFilter, player: &Player) -> 
 			}
 			pack_op.expect("some pack operation")
 		};
-		check_message();
+		game.dialog.clear_message();
 		match pack_op {
 			PackOp::List(filter) => {
-				inventory(filter, player);
+				inventory(filter, game);
 			}
 			PackOp::Cancel => {
 				return CANCEL;
@@ -225,35 +229,35 @@ pub fn unwield(player: &mut Player) {
 	player.unwield_weapon();
 }
 
-pub unsafe fn call_it(player: &mut Player) {
-	let ch = pack_letter("call what?", AnyFrom(vec![Scroll, Potion, Wand, Ring]), player);
+pub unsafe fn call_it(game: &mut GameState) {
+	let ch = pack_letter("call what?", AnyFrom(vec![Scroll, Potion, Wand, Ring]), game);
 	if ch == CANCEL {
 		return;
 	}
-	match player.object_id_with_letter(ch) {
+	match game.player.object_id_with_letter(ch) {
 		None => {
-			message("no such item.", 0);
+			game.dialog.message("no such item.", 0);
 			return;
 		}
 		Some(obj_id) => {
-			let what = player.object_what(obj_id);
+			let what = game.player.object_what(obj_id);
 			match what {
 				Scroll | Potion | Wand | Ring => {
-					let kind = player.object_kind(obj_id);
+					let kind = game.player.object_kind(obj_id);
 					let new_name = get_input_line::<String>(
 						"call it:",
 						None,
-						Some(player.notes.title(what, kind as usize).as_str()),
+						Some(game.player.notes.title(what, kind as usize).as_str()),
 						true,
-						true);
+						true, game);
 					if !new_name.is_empty() {
-						let id = player.notes.note_mut(what, kind as usize);
+						let id = game.player.notes.note_mut(what, kind as usize);
 						id.status = Called;
 						id.title = Title::UserString(new_name);
 					}
 				}
 				_ => {
-					message("surely you already know what that's called", 0);
+					game.dialog.message("surely you already know what that's called", 0);
 					return;
 				}
 			}
@@ -342,22 +346,22 @@ pub fn has_amulet(player: &Player) -> bool {
 	mask_pack(&player.rogue.pack, Amulets)
 }
 
-pub unsafe fn kick_into_pack(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
-	if !level.dungeon[player.rogue.row as usize][player.rogue.col as usize].has_object() {
-		message("nothing here", 0);
+pub unsafe fn kick_into_pack(game: &mut GameState) {
+	if !game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].has_object() {
+		game.dialog.message("nothing here", 0);
 	} else {
-		let settings = player.settings.clone();
-		match pick_up(player.rogue.row, player.rogue.col, player, level, ground) {
+		let settings = game.player.settings.clone();
+		match pick_up(game.player.rogue.row, game.player.rogue.col, game) {
 			PickUpResult::TurnedToDust => {
-				reg_move(mash, player, level, ground);
+				reg_move(game);
 			}
 			PickUpResult::AddedToGold(obj) => {
-				let msg = get_obj_desc(&obj, settings.fruit.to_string(), player);
-				message(&msg, 0);
+				let msg = get_obj_desc(&obj, settings.fruit.to_string(), &game.player);
+				game.dialog.message(&msg, 0);
 			}
 			PickUpResult::AddedToPack { added_id: obj_id, .. } => {
-				let msg = player.get_obj_desc(obj_id);
-				message(&msg, 0);
+				let msg = game.player.get_obj_desc(obj_id);
+				game.dialog.message(&msg, 0);
 			}
 			PickUpResult::PackTooFull => {
 				// No message, pick_up displays a message

@@ -6,11 +6,10 @@ use serde::{Deserialize, Serialize};
 use TrapKind::NoTrap;
 
 use crate::hit::{DamageEffect, DamageStat, get_damage, get_dir_rc};
+use crate::init::GameState;
 use crate::level::{CellFixture, Level};
 use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
-use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
-use crate::monster::MonsterMash;
-use crate::objects::ObjectPack;
+use crate::message::{CANCEL, print_stats, rgetchar, sound_bell};
 use crate::play::interrupted;
 use crate::player::Player;
 use crate::prelude::*;
@@ -108,52 +107,52 @@ pub unsafe fn trap_at(row: usize, col: usize, level: &Level) -> TrapKind {
 	return NoTrap;
 }
 
-pub unsafe fn trap_player(row: usize, col: usize, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
-	let t = trap_at(row, col, level);
+pub unsafe fn trap_player(row: usize, col: usize, game: &mut GameState) {
+	let t = trap_at(row, col, &game.level);
 	if t == NoTrap {
 		return;
 	}
-	level.dungeon[row][col].set_hidden(false);
-	if rand_percent(player.buffed_exp() as usize) {
-		message("the trap failed", 1);
+	game.level.dungeon[row][col].set_hidden(false);
+	if rand_percent(game.player.buffed_exp() as usize) {
+		game.dialog.message("the trap failed", 1);
 		return;
 	}
 	match t {
 		NoTrap => unreachable!("no trap"),
 		TrapDoor => {
-			level.trap_door = true;
-			level.new_level_message = Some(trap_message(t).to_string());
+			game.level.trap_door = true;
+			game.level.new_level_message = Some(trap_message(t).to_string());
 		}
 		BearTrap => {
-			message(trap_message(t), 1);
-			level.bear_trap = get_rand(4, 7);
+			game.dialog.message(trap_message(t), 1);
+			game.level.bear_trap = get_rand(4, 7);
 		}
 		TeleTrap => {
-			mvaddch(player.rogue.row as i32, player.rogue.col as i32, chtype::from('^'));
-			tele(mash, player, level);
+			mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, chtype::from('^'));
+			tele(game);
 		}
 		DartTrap => {
-			message(trap_message(t), 1);
+			game.dialog.message(trap_message(t), 1);
 			const DART_DAMAGE: DamageStat = DamageStat { hits: 1, damage: 6 };
-			player.rogue.hp_current -= get_damage(&[DART_DAMAGE], DamageEffect::Roll);
-			if player.rogue.hp_current <= 0 {
-				player.rogue.hp_current = 0;
+			game.player.rogue.hp_current -= get_damage(&[DART_DAMAGE], DamageEffect::Roll);
+			if game.player.rogue.hp_current <= 0 {
+				game.player.rogue.hp_current = 0;
 			}
-			if !player.ring_effects.has_sustain_strength() && rand_percent(40) && player.rogue.str_current >= 3 {
-				player.rogue.str_current -= 1;
+			if !game.player.ring_effects.has_sustain_strength() && rand_percent(40) && game.player.rogue.str_current >= 3 {
+				game.player.rogue.str_current -= 1;
 			}
-			print_stats(STAT_HP | STAT_STRENGTH, player);
-			if player.rogue.hp_current <= 0 {
-				killed_by(Ending::PoisonDart, player);
+			print_stats(STAT_HP | STAT_STRENGTH, &mut game.player);
+			if game.player.rogue.hp_current <= 0 {
+				killed_by(Ending::PoisonDart, game);
 			}
 		}
 		SleepingGasTrap => {
-			message(trap_message(t), 1);
-			take_a_nap(mash, player, level, ground);
+			game.dialog.message(trap_message(t), 1);
+			take_a_nap(game);
 		}
 		RustTrap => {
-			message(trap_message(t), 1);
-			rust(None, player);
+			game.dialog.message(trap_message(t), 1);
+			rust(None, game);
 		}
 	}
 }
@@ -216,8 +215,8 @@ fn random_spot_with_floor_or_monster(player: &Player, level: &mut Level) -> (usi
 	(row as usize, col as usize)
 }
 
-pub unsafe fn id_trap(player: &Player, level: &Level) {
-	message("direction? ", 0);
+pub unsafe fn id_trap(game: &mut GameState) {
+	game.dialog.message("direction? ", 0);
 	let mut dir: char;
 	loop {
 		dir = rgetchar();
@@ -226,18 +225,18 @@ pub unsafe fn id_trap(player: &Player, level: &Level) {
 		}
 		sound_bell();
 	}
-	check_message();
+	game.dialog.clear_message();
 	if dir == CANCEL {
 		return;
 	}
 
-	let mut row = player.rogue.row;
-	let mut col = player.rogue.col;
+	let mut row = game.player.rogue.row;
+	let mut col = game.player.rogue.col;
 	get_dir_rc(dir, &mut row, &mut col, false);
-	if level.dungeon[row as usize][col as usize].is_trap() && !level.dungeon[row as usize][col as usize].is_hidden() {
-		message(trap_at(row as usize, col as usize, level).name(), 0);
+	if game.level.dungeon[row as usize][col as usize].is_trap() && !game.level.dungeon[row as usize][col as usize].is_hidden() {
+		 game.dialog.message(trap_at(row as usize, col as usize, &game.level).name(), 0);
 	} else {
-		message("no trap there", 0);
+		game.dialog.message("no trap there", 0);
 	}
 }
 
@@ -252,18 +251,18 @@ pub unsafe fn show_traps(level: &Level) {
 	}
 }
 
-pub unsafe fn search(n: usize, is_auto: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
+pub unsafe fn search(n: usize, is_auto: bool, game: &mut GameState) {
 	static mut reg_search: bool = false;
 
 	let mut found = 0;
 	for i in -1..=1 {
 		for j in -1..=1 {
-			let row = player.rogue.row + i;
-			let col = player.rogue.col + j;
+			let row = game.player.rogue.row + i;
+			let col = game.player.rogue.col + j;
 			if is_off_screen(row, col) {
 				continue;
 			}
-			if level.dungeon[row as usize][col as usize].is_hidden() {
+			if game.level.dungeon[row as usize][col as usize].is_hidden() {
 				found += 1;
 			}
 		}
@@ -273,20 +272,20 @@ pub unsafe fn search(n: usize, is_auto: bool, mash: &mut MonsterMash, player: &m
 	for _s in 0..n {
 		for i in -1..=1 {
 			for j in -1..=1 {
-				let row = player.rogue.row + i;
-				let col = player.rogue.col + j;
+				let row = game.player.rogue.row + i;
+				let col = game.player.rogue.col + j;
 				if is_off_screen(row, col) {
 					continue;
 				}
-				if level.dungeon[row as usize][col as usize].is_hidden() {
-					if rand_percent(17 + player.buffed_exp() as usize) {
-						level.dungeon[row as usize][col as usize].set_hidden(false);
-						if player.blind.is_inactive() && !player.is_at(row, col) {
-							mvaddch(row as i32, col as i32, get_dungeon_char(row, col, mash, player, level));
+				if game.level.dungeon[row as usize][col as usize].is_hidden() {
+					if rand_percent(17 + game.player.buffed_exp() as usize) {
+						game.level.dungeon[row as usize][col as usize].set_hidden(false);
+						if game.player.blind.is_inactive() && !game.player.is_at(row, col) {
+							mvaddch(row as i32, col as i32, get_dungeon_char(row, col, game));
 						}
 						shown += 1;
-						if level.dungeon[row as usize][col as usize].is_trap() {
-							message(trap_at(row as usize, col as usize, level).name(), 1);
+						if game.level.dungeon[row as usize][col as usize].is_trap() {
+							game.dialog.message(trap_at(row as usize, col as usize, &game.level).name(), 1);
 						}
 					}
 				}
@@ -298,7 +297,7 @@ pub unsafe fn search(n: usize, is_auto: bool, mash: &mut MonsterMash, player: &m
 		if !is_auto {
 			reg_search = !reg_search;
 			if reg_search {
-				reg_move(mash, player, level, ground);
+				reg_move(game);
 			}
 		}
 	}

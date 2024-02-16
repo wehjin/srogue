@@ -4,11 +4,12 @@ use libc::c_char;
 
 pub use damage_stat::*;
 
-use crate::level::{add_exp, Level};
+use crate::init::GameState;
+use crate::level::add_exp;
 use crate::level::constants::{DCOLS, DROWS};
-use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
-use crate::monster::{mon_name, Monster, MonsterMash};
-use crate::objects::{get_armor_class, Object, ObjectPack};
+use crate::message::{CANCEL, print_stats, rgetchar, sound_bell};
+use crate::monster::{mon_name, Monster};
+use crate::objects::{get_armor_class, Object};
 use crate::play::interrupted;
 use crate::player::Player;
 use crate::prelude::{AMULET_LEVEL, MIN_ROW};
@@ -28,119 +29,119 @@ fn reduce_chance(chance: usize, reduction: isize) -> usize {
 	if chance <= reduction { 0 } else { chance - reduction }
 }
 
-pub unsafe fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
-	if let Some(fight_id) = player.fight_monster {
+pub unsafe fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, game: &mut GameState) {
+	if let Some(fight_id) = game.player.fight_monster {
 		if mon_id == fight_id {
-			player.fight_monster = None;
+			game.player.fight_monster = None;
 		}
 	}
-	mash.monster_mut(mon_id).clear_target_spot();
-	let mut hit_chance: usize = if player.cur_depth >= (AMULET_LEVEL * 2) {
+	game.mash.monster_mut(mon_id).clear_target_spot();
+	let mut hit_chance: usize = if game.player.cur_depth >= (AMULET_LEVEL * 2) {
 		100
 	} else {
-		let reduction = (2 * player.buffed_exp()) - player.debuf_exp();
-		reduce_chance(mash.monster(mon_id).m_hit_chance(), reduction)
+		let reduction = (2 * game.player.buffed_exp()) - game.player.debuf_exp();
+		reduce_chance(game.mash.monster(mon_id).m_hit_chance(), reduction)
 	};
-	if player.wizard {
+	if game.player.wizard {
 		hit_chance /= 2;
 	}
-	if player.fight_monster.is_none() {
+	if game.player.fight_monster.is_none() {
 		interrupted = true;
 	}
 
 	if other.is_some() {
-		hit_chance = reduce_chance(hit_chance, player.buffed_exp() - player.debuf_exp());
+		hit_chance = reduce_chance(hit_chance, game.player.buffed_exp() - game.player.debuf_exp());
 	}
 
-	let base_monster_name = mon_name(mash.monster(mon_id), player, level);
+	let base_monster_name = mon_name(game.mash.monster(mon_id), &game.player, &game.level);
 	let monster_name = if let Some(name) = other { name } else { &base_monster_name };
 	if !rand_percent(hit_chance) {
-		if player.fight_monster.is_none() {
+		if game.player.fight_monster.is_none() {
 			HIT_MESSAGE = format!("{}the {} misses", HIT_MESSAGE, monster_name);
-			message(&HIT_MESSAGE, 1);
+			game.dialog.message(&HIT_MESSAGE, 1);
 			HIT_MESSAGE.clear();
 		}
 		return;
 	}
-	if player.fight_monster.is_none() {
+	if game.player.fight_monster.is_none() {
 		HIT_MESSAGE = format!("{}the {} hit", HIT_MESSAGE, monster_name);
-		message(&HIT_MESSAGE, 1);
+		game.dialog.message(&HIT_MESSAGE, 1);
 		HIT_MESSAGE.clear();
 	}
-	let mut damage: isize = if !mash.monster_flags(mon_id).stationary {
-		let mut damage = get_damage(mash.monster(mon_id).m_damage(), DamageEffect::Roll);
+	let mut damage: isize = if !game.mash.monster_flags(mon_id).stationary {
+		let mut damage = get_damage(game.mash.monster(mon_id).m_damage(), DamageEffect::Roll);
 		if other.is_some() && flame {
-			damage -= get_armor_class(player.armor());
+			damage -= get_armor_class(game.player.armor());
 			if damage < 0 {
 				damage = 1;
 			}
 		}
-		let minus: isize = if player.cur_depth >= AMULET_LEVEL * 2 {
-			(player.cur_depth - AMULET_LEVEL * 2) * -1
+		let minus: isize = if game.player.cur_depth >= AMULET_LEVEL * 2 {
+			(game.player.cur_depth - AMULET_LEVEL * 2) * -1
 		} else {
-			let mut minus = get_armor_class(player.armor()) * 3;
+			let mut minus = get_armor_class(game.player.armor()) * 3;
 			minus = (minus as f64 / 100.0 * damage as f64) as isize;
 			minus
 		};
 		damage -= minus;
 		damage
 	} else {
-		let original = mash.monster(mon_id).stationary_damage;
-		mash.monster_mut(mon_id).stationary_damage += 1;
+		let original = game.mash.monster(mon_id).stationary_damage;
+		game.mash.monster_mut(mon_id).stationary_damage += 1;
 		original
 	};
-	if player.wizard {
+	if game.player.wizard {
 		damage /= 3;
 	}
 	if damage > 0 {
-		rogue_damage(damage, mash.monster(mon_id), player);
+		rogue_damage(damage, mon_id, game);
 	}
-	if mash.monster_flags(mon_id).special_hit() {
-		special_hit(mon_id, mash, player, level, ground);
+	if game.mash.monster_flags(mon_id).special_hit() {
+		special_hit(mon_id, game);
 	}
 }
 
-pub unsafe fn rogue_hit(mon_id: u64, force_hit: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
-	if check_imitator(mon_id, mash, player, level) {
+pub unsafe fn rogue_hit(mon_id: u64, force_hit: bool, game: &mut GameState) {
+	if check_imitator(mon_id, game) {
 		return;
 	}
-	let hit_chance = if force_hit { 100 } else { get_hit_chance_player(player.weapon(), player) };
-	let hit_chance = if player.wizard { hit_chance * 2 } else { hit_chance };
+	let hit_chance = if force_hit { 100 } else { get_hit_chance_player(game.player.weapon(), &game.player) };
+	let hit_chance = if game.player.wizard { hit_chance * 2 } else { hit_chance };
 	if !rand_percent(hit_chance) {
-		if player.fight_monster.is_none() {
+		if game.player.fight_monster.is_none() {
 			HIT_MESSAGE = "you miss  ".to_string();
 		}
 	} else {
-		let player_exp = player.buffed_exp();
-		let player_debuf = player.debuf_exp();
-		let player_str = player.buffed_strength();
-		let damage = get_weapon_damage(player.weapon(), player_str, player_exp, player_debuf);
-		let damage = if player.wizard { damage * 3 } else { damage };
-		match mon_damage(mon_id, damage, mash, player, level, ground) {
+		let player_exp = game.player.buffed_exp();
+		let player_debuf = game.player.debuf_exp();
+		let player_str = game.player.buffed_strength();
+		let damage = get_weapon_damage(game.player.weapon(), player_str, player_exp, player_debuf);
+		let damage = if game.player.wizard { damage * 3 } else { damage };
+		match mon_damage(mon_id, damage, game) {
 			MonDamageEffect::MonsterDies(_) => {
 				// mon_id is no longer in the mash.
 				return;
 			}
 			MonDamageEffect::MonsterSurvives => {
-				if player.fight_monster.is_none() {
+				if game.player.fight_monster.is_none() {
 					HIT_MESSAGE = "you hit  ".to_string();
 				}
 			}
 		}
 	}
-	let monster = mash.monster_mut(mon_id);
+	let monster = game.mash.monster_mut(mon_id);
 	clear_gold_seeker(monster);
 	monster.wake_up();
 }
 
-pub unsafe fn rogue_damage(d: isize, monster: &Monster, player: &mut Player) {
-	if d >= player.rogue.hp_current {
-		player.rogue.hp_current = 0;
-		print_stats(STAT_HP, player);
-		killed_by(Ending::Monster(monster), player);
+pub unsafe fn rogue_damage(d: isize, mon_id: u64, game: &mut GameState) {
+	if d >= game.player.rogue.hp_current {
+		game.player.rogue.hp_current = 0;
+		print_stats(STAT_HP, &mut game.player);
+		killed_by(Ending::Monster(game.mash.monster(mon_id).name().to_string()), game);
 	}
-	player.rogue.hp_current -= d;
-	print_stats(STAT_HP, player);
+	game.player.rogue.hp_current -= d;
+	print_stats(STAT_HP, &mut game.player);
 }
 
 
@@ -205,37 +206,36 @@ pub enum MonDamageEffect {
 	MonsterSurvives,
 }
 
-pub unsafe fn mon_damage(mon_id: u64, damage: isize, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) -> MonDamageEffect {
-	mash.monster_mut(mon_id).hp_to_kill -= damage;
-	if mash.monster(mon_id).hp_to_kill <= 0 {
+pub unsafe fn mon_damage(mon_id: u64, damage: isize, game: &mut GameState) -> MonDamageEffect {
+	game.mash.monster_mut(mon_id).hp_to_kill -= damage;
+	if game.mash.monster(mon_id).hp_to_kill <= 0 {
 		{
-			let monster = mash.monster(mon_id);
+			let monster = game.mash.monster(mon_id);
 			let row = monster.spot.row;
 			let col = monster.spot.col;
-			level.dungeon[row as usize][col as usize].set_monster(false);
-			ncurses::mvaddch(row as i32, col as i32, get_dungeon_char(row, col, mash, player, level));
+			game.level.dungeon[row as usize][col as usize].set_monster(false);
+			ncurses::mvaddch(row as i32, col as i32, get_dungeon_char(row, col, game));
 		}
-		player.fight_monster = None;
-		cough_up(mon_id, mash, player, level, ground);
+		game.player.fight_monster = None;
+		cough_up(mon_id, game);
 		{
-			let monster = mash.monster(mon_id);
-			let monster_name = mon_name(monster, player, level);
+			let monster = game.mash.monster(mon_id);
+			let monster_name = mon_name(monster, &game.player, &game.level);
 			HIT_MESSAGE = format!("{}defeated the {}", HIT_MESSAGE, monster_name);
-			message(&HIT_MESSAGE, 1);
+			game.dialog.message(&HIT_MESSAGE, 1);
 			HIT_MESSAGE.clear();
 		}
-		let monster = mash.monster(mon_id);
-		add_exp(monster.kill_exp(), true, player);
-		if monster.m_flags.holds {
-			level.being_held = false;
+		add_exp(game.mash.monster(mon_id).kill_exp(), true, game);
+		if game.mash.monster_flags(mon_id).holds {
+			game.level.being_held = false;
 		}
-		let removed = mash.remove_monster(monster.id());
+		let removed = game.mash.remove_monster(game.mash.monster(mon_id).id());
 		return MonDamageEffect::MonsterDies(removed);
 	}
 	return MonDamageEffect::MonsterSurvives;
 }
 
-pub unsafe fn fight(to_the_death: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
+pub unsafe fn fight(to_the_death: bool, game: &mut GameState) {
 	let mut first_miss: bool = true;
 	let mut ch: char;
 	loop {
@@ -245,49 +245,49 @@ pub unsafe fn fight(to_the_death: bool, mash: &mut MonsterMash, player: &mut Pla
 		}
 		sound_bell();
 		if first_miss {
-			message("direction?", 0);
+			game.dialog.message("direction?", 0);
 			first_miss = false;
 		}
 	}
-	check_message();
+	game.dialog.clear_message();
 	if ch == CANCEL {
 		return;
 	}
-	let mut row = player.rogue.row;
-	let mut col = player.rogue.col;
+	let mut row = game.player.rogue.row;
+	let mut col = game.player.rogue.col;
 	get_dir_rc(ch, &mut row, &mut col, false);
 	let c = ncurses::mvinch(row as i32, col as i32);
 	{
 		let not_a_monster = (c as i64) < 'A' as i64 || c as i64 > 'Z' as i64;
-		let cannot_move = !can_move(player.rogue.row, player.rogue.col, row, col, level);
+		let cannot_move = !can_move(game.player.rogue.row, game.player.rogue.col, row, col, &game.level);
 		if not_a_monster || cannot_move {
-			message("I see no monster there", 0);
+			game.dialog.message("I see no monster there", 0);
 			return;
 		}
 	}
-	player.fight_monster = mash.monster_at_spot(row, col).map(|m| m.id());
-	if player.fight_monster.is_none() {
+	game.player.fight_monster = game.mash.monster_at_spot(row, col).map(|m| m.id());
+	if game.player.fight_monster.is_none() {
 		return;
 	}
 	let possible_damage = {
-		let fight_id = player.fight_monster.expect("some fight-monster id");
-		let fight_monster = mash.monster_mut(fight_id);
+		let fight_id = game.player.fight_monster.expect("some fight-monster id");
+		let fight_monster = game.mash.monster_mut(fight_id);
 		if !fight_monster.m_flags.stationary {
 			get_damage(fight_monster.m_damage(), DamageEffect::None) * 2 / 3
 		} else {
 			fight_monster.stationary_damage - 1
 		}
 	};
-	while player.fight_monster.is_some() {
-		one_move_rogue(ch, false, mash, player, level, ground);
-		if (!to_the_death && player.rogue.hp_current <= possible_damage)
+	while game.player.fight_monster.is_some() {
+		one_move_rogue(ch, false, game);
+		if (!to_the_death && game.player.rogue.hp_current <= possible_damage)
 			|| interrupted
-			|| !level.dungeon[row as usize][col as usize].has_monster() {
-			player.fight_monster = None;
+			|| !game.level.dungeon[row as usize][col as usize].has_monster() {
+			game.player.fight_monster = None;
 		} else {
-			let monster_id = mash.monster_at_spot(row, col).map(|m| m.id());
-			if monster_id != player.fight_monster {
-				player.fight_monster = None;
+			let monster_id = game.mash.monster_at_spot(row, col).map(|m| m.id());
+			if monster_id != game.player.fight_monster {
+				game.player.fight_monster = None;
 			}
 		}
 	}

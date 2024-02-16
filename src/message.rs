@@ -4,12 +4,9 @@ use libc::c_int;
 use ncurses::{addch, chtype, clrtoeol, curscr, mvaddstr, wrefresh};
 
 use crate::components::hunger::HungerLevel;
-use crate::init::{cant_int, did_int, onintr, save_is_interactive};
+use crate::init::GameState;
 use crate::level::constants::DROWS;
-use crate::machdep::md_slurp;
 use crate::objects::get_armor_class;
-use crate::pack::wait_for_ack;
-use crate::play::interrupted;
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_EXP, STAT_GOLD, STAT_HP, STAT_HUNGER, STAT_LABEL, STAT_LEVEL, STAT_STRENGTH};
@@ -17,55 +14,25 @@ use crate::prelude::stat_const::{STAT_ARMOR, STAT_EXP, STAT_GOLD, STAT_HP, STAT_
 pub static mut msg_written: String = String::new();
 pub static mut msg_cleared: bool = true;
 
-pub unsafe fn message(msg: &str, intrpt: i64) {
-	if !save_is_interactive {
-		return;
-	}
-	if intrpt != 0 {
-		interrupted = true;
-		md_slurp();
-	}
-	cant_int = true;
 
-	if !msg_cleared {
-		mvaddstr((MIN_ROW - 1) as i32, msg_written.len() as i32, MORE);
-		ncurses::refresh();
-		wait_for_ack();
-		check_message();
-	}
-	mvaddstr((MIN_ROW - 1) as i32, 0, msg);
-	addch(chtype::from(' '));
-	ncurses::refresh();
-	msg_written = msg.to_string();
-	msg_cleared = false;
-	cant_int = false;
-	if did_int {
-		did_int = false;
-		onintr();
-	}
-}
-
-pub unsafe extern "C" fn remessage() {
+pub unsafe extern "C" fn remessage(game: &mut GameState) {
 	if !msg_written.is_empty() {
-		message(&msg_written, 0);
+		game.dialog.message(&msg_written, 0);
 	}
-}
-
-pub unsafe fn check_message() {
-	if msg_cleared {
-		return;
-	}
-	ncurses::mv((MIN_ROW - 1) as i32, 0);
-	clrtoeol();
-	ncurses::refresh();
-	msg_cleared = true;
 }
 
 pub const CANCEL: char = '\u{1b}';
 pub const LIST: char = '*';
 
-pub unsafe fn get_input_line<T: AsRef<str>>(prompt: &str, insert: Option<T>, if_cancelled: Option<&str>, add_blank: bool, do_echo: bool) -> String {
-	message(prompt, 0);
+pub unsafe fn get_input_line<T: AsRef<str>>(
+	prompt: &str,
+	insert: Option<T>,
+	if_cancelled: Option<&str>,
+	add_blank: bool,
+	do_echo: bool,
+	game: &mut GameState,
+) -> String {
+	game.dialog.message(prompt, 0);
 
 	let mut line: Vec<char> = Vec::new();
 	let n = prompt.len();
@@ -100,7 +67,7 @@ pub unsafe fn get_input_line<T: AsRef<str>>(prompt: &str, insert: Option<T>, if_
 		}
 		ncurses::refresh();
 	}
-	check_message();
+	game.dialog.clear_message();
 	if add_blank {
 		line.push(' ');
 	} else {
@@ -110,7 +77,7 @@ pub unsafe fn get_input_line<T: AsRef<str>>(prompt: &str, insert: Option<T>, if_
 	}
 	if ch == CANCEL || line.is_empty() || (line.len() == 1 && add_blank) {
 		if let Some(msg) = if_cancelled {
-			message(msg, 0);
+			game.dialog.message(msg, 0);
 		}
 		"".to_string()
 	} else {

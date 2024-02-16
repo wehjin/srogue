@@ -2,8 +2,9 @@
 
 use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
 
+use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
-use crate::message::{CANCEL, message};
+use crate::message::CANCEL;
 use crate::objects::{get_armor_class, name_of, NoteStatus, Object, ObjectId};
 use crate::objects::note_tables::NoteTables;
 use crate::pack::{pack_letter, wait_for_ack};
@@ -21,19 +22,19 @@ use crate::score::is_vowel;
 use crate::scrolls::ScrollKind;
 use crate::zap::wand_kind::WandKind;
 
-pub unsafe fn inventory(filter: PackFilter, player: &Player) {
-	if player.pack().is_empty() {
-		message("your pack is empty", 0);
+pub unsafe fn inventory(filter: PackFilter, game: &mut GameState) {
+	if game.player.pack().is_empty() {
+		game.dialog.message("your pack is empty", 0);
 		return;
 	}
 	let item_lines = {
 		let mut item_lines = Vec::new();
-		for obj in player.pack().objects() {
+		for obj in game.player.pack().objects() {
 			let what = obj.what_is;
 			if filter.includes(what) {
 				let close_char = if what == Armor && obj.is_protected != 0 { '}' } else { ')' };
 				let obj_ichar = obj.ichar;
-				let obj_desc = get_obj_desc(obj, player.settings.fruit.to_string(), player);
+				let obj_desc = get_obj_desc(obj, game.player.settings.fruit.to_string(), &game.player);
 				let line = format!(" {}{} {}", obj_ichar, close_char, obj_desc);
 				item_lines.push(line);
 			}
@@ -270,37 +271,37 @@ fn take_unused<const N: usize>(used: &mut [bool; N]) -> usize {
 	j
 }
 
-pub unsafe fn single_inv(ichar: Option<char>, player: &mut Player) {
+pub unsafe fn single_inv(ichar: Option<char>, game: &mut GameState) {
 	let ch = if let Some(ichar) = ichar {
 		ichar
 	} else {
-		pack_letter("inventory what?", AllObjects, player)
+		pack_letter("inventory what?", AllObjects, game)
 	};
 	if ch == CANCEL {
 		return;
 	}
-	if let Some(obj) = player.object_with_letter(ch) {
+	if let Some(obj) = game.player.object_with_letter(ch) {
 		let separator = if obj.what_is == Armor && obj.is_protected != 0 { '}' } else { ')' };
-		let obj_desc = get_obj_desc(obj, player.settings.fruit.to_string(), player);
+		let obj_desc = get_obj_desc(obj, game.player.settings.fruit.to_string(), &game.player);
 		let msg = format!("{}{} {}", ch, separator, obj_desc);
-		message(&msg, 0);
+		game.dialog.message(&msg, 0);
 	} else {
-		message("no such item.", 0);
+		game.dialog.message("no such item.", 0);
 	}
 }
 
-pub unsafe fn inv_armor_weapon(is_weapon: bool, player: &mut Player) {
+pub unsafe fn inv_armor_weapon(is_weapon: bool, game: &mut GameState) {
 	if is_weapon {
-		if let Some(weapon) = player.weapon() {
-			single_inv(Some(weapon.ichar), player);
+		if let Some(weapon) = game.player.weapon() {
+			single_inv(Some(weapon.ichar), game);
 		} else {
-			message("not wielding anything", 0);
+			game.dialog.message("not wielding anything", 0);
 		}
 	} else {
-		if let Some(armor) = player.armor() {
-			single_inv(Some(armor.ichar), player);
+		if let Some(armor) = game.player.armor() {
+			single_inv(Some(armor.ichar), game);
 		} else {
-			message("not wearing anything", 0);
+			game.dialog.message("not wearing anything", 0);
 		}
 	}
 }

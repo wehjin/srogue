@@ -68,7 +68,7 @@ pub struct termios {
  * input without waiting for the user to read the message.  Not such a
  * big deal.
  */
-pub unsafe fn md_slurp() {}
+pub fn md_slurp() {}
 
 pub fn md_control_keybord(_mode: libc::c_short) {
 	// Stubbing this out allows tty driver so steal some commands like ^Y.

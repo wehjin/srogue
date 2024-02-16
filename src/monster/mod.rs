@@ -8,9 +8,9 @@ pub use kind::*;
 pub use mash::*;
 
 use crate::hit::mon_hit;
+use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
-use crate::message::message;
 use crate::objects::{ObjectId, ObjectPack};
 use crate::odds;
 use crate::player::Player;
@@ -50,18 +50,18 @@ pub struct Fighter {
 
 pub static mut mon_disappeared: bool = false;
 
-pub unsafe fn put_mons(mash: &mut MonsterMash, player: &Player, level: &mut Level) {
+pub unsafe fn put_mons(game: &mut GameState) {
 	for _ in 0..get_rand(4, 6) {
-		let mut monster = gr_monster(player.cur_depth, 0, None);
+		let mut monster = gr_monster(game.player.cur_depth, 0, None);
 		if monster.m_flags.wanders && coin_toss() {
 			monster.wake_up();
 		}
 		let DungeonSpot { row, col } = random_spot_with_flag(
 			|cell| cell.is_floor() || cell.is_tunnel() || cell.is_stairs() || cell.has_object(),
-			player,
-			level,
+			&game.player,
+			&game.level,
 		);
-		put_m_at(row, col, monster, mash, level);
+		put_m_at(row, col, monster, &mut game.mash, &mut game.level);
 	}
 }
 
@@ -78,42 +78,42 @@ pub fn gr_monster(level_depth: isize, first_level_boost: isize, kind: Option<Mon
 	return monster;
 }
 
-pub unsafe fn mv_mons(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
-	if player.haste_self.is_half_active() {
+pub unsafe fn mv_mons(game: &mut GameState) {
+	if game.player.haste_self.is_half_active() {
 		return;
 	}
 
-	for mon_id in mash.monster_ids() {
+	for mon_id in game.mash.monster_ids() {
 		let mut done_with_monster = false;
-		if mash.test_monster(mon_id, Monster::is_hasted) {
+		if game.mash.test_monster(mon_id, Monster::is_hasted) {
 			mon_disappeared = false;
-			mv_monster(mon_id, player.rogue.row, player.rogue.col, mash, player, level, ground);
+			mv_monster(mon_id, game.player.rogue.row, game.player.rogue.col, game);
 			if mon_disappeared {
 				done_with_monster = true;
 			}
-		} else if mash.test_monster(mon_id, Monster::is_slowed) {
-			mash.monster_mut(mon_id).flip_slowed_toggle();
-			if mash.test_monster(mon_id, Monster::slowed_toggle) {
+		} else if game.mash.test_monster(mon_id, Monster::is_slowed) {
+			game.mash.monster_mut(mon_id).flip_slowed_toggle();
+			if game.mash.test_monster(mon_id, Monster::slowed_toggle) {
 				done_with_monster = true;
 			}
 		}
-		if !done_with_monster && mash.test_monster(mon_id, Monster::is_confused) {
-			if move_confused(mash.monster_mut(mon_id), player, level, ground) {
+		if !done_with_monster && game.mash.test_monster(mon_id, Monster::is_confused) {
+			if move_confused(game.mash.monster_mut(mon_id), &game.player, &mut game.level, &game.ground) {
 				done_with_monster = true;
 			}
 		}
 		if !done_with_monster {
 			let mut flew = false;
-			let monster = mash.monster(mon_id);
+			let monster = game.mash.monster(mon_id);
 			if monster.flies()
 				&& !monster.is_napping()
-				&& !mon_can_go(monster, player.rogue.row, player.rogue.col, player, level, ground) {
+				&& !mon_can_go(monster, game.player.rogue.row, game.player.rogue.col, &game.player, &game.level, &game.ground) {
 				flew = true;
-				mv_monster(mon_id, player.rogue.row, player.rogue.col, mash, player, level, ground);
+				mv_monster(mon_id, game.player.rogue.row, game.player.rogue.col, game);
 			}
-			let monster = mash.monster(mon_id);
-			if !(flew && mon_can_go(monster, player.rogue.row, player.rogue.col, player, level, ground)) {
-				mv_monster(mon_id, player.rogue.row, player.rogue.col, mash, player, level, ground);
+			let monster = game.mash.monster(mon_id);
+			if !(flew && mon_can_go(monster, game.player.rogue.row, game.player.rogue.col, &game.player, &game.level, &game.ground)) {
+				mv_monster(mon_id, game.player.rogue.row, game.player.rogue.col, game);
 			}
 		}
 	}
@@ -146,9 +146,9 @@ pub unsafe fn party_monsters(rn: usize, n: usize, level_depth: isize, mash: &mut
 	}
 }
 
-pub fn gmc_row_col(row: i64, col: i64, mash: &MonsterMash, player: &Player, level: &Level) -> chtype {
-	if let Some(monster) = mash.monster_at_spot(row, col) {
-		gmc(monster, player, level)
+pub fn gmc_row_col(row: i64, col: i64, game: &mut GameState) -> chtype {
+	if let Some(monster) = game.mash.monster_at_spot(row, col) {
+		gmc(monster, &game.player, &game.level)
 	} else {
 		ncurses::chtype::from('&')
 	}
@@ -165,72 +165,72 @@ pub fn gmc(monster: &Monster, player: &Player, level: &Level) -> chtype {
 	}
 }
 
-pub unsafe fn mv_monster(mon_id: u64, row: i64, col: i64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
-	if mash.monster_flags(mon_id).asleep {
-		if mash.monster_flags(mon_id).napping {
-			mash.monster_mut(mon_id).do_nap();
+pub unsafe fn mv_monster(mon_id: u64, row: i64, col: i64, game: &mut GameState) {
+	if game.mash.monster_flags(mon_id).asleep {
+		if game.mash.monster_flags(mon_id).napping {
+			game.mash.monster_mut(mon_id).do_nap();
 			return;
 		}
 		let chance = odds::WAKE_PERCENT;
-		let monster = mash.monster(mon_id);
+		let monster = game.mash.monster(mon_id);
 		let row1 = monster.spot.row;
 		let col1 = monster.spot.col;
 		if (monster.m_flags.wakens)
-			&& player.is_near(row1, col1)
-			&& rand_percent(player.ring_effects.apply_stealthy(chance)) {
-			mash.monster_mut(mon_id).wake_up();
+			&& game.player.is_near(row1, col1)
+			&& rand_percent(game.player.ring_effects.apply_stealthy(chance)) {
+			game.mash.monster_mut(mon_id).wake_up();
 		}
 		return;
-	} else if mash.monster_flags(mon_id).already_moved {
-		mash.monster_flags_mut(mon_id).already_moved = false;
+	} else if game.mash.monster_flags(mon_id).already_moved {
+		game.mash.monster_flags_mut(mon_id).already_moved = false;
 		return;
 	}
-	if mash.monster_flags(mon_id).flits && flit(mash.monster_mut(mon_id), player, level, ground) {
+	if game.mash.monster_flags(mon_id).flits && flit(game.mash.monster_mut(mon_id), &game.player, &mut game.level, &game.ground) {
 		return;
 	}
-	if mash.monster_flags(mon_id).stationary
-		&& !mon_can_go(mash.monster(mon_id), player.rogue.row, player.rogue.col, player, level, ground) {
+	if game.mash.monster_flags(mon_id).stationary
+		&& !mon_can_go(game.mash.monster(mon_id), game.player.rogue.row, game.player.rogue.col, &game.player, &game.level, &game.ground) {
 		return;
 	}
-	if mash.monster_flags(mon_id).freezing_rogue {
+	if game.mash.monster_flags(mon_id).freezing_rogue {
 		return;
 	}
-	if mash.monster_flags(mon_id).confuses && m_confuse(mash.monster_mut(mon_id), player, level) {
+	if game.mash.monster_flags(mon_id).confuses && m_confuse(mon_id, game) {
 		return;
 	}
-	if mon_can_go(mash.monster(mon_id), player.rogue.row, player.rogue.col, player, level, ground) {
-		mon_hit(mon_id, None, false, mash, player, level, ground);
+	if mon_can_go(game.mash.monster(mon_id), game.player.rogue.row, game.player.rogue.col, &game.player, &game.level, &game.ground) {
+		mon_hit(mon_id, None, false, game);
 		return;
 	}
-	if mash.monster_flags(mon_id).flames && flame_broil(mon_id, mash, player, level, ground) {
+	if game.mash.monster_flags(mon_id).flames && flame_broil(mon_id, game) {
 		return;
 	}
-	if mash.monster_flags(mon_id).seeks_gold && seek_gold(mon_id, mash, player, level, ground) {
+	if game.mash.monster_flags(mon_id).seeks_gold && seek_gold(mon_id, game) {
 		return;
 	}
 
-	mash.monster_mut(mon_id).clear_target_spot_if_reached();
-	let monster = mash.monster_mut(mon_id);
+	game.mash.monster_mut(mon_id).clear_target_spot_if_reached();
+	let monster = game.mash.monster_mut(mon_id);
 	let target_spot = monster.target_spot_or(DungeonSpot { row, col });
 	let row = monster.spot.next_closest_row(target_spot.row);
-	if level.dungeon[row as usize][monster.spot.col as usize].is_door() && mtry(monster, row, monster.spot.col, player, level, ground) {
+	if game.level.dungeon[row as usize][monster.spot.col as usize].is_door() && mtry(monster, row, monster.spot.col, &game.player, &mut game.level, &game.ground) {
 		return;
 	}
 	let col = monster.spot.next_closest_col(target_spot.col);
-	if level.dungeon[monster.spot.row as usize][col as usize].is_door() && mtry(monster, monster.spot.row, col, player, level, ground) {
+	if game.level.dungeon[monster.spot.row as usize][col as usize].is_door() && mtry(monster, monster.spot.row, col, &game.player, &mut game.level, &game.ground) {
 		return;
 	}
-	if mtry(monster, row, col, player, level, ground) {
+	if mtry(monster, row, col, &game.player, &mut game.level, &game.ground) {
 		return;
 	}
 	for kind in get_rand_indices(6) {
 		match kind {
-			0 => if mtry(monster, row, monster.spot.col - 1, player, level, ground) { break; }
-			1 => if mtry(monster, row, monster.spot.col, player, level, ground) { break; }
-			2 => if mtry(monster, row, monster.spot.col + 1, player, level, ground) { break; }
-			3 => if mtry(monster, monster.spot.row - 1, col, player, level, ground) { break; }
-			4 => if mtry(monster, monster.spot.row, col, player, level, ground) { break; }
-			5 => if mtry(monster, monster.spot.row + 1, col, player, level, ground) { break; }
+			0 => if mtry(monster, row, monster.spot.col - 1, &game.player, &mut game.level, &game.ground) { break; }
+			1 => if mtry(monster, row, monster.spot.col, &game.player, &mut game.level, &game.ground) { break; }
+			2 => if mtry(monster, row, monster.spot.col + 1, &game.player, &mut game.level, &game.ground) { break; }
+			3 => if mtry(monster, monster.spot.row - 1, col, &game.player, &mut game.level, &game.ground) { break; }
+			4 => if mtry(monster, monster.spot.row, col, &game.player, &mut game.level, &game.ground) { break; }
+			5 => if mtry(monster, monster.spot.row + 1, col, &game.player, &mut game.level, &game.ground) { break; }
 			_ => unreachable!("0 <= n  <= 5")
 		}
 	}
@@ -238,9 +238,9 @@ pub unsafe fn mv_monster(mon_id: u64, row: i64, col: i64, mash: &mut MonsterMash
 	// No possible moves
 	monster.stuck_counter.log_row_col(monster.spot.row, monster.spot.col);
 	if monster.stuck_counter.count > 4 {
-		let row1 = player.rogue.row;
-		let col1 = player.rogue.col;
-		if monster.target_spot.is_none() && !monster.sees(row1, col1, level) {
+		let row1 = game.player.rogue.row;
+		let col1 = game.player.rogue.col;
+		if monster.target_spot.is_none() && !monster.sees(row1, col1, &game.level) {
 			monster.set_target_spot(
 				get_rand(1, (DROWS - 2) as i64),
 				get_rand(0, (DCOLS - 1) as i64),
@@ -344,11 +344,11 @@ pub unsafe fn mon_can_go(monster: &Monster, row: i64, col: i64, player: &Player,
 	return true;
 }
 
-pub fn wake_room(rn: usize, entering: bool, row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &Level) {
-	let normal_chance = level.room_wake_percent(rn);
-	let buffed_chance = player.ring_effects.apply_stealthy(normal_chance);
-	for monster in &mut mash.monsters {
-		if monster.in_room(rn, level) {
+pub fn wake_room(rn: usize, entering: bool, row: i64, col: i64, game: &mut GameState) {
+	let normal_chance = game.level.room_wake_percent(rn);
+	let buffed_chance = game.player.ring_effects.apply_stealthy(normal_chance);
+	for monster in &mut game.mash.monsters {
+		if monster.in_room(rn, &game.level) {
 			if entering {
 				monster.clear_target_spot();
 			} else {
@@ -406,21 +406,21 @@ fn random_spot_for_wanderer(player: &Player, level: &Level) -> Option<DungeonSpo
 	None
 }
 
-pub unsafe fn put_wanderer(mash: &mut MonsterMash, player: &Player, level: &mut Level) {
-	if let Some(mut monster) = random_wanderer(player.cur_depth) {
+pub unsafe fn put_wanderer(game: &mut GameState) {
+	if let Some(mut monster) = random_wanderer(game.player.cur_depth) {
 		monster.wake_up();
-		if let Some(spot) = random_spot_for_wanderer(player, level) {
-			put_m_at(spot.row, spot.col, monster, mash, level);
+		if let Some(spot) = random_spot_for_wanderer(&game.player, &game.level) {
+			put_m_at(spot.row, spot.col, monster, &mut game.mash, &mut game.level);
 		}
 	}
 }
 
-pub unsafe fn show_monsters(mash: &mut MonsterMash, player: &Player, level: &mut Level) {
-	level.detect_monster = true;
-	if player.blind.is_active() {
+pub unsafe fn show_monsters(game: &mut GameState) {
+	game.level.detect_monster = true;
+	if game.player.blind.is_active() {
 		return;
 	}
-	for monster in &mut mash.monsters {
+	for monster in &mut game.mash.monsters {
 		ncurses::mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.m_char());
 		if monster.m_flags.imitates {
 			monster.m_flags.imitates = false;
@@ -445,18 +445,20 @@ fn random_spot_for_monster(start_row: i64, start_col: i64, level: &Level) -> Opt
 	None
 }
 
-pub unsafe fn create_monster(mash: &mut MonsterMash, player: &Player, level: &mut Level) {
-	if let Some(found) = random_spot_for_monster(player.rogue.row, player.rogue.col, level) {
+pub unsafe fn create_monster(game: &mut GameState) {
+	let player = &game.player;
+	if let Some(found) = random_spot_for_monster(player.rogue.row, player.rogue.col, &game.level) {
 		let monster = gr_monster(player.cur_depth, 0, None);
-		put_m_at(found.row, found.col, monster, mash, level);
+		let level = &mut game.level;
+		put_m_at(found.row, found.col, monster, &mut game.mash, level);
 
-		let monster = mash.monster_at_spot_mut(found.row, found.col).expect("created is in monster in mash");
+		let monster = game.mash.monster_at_spot_mut(found.row, found.col).expect("created is in monster in mash");
 		ncurses::mvaddch(found.row as i32, found.col as i32, gmc(monster, player, level));
 		if monster.wanders_or_wakens() {
 			monster.wake_up();
 		}
 	} else {
-		message("you hear a faint cry of anguish in the distance", 0);
+		game.dialog.message("you hear a faint cry of anguish in the distance", 0);
 	}
 }
 
@@ -550,24 +552,24 @@ pub fn no_spot_for_monster(rn: usize, level: &Level) -> bool {
 	return true;
 }
 
-pub unsafe fn aggravate(mash: &mut MonsterMash, player: &Player, level: &Level) {
-	message("you hear a high pitched humming noise", 0);
-	for monster in &mut mash.monsters {
+pub unsafe fn aggravate(game: &mut GameState) {
+	game.dialog.message("you hear a high pitched humming noise", 0);
+	for monster in &mut game.mash.monsters {
 		monster.wake_up();
 		monster.m_flags.imitates = false;
-		if player.can_see(monster.spot.row, monster.spot.col, level) {
+		if game.player.can_see(monster.spot.row, monster.spot.col, &game.level) {
 			ncurses::mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.m_char());
 		}
 	}
 }
 
-pub unsafe fn mv_aquatars(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
-	for mon_id in mash.monster_ids() {
-		let monster = mash.monster(mon_id);
+pub unsafe fn mv_aquatars(game: &mut GameState) {
+	for mon_id in game.mash.monster_ids() {
+		let monster = game.mash.monster(mon_id);
 		if monster.kind == MonsterKind::Aquator
-			&& mon_can_go(monster, player.rogue.row, player.rogue.col, player, level, ground) {
-			mv_monster(mon_id, player.rogue.row, player.rogue.col, mash, player, level, ground);
-			mash.monster_flags_mut(mon_id).already_moved = true;
+			&& mon_can_go(monster, game.player.rogue.row, game.player.rogue.col, &game.player, &game.level, &game.ground) {
+			mv_monster(mon_id, game.player.rogue.row, game.player.rogue.col, game);
+			game.mash.monster_flags_mut(mon_id).already_moved = true;
 		}
 	}
 }

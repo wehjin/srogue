@@ -13,11 +13,12 @@ use ObjectWhat::{Armor, Potion, Scroll, Weapon};
 use crate::armors::ArmorKind;
 use crate::armors::constants::{ARMORS, PLATE, SPLINT};
 use crate::hit::DamageStat;
+use crate::init::GameState;
 use crate::inventory::get_obj_desc;
 use crate::level::{CellFixture, CellMaterial, Level};
 use crate::level::constants::MAX_ROOM;
-use crate::message::{CANCEL, check_message, get_input_line, message, rgetchar, sound_bell};
-use crate::monster::{MonsterMash, party_monsters};
+use crate::message::{CANCEL, get_input_line, rgetchar, sound_bell};
+use crate::monster::party_monsters;
 use crate::objects::note_tables::NoteTables;
 use crate::odds::GOLD_PERCENT;
 use crate::pack::MAX_PACK_COUNT;
@@ -209,8 +210,8 @@ impl Object {
 	pub fn id(&self) -> ObjectId { self.id }
 }
 
-pub unsafe fn put_objects(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
-	if player.cur_depth < player.max_depth {
+pub unsafe fn put_objects(game: &mut GameState) {
+	if game.player.cur_depth < game.player.max_depth {
 		return;
 	}
 
@@ -218,15 +219,15 @@ pub unsafe fn put_objects(mash: &mut MonsterMash, player: &mut Player, level: &m
 	while rand_percent(33) {
 		n += 1;
 	}
-	if player.cur_depth == player.party_counter {
-		make_party(player.cur_depth, mash, player, level, ground);
-		player.party_counter = next_party(player.cur_depth);
+	if game.player.cur_depth == game.player.party_counter {
+		make_party(game.player.cur_depth, game);
+		game.player.party_counter = next_party(game.player.cur_depth);
 	}
 	for _i in 0..n {
-		let obj = gr_object(player);
-		rand_place(obj, player, level, ground);
+		let obj = gr_object(&mut game.player);
+		rand_place(obj, game);
 	}
-	put_gold(player.cur_depth, level, ground);
+	put_gold(game.player.cur_depth, &mut game.level, &mut game.ground);
 }
 
 pub unsafe fn put_gold(level_depth: isize, level: &mut Level, ground: &mut ObjectPack) {
@@ -563,57 +564,57 @@ pub fn alloc_object() -> Object {
 	return obj;
 }
 
-pub unsafe fn make_party(level_depth: isize, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
-	let party_room = gr_room(level);
-	level.party_room = Some(party_room);
-	let n = if rand_percent(99) { party_objects(party_room, player, level, ground) } else { 11 };
+pub unsafe fn make_party(level_depth: isize, game: &mut GameState) {
+	let party_room = gr_room(&game.level);
+	game.level.party_room = Some(party_room);
+	let n = if rand_percent(99) { party_objects(party_room, game) } else { 11 };
 	if rand_percent(99) {
-		party_monsters(party_room, n, level_depth, mash, level);
+		party_monsters(party_room, n, level_depth, &mut game.mash, &mut game.level);
 	}
 }
 
-pub unsafe fn show_objects(mash: &mut MonsterMash, player: &Player, level: &Level, ground: &ObjectPack) {
-	for obj in ground.objects() {
+pub unsafe fn show_objects(game: &mut GameState) {
+	for obj in game.ground.objects() {
 		let row = (*obj).row;
 		let col = (*obj).col;
 		let rc = get_mask_char((*obj).what_is) as chtype;
-		if level.dungeon[row as usize][col as usize].has_monster() {
-			let monster = mash.monster_at_spot_mut(row, col);
+		if game.level.dungeon[row as usize][col as usize].has_monster() {
+			let monster = game.mash.monster_at_spot_mut(row, col);
 			if let Some(monster) = monster {
 				monster.trail_char = rc;
 			}
 		}
 		let mc = mvinch(row as i32, col as i32);
-		if (mc < 'A' as chtype || mc > 'Z' as chtype) && (row != player.rogue.row || col != player.rogue.col) {
+		if (mc < 'A' as chtype || mc > 'Z' as chtype) && (row != game.player.rogue.row || col != game.player.rogue.col) {
 			mvaddch(row as i32, col as i32, rc);
 		}
 	}
-	for monster in &mash.monsters {
+	for monster in &game.mash.monsters {
 		if monster.m_flags.imitates {
 			mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.disguise_char);
 		}
 	}
 }
 
-pub fn put_amulet(player: &Player, level: &mut Level, ground: &mut ObjectPack) {
+pub fn put_amulet(game: &mut GameState) {
 	let mut obj = alloc_object();
 	obj.what_is = Amulet;
-	rand_place(obj, player, level, ground);
+	rand_place(obj, game);
 }
 
-pub fn rand_place(obj: Object, player: &Player, level: &mut Level, ground: &mut ObjectPack) {
+pub fn rand_place(obj: Object, game: &mut GameState) {
 	let mut row = 0;
 	let mut col = 0;
-	gr_row_col(&mut row, &mut col, |cell| cell.is_floor() || cell.is_tunnel(), player, level);
-	place_at(obj, row, col, level, ground);
+	gr_row_col(&mut row, &mut col, |cell| cell.is_floor() || cell.is_tunnel(), &game.player, &game.level);
+	place_at(obj, row, col, &mut game.level, &mut game.ground);
 }
 
-pub unsafe fn new_object_for_wizard(player: &mut Player) {
-	if player.pack_weight_with_new_object(None) >= MAX_PACK_COUNT {
-		message("pack full", 0);
+pub unsafe fn new_object_for_wizard(game: &mut GameState) {
+	if game.player.pack_weight_with_new_object(None) >= MAX_PACK_COUNT {
+		game.dialog.message("pack full", 0);
 		return;
 	}
-	message("type of object?", 0);
+	game.dialog.message("type of object?", 0);
 	let ch = {
 		const CHOICES: &'static str = "!?:)]=/,\x1B";
 		let mut ch: char;
@@ -630,7 +631,7 @@ pub unsafe fn new_object_for_wizard(player: &mut Player) {
 		}
 		ch
 	};
-	check_message();
+	game.dialog.clear_message();
 	if ch == CANCEL {
 		return;
 	}
@@ -671,7 +672,7 @@ pub unsafe fn new_object_for_wizard(player: &mut Player) {
 		_ => None
 	};
 	if let Some(max_kind) = max_kind {
-		if let Some(kind) = get_kind(max_kind) {
+		if let Some(kind) = get_kind(max_kind, game) {
 			obj.which_kind = kind as u16;
 			if obj.what_is == Ring {
 				gr_ring(&mut obj, false);
@@ -680,16 +681,16 @@ pub unsafe fn new_object_for_wizard(player: &mut Player) {
 			return;
 		}
 	}
-	let obj_desc = get_obj_desc(&obj, player.settings.fruit.to_string(), player);
-	message(&obj_desc, 0);
-	player.combine_or_add_item_to_pack(obj);
+	let obj_desc = get_obj_desc(&obj, game.player.settings.fruit.to_string(), &game.player);
+	game.dialog.message(&obj_desc, 0);
+	game.player.combine_or_add_item_to_pack(obj);
 }
 
-unsafe fn get_kind(max_kind: usize) -> Option<usize> {
+unsafe fn get_kind(max_kind: usize, game: &mut GameState) -> Option<usize> {
 	let good_kind = {
 		let good_kind;
 		loop {
-			let line = get_input_line::<String>("which kind?", None, None, false, true);
+			let line = get_input_line::<String>("which kind?", None, None, false, true, game);
 			let trimmed_line = line.trim();
 			if trimmed_line.is_empty() {
 				good_kind = None;

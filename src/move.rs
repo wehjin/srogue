@@ -6,12 +6,12 @@ use MoveResult::MoveFailed;
 
 use crate::components::hunger::{FAINT_MOVES_LEFT, HungerLevel, HUNGRY_MOVES_LEFT, STARVE_MOVES_LEFT, WEAK_MOVES_LEFT};
 use crate::hit::{get_dir_rc, rogue_hit};
+use crate::init::GameState;
 use crate::inventory::get_obj_desc;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
-use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
-use crate::monster::{MonsterMash, mv_mons, put_wanderer, wake_room};
-use crate::objects::ObjectPack;
+use crate::message::{CANCEL, print_stats, rgetchar, sound_bell};
+use crate::monster::{mv_mons, put_wanderer, wake_room};
 use crate::odds::R_TELE_PERCENT;
 use crate::pack::{pick_up, PickUpResult};
 use crate::play::interrupted;
@@ -40,137 +40,134 @@ pub enum MoveResult {
 pub unsafe fn one_move_rogue(
 	dirch: char,
 	pickup: bool,
-	mash: &mut MonsterMash,
-	player: &mut Player,
-	level: &mut Level,
-	ground: &mut ObjectPack,
+	game: &mut GameState,
 ) -> MoveResult {
-	let dirch = if player.confused.is_active() {
+	let dirch = if game.player.confused.is_active() {
 		Move::random8().to_char()
 	} else {
 		dirch
 	};
-	let mut row = player.rogue.row;
-	let mut col = player.rogue.col;
+	let mut row = game.player.rogue.row;
+	let mut col = game.player.rogue.col;
 	get_dir_rc(dirch, &mut row, &mut col, true);
-	if !can_move(player.rogue.row, player.rogue.col, row, col, level) {
+	if !can_move(game.player.rogue.row, game.player.rogue.col, row, col, &game.level) {
 		return MoveFailed;
 	}
-	if level.being_held || level.bear_trap > 0 {
-		if !level.dungeon[row as usize][col as usize].has_monster() {
-			if level.being_held {
-				message("you are being held", 1);
+	if game.level.being_held || game.level.bear_trap > 0 {
+		if !game.level.dungeon[row as usize][col as usize].has_monster() {
+			if game.level.being_held {
+				game.dialog.message("you are being held", 1);
 			} else {
-				message("you are still stuck in the bear trap", 0);
-				reg_move(mash, player, level, ground);
+				game.dialog.message("you are still stuck in the bear trap", 0);
+				reg_move(game);
 			}
 			return MoveFailed;
 		}
 	}
-	if player.ring_effects.has_teleport() && rand_percent(R_TELE_PERCENT) {
-		tele(mash, player, level);
+	if game.player.ring_effects.has_teleport() && rand_percent(R_TELE_PERCENT) {
+		tele(game);
 		return StoppedOnSomething;
 	}
-	if level.dungeon[row as usize][col as usize].has_monster() {
-		let mon_id = mash.monster_id_at_spot(row, col).expect("monster in mash at monster spot one_move_rogue");
-		rogue_hit(mon_id, false, mash, player, level, ground);
-		reg_move(mash, player, level, ground);
+	if game.level.dungeon[row as usize][col as usize].has_monster() {
+		let mon_id = game.mash.monster_id_at_spot(row, col).expect("monster in mash at monster spot one_move_rogue");
+		rogue_hit(mon_id, false, game);
+		reg_move(game);
 		return MoveFailed;
 	}
 
-	let to_cell = level.cell(row, col);
+	let to_cell = game.level.cell(row, col);
 	if to_cell.is_door() {
-		match player.cur_room {
+		match game.player.cur_room {
 			RoomMark::None => {}
 			RoomMark::Passage => {
 				// tunnel to door
-				player.cur_room = level.room(row, col);
-				let cur_rn = player.cur_room.rn().expect("current room should be the room at rol,col");
-				light_up_room(cur_rn, mash, player, level);
-				wake_room(cur_rn, true, row, col, mash, player, level);
+				game.player.cur_room = game.level.room(row, col);
+				let cur_rn = game.player.cur_room.rn().expect("current room should be the room at rol,col");
+				light_up_room(cur_rn, game);
+				wake_room(cur_rn, true, row, col, game);
 			}
 			RoomMark::Area(_) => {
 				// room to door
-				light_passage(row, col, mash, player, level);
+				light_passage(row, col, game);
 			}
 		}
-	} else if player.cur_cell(level).is_door() && to_cell.is_tunnel() {
+	} else if game.player.cur_cell(&game.level).is_door() && to_cell.is_tunnel() {
 		// door to tunnel
-		light_passage(row, col, mash, player, level);
-		let rn = player.cur_room.rn().expect("player room not an area moving from door to passage");
-		wake_room(rn, false, player.rogue.row, player.rogue.col, mash, player, level);
-		darken_room(rn, mash, player, level);
-		player.cur_room = RoomMark::Passage;
+		light_passage(row, col, game);
+		let rn = game.player.cur_room.rn().expect("player room not an area moving from door to passage");
+		wake_room(rn, false, game.player.rogue.row, game.player.rogue.col, game);
+		darken_room(rn, game);
+		game.player.cur_room = RoomMark::Passage;
 	} else if to_cell.is_tunnel() {
 		// tunnel to tunnel.
-		light_passage(row, col, mash, player, level);
+		light_passage(row, col, game);
 	} else {
 		// room to room, door to room
 	}
-	mvaddch(player.rogue.row as i32, player.rogue.col as i32, get_dungeon_char(player.rogue.row, player.rogue.col, mash, player, level));
-	mvaddch(row as i32, col as i32, chtype::from(player.rogue.fchar));
-	if !player.settings.jump {
+	mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, get_dungeon_char(game.player.rogue.row, game.player.rogue.col, game));
+	mvaddch(row as i32, col as i32, chtype::from(game.player.rogue.fchar));
+	if !game.player.settings.jump {
 		refresh();
 	}
 
-	player.rogue.row = row;
-	player.rogue.col = col;
-	let player_cell = level.dungeon[row as usize][col as usize];
+	game.player.rogue.row = row;
+	game.player.rogue.col = col;
+	let player_cell = game.level.dungeon[row as usize][col as usize];
 	if player_cell.has_object() {
 		if !pickup {
-			stopped_on_something_with_moved_onto_message(row, col, mash, player, level, ground)
+			stopped_on_something_with_moved_onto_message(row, col, game)
 		} else {
-			if player.levitate.is_active() {
+			if game.player.levitate.is_active() {
 				StoppedOnSomething
 			} else {
-				match pick_up(row, col, player, level, ground) {
+				match pick_up(row, col, game) {
 					PickUpResult::TurnedToDust => {
-						moved_unless_hungry_or_confused(mash, player, level, ground)
+						moved_unless_hungry_or_confused(game)
 					}
 					PickUpResult::AddedToGold(obj) => {
-						let msg = get_obj_desc(&obj, player.settings.fruit.to_string(), player);
-						stopped_on_something_with_message(&msg, mash, player, level, ground)
+						let msg = get_obj_desc(&obj, game.player.settings.fruit.to_string(), &game.player);
+						stopped_on_something_with_message(&msg, game)
 					}
 					PickUpResult::AddedToPack { added_id, .. } => {
-						let msg = player.get_obj_desc(added_id);
-						stopped_on_something_with_message(&msg, mash, player, level, ground)
+						let msg = game.player.get_obj_desc(added_id);
+						stopped_on_something_with_message(&msg, game)
 					}
 					PickUpResult::PackTooFull => {
-						stopped_on_something_with_moved_onto_message(row, col, mash, player, level, ground)
+						stopped_on_something_with_moved_onto_message(row, col, game)
 					}
 				}
 			}
 		}
 	} else if player_cell.is_door() || player_cell.is_stairs() || player_cell.is_trap() {
-		if player.levitate.is_inactive() && player_cell.is_trap() {
-			trap_player(row as usize, col as usize, mash, player, level, ground);
+		if game.player.levitate.is_inactive() && player_cell.is_trap() {
+			trap_player(row as usize, col as usize, game);
 		}
-		reg_move(mash, player, level, ground);
+		reg_move(game);
 		StoppedOnSomething
 	} else {
-		moved_unless_hungry_or_confused(mash, player, level, ground)
+		moved_unless_hungry_or_confused(game)
 	}
 }
 
-unsafe fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> MoveResult {
-	let obj = ground.find_object_at(row, col).expect("moved-on object");
-	let obj_desc = get_obj_desc(obj, player.settings.fruit.to_string(), player);
+unsafe fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, game: &mut GameState) -> MoveResult {
+	let obj = game.ground.find_object_at(row, col).expect("moved-on object");
+	let obj_desc = get_obj_desc(obj, game.player.settings.fruit.to_string(), &game.player);
 	let desc = format!("moved onto {}", obj_desc);
-	return stopped_on_something_with_message(&desc, mash, player, level, ground);
+	return stopped_on_something_with_message(&desc, game);
 }
 
-unsafe fn stopped_on_something_with_message(desc: &str, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> MoveResult {
-	message(desc, 1);
-	reg_move(mash, player, level, ground);
+unsafe fn stopped_on_something_with_message(desc: &str, game: &mut GameState) -> MoveResult {
+	game.dialog.message(desc, 1);
+	reg_move(game);
 	return StoppedOnSomething;
 }
 
-unsafe fn moved_unless_hungry_or_confused(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> MoveResult {
-	if reg_move(mash, player, level, ground) {
+unsafe fn moved_unless_hungry_or_confused(game: &mut GameState) -> MoveResult {
+	if reg_move(game) {
 		/* fainted from hunger */
 		StoppedOnSomething
 	} else {
-		if player.confused.is_active() {
+		if game.player.confused.is_active() {
 			StoppedOnSomething
 		} else {
 			Moved
@@ -187,17 +184,17 @@ const NAK: char = '\x15';
 const SO: char = '\x0e';
 const STX: char = '\x02';
 
-pub unsafe fn multiple_move_rogue(dirch: i64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
+pub unsafe fn multiple_move_rogue(dirch: i64, game: &mut GameState) {
 	let dirch = dirch as u8 as char;
 	match dirch {
 		BS | LF | VT | FF | EM | NAK | SO | STX => loop {
-			let row = player.rogue.row;
-			let col = player.rogue.col;
-			let m = one_move_rogue((dirch as u8 + 96) as char, true, mash, player, level, ground);
+			let row = game.player.rogue.row;
+			let col = game.player.rogue.col;
+			let m = one_move_rogue((dirch as u8 + 96) as char, true, game);
 			if m == MoveFailed || m == StoppedOnSomething || interrupted {
 				break;
 			}
-			if next_to_something(row, col, player, level) {
+			if next_to_something(row, col, &game.player, &game.level) {
 				break;
 			}
 		},
@@ -206,7 +203,7 @@ pub unsafe fn multiple_move_rogue(dirch: i64, mash: &mut MonsterMash, player: &m
 				if interrupted {
 					break;
 				}
-				let one_move_result = one_move_rogue((dirch as u8 + 32) as char, true, mash, player, level, ground);
+				let one_move_result = one_move_rogue((dirch as u8 + 32) as char, true, game);
 				if one_move_result != Moved {
 					break;
 				}
@@ -307,15 +304,15 @@ pub fn can_move(row1: i64, col1: i64, row2: i64, col2: i64, level: &Level) -> bo
 	}
 }
 
-pub unsafe fn move_onto(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
-	let ch = get_dir_or_cancel();
-	check_message();
+pub unsafe fn move_onto(game: &mut GameState) {
+	let ch = get_dir_or_cancel(game);
+	game.dialog.clear_message();
 	if ch != CANCEL {
-		one_move_rogue(ch, false, mash, player, level, ground);
+		one_move_rogue(ch, false, game);
 	}
 }
 
-pub unsafe fn get_dir_or_cancel() -> char {
+pub unsafe fn get_dir_or_cancel(game: &mut GameState) -> char {
 	let mut dir: char;
 	let mut first_miss: bool = true;
 	loop {
@@ -325,7 +322,7 @@ pub unsafe fn get_dir_or_cancel() -> char {
 		}
 		sound_bell();
 		if first_miss {
-			message("direction? ", 0);
+			game.dialog.message("direction? ", 0);
 			first_miss = false;
 		}
 	}
@@ -364,124 +361,124 @@ fn get_hunger_transition_with_burn_count(moves_left: isize, moves_burned: isize)
 	}
 }
 
-pub unsafe fn check_hunger(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> HungerCheckResult {
-	let moves_to_burn = match player.ring_effects.calorie_burn() {
+pub unsafe fn check_hunger(game: &mut GameState) -> HungerCheckResult {
+	let moves_to_burn = match game.player.ring_effects.calorie_burn() {
 		-2 => 0,
-		-1 => player.rogue.moves_left % 2,
+		-1 => game.player.rogue.moves_left % 2,
 		0 => 1,
-		1 => 1 + (player.rogue.moves_left % 2),
+		1 => 1 + (game.player.rogue.moves_left % 2),
 		2 => 2,
 		_ => panic!("invalid calorie burn")
 	};
 	if moves_to_burn == 0 {
 		return HungerCheckResult::StillWalking;
 	}
-	player.rogue.moves_left -= moves_to_burn;
-	if let Some(next_hunger) = get_hunger_transition_with_burn_count(player.rogue.moves_left, moves_to_burn) {
-		player.hunger = next_hunger;
-		message(&player.hunger.as_str(), 0);
-		print_stats(STAT_HUNGER, player);
+	game.player.rogue.moves_left -= moves_to_burn;
+	if let Some(next_hunger) = get_hunger_transition_with_burn_count(game.player.rogue.moves_left, moves_to_burn) {
+		game.player.hunger = next_hunger;
+		game.dialog.message(&game.player.hunger.as_str(), 0);
+		print_stats(STAT_HUNGER, &mut game.player);
 	}
 
-	if player.hunger == HungerLevel::Starved {
-		killed_by(Ending::Starvation, player);
+	if game.player.hunger == HungerLevel::Starved {
+		killed_by(Ending::Starvation, game);
 		return HungerCheckResult::DidStarve;
 	}
-	if player.hunger == HungerLevel::Faint && random_faint(mash, player, level, ground) {
+	if game.player.hunger == HungerLevel::Faint && random_faint(game) {
 		return HungerCheckResult::DidFaint;
 	}
 	return HungerCheckResult::StillWalking;
 }
 
-unsafe fn random_faint(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> bool {
-	let n = get_rand(0, FAINT_MOVES_LEFT - player.rogue.moves_left);
+unsafe fn random_faint(game: &mut GameState) -> bool {
+	let n = get_rand(0, FAINT_MOVES_LEFT - game.player.rogue.moves_left);
 	if n > 0 {
 		if rand_percent(40) {
-			player.rogue.moves_left += 1;
+			game.player.rogue.moves_left += 1;
 		}
-		message("you faint", 1);
+		game.dialog.message("you faint", 1);
 		for _ in 0..n {
 			if coin_toss() {
-				mv_mons(mash, player, level, ground);
+				mv_mons(game);
 			}
 		}
-		message(YOU_CAN_MOVE_AGAIN, 1);
+		game.dialog.message(YOU_CAN_MOVE_AGAIN, 1);
 		true
 	} else {
 		false
 	}
 }
 
-pub unsafe fn reg_move(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> bool {
-	let hunger_check = if player.rogue.moves_left <= HUNGRY_MOVES_LEFT || player.cur_depth >= player.max_depth {
-		check_hunger(mash, player, level, ground)
+pub unsafe fn reg_move(game: &mut GameState) -> bool {
+	let hunger_check = if game.player.rogue.moves_left <= HUNGRY_MOVES_LEFT || game.player.cur_depth >= game.player.max_depth {
+		check_hunger(game)
 	} else {
 		HungerCheckResult::StillWalking
 	};
 	if hunger_check == HungerCheckResult::DidStarve {
 		return true;
 	}
-	mv_mons(mash, player, level, ground);
-	mash.m_moves += 1;
-	if mash.m_moves >= 120 {
-		mash.m_moves = 0;
-		put_wanderer(mash, player, level);
+	mv_mons(game);
+	game.mash.m_moves += 1;
+	if game.mash.m_moves >= 120 {
+		game.mash.m_moves = 0;
+		put_wanderer(game);
 	}
-	if player.halluc.is_active() {
-		player.halluc.decr();
-		if player.halluc.is_active() {
-			hallucinate_on_screen(mash, player, ground);
+	if game.player.halluc.is_active() {
+		game.player.halluc.decr();
+		if game.player.halluc.is_active() {
+			hallucinate_on_screen(game);
 		} else {
-			unhallucinate(mash, player, level);
+			unhallucinate(game);
 		}
 	}
-	if player.blind.is_active() {
-		player.blind.decr();
-		if player.blind.is_inactive() {
-			unblind(mash, player, level, ground);
+	if game.player.blind.is_active() {
+		game.player.blind.decr();
+		if game.player.blind.is_inactive() {
+			unblind(game);
 		}
 	}
-	if player.confused.is_active() {
-		player.confused.decr();
-		if player.confused.is_inactive() {
-			unconfuse(player);
+	if game.player.confused.is_active() {
+		game.player.confused.decr();
+		if game.player.confused.is_inactive() {
+			unconfuse(game);
 		}
 	}
-	if level.bear_trap > 0 {
-		level.bear_trap -= 1;
+	if game.level.bear_trap > 0 {
+		game.level.bear_trap -= 1;
 	}
-	if player.levitate.is_active() {
-		player.levitate.decr();
-		if player.levitate.is_inactive() {
-			message("you float gently to the ground", 1);
-			if level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_trap() {
-				trap_player(player.rogue.row as usize, player.rogue.col as usize, mash, player, level, ground);
+	if game.player.levitate.is_active() {
+		game.player.levitate.decr();
+		if game.player.levitate.is_inactive() {
+			game.dialog.message("you float gently to the ground", 1);
+			if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_trap() {
+				trap_player(game.player.rogue.row as usize, game.player.rogue.col as usize, game);
 			}
 		}
 	}
-	if player.haste_self.is_active() {
-		player.haste_self.decr();
-		if player.haste_self.is_inactive() {
-			message("you feel yourself slowing down", 0);
+	if game.player.haste_self.is_active() {
+		game.player.haste_self.decr();
+		if game.player.haste_self.is_inactive() {
+			game.dialog.message("you feel yourself slowing down", 0);
 		}
 	}
-	heal(player);
+	heal(&mut game.player);
 	{
-		let auto_search = player.ring_effects.auto_search();
+		let auto_search = game.player.ring_effects.auto_search();
 		if auto_search > 0 {
-			search(auto_search as usize, auto_search > 0, mash, player, level, ground);
+			search(auto_search as usize, auto_search > 0, game);
 		}
 	}
 	return hunger_check == HungerCheckResult::DidFaint;
 }
 
-pub unsafe fn rest(count: libc::c_int, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
+pub unsafe fn rest(count: libc::c_int, game: &mut GameState) {
 	interrupted = false;
 	for _i in 0..count {
 		if interrupted {
 			break;
 		}
-		reg_move(mash, player, level, ground);
+		reg_move(game);
 	}
 }
 

@@ -14,7 +14,7 @@ use crate::init::{GameState, GameSystem};
 use crate::instruct::Instructions;
 use crate::inventory::{inv_armor_weapon, inventory, single_inv};
 use crate::level::{check_up, drop_check, show_average_hp, UpResult};
-use crate::message::{CANCEL, check_message, message, remessage, rgetchar};
+use crate::message::{CANCEL, remessage, rgetchar};
 use crate::monster::show_monsters;
 use crate::objects::{new_object_for_wizard, show_objects};
 use crate::pack::{call_it, drop_0, kick_into_pack};
@@ -64,7 +64,7 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 				None => {
 					interrupted = false;
 					if !HIT_MESSAGE.is_empty() {
-						message(&HIT_MESSAGE, 1);
+						game.dialog.message(&HIT_MESSAGE, 1);
 						HIT_MESSAGE.clear();
 					}
 					if game.level.trap_door {
@@ -74,7 +74,7 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 					mv(game.player.rogue.row as i32, game.player.rogue.col as i32);
 					refresh();
 					let ch = rgetchar();
-					check_message();
+					game.dialog.clear_message();
 					count = 0;
 					ch
 				}
@@ -86,29 +86,29 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 		if let Some(player_action) = player_actions.get(ch) {
 			player_action.commit(game);
 			if game.next_system == GameSystem::MonsterActions {
-				reg_move(&mut game.mash, &mut game.player, &mut game.level, &game.ground);
+				reg_move(game);
 			}
 		} else {
 			match ch {
-				'?' => Instructions(),
-				'.' => rest(if count > 0 { count } else { 1 } as c_int, &mut game.mash, &mut game.player, &mut game.level, &mut game.ground),
-				's' => search(if count > 0 { count } else { 1 } as usize, false, &mut game.mash, &mut game.player, &mut game.level, &mut game.ground),
-				'i' => inventory(AllObjects, &game.player),
-				'f' => fight(false, &mut game.mash, &mut game.player, &mut game.level, &mut game.ground),
-				'F' => fight(true, &mut game.mash, &mut game.player, &mut game.level, &mut game.ground),
+				'?' => Instructions(game),
+				'.' => rest(if count > 0 { count } else { 1 } as c_int, game),
+				's' => search(if count > 0 { count } else { 1 } as usize, false, game),
+				'i' => inventory(AllObjects, game),
+				'f' => fight(false, game),
+				'F' => fight(true, game),
 				'h' | 'j' | 'k' | 'l' | 'y' | 'u' | 'n' | 'b' => {
-					one_move_rogue(ch, true, &mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
+					one_move_rogue(ch, true, game);
 				}
-				'H' | 'J' | 'K' | 'L' | 'B' | 'Y' | 'U' | 'N' | '\x08' | '\x0a' | '\x0b' | '\x0c' | '\x19' | '\x15' | '\x0e' | '\x02' => multiple_move_rogue(ch as i64, &mut game.mash, &mut game.player, &mut game.level, &mut game.ground),
-				'e' => eat(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground),
-				'q' => quaff(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground),
-				'r' => read_scroll(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground),
-				'm' => move_onto(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground),
-				'd' => drop_0(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground),
-				'\x10' => remessage(),
-				'\x17' => wizardize(&mut game.player),
+				'H' | 'J' | 'K' | 'L' | 'B' | 'Y' | 'U' | 'N' | '\x08' | '\x0a' | '\x0b' | '\x0c' | '\x19' | '\x15' | '\x0e' | '\x02' => multiple_move_rogue(ch as i64, game),
+				'e' => eat(game),
+				'q' => quaff(game),
+				'r' => read_scroll(game),
+				'm' => move_onto(game),
+				'd' => drop_0(game),
+				'\x10' => remessage(game),
+				'\x17' => wizardize(game),
 				'>' => {
-					if drop_check(&game.player, &game.level) {
+					if drop_check(game) {
 						return StairsDown;
 					}
 				}
@@ -125,16 +125,16 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 						}
 					}
 				}
-				')' | ']' => inv_armor_weapon(ch == ')', &mut game.player),
-				'=' => inv_rings(&game.player),
-				'^' => id_trap(&game.player, &game.level),
-				'I' => single_inv(None, &mut game.player),
-				'c' => call_it(&mut game.player),
-				'z' => zapp(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground),
-				't' => throw(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground),
-				'v' => message("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims", 0),
+				')' | ']' => inv_armor_weapon(ch == ')', game),
+				'=' => inv_rings(game),
+				'^' => id_trap(game),
+				'I' => single_inv(None, game),
+				'c' => call_it(game),
+				'z' => zapp(game),
+				't' => throw(game),
+				'v' => game.dialog.message("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims", 0),
 				'Q' => {
-					if ask_quit(false, &mut game.player) {
+					if ask_quit(false, game) {
 						return PlayResult::ExitQuit;
 					}
 				}
@@ -158,47 +158,47 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 				' ' => {}
 				'\x09' => {
 					if game.player.wizard {
-						inventory(AllObjects, &game.player);
+						inventory(AllObjects, game);
 					} else {
-						message(UNKNOWN_COMMAND, 0);
+						game.dialog.message(UNKNOWN_COMMAND, 0);
 					}
 				}
 				'\x13' => {
 					if game.player.wizard {
 						draw_magic_map(&mut game.mash, &mut game.level);
 					} else {
-						message(UNKNOWN_COMMAND, 0);
+						game.dialog.message(UNKNOWN_COMMAND, 0);
 					}
 				}
 				'\x14' => {
 					if game.player.wizard {
 						show_traps(&game.level);
 					} else {
-						message(UNKNOWN_COMMAND, 0);
+						game.dialog.message(UNKNOWN_COMMAND, 0);
 					}
 				}
 				'\x0f' => {
 					if game.player.wizard {
-						show_objects(&mut game.mash, &game.player, &game.level, &mut game.ground);
+						show_objects(game);
 					} else {
-						message(UNKNOWN_COMMAND, 0);
+						game.dialog.message(UNKNOWN_COMMAND, 0);
 					}
 				}
 				'\x01' => {
-					show_average_hp(&game.player);
+					show_average_hp(game);
 				}
 				'\x03' => {
 					if game.player.wizard {
-						new_object_for_wizard(&mut game.player);
+						new_object_for_wizard(game);
 					} else {
-						message(UNKNOWN_COMMAND, 0);
+						game.dialog.message(UNKNOWN_COMMAND, 0);
 					}
 				}
 				'\x0d' => {
 					if game.player.wizard {
-						show_monsters(&mut game.mash, &game.player, &mut game.level);
+						show_monsters(game);
 					} else {
-						message(UNKNOWN_COMMAND, 0);
+						game.dialog.message(UNKNOWN_COMMAND, 0);
 					}
 				}
 				'S' => {
@@ -207,10 +207,10 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 					}
 				}
 				',' => {
-					kick_into_pack(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
+					kick_into_pack(game);
 				}
 				_ => {
-					message(UNKNOWN_COMMAND, 0);
+					game.dialog.message(UNKNOWN_COMMAND, 0);
 				}
 			}
 		}

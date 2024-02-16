@@ -6,12 +6,10 @@ use std::io::{Read, Seek, Write};
 
 use ncurses::{mv, mvaddch, mvaddstr, mvinch, refresh, standend, standout};
 
-use crate::init::{BYEBYE_STRING, clean_up};
+use crate::init::{BYEBYE_STRING, clean_up, GameState};
 use crate::level::constants::{DCOLS, DROWS};
-use crate::level::Level;
 use crate::machdep::{md_heed_signals, md_ignore_signals};
-use crate::message::{check_message, message, msg_cleared, rgetchar};
-use crate::monster::MonsterMash;
+use crate::message::{msg_cleared, rgetchar};
 use crate::pack::{has_amulet, unwear, unwield};
 use crate::player::Player;
 use crate::prelude::*;
@@ -24,16 +22,16 @@ mod values;
 
 pub const SCORE_FILE: &'static str = "/usr/games/player.rogue.scores";
 
-pub unsafe fn killed_by(ending: Ending, player: &mut Player) {
+pub unsafe fn killed_by(ending: Ending, game: &mut GameState) {
 	md_ignore_signals();
 	if !ending.is_quit() {
-		player.rogue.gold = ((player.rogue.gold as f64 * 9.0) / 10.0) as usize;
+		game.player.rogue.gold = ((game.player.rogue.gold as f64 * 9.0) / 10.0) as usize;
 	}
 
 	let mut how_ended = ending_string(&ending);
-	how_ended += &format!(" with {} gold", player.rogue.gold);
+	how_ended += &format!(" with {} gold", game.player.rogue.gold);
 
-	if ending.is_monster() && player.settings.show_skull {
+	if ending.is_monster() && game.player.settings.show_skull {
 		ncurses::clear();
 		mvaddstr(4, 32, "__---------__");
 		mvaddstr(5, 30, "_~             ~_");
@@ -51,19 +49,18 @@ pub unsafe fn killed_by(ending: Ending, player: &mut Player) {
 		mvaddstr(17, 30, "|  ^^^^^^^^^^^  |");
 		mvaddstr(18, 31, "\\_           _/");
 		mvaddstr(19, 33, "~---------~");
-		center(21, player.settings.player_name().as_str());
+		center(21, game.player.settings.player_name().as_str());
 		center(22, &how_ended);
 	} else {
-		message(&how_ended, 0);
+		game.dialog.message(&how_ended, 0);
 	}
-	message("", 0);
-	put_scores(Some(ending), player);
+	game.dialog.message("", 0);
+	put_scores(Some(ending), game);
 }
 
 unsafe fn ending_string(ending: &Ending) -> String {
 	match ending {
-		&Ending::Monster(monster) => {
-			let name = monster.name();
+		&Ending::Monster(ref name) => {
 			let article = if is_vowel(name.chars().nth(0).unwrap()) { "an" } else { "a" };
 			format!("Killed by {} {}", article, name)
 		}
@@ -75,11 +72,11 @@ unsafe fn ending_string(ending: &Ending) -> String {
 	}
 }
 
-pub unsafe fn win(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
-	unwield(player);          /* disarm and relax */
-	unwear(player);
+pub unsafe fn win(game: &mut GameState) {
+	unwield(&mut game.player);          /* disarm and relax */
+	unwear(&mut game.player);
 	for hand in PlayerHand::ALL_HANDS {
-		un_put_hand(hand, mash, player, level);
+		un_put_hand(hand, game);
 	}
 	ncurses::clear();
 	mvaddstr(10, 11, "@   @  @@@   @   @      @  @  @   @@@   @   @   @");
@@ -90,32 +87,32 @@ pub unsafe fn win(mash: &mut MonsterMash, player: &mut Player, level: &mut Level
 	mvaddstr(17, 11, "Congratulations,  you have  been admitted  to  the");
 	mvaddstr(18, 11, "Fighters' Guild.   You return home,  sell all your");
 	mvaddstr(19, 11, "treasures at great profit and retire into comfort.");
-	message("", 0);
-	message("", 0);
-	player.notes.identify_all();
-	sell_pack(player);
-	put_scores(Some(Ending::Win), player);
+	game.dialog.message("", 0);
+	game.dialog.message("", 0);
+	game.player.notes.identify_all();
+	sell_pack(game);
+	put_scores(Some(Ending::Win), game);
 }
 
-pub unsafe fn ask_quit(from_intrpt: bool, player: &mut Player) -> bool {
+pub unsafe fn ask_quit(from_intrpt: bool, game: &mut GameState) -> bool {
 	md_ignore_signals();
 	let mut orow = 0;
 	let mut ocol = 0;
 	let mut mc = false;
 	let mut buf = [0; 128];
 	if from_intrpt {
-		orow = player.rogue.row;
-		ocol = player.rogue.col;
+		orow = game.player.rogue.row;
+		ocol = game.player.rogue.col;
 		mc = msg_cleared;
 		for i in 0..DCOLS {
 			buf[i] = mvinch(0, i as i32);
 		}
 	}
-	check_message();
-	message("really quit?", 1);
+	game.dialog.clear_message();
+	game.dialog.message("really quit?", 1);
 	if rgetchar() != 'y' {
 		md_heed_signals();
-		check_message();
+		game.dialog.clear_message();
 		if from_intrpt {
 			for i in 0..DCOLS {
 				mvaddch(0, i as i32, buf[i]);
@@ -127,36 +124,36 @@ pub unsafe fn ask_quit(from_intrpt: bool, player: &mut Player) -> bool {
 		return false;
 	}
 	if from_intrpt {
-		clean_up(BYEBYE_STRING, player);
+		clean_up(BYEBYE_STRING, &mut game.player);
 		return true;
 	}
-	check_message();
-	killed_by(Ending::Quit, player);
+	game.dialog.clear_message();
+	killed_by(Ending::Quit, game);
 	return true;
 }
 
-pub unsafe fn put_scores(ending: Option<Ending>, player: &mut Player) {
+pub unsafe fn put_scores(ending: Option<Ending>, game: &mut GameState) {
 	// TODO turn_into_games();
 	let mut file = match File::options().read(true).write(true).open(SCORE_FILE) {
 		Ok(file) => file,
 		Err(_) => match File::options().write(true).open(SCORE_FILE) {
 			Ok(file) => file,
 			Err(_) => {
-				message("cannot read/write/create score file", 0);
-				score_file_error(player);
+				game.dialog.message("cannot read/write/create score file", 0);
+				score_file_error(game);
 				return;
 			}
 		},
 	};
 	// TODO turn_into_user();
 
-	let mut score_only = player.settings.score_only;
+	let mut score_only = game.player.settings.score_only;
 	let mut scores: Vec<String> = Vec::new();
 	let mut n_names: Vec<String> = Vec::new();
 	{
 		let mut scores_string = String::new();
 		if file.read_to_string(&mut scores_string).is_err() {
-			score_file_error(player);
+			score_file_error(game);
 			return;
 		};
 		for (i, line) in scores_string.lines().enumerate() {
@@ -172,15 +169,15 @@ pub unsafe fn put_scores(ending: Option<Ending>, player: &mut Player) {
 	for i in 0..max_search {
 		if !score_only {
 			let name_in_score = &scores[i][START_OF_NAME..];
-			if name_cmp(name_in_score, &player.settings.login_name) == Ordering::Equal {
+			if name_cmp(name_in_score, &game.player.settings.login_name) == Ordering::Equal {
 				if let Some(gold_in_score) = gold_in_score(&scores[i]) {
-					if player.rogue.gold < gold_in_score {
+					if game.player.rogue.gold < gold_in_score {
 						score_only = true;
 					} else {
 						found_player = Some(i);
 					}
 				} else {
-					score_file_error(player);
+					score_file_error(game);
 					return;
 				}
 			}
@@ -196,12 +193,12 @@ pub unsafe fn put_scores(ending: Option<Ending>, player: &mut Player) {
 		let ne = scores.len().min(n_names.len()).min(10);
 		for i in 0..ne {
 			if let Some(gold_in_score) = gold_in_score(&scores[i]) {
-				if player.rogue.gold >= gold_in_score {
+				if game.player.rogue.gold >= gold_in_score {
 					rank = i;
 					break;
 				}
 			} else {
-				score_file_error(player);
+				score_file_error(game);
 				return;
 			}
 		}
@@ -211,11 +208,11 @@ pub unsafe fn put_scores(ending: Option<Ending>, player: &mut Player) {
 			rank = ne;
 		}
 		if rank < 10 {
-			let name = match &player.settings.nick_name {
+			let name = match &game.player.settings.nick_name {
 				None => "".to_string(),
 				Some(name) => name.to_string(),
 			};
-			insert_score(&mut scores, &mut n_names, &name, rank, ne, ending.expect("ending"), player);
+			insert_score(&mut scores, &mut n_names, &name, rank, ne, ending.expect("ending"), &game.player);
 		}
 		file.rewind().expect("rewind file");
 	}
@@ -246,8 +243,8 @@ pub unsafe fn put_scores(ending: Option<Ending>, player: &mut Player) {
 	}
 	refresh();
 	drop(file);
-	message("", 0);
-	clean_up("", player);
+	game.dialog.message("", 0);
+	clean_up("", &mut game.player);
 }
 
 fn gold_in_score(score: &str) -> Option<usize> {
@@ -294,18 +291,18 @@ pub fn is_vowel(ch: char) -> bool {
 	}
 }
 
-pub unsafe fn sell_pack(player: &mut Player)
+pub unsafe fn sell_pack(game: &mut GameState)
 {
 	ncurses::clear();
 	mvaddstr(1, 0, "Value      Item");
 	let mut row: usize = 2;
-	for pack_id in player.object_ids() {
-		if player.object_what(pack_id) != ObjectWhat::Food {
-			let obj = player.object_mut(pack_id).expect("obj in player");
+	for pack_id in game.player.object_ids() {
+		if game.player.object_what(pack_id) != ObjectWhat::Food {
+			let obj = game.player.object_mut(pack_id).expect("obj in player");
 			obj.identified = true;
 			let obj_value = obj.sale_value();
-			let obj_desc = player.get_obj_desc(pack_id);
-			player.rogue.gold += obj_value;
+			let obj_desc = game.player.get_obj_desc(pack_id);
+			game.player.rogue.gold += obj_value;
 			if row < DROWS {
 				let msg = format!("{:5}      {}", obj_value, obj_desc);
 				mvaddstr(row as i32, 0, &msg);
@@ -314,10 +311,10 @@ pub unsafe fn sell_pack(player: &mut Player)
 		}
 	}
 	refresh();
-	if player.rogue.gold > MAX_GOLD {
-		player.rogue.gold = MAX_GOLD;
+	if game.player.rogue.gold > MAX_GOLD {
+		game.player.rogue.gold = MAX_GOLD;
 	}
-	message("", 0);
+	game.dialog.message("", 0);
 }
 
 pub fn name_cmp(s1: &str, s2: &str) -> Ordering {
@@ -357,7 +354,7 @@ pub fn center(row: i64, msg: &str) {
 	mvaddstr(row as i32, margin as i32, msg);
 }
 
-pub unsafe fn score_file_error(player: &mut Player) {
-	message("", 1);
-	clean_up("sorry, score file is out of order", player);
+pub unsafe fn score_file_error(game: &mut GameState) {
+	game.dialog.message("", 1);
+	clean_up("sorry, score file is out of order", &mut game.player);
 }

@@ -9,7 +9,6 @@ pub const BIG_ROOM: usize = 10;
 pub const R_ROOM: c_ushort = 2;
 pub const MIN_ROW: i64 = 1;
 pub const MAX_TITLE_LENGTH: usize = 30;
-pub const MORE: &'static str = "-more-";
 pub const COL1: i64 = 26;
 pub const COL2: i64 = 52;
 pub const ROW1: i64 = 7;

@@ -2,11 +2,10 @@
 
 use constants::{ADD_STRENGTH, ADORNMENT, DEXTERITY, R_TELEPORT, RINGS};
 use ring_kind::RingKind;
-use crate::level::Level;
-use crate::message::{CANCEL, message, print_stats, rgetchar};
-use crate::monster::MonsterMash;
+
+use crate::init::GameState;
+use crate::message::{CANCEL, print_stats, rgetchar};
 use crate::objects::{Object, ObjectId};
-use crate::player::Player;
 use crate::player::rings::HandUsage;
 use crate::prelude::item_usage::{ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat::Ring;
@@ -19,16 +18,16 @@ pub(crate) mod ring_kind;
 pub(crate) mod ring_gem;
 
 
-pub(crate) unsafe fn ask_ring_hand() -> Option<PlayerHand> {
-	match ask_left_or_right() {
+pub(crate) unsafe fn ask_ring_hand(game: &mut GameState) -> Option<PlayerHand> {
+	match ask_left_or_right(game) {
 		'l' => Some(PlayerHand::Left),
 		'r' => Some(PlayerHand::Right),
 		_ => None,
 	}
 }
 
-unsafe fn ask_left_or_right() -> char {
-	message("left or right hand?", 0);
+unsafe fn ask_left_or_right(game: &mut GameState) -> char {
+	game.dialog.message("left or right hand?", 0);
 	let mut ch;
 	loop {
 		ch = rgetchar();
@@ -40,9 +39,9 @@ unsafe fn ask_left_or_right() -> char {
 	ch
 }
 
-pub unsafe fn un_put_hand(hand: PlayerHand, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) -> Option<ObjectId> {
-	let un_put_id = player.un_put_ring(hand);
-	ring_stats(true, mash, player, level);
+pub unsafe fn un_put_hand(hand: PlayerHand, game: &mut GameState) -> Option<ObjectId> {
+	let un_put_id = game.player.un_put_ring(hand);
+	ring_stats(true, game);
 	un_put_id
 }
 
@@ -72,27 +71,27 @@ pub fn gr_ring(ring: &mut Object, assign_wk: bool) {
 	}
 }
 
-pub unsafe fn inv_rings(player: &Player) {
-	let hand_usage = player.hand_usage();
+pub unsafe fn inv_rings(game: &mut GameState) {
+	let hand_usage = game.player.hand_usage();
 	if hand_usage == HandUsage::None {
-		message("not wearing any rings", 0);
+		game.dialog.message("not wearing any rings", 0);
 	} else {
 		for ring_hand in PlayerHand::ALL_HANDS {
-			if let Some(ring_id) = player.ring_id(ring_hand) {
-				let msg = player.get_obj_desc(ring_id);
-				message(&msg, 0);
+			if let Some(ring_id) = game.player.ring_id(ring_hand) {
+				let msg = game.player.get_obj_desc(ring_id);
+				game.dialog.message(&msg, 0);
 			}
 		}
 	}
-	if player.wizard {
-		message(
+	if game.player.wizard {
+		game.dialog.message(
 			&format!("ste {}, r_r {}, e_r {}, r_t {}, s_s {}, a_s {}, reg {}, r_e {}, s_i {}, m_a {}, aus {}",
-			         player.ring_effects.stealthy(), hand_usage.count_hands(),
-			         player.ring_effects.calorie_burn(), player.ring_effects.has_teleport(),
-			         player.ring_effects.has_sustain_strength(), player.ring_effects.add_strength(),
-			         player.ring_effects.regeneration(), player.ring_effects.dexterity(),
-			         player.ring_effects.has_see_invisible(), player.ring_effects.has_maintain_armor(),
-			         player.ring_effects.auto_search()),
+			         game.player.ring_effects.stealthy(), hand_usage.count_hands(),
+			         game.player.ring_effects.calorie_burn(), game.player.ring_effects.has_teleport(),
+			         game.player.ring_effects.has_sustain_strength(), game.player.ring_effects.add_strength(),
+			         game.player.ring_effects.regeneration(), game.player.ring_effects.dexterity(),
+			         game.player.ring_effects.has_see_invisible(), game.player.ring_effects.has_maintain_armor(),
+			         game.player.ring_effects.auto_search()),
 			0,
 		);
 	}
@@ -120,67 +119,67 @@ impl PlayerHand {
 pub(crate) mod effects;
 
 
-pub unsafe fn ring_stats(print: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
-	player.ring_effects.clear_stealthy();
-	player.ring_effects.clear_calorie_burn();
-	player.ring_effects.set_teleport(false);
-	player.ring_effects.set_sustain_strength(false);
-	player.ring_effects.clear_add_strength();
-	player.ring_effects.clear_regeneration();
-	player.ring_effects.clear_dexterity();
-	player.ring_effects.set_see_invisible(false);
-	player.ring_effects.set_maintain_armor(false);
-	player.ring_effects.clear_auto_search();
+pub unsafe fn ring_stats(print: bool, game: &mut GameState) {
+	game.player.ring_effects.clear_stealthy();
+	game.player.ring_effects.clear_calorie_burn();
+	game.player.ring_effects.set_teleport(false);
+	game.player.ring_effects.set_sustain_strength(false);
+	game.player.ring_effects.clear_add_strength();
+	game.player.ring_effects.clear_regeneration();
+	game.player.ring_effects.clear_dexterity();
+	game.player.ring_effects.set_see_invisible(false);
+	game.player.ring_effects.set_maintain_armor(false);
+	game.player.ring_effects.clear_auto_search();
 
 	for ring_hand in PlayerHand::ALL_HANDS {
-		match player.ring_id(ring_hand) {
+		match game.player.ring_id(ring_hand) {
 			None => {
 				continue;
 			}
 			Some(ring_id) => {
-				player.ring_effects.incr_calorie_burn();
-				match player.expect_object(ring_id).ring_kind().expect("ring kind") {
+				game.player.ring_effects.incr_calorie_burn();
+				match game.player.expect_object(ring_id).ring_kind().expect("ring kind") {
 					RingKind::Stealth => {
-						player.ring_effects.incr_stealthy();
+						game.player.ring_effects.incr_stealthy();
 					}
 					RingKind::RTeleport => {
-						player.ring_effects.set_teleport(true);
+						game.player.ring_effects.set_teleport(true);
 					}
 					RingKind::Regeneration => {
-						player.ring_effects.incr_regeneration();
+						game.player.ring_effects.incr_regeneration();
 					}
 					RingKind::SlowDigest => {
-						player.ring_effects.slow_calorie_burn();
+						game.player.ring_effects.slow_calorie_burn();
 					}
 					RingKind::AddStrength => {
-						let player_class = player.expect_object(ring_id).class;
-						player.ring_effects.increase_add_strength(player_class);
+						let player_class = game.player.expect_object(ring_id).class;
+						game.player.ring_effects.increase_add_strength(player_class);
 					}
 					RingKind::SustainStrength => {
-						player.ring_effects.set_sustain_strength(true);
+						game.player.ring_effects.set_sustain_strength(true);
 					}
 					RingKind::Dexterity => {
-						let player_class = player.expect_object(ring_id).class;
-						player.ring_effects.increase_dexterity(player_class);
+						let player_class = game.player.expect_object(ring_id).class;
+						game.player.ring_effects.increase_dexterity(player_class);
 					}
 					RingKind::Adornment => {
 						// Do nothing
 					}
 					RingKind::RSeeInvisible => {
-						player.ring_effects.set_see_invisible(true);
+						game.player.ring_effects.set_see_invisible(true);
 					}
 					RingKind::MaintainArmor => {
-						player.ring_effects.set_maintain_armor(true);
+						game.player.ring_effects.set_maintain_armor(true);
 					}
 					RingKind::Searching => {
-						player.ring_effects.increase_auto_search(2);
+						game.player.ring_effects.increase_auto_search(2);
 					}
 				}
 			}
 		}
 	}
 	if print {
-		print_stats(STAT_STRENGTH, player);
-		relight(mash, player, level);
+		print_stats(STAT_STRENGTH, &mut game.player);
+		relight(game);
 	}
 }

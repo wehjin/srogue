@@ -5,10 +5,11 @@ use std::ops::RangeInclusive;
 use ncurses::{addch, chtype, mvaddch, mvinch};
 use serde::{Deserialize, Serialize};
 
+use crate::init::GameState;
 use crate::level::{CellMaterial, DungeonCell, Level, same_col, same_row};
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM};
 use crate::monster::{gmc_row_col, Monster, MonsterMash};
-use crate::objects::{gr_object, ObjectPack, place_at};
+use crate::objects::{gr_object, place_at};
 use crate::player::{Player, RoomMark};
 use crate::prelude::*;
 use crate::prelude::object_what::ObjectWhat;
@@ -197,37 +198,37 @@ impl Room {
 	}
 }
 
-pub fn light_up_room(rn: usize, mash: &mut MonsterMash, player: &Player, level: &mut Level) {
-	if player.blind.is_active() {
+pub fn light_up_room(rn: usize, game: &mut GameState) {
+	if game.player.blind.is_active() {
 		return;
 	}
-	let wall_bounds = level.rooms[rn].to_wall_bounds();
+	let wall_bounds = game.level.rooms[rn].to_wall_bounds();
 	for i in wall_bounds.rows() {
 		for j in wall_bounds.cols() {
-			if level.cell(i, j).has_monster() {
-				if let Some(mon_id) = mash.monster_id_at_spot(i, j) {
+			if game.level.cell(i, j).has_monster() {
+				if let Some(mon_id) = game.mash.monster_id_at_spot(i, j) {
 					let monster_spot = {
-						let monster = mash.monster_mut(mon_id);
-						monster.cell_mut(level).set_monster(false);
+						let monster = game.mash.monster_mut(mon_id);
+						monster.cell_mut(&mut game.level).set_monster(false);
 						monster.spot
 					};
-					let dungeon_char = get_dungeon_char(monster_spot.row, monster_spot.col, mash, player, level);
+					let dungeon_char = get_dungeon_char(monster_spot.row, monster_spot.col, game);
 					{
-						let monster = mash.monster_mut(mon_id);
+						let monster = game.mash.monster_mut(mon_id);
 						monster.trail_char = dungeon_char;
-						monster.cell_mut(level).set_monster(true);
+						monster.cell_mut(&mut game.level).set_monster(true);
 					}
 				}
 			}
-			mvaddch(i as i32, j as i32, get_dungeon_char(i, j, mash, player, level));
+			mvaddch(i as i32, j as i32, get_dungeon_char(i, j, game));
 		}
 	}
-	mvaddch(player.rogue.row as i32, player.rogue.col as i32, player.rogue.fchar as chtype);
+	mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, game.player.rogue.fchar as chtype);
 }
 
 
-pub fn light_passage(row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &Level) {
-	if player.blind.is_active() {
+pub fn light_passage(row: i64, col: i64, game: &mut GameState) {
+	if game.player.blind.is_active() {
 		return;
 	}
 	let i_end = if row < DROWS as i64 - 2 { 1 } else { 0 };
@@ -236,30 +237,30 @@ pub fn light_passage(row: i64, col: i64, mash: &mut MonsterMash, player: &Player
 	let j_start = if col > 0 { -1 } else { 0 };
 	for i in i_start..=i_end {
 		for j in j_start..=j_end {
-			if can_move(row, col, row + i, col + j, level) {
-				mvaddch((row + i) as i32, (col + j) as i32, get_dungeon_char(row + i, col + j, mash, player, level));
+			if can_move(row, col, row + i, col + j, &game.level) {
+				mvaddch((row + i) as i32, (col + j) as i32, get_dungeon_char(row + i, col + j, game));
 			}
 		}
 	}
 }
 
-pub fn darken_room(rn: usize, mash: &mut MonsterMash, player: &Player, level: &Level) {
-	let floor_bounds = level.rooms[rn].to_floor_bounds();
+pub fn darken_room(rn: usize, game: &mut GameState) {
+	let floor_bounds = game.level.rooms[rn].to_floor_bounds();
 	for i in floor_bounds.rows_usize() {
 		for j in floor_bounds.cols_usize() {
-			if player.blind.is_active() {
+			if game.player.blind.is_active() {
 				mvaddch(i as i32, j as i32, chtype::from(' '));
 			} else {
-				let cell = &level.dungeon[i][j];
+				let cell = &game.level.dungeon[i][j];
 				let cell_remains_lit = {
-					let cell_is_detected_monster = level.detect_monster && cell.has_monster();
+					let cell_is_detected_monster = game.level.detect_monster && cell.has_monster();
 					cell_is_detected_monster || cell.has_object() || cell.is_stairs()
 				};
 				if !cell_remains_lit {
-					if !imitating(i as i64, j as i64, mash, level) {
+					if !imitating(i as i64, j as i64, &mut game.mash, &game.level) {
 						mvaddch(i as i32, j as i32, chtype::from(' '));
 					}
-					if cell.is_trap() && !level.dungeon[i][j].is_hidden() {
+					if cell.is_trap() && !game.level.dungeon[i][j].is_hidden() {
 						mvaddch(i as i32, j as i32, chtype::from('^'));
 					}
 				}
@@ -268,10 +269,10 @@ pub fn darken_room(rn: usize, mash: &mut MonsterMash, player: &Player, level: &L
 	}
 }
 
-pub fn get_dungeon_char(row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &Level) -> chtype {
-	let cell = level.dungeon[row as usize][col as usize];
+pub fn get_dungeon_char(row: i64, col: i64, game: &mut GameState) -> chtype {
+	let cell = game.level.dungeon[row as usize][col as usize];
 	if cell.has_monster() {
-		return gmc_row_col(row, col, mash, player, level);
+		return gmc_row_col(row, col, game);
 	}
 	if cell.has_object() {
 		return get_mask_char(cell.object_what()) as chtype;
@@ -363,8 +364,8 @@ pub fn gr_room(level: &Level) -> usize {
 	}
 }
 
-pub unsafe fn party_objects(rn: usize, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) -> usize {
-	let N = (level.rooms[rn].bottom_row - level.rooms[rn].top_row - 1) * (level.rooms[rn].right_col - level.rooms[rn].left_col - 1);
+pub unsafe fn party_objects(rn: usize, game: &mut GameState) -> usize {
+	let N = (game.level.rooms[rn].bottom_row - game.level.rooms[rn].top_row - 1) * (game.level.rooms[rn].right_col - game.level.rooms[rn].left_col - 1);
 	let mut n = get_rand(5, 10);
 	if n > N {
 		n = N - 2;
@@ -373,17 +374,17 @@ pub unsafe fn party_objects(rn: usize, player: &mut Player, level: &mut Level, g
 	for _i in 0..n {
 		let mut found = None;
 		for _j in 0..250 {
-			let row = get_rand(level.rooms[rn].top_row + 1, level.rooms[rn].bottom_row - 1);
-			let col = get_rand(level.rooms[rn].left_col + 1, level.rooms[rn].right_col - 1);
-			if level.dungeon[row as usize][col as usize].is_material_only(CellMaterial::Floor)
-				|| level.dungeon[row as usize][col as usize].is_material_only(CellMaterial::Tunnel) {
+			let row = get_rand(game.level.rooms[rn].top_row + 1, game.level.rooms[rn].bottom_row - 1);
+			let col = get_rand(game.level.rooms[rn].left_col + 1, game.level.rooms[rn].right_col - 1);
+			if game.level.dungeon[row as usize][col as usize].is_material_only(CellMaterial::Floor)
+				|| game.level.dungeon[row as usize][col as usize].is_material_only(CellMaterial::Tunnel) {
 				found = Some(DungeonSpot { row, col });
 				break;
 			}
 		}
 		if let Some(found) = found {
-			let obj = gr_object(player);
-			place_at(obj, found.row, found.col, level, ground);
+			let obj = gr_object(&mut game.player);
+			place_at(obj, found.row, found.col, &mut game.level, &mut game.ground);
 			number_found += 1;
 		}
 	}

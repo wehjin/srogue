@@ -14,7 +14,7 @@ use crate::settings::SettingsError;
 use crate::trap::add_traps;
 
 pub mod components;
-
+pub mod resources;
 mod message;
 mod level;
 mod monster;
@@ -92,17 +92,17 @@ pub fn main() {
 		if !restored {
 			clear_level(&mut game);
 			game.player.descend();
-			make_level(&game.player, &mut game.level, &mut game.ground);
-			unsafe { put_objects(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground); }
+			make_level(&mut game);
+			unsafe { put_objects(&mut game); }
 			unsafe { put_stairs(&mut game.player, &mut game.level); }
 			unsafe { add_traps(&game.player, &mut game.level); }
-			unsafe { put_mons(&mut game.mash, &game.player, &mut game.level); }
+			unsafe { put_mons(&mut game); }
 			{
 				let avoid_room = match game.level.party_room {
 					None => RoomMark::None,
 					Some(rn) => RoomMark::Area(rn),
 				};
-				put_player(avoid_room, &mut game.mash, &mut game.player, &mut game.level);
+				put_player(avoid_room, &mut game);
 			}
 			unsafe { print_stats(STAT_ALL, &mut game.player); }
 		}

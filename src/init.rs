@@ -10,14 +10,14 @@ use crate::console;
 use crate::console::{Console, ConsoleError};
 use crate::init::InitError::NoConsole;
 use crate::level::Level;
-use crate::machdep::{md_heed_signals, md_ignore_signals};
-use crate::message::{check_message, message};
+use crate::machdep::md_heed_signals;
 use crate::monster::MonsterMash;
 use crate::objects::{alloc_object, get_food, ObjectPack};
 use crate::pack::{do_wear, do_wield};
 use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::{Armor, Weapon};
 use crate::random::get_rand;
+use crate::resources::dialog::PlayerDialog;
 use crate::ring::ring_stats;
 use crate::save::restore;
 use crate::score::put_scores;
@@ -53,19 +53,19 @@ pub unsafe fn init(settings: Settings) -> Result<InitResult, InitError> {
 		}
 	};
 	md_heed_signals();
-	if settings.score_only {
-		let mut player = Player::new(settings.clone());
-		put_scores(None, &mut player);
-		return Ok(InitResult::ScoreOnly(Player::new(settings.clone()), console, settings));
-	}
 
 	let mut game = GameState {
-		player: Player::new(settings),
+		dialog: PlayerDialog::default(),
+		player: Player::new(settings.clone()),
 		level: Level::new(),
 		mash: MonsterMash::new(),
 		ground: ObjectPack::new(),
 		next_system: GameSystem::PlayerActions,
 	};
+	if settings.score_only {
+		put_scores(None, &mut game);
+		return Ok(InitResult::ScoreOnly(Player::new(settings.clone()), console, settings));
+	}
 	if let Some(rest_file) = game.player.settings.rest_file.clone() {
 		return if restore(&rest_file, &mut game) {
 			Ok(InitResult::Restored(game, console))
@@ -75,7 +75,7 @@ pub unsafe fn init(settings: Settings) -> Result<InitResult, InitError> {
 	}
 	game.player.notes.assign_dynamic_titles();
 	player_init(&mut game.player);
-	ring_stats(false, &mut game.mash, &mut game.player, &mut game.level);
+	ring_stats(false, &mut game);
 	return Ok(InitResult::Initialized(game, console));
 }
 
@@ -86,6 +86,7 @@ pub enum GameSystem {
 }
 
 pub struct GameState {
+	pub dialog: PlayerDialog,
 	pub player: Player,
 	pub level: Level,
 	pub mash: MonsterMash,
@@ -172,12 +173,12 @@ pub unsafe fn clean_up(estr: &str, player: &mut Player) {
 // }
 
 pub unsafe fn onintr() {
-	md_ignore_signals();
-	if cant_int {
-		did_int = true;
-	} else {
-		check_message();
-		message("interrupt", 1);
-	}
-	md_heed_signals();
+	// md_ignore_signals();
+	// if cant_int {
+	// 	did_int = true;
+	// } else {
+	//  game.diary.clear_message();
+	//   game.diary.message("interrupt", 1);
+	// }
+	// md_heed_signals();
 }

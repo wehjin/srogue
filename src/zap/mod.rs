@@ -5,10 +5,10 @@ use ncurses::{mvaddch, mvinch};
 use wand_kind::WandKind;
 
 use crate::hit::{get_dir_rc, rogue_hit};
+use crate::init::GameState;
 use crate::level::Level;
-use crate::message::{CANCEL, check_message, get_input_line, message};
+use crate::message::{CANCEL, get_input_line};
 use crate::monster::{gmc, gr_monster, Monster, MonsterKind, MonsterMash};
-use crate::objects::ObjectPack;
 use crate::pack::pack_letter;
 use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::Wand;
@@ -23,43 +23,43 @@ pub(crate) mod constants;
 pub(crate) mod wand_kind;
 pub(crate) mod wand_materials;
 
-pub unsafe fn zapp(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
-	let dir = get_dir_or_cancel();
-	check_message();
+pub unsafe fn zapp(game: &mut GameState) {
+	let dir = get_dir_or_cancel(game);
+	game.dialog.clear_message();
 	if dir == CANCEL {
 		return;
 	}
-	let ch = pack_letter("zap with what?", Wands, player);
+	let ch = pack_letter("zap with what?", Wands, game);
 	if ch == CANCEL {
 		return;
 	}
 
-	check_message();
-	match player.object_id_with_letter(ch) {
+	game.dialog.clear_message();
+	match game.player.object_id_with_letter(ch) {
 		None => {
-			message("no such item.", 0);
+			game.dialog.message("no such item.", 0);
 			return;
 		}
 		Some(obj_id) => {
-			if player.object_what(obj_id) != Wand {
-				message("you can't zap with that", 0);
+			if game.player.object_what(obj_id) != Wand {
+				game.dialog.message("you can't zap with that", 0);
 				return;
 			}
-			if player.expect_object(obj_id).class <= 0 {
-				message("nothing happens", 0);
+			if game.player.expect_object(obj_id).class <= 0 {
+				game.dialog.message("nothing happens", 0);
 			} else {
-				player.expect_object_mut(obj_id).class -= 1;
-				let mut row = player.rogue.row;
-				let mut col = player.rogue.col;
-				if let Some(mon_id) = get_zapped_monster(dir, &mut row, &mut col, mash, level) {
-					let monster = mash.monster_mut(mon_id);
-					let obj_kind = player.object_kind(obj_id);
+				game.player.expect_object_mut(obj_id).class -= 1;
+				let mut row = game.player.rogue.row;
+				let mut col = game.player.rogue.col;
+				if let Some(mon_id) = get_zapped_monster(dir, &mut row, &mut col, &mut game.mash, &game.level) {
+					let monster = game.mash.monster_mut(mon_id);
+					let obj_kind = game.player.object_kind(obj_id);
 					monster.wake_up();
-					zap_monster(monster.id(), obj_kind, mash, player, level, ground);
-					relight(mash, player, level);
+					zap_monster(monster.id(), obj_kind, game);
+					relight(game);
 				}
 			}
-			reg_move(mash, player, level, ground);
+			reg_move(game);
 		}
 	}
 }
@@ -82,13 +82,13 @@ pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, mash: 
 	}
 }
 
-pub unsafe fn zap_monster(mon_id: u64, which_kind: u16, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
-	let monster = mash.monster(mon_id);
+pub unsafe fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
+	let monster = game.mash.monster(mon_id);
 	let row = monster.spot.row;
 	let col = monster.spot.col;
 	match WandKind::from_index(which_kind as usize) {
 		WandKind::SlowMonster => {
-			let monster = mash.monster_mut(mon_id);
+			let monster = game.mash.monster_mut(mon_id);
 			if monster.m_flags.hasted {
 				monster.m_flags.hasted = false;
 			} else {
@@ -97,7 +97,7 @@ pub unsafe fn zap_monster(mon_id: u64, which_kind: u16, mash: &mut MonsterMash, 
 			}
 		}
 		WandKind::HasteMonster => {
-			let monster = mash.monster_mut(mon_id);
+			let monster = game.mash.monster_mut(mon_id);
 			if monster.m_flags.slowed {
 				monster.m_flags.slowed = false;
 			} else {
@@ -105,54 +105,54 @@ pub unsafe fn zap_monster(mon_id: u64, which_kind: u16, mash: &mut MonsterMash, 
 			}
 		}
 		WandKind::TeleAway => {
-			let monster = mash.monster_mut(mon_id);
-			tele_away(monster, player, level);
+			let monster = game.mash.monster_mut(mon_id);
+			tele_away(monster, &game.player, &mut game.level);
 		}
 		WandKind::ConfuseMonster => {
-			let monster = mash.monster_mut(mon_id);
+			let monster = game.mash.monster_mut(mon_id);
 			monster.m_flags.confused = true;
 			monster.moves_confused += get_rand(12, 22);
 		}
 		WandKind::Invisibility => {
-			let monster = mash.monster_mut(mon_id);
+			let monster = game.mash.monster_mut(mon_id);
 			monster.m_flags.invisible = true;
 		}
 		WandKind::Polymorph => {
 			if monster.m_flags.holds {
-				level.being_held = false;
+				game.level.being_held = false;
 			}
-			let mut morph_monster = gr_monster(player.cur_depth, 0, Some(MonsterKind::random_any()));
+			let mut morph_monster = gr_monster(game.player.cur_depth, 0, Some(MonsterKind::random_any()));
 			morph_monster.set_spot(row, col);
 			morph_monster.trail_char = monster.trail_char;
 			if !morph_monster.m_flags.imitates {
 				morph_monster.wake_up();
 			}
-			if let Some(fight_id) = player.fight_monster {
+			if let Some(fight_id) = game.player.fight_monster {
 				if fight_id == monster.id() {
-					player.fight_monster = Some(morph_monster.id());
+					game.player.fight_monster = Some(morph_monster.id());
 				}
 			}
-			mash.remove_monster(monster.id());
-			mash.add_monster(morph_monster);
+			game.mash.remove_monster(monster.id());
+			game.mash.add_monster(morph_monster);
 		}
 		WandKind::PutToSleep => {
-			let monster = mash.monster_mut(mon_id);
+			let monster = game.mash.monster_mut(mon_id);
 			monster.m_flags.asleep = true;
 			monster.m_flags.napping = true;
 			monster.nap_length = get_rand(3, 6);
 		}
 		WandKind::MagicMissile => {
-			rogue_hit(mon_id, true, mash, player, level, ground);
+			rogue_hit(mon_id, true, game);
 		}
 		WandKind::Cancellation => {
 			if monster.m_flags.holds {
-				level.being_held = false;
+				game.level.being_held = false;
 			}
 			if monster.m_flags.steals_item {
-				let monster = mash.monster_mut(mon_id);
+				let monster = game.mash.monster_mut(mon_id);
 				monster.drop_percent = 0;
 			}
-			let monster = mash.monster_mut(mon_id);
+			let monster = game.mash.monster_mut(mon_id);
 			monster.m_flags.flies = false;
 			monster.m_flags.flits = false;
 			monster.m_flags.set_special_hit(false);
@@ -164,7 +164,7 @@ pub unsafe fn zap_monster(mon_id: u64, which_kind: u16, mash: &mut MonsterMash, 
 			monster.m_flags.holds = false;
 		}
 		WandKind::DoNothing => {
-			message("nothing happens", 0);
+			game.dialog.message("nothing happens", 0);
 		}
 	}
 }
@@ -194,21 +194,21 @@ unsafe fn tele_away(monster: &mut Monster, player: &Player, level: &mut Level) {
 	}
 }
 
-pub unsafe fn wizardize(player: &mut Player) {
-	if player.wizard {
-		player.wizard = false;
-		message("not wizard anymore", 0);
+pub unsafe fn wizardize(game: &mut GameState) {
+	if game.player.wizard {
+		game.player.wizard = false;
+		game.dialog.message("not wizard anymore", 0);
 	} else {
-		let line = get_input_line::<String>("wizard's password:", None, None, false, false);
+		let line = get_input_line::<String>("wizard's password:", None, None, false, false, game);
 		if !line.is_empty() {
 			//const PW: &str = "\u{A7}DV\u{BA}M\u{A3}\u{17}";
 			const PW: &str = "neko?";
 			if line == PW {
-				player.wizard = true;
-				player.settings.score_only = true;
-				message("Welcome, mighty wizard!", 0);
+				game.player.wizard = true;
+				game.player.settings.score_only = true;
+				game.dialog.message("Welcome, mighty wizard!", 0);
 			} else {
-				message("sorry", 0);
+				game.dialog.message("sorry", 0);
 			}
 		}
 	}

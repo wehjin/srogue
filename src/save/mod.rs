@@ -9,20 +9,19 @@ use ncurses::clear;
 
 use crate::init::{clean_up, GameState};
 use crate::machdep::{delete_file, get_file_modification_time, md_get_file_id, md_ignore_signals, md_link_count, RogueTime};
-use crate::message::{check_message, get_input_line, message, msg_cleared, sound_bell};
+use crate::message::{get_input_line, msg_cleared, sound_bell};
 use crate::ring::ring_stats;
 use crate::save::data::SaveData;
 
 pub unsafe fn save_game(game: &mut GameState) -> bool {
 	let save_file = game.player.settings.save_file.clone();
 	let cancellation_prompt = Some("game not saved");
-	let file_name = get_input_line("file name?", save_file, cancellation_prompt, false, true,
-	);
+	let file_name = get_input_line("file name?", save_file, cancellation_prompt, false, true, game);
 	if file_name.is_empty() {
 		return false;
 	}
-	check_message();
-	message(&file_name, 0);
+	game.dialog.clear_message();
+	game.dialog.message(&file_name, 0);
 	return save_into_file(&file_name, game);
 }
 
@@ -33,7 +32,7 @@ unsafe fn save_into_file(save_path: &str, game: &mut GameState) -> bool {
 	let file = File::create(&save_path);
 	let mut file = match file {
 		Err(_) => {
-			message("problem accessing the save file", 0);
+			game.dialog.message("problem accessing the save file", 0);
 			return false;
 		}
 		Ok(file) => {
@@ -42,14 +41,14 @@ unsafe fn save_into_file(save_path: &str, game: &mut GameState) -> bool {
 	};
 	let file_id = md_get_file_id(&save_path);
 	if file_id == -1 {
-		message("problem accessing the save file", 0);
+		game.dialog.message("problem accessing the save file", 0);
 		return false;
 	}
 	md_ignore_signals();
 	let save_data = SaveData::read_from_statics(file_id, game);
 	let json = serde_json::to_string_pretty(&save_data).expect("serialize data");
 	let write_failed = if let Err(_) = file.write(json.as_bytes()) {
-		message("write() failed, don't know why", 0);
+		game.dialog.message("write() failed, don't know why", 0);
 		sound_bell();
 		true
 	} else {
@@ -120,6 +119,7 @@ pub unsafe fn restore(file_path: &str, game: &mut GameState) -> bool {
 	game.ground = save_data.ground;
 	game.mash = save_data.mash;
 	game.player = save_data.player;
+	game.dialog.reset();
 	game.level = save_data.level;
 
 	if !game.player.wizard && !delete_file(file_path) {
@@ -128,7 +128,7 @@ pub unsafe fn restore(file_path: &str, game: &mut GameState) -> bool {
 	}
 
 	msg_cleared = false;
-	ring_stats(false, &mut game.mash, &mut game.player, &mut game.level);
+	ring_stats(false, game);
 	return true;
 }
 

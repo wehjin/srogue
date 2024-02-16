@@ -1,18 +1,21 @@
 use std::fs::File;
 use std::io::Read;
+
 use libc::c_int;
 use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
+
+use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
-use crate::message::{message, rgetchar};
+use crate::message::rgetchar;
 
 static INSTRUCTIONS_FILE: &'static str = "/usr/games/player.rogue.instr";
 
 #[no_mangle]
-pub unsafe extern "C" fn Instructions() {
+pub unsafe extern "C" fn Instructions(game: &mut GameState) {
 	let mut file = match File::open(INSTRUCTIONS_FILE) {
 		Ok(file) => file,
 		Err(_) => {
-			message("Help file not on line.", 0);
+			game.dialog.message("Help file not on line.", 0);
 			return;
 		}
 	};
