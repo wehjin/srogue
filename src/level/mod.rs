@@ -29,7 +29,6 @@ pub mod constants;
 mod cells;
 mod dungeon;
 
-pub static mut r_de: Option<usize> = None;
 pub const LEVEL_POINTS: [isize; MAX_EXP_LEVEL] = [
 	10,
 	20,
@@ -80,6 +79,7 @@ impl Level {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Level {
+	pub recursive_deadend: Option<usize>,
 	pub rooms: [Room; MAX_ROOM],
 	pub traps: [Trap; MAX_TRAP],
 	pub dungeon: [DungeonRow; DROWS],
@@ -95,6 +95,7 @@ pub struct Level {
 impl Level {
 	pub fn new() -> Self {
 		Level {
+			recursive_deadend: None,
 			rooms: [Room::default(); MAX_ROOM],
 			traps: [Trap::default(); MAX_TRAP],
 			dungeon: [DungeonRow::default(); DROWS],
@@ -404,7 +405,7 @@ pub unsafe fn add_mazes(level_depth: isize, level: &mut Level) {
 
 pub unsafe fn fill_out_level(level: &mut Level, level_depth: isize) {
 	let shuffled_rns = shuffled_rns();
-	r_de = None;
+	level.recursive_deadend = None;
 	for i in 0..MAX_ROOM {
 		let rn = shuffled_rns[i];
 		if level.rooms[rn].room_type.is_nothing()
@@ -412,7 +413,7 @@ pub unsafe fn fill_out_level(level: &mut Level, level_depth: isize) {
 			fill_it(rn, true, level_depth, level);
 		}
 	}
-	if let Some(deadend_rn) = r_de {
+	if let Some(deadend_rn) = level.recursive_deadend {
 		fill_it(deadend_rn, false, level_depth, level);
 	}
 }
@@ -421,7 +422,7 @@ pub unsafe fn fill_it(rn: usize, do_rec_de: bool, level_depth: isize, level: &mu
 	let mut did_this = false;
 	let mut srow: i64 = 0;
 	let mut scol: i64 = 0;
-	static mut OFFSETS: [isize; 4] = [-1, 1, 3, -3];
+	pub static mut OFFSETS: [isize; 4] = [-1, 1, 3, -3];
 	for _ in 0..10 {
 		srow = get_rand(0, 3);
 		scol = get_rand(0, 3);
@@ -488,7 +489,7 @@ pub unsafe fn recursive_deadend(rn: usize, offsets: &[isize; 4], s_spot: &Dungeo
 		let d_spot = level.rooms[de].center_spot();
 		let tunnel_dir = get_tunnel_dir(rn, de, level);
 		draw_simple_passage(&s_spot, &d_spot, tunnel_dir, level_depth, level);
-		r_de = Some(de);
+		level.recursive_deadend = Some(de);
 		recursive_deadend(de, offsets, &d_spot, level_depth, level);
 	}
 }
