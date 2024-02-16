@@ -27,7 +27,6 @@ use crate::score::killed_by;
 use crate::throw::Move;
 use crate::trap::{is_off_screen, search, trap_player};
 
-pub static mut m_moves: i16 = 0;
 pub const YOU_CAN_MOVE_AGAIN: &'static str = "you can move again";
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -423,9 +422,9 @@ pub unsafe fn reg_move(mash: &mut MonsterMash, player: &mut Player, level: &mut 
 		return true;
 	}
 	mv_mons(mash, player, level, ground);
-	m_moves += 1;
-	if m_moves >= 120 {
-		m_moves = 0;
+	mash.m_moves += 1;
+	if mash.m_moves >= 120 {
+		mash.m_moves = 0;
 		put_wanderer(mash, player, level);
 	}
 	if player.halluc.is_active() {

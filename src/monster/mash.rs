@@ -11,13 +11,20 @@ use crate::prelude::DungeonSpot;
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct MonsterMash {
 	pub monsters: Vec<Monster>,
+	pub m_moves: usize,
 }
 
 impl MonsterMash {
-	pub const fn new() -> Self { MonsterMash { monsters: Vec::new() } }
+	pub const fn new() -> Self {
+		MonsterMash {
+			monsters: Vec::new(),
+			m_moves: 0,
+		}
+	}
 
 	pub fn clear(&mut self) {
 		self.monsters.clear();
+		self.m_moves = 0;
 	}
 }
 

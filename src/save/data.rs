@@ -9,7 +9,6 @@ use crate::machdep::{get_current_time, RogueTime};
 use crate::monster::MonsterMash;
 use crate::objects::ObjectPack;
 use crate::player::Player;
-use crate::r#move::m_moves;
 
 pub fn from_file(path: &str) -> Result<SaveData, Box<dyn Error>> {
 	let json = fs::read_to_string(path)?;
@@ -24,7 +23,6 @@ pub struct SaveData {
 	pub ground: ObjectPack,
 	pub file_id: i64,
 	pub level: Level,
-	pub m_moves: i16,
 	pub saved_time: RogueTime,
 }
 
@@ -36,11 +34,8 @@ impl SaveData {
 			ground: game.ground.clone(),
 			file_id,
 			level: game.level.clone(),
-			m_moves,
 			saved_time: get_current_time().add_seconds(10),
 		}
 	}
-	pub unsafe fn write_to_statics(&self) {
-		m_moves = self.m_moves;
-	}
+	pub unsafe fn write_to_statics(&self) {}
 }
