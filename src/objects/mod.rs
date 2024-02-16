@@ -209,10 +209,9 @@ impl Object {
 	pub fn id(&self) -> ObjectId { self.id }
 }
 
-pub static mut LEVEL_OBJECTS: ObjectPack = ObjectPack::new();
 pub static mut foods: i16 = 0;
 
-pub unsafe fn put_objects(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn put_objects(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
 	if player.cur_depth < player.max_depth {
 		return;
 	}
@@ -222,17 +221,17 @@ pub unsafe fn put_objects(mash: &mut MonsterMash, player: &mut Player, level: &m
 		n += 1;
 	}
 	if player.cur_depth == player.party_counter {
-		make_party(player.cur_depth, mash, level);
+		make_party(player.cur_depth, mash, level, ground);
 		player.party_counter = next_party(player.cur_depth);
 	}
 	for _i in 0..n {
 		let obj = gr_object(player.cur_depth);
-		rand_place(obj, player, level);
+		rand_place(obj, player, level, ground);
 	}
-	put_gold(player.cur_depth, level);
+	put_gold(player.cur_depth, level, ground);
 }
 
-pub unsafe fn put_gold(level_depth: isize, level: &mut Level) {
+pub unsafe fn put_gold(level_depth: isize, level: &mut Level, ground: &mut ObjectPack) {
 	for i in 0..MAX_ROOM {
 		let is_maze = level.rooms[i].room_type == RoomType::Maze;
 		let is_room = level.rooms[i].room_type == RoomType::Room;
@@ -245,7 +244,7 @@ pub unsafe fn put_gold(level_depth: isize, level: &mut Level) {
 				let col = get_rand(level.rooms[i].left_col + 1, level.rooms[i].right_col - 1);
 				if level.dungeon[row as usize][col as usize].is_material_only(CellMaterial::Floor)
 					|| level.dungeon[row as usize][col as usize].is_material_only(CellMaterial::Tunnel) {
-					plant_gold(row, col, is_maze, level_depth, level);
+					plant_gold(row, col, is_maze, level_depth, level, ground);
 					break;
 				}
 			}
@@ -253,7 +252,7 @@ pub unsafe fn put_gold(level_depth: isize, level: &mut Level) {
 	}
 }
 
-pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: isize, level: &mut Level) {
+pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: isize, level: &mut Level, ground: &mut ObjectPack) {
 	let mut obj = alloc_object();
 	obj.row = row;
 	obj.col = col;
@@ -263,15 +262,15 @@ pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: isize, le
 		obj.quantity += obj.quantity / 2;
 	}
 	level.dungeon[row as usize][col as usize].set_object(Gold);
-	LEVEL_OBJECTS.add(obj);
+	ground.add(obj);
 }
 
 
-pub unsafe fn place_at(mut obj: Object, row: i64, col: i64, level: &mut Level) {
+pub unsafe fn place_at(mut obj: Object, row: i64, col: i64, level: &mut Level, ground: &mut ObjectPack) {
 	obj.row = row;
 	obj.col = col;
 	level.dungeon[row as usize][col as usize].set_object(obj.what_is);
-	LEVEL_OBJECTS.add(obj);
+	ground.add(obj);
 }
 
 impl Player {
@@ -566,17 +565,17 @@ pub fn alloc_object() -> Object {
 	return obj;
 }
 
-pub unsafe fn make_party(level_depth: isize, mash: &mut MonsterMash, level: &mut Level) {
+pub unsafe fn make_party(level_depth: isize, mash: &mut MonsterMash, level: &mut Level, ground: &mut ObjectPack) {
 	let party_room = gr_room(level);
 	level.party_room = Some(party_room);
-	let n = if rand_percent(99) { party_objects(party_room, level_depth, level) } else { 11 };
+	let n = if rand_percent(99) { party_objects(party_room, level_depth, level, ground) } else { 11 };
 	if rand_percent(99) {
 		party_monsters(party_room, n, level_depth, mash, level);
 	}
 }
 
-pub unsafe fn show_objects(mash: &mut MonsterMash, player: &Player, level: &Level) {
-	for obj in LEVEL_OBJECTS.objects() {
+pub unsafe fn show_objects(mash: &mut MonsterMash, player: &Player, level: &Level, ground: &ObjectPack) {
+	for obj in ground.objects() {
 		let row = (*obj).row;
 		let col = (*obj).col;
 		let rc = get_mask_char((*obj).what_is) as chtype;
@@ -598,17 +597,17 @@ pub unsafe fn show_objects(mash: &mut MonsterMash, player: &Player, level: &Leve
 	}
 }
 
-pub unsafe fn put_amulet(player: &Player, level: &mut Level) {
+pub unsafe fn put_amulet(player: &Player, level: &mut Level, ground: &mut ObjectPack) {
 	let mut obj = alloc_object();
 	obj.what_is = Amulet;
-	rand_place(obj, player, level);
+	rand_place(obj, player, level, ground);
 }
 
-pub unsafe fn rand_place(obj: Object, player: &Player, level: &mut Level) {
+pub unsafe fn rand_place(obj: Object, player: &Player, level: &mut Level, ground: &mut ObjectPack) {
 	let mut row = 0;
 	let mut col = 0;
 	gr_row_col(&mut row, &mut col, |cell| cell.is_floor() || cell.is_tunnel(), player, level);
-	place_at(obj, row, col, level);
+	place_at(obj, row, col, level, ground);
 }
 
 pub unsafe fn new_object_for_wizard(player: &mut Player) {

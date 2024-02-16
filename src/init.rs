@@ -13,7 +13,7 @@ use crate::level::Level;
 use crate::machdep::{md_heed_signals, md_ignore_signals};
 use crate::message::{check_message, message};
 use crate::monster::MonsterMash;
-use crate::objects::{alloc_object, get_food, LEVEL_OBJECTS};
+use crate::objects::{alloc_object, get_food, ObjectPack};
 use crate::pack::{do_wear, do_wield};
 use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::{Armor, Weapon};
@@ -63,6 +63,7 @@ pub unsafe fn init(settings: Settings) -> Result<InitResult, InitError> {
 		player: Player::new(settings),
 		level: Level::new(),
 		mash: MonsterMash::new(),
+		ground: ObjectPack::new(),
 	};
 	if let Some(rest_file) = game.player.settings.rest_file.clone() {
 		return if restore(&rest_file, &mut game) {
@@ -72,7 +73,6 @@ pub unsafe fn init(settings: Settings) -> Result<InitResult, InitError> {
 		};
 	}
 	game.player.notes.assign_dynamic_titles();
-	LEVEL_OBJECTS.clear();
 	player_init(&mut game.player);
 	ring_stats(false, &mut game.mash, &mut game.player, &mut game.level);
 	return Ok(InitResult::Initialized(game, console));
@@ -82,6 +82,7 @@ pub struct GameState {
 	pub player: Player,
 	pub level: Level,
 	pub mash: MonsterMash,
+	pub ground: ObjectPack,
 }
 
 fn player_init(player: &mut Player) {

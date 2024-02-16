@@ -4,7 +4,7 @@ use crate::inventory::{get_obj_desc, inventory};
 use crate::level::Level;
 use crate::message::{CANCEL, check_message, get_input_line, LIST, message, print_stats, rgetchar, sound_bell};
 use crate::monster::{MonsterMash, mv_aquatars};
-use crate::objects::{LEVEL_OBJECTS, Object, ObjectId, ObjectPack, place_at, Title};
+use crate::objects::{Object, ObjectId, ObjectPack, place_at, Title};
 use crate::objects::NoteStatus::{Called, Identified, Unidentified};
 use crate::player::Player;
 use crate::prelude::food_kind::FRUIT;
@@ -32,29 +32,29 @@ pub enum PickUpResult {
 	PackTooFull,
 }
 
-pub unsafe fn pick_up(row: i64, col: i64, player: &mut Player, level: &mut Level) -> PickUpResult {
-	let obj_id = LEVEL_OBJECTS.find_id_at(row, col).expect("obj_id in level-objects at pick-up spot");
-	if LEVEL_OBJECTS.check_object(obj_id, Object::is_used_scare_monster_scroll) {
+pub unsafe fn pick_up(row: i64, col: i64, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) -> PickUpResult {
+	let obj_id = ground.find_id_at(row, col).expect("obj_id in level-objects at pick-up spot");
+	if ground.check_object(obj_id, Object::is_used_scare_monster_scroll) {
 		message("the scroll turns to dust as you pick it up", 0);
 		level.dungeon[row as usize][col as usize].clear_object();
-		LEVEL_OBJECTS.remove(obj_id);
+		ground.remove(obj_id);
 		if player.notes.scrolls[ScareMonster.to_index()].status == Unidentified {
 			player.notes.scrolls[ScareMonster.to_index()].status = Identified
 		}
 		PickUpResult::TurnedToDust
-	} else if let Some(quantity) = LEVEL_OBJECTS.try_map_object(obj_id, Object::gold_quantity) {
+	} else if let Some(quantity) = ground.try_map_object(obj_id, Object::gold_quantity) {
 		player.rogue.gold += quantity;
 		level.dungeon[row as usize][col as usize].clear_object();
-		let removed = LEVEL_OBJECTS.remove(obj_id).expect("remove level object");
+		let removed = ground.remove(obj_id).expect("remove level object");
 		print_stats(STAT_GOLD, player);
 		PickUpResult::AddedToGold(removed)
-	} else if player.pack_weight_with_new_object(LEVEL_OBJECTS.object(obj_id))
+	} else if player.pack_weight_with_new_object(ground.object(obj_id))
 		>= MAX_PACK_COUNT {
 		message("pack too full", 1);
 		PickUpResult::PackTooFull
 	} else {
 		level.dungeon[row as usize][col as usize].clear_object();
-		let removed_obj = take_from_pack(obj_id, &mut LEVEL_OBJECTS).expect("removed object");
+		let removed_obj = take_from_pack(obj_id, ground).expect("removed object");
 		let added_id = player.combine_or_add_item_to_pack(removed_obj);
 		let added_kind = {
 			let obj = player.object_mut(added_id).expect("picked-up item in player's pack");
@@ -74,7 +74,7 @@ impl Object {
 	}
 }
 
-pub unsafe fn drop_0(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn drop_0(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
 	let player_cell = level.dungeon[player.rogue.row as usize][player.rogue.col as usize];
 	if player_cell.has_object() || player_cell.is_stairs() || player_cell.is_trap() {
 		message("there's already something there", 0);
@@ -104,7 +104,7 @@ pub unsafe fn drop_0(mash: &mut MonsterMash, player: &mut Player, level: &mut Le
 					message(CURSE_MESSAGE, 0);
 					return;
 				}
-				mv_aquatars(mash, player, level);
+				mv_aquatars(mash, player, level, ground);
 				unwear(player);
 				print_stats(STAT_ARMOR, player);
 			} else if let Some(hand) = player.ring_hand(obj_id) {
@@ -125,9 +125,9 @@ pub unsafe fn drop_0(mash: &mut MonsterMash, player: &mut Player, level: &mut Le
 				obj
 			};
 			let obj_desc = get_obj_desc(&place_obj, player.settings.fruit.to_string(), &player.notes);
-			place_at(place_obj, player.rogue.row, player.rogue.col, level);
+			place_at(place_obj, player.rogue.row, player.rogue.col, level, ground);
 			message(&format!("dropped {}", obj_desc), 0);
-			reg_move(mash, player, level);
+			reg_move(mash, player, level, ground);
 		}
 	}
 }
@@ -202,12 +202,12 @@ pub unsafe fn pack_letter(prompt: &str, filter: PackFilter, player: &Player) -> 
 	}
 }
 
-pub unsafe fn take_off(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn take_off(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	if let Some(armor_id) = player.armor_id() {
 		if player.pack().check_object(armor_id, Object::is_cursed) {
 			message(CURSE_MESSAGE, 0);
 		} else {
-			mv_aquatars(mash, player, level);
+			mv_aquatars(mash, player, level, ground);
 			if let Some(armor) = unwear(player) {
 				let armor_id = armor.id();
 				let obj_desc = player.get_obj_desc(armor_id);
@@ -215,14 +215,14 @@ pub unsafe fn take_off(mash: &mut MonsterMash, player: &mut Player, level: &mut 
 				message(&msg, 0);
 			}
 			print_stats(STAT_ARMOR, player);
-			reg_move(mash, player, level);
+			reg_move(mash, player, level, ground);
 		}
 	} else {
 		message("not wearing any", 0);
 	}
 }
 
-pub unsafe fn wear(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn wear(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	if player.armor_id().is_some() {
 		message("your already wearing some", 0);
 		return;
@@ -247,7 +247,7 @@ pub unsafe fn wear(mash: &mut MonsterMash, player: &mut Player, level: &mut Leve
 			message(&format!("wearing {}", obj_desc), 0);
 			do_wear(obj_id, player);
 			print_stats(STAT_ARMOR, player);
-			reg_move(mash, player, level);
+			reg_move(mash, player, level, ground);
 		}
 	};
 }
@@ -264,7 +264,7 @@ pub fn unwear(player: &mut Player) -> Option<&Object> {
 }
 
 
-pub unsafe fn wield(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn wield(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	if player.wields_cursed_weapon() {
 		message(CURSE_MESSAGE, 0);
 		return;
@@ -293,7 +293,7 @@ pub unsafe fn wield(mash: &mut MonsterMash, player: &mut Player, level: &mut Lev
 				player.unwield_weapon();
 				message(&format!("wielding {}", obj_desc), 0);
 				do_wield(obj_id, player);
-				reg_move(mash, player, level);
+				reg_move(mash, player, level, ground);
 			}
 		}
 	}
@@ -426,14 +426,14 @@ pub unsafe fn has_amulet(player: &Player) -> bool {
 	mask_pack(&player.rogue.pack, Amulets)
 }
 
-pub unsafe fn kick_into_pack(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn kick_into_pack(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
 	if !level.dungeon[player.rogue.row as usize][player.rogue.col as usize].has_object() {
 		message("nothing here", 0);
 	} else {
 		let settings = player.settings.clone();
-		match pick_up(player.rogue.row, player.rogue.col, player, level) {
+		match pick_up(player.rogue.row, player.rogue.col, player, level, ground) {
 			PickUpResult::TurnedToDust => {
-				reg_move(mash, player, level);
+				reg_move(mash, player, level, ground);
 			}
 			PickUpResult::AddedToGold(obj) => {
 				let msg = get_obj_desc(&obj, settings.fruit.to_string(), &player.notes);

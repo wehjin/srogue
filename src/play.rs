@@ -70,46 +70,46 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 				Instructions();
 			}
 			'.' => {
-				rest(if count > 0 { count } else { 1 } as c_int, &mut game.mash, &mut game.player, &mut game.level);
+				rest(if count > 0 { count } else { 1 } as c_int, &mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			's' => {
-				search(if count > 0 { count } else { 1 } as usize, false, &mut game.mash, &mut game.player, &mut game.level);
+				search(if count > 0 { count } else { 1 } as usize, false, &mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'i' => {
 				inventory(AllObjects, &game.player);
 			}
 			'f' => {
-				fight(false, &mut game.mash, &mut game.player, &mut game.level);
+				fight(false, &mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'F' => {
-				fight(true, &mut game.mash, &mut game.player, &mut game.level);
+				fight(true, &mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'h' | 'j' | 'k' | 'l' | 'y' | 'u' | 'n' | 'b' => {
-				one_move_rogue(ch, true, &mut game.mash, &mut game.player, &mut game.level);
+				one_move_rogue(ch, true, &mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'H' | 'J' | 'K' | 'L' | 'B' | 'Y' | 'U' | 'N' | '\x08' | '\x0a' | '\x0b' | '\x0c' | '\x19' | '\x15' | '\x0e' | '\x02' => {
-				multiple_move_rogue(ch as i64, &mut game.mash, &mut game.player, &mut game.level);
+				multiple_move_rogue(ch as i64, &mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'e' => {
-				eat(&mut game.mash, &mut game.player, &mut game.level);
+				eat(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'q' => {
-				quaff(&mut game.mash, &mut game.player, &mut game.level);
+				quaff(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'r' => {
-				read_scroll(&mut game.mash, &mut game.player, &mut game.level);
+				read_scroll(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'm' => {
-				move_onto(&mut game.mash, &mut game.player, &mut game.level);
+				move_onto(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'd' => {
-				drop_0(&mut game.mash, &mut game.player, &mut game.level);
+				drop_0(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'P' => {
-				put_on_ring(&mut game.mash, &mut game.player, &mut game.level);
+				put_on_ring(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'R' => {
-				remove_ring(&mut game.mash, &mut game.player, &mut game.level);
+				remove_ring(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'\x10' => {
 				remessage();
@@ -148,22 +148,22 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 				single_inv(None, &mut game.player);
 			}
 			'T' => {
-				take_off(&mut game.mash, &mut game.player, &mut game.level);
+				take_off(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'W' => {
-				wear(&mut game.mash, &mut game.player, &mut game.level);
+				wear(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'w' => {
-				wield(&mut game.mash, &mut game.player, &mut game.level);
+				wield(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'c' => {
 				call_it(&mut game.player);
 			}
 			'z' => {
-				zapp(&mut game.mash, &mut game.player, &mut game.level);
+				zapp(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			't' => {
-				throw(&mut game.mash, &mut game.player, &mut game.level);
+				throw(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			'v' => {
 				message("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims", 0);
@@ -214,7 +214,7 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 			}
 			'\x0f' => {
 				if wizard {
-					show_objects(&mut game.mash, &game.player, &game.level);
+					show_objects(&mut game.mash, &game.player, &game.level, &mut game.ground);
 				} else {
 					message(UNKNOWN_COMMAND, 0);
 				}
@@ -242,7 +242,7 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 				}
 			}
 			',' => {
-				kick_into_pack(&mut game.mash, &mut game.player, &mut game.level);
+				kick_into_pack(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground);
 			}
 			_ => {
 				message(UNKNOWN_COMMAND, 0);

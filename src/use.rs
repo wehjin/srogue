@@ -6,7 +6,7 @@ use crate::level::{add_exp, Level, put_player};
 use crate::machdep::md_sleep;
 use crate::message::{CANCEL, check_message, hunger_str, message, print_stats};
 use crate::monster::{aggravate, create_monster, gr_obj_char, MonsterMash, mv_mons, show_monsters};
-use crate::objects::{LEVEL_OBJECTS, ObjectId};
+use crate::objects::{ObjectId, ObjectPack};
 use crate::objects::NoteStatus::Identified;
 use crate::pack::{pack_letter, take_from_pack, unwear, unwield};
 use crate::player::{Player, RoomMark};
@@ -26,7 +26,7 @@ use crate::trap::is_off_screen;
 
 pub const STRANGE_FEELING: &'static str = "you have a strange feeling for a moment, then it passes";
 
-pub unsafe fn quaff(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn quaff(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	let ch = pack_letter("quaff what?", Potions, player);
 	if ch == CANCEL {
 		return;
@@ -43,17 +43,17 @@ pub unsafe fn quaff(mash: &mut MonsterMash, player: &mut Player, level: &mut Lev
 					return;
 				}
 				Some(potion_kind) => {
-					quaff_potion(potion_kind, mash, player, level);
+					quaff_potion(potion_kind, mash, player, level, ground);
 					print_stats(STAT_STRENGTH | STAT_HP, player);
 					player.notes.identify_if_un_called(Potion, potion_kind.to_index());
-					vanish(obj_id, true, mash, player, level);
+					vanish(obj_id, true, mash, player, level, ground);
 				}
 			}
 		}
 	}
 }
 
-pub unsafe fn read_scroll(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn read_scroll(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	if player.blind.is_active() {
 		message("You can't see to read the scroll.", 0);
 		return;
@@ -124,7 +124,7 @@ pub unsafe fn read_scroll(mash: &mut MonsterMash, player: &mut Player, level: &m
 						}
 						ScrollKind::Sleep => {
 							message("you fall asleep", 0);
-							take_a_nap(mash, player, level);
+							take_a_nap(mash, player, level, ground);
 						}
 						ScrollKind::ProtectArmor => {
 							if let Some(armor) = player.armor_mut() {
@@ -156,14 +156,14 @@ pub unsafe fn read_scroll(mash: &mut MonsterMash, player: &mut Player, level: &m
 						}
 					}
 					player.notes.identify_if_un_called(Scroll, scroll_kind.to_index());
-					vanish(obj_id, scroll_kind != ScrollKind::Sleep, mash, player, level);
+					vanish(obj_id, scroll_kind != ScrollKind::Sleep, mash, player, level, ground);
 				}
 			}
 		}
 	}
 }
 
-pub unsafe fn vanish(obj_id: ObjectId, do_regular_move: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn vanish(obj_id: ObjectId, do_regular_move: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	/* vanish() does NOT handle a quiver of weapons with more than one
 	   arrow (or whatever) in the quiver.  It will only decrement the count.
 	*/
@@ -181,7 +181,7 @@ pub unsafe fn vanish(obj_id: ObjectId, do_regular_move: bool, mash: &mut Monster
 		take_from_pack(obj_id, &mut player.rogue.pack);
 	}
 	if do_regular_move {
-		reg_move(mash, player, level);
+		reg_move(mash, player, level, ground);
 	}
 }
 
@@ -217,7 +217,7 @@ unsafe fn idntfy(player: &mut Player) {
 }
 
 
-pub unsafe fn eat(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn eat(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	let ch = pack_letter("eat what?", Foods, player);
 	if ch == CANCEL {
 		return;
@@ -250,7 +250,7 @@ pub unsafe fn eat(mash: &mut MonsterMash, player: &mut Player, level: &mut Level
 			player.rogue.moves_left += moves;
 			hunger_str.clear();
 			print_stats(STAT_HUNGER, player);
-			vanish(obj_id, true, mash, player, level);
+			vanish(obj_id, true, mash, player, level, ground);
 		}
 	}
 }
@@ -292,12 +292,12 @@ pub unsafe fn tele(mash: &mut MonsterMash, player: &mut Player, level: &mut Leve
 	level.bear_trap = 0;
 }
 
-pub unsafe fn hallucinate_on_screen(mash: &mut MonsterMash, player: &Player) {
+pub unsafe fn hallucinate_on_screen(mash: &mut MonsterMash, player: &Player, ground: &ObjectPack) {
 	if player.blind.is_active() {
 		return;
 	}
 
-	for obj in LEVEL_OBJECTS.objects() {
+	for obj in ground.objects() {
 		let ch = mvinch(obj.row as i32, obj.col as i32);
 		let row = obj.row;
 		let col = obj.col;
@@ -332,12 +332,12 @@ pub unsafe fn unhallucinate(mash: &mut MonsterMash, player: &mut Player, level: 
 	message("everything looks SO boring now", 1);
 }
 
-pub unsafe fn unblind(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn unblind(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	player.blind.clear();
 	message("the veil of darkness lifts", 1);
 	relight(mash, player, level);
 	if player.halluc.is_active() {
-		hallucinate_on_screen(mash, player);
+		hallucinate_on_screen(mash, player, ground);
 	}
 	if level.detect_monster {
 		show_monsters(mash, player, level);
@@ -357,12 +357,12 @@ pub unsafe fn relight(mash: &mut MonsterMash, player: &Player, level: &mut Level
 	mvaddch(player.rogue.row as i32, player.rogue.col as i32, chtype::from(player.rogue.fchar));
 }
 
-pub unsafe fn take_a_nap(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn take_a_nap(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	let mut i = get_rand(2, 5);
 	md_sleep(1);
 	while i > 0 {
 		i -= 1;
-		mv_mons(mash, player, level);
+		mv_mons(mash, player, level, ground);
 	}
 	md_sleep(1);
 	message(YOU_CAN_MOVE_AGAIN, 0);

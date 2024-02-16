@@ -3,13 +3,13 @@ use ncurses::{chtype, mvaddch};
 use crate::level::{add_exp, Level, LEVEL_POINTS};
 use crate::message::message;
 use crate::monster::{MonsterMash, show_monsters};
-use crate::objects::{LEVEL_OBJECTS, show_objects};
+use crate::objects::{ObjectPack, show_objects};
 use crate::player::{Player, RoomMark};
 use crate::potions::kind::PotionKind;
 use crate::r#use::STRANGE_FEELING;
 use crate::random::get_rand;
 
-pub unsafe fn quaff_potion(potion_kind: PotionKind, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn quaff_potion(potion_kind: PotionKind, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	match potion_kind {
 		PotionKind::IncreaseStrength => {
 			message("you feel stronger now, what bulging muscles!", 0);
@@ -24,11 +24,11 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, mash: &mut MonsterMash, play
 		}
 		PotionKind::Healing => {
 			message("you begin to feel better", 0);
-			potion_heal(false, mash, player, level);
+			potion_heal(false, mash, player, level, ground);
 		}
 		PotionKind::ExtraHealing => {
 			message("you begin to feel much better", 0);
-			potion_heal(true, mash, player, level);
+			potion_heal(true, mash, player, level, ground);
 		}
 		PotionKind::Poison => {
 			if !player.ring_effects.has_sustain_strength() {
@@ -65,11 +65,11 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, mash: &mut MonsterMash, play
 			}
 		}
 		PotionKind::DetectObjects => {
-			if LEVEL_OBJECTS.is_empty() {
+			if ground.is_empty() {
 				message(STRANGE_FEELING, 0);
 			} else {
 				if player.blind.is_inactive() {
-					show_objects(mash, player, level);
+					show_objects(mash, player, level, ground);
 				}
 			}
 		}
@@ -96,7 +96,7 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, mash: &mut MonsterMash, play
 		PotionKind::SeeInvisible => {
 			message(&format!("hmm, this potion tastes like {} juice", player.settings.fruit.trim()), 0);
 			if player.blind.is_active() {
-				crate::r#use::unblind(mash, player, level);
+				crate::r#use::unblind(mash, player, level, ground);
 			}
 			level.see_invisible = true;
 			crate::r#use::relight(mash, player, level);
@@ -104,7 +104,7 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, mash: &mut MonsterMash, play
 	}
 }
 
-unsafe fn potion_heal(extra: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+unsafe fn potion_heal(extra: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	player.rogue.hp_current += player.rogue.exp;
 
 	let mut ratio = player.rogue.hp_current as f32 / player.rogue.hp_max as f32;
@@ -129,7 +129,7 @@ unsafe fn potion_heal(extra: bool, mash: &mut MonsterMash, player: &mut Player, 
 		player.rogue.hp_current = player.rogue.hp_current.min(player.rogue.hp_max);
 	}
 	if player.blind.is_active() {
-		crate::r#use::unblind(mash, player, level);
+		crate::r#use::unblind(mash, player, level, ground);
 	}
 	if player.confused.is_active() {
 		if extra {

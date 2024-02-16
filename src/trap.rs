@@ -10,6 +10,7 @@ use crate::level::{CellFixture, Level};
 use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
 use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
 use crate::monster::MonsterMash;
+use crate::objects::ObjectPack;
 use crate::play::interrupted;
 use crate::player::Player;
 use crate::prelude::*;
@@ -107,7 +108,7 @@ pub unsafe fn trap_at(row: usize, col: usize, level: &Level) -> TrapKind {
 	return NoTrap;
 }
 
-pub unsafe fn trap_player(row: usize, col: usize, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn trap_player(row: usize, col: usize, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	let t = trap_at(row, col, level);
 	if t == NoTrap {
 		return;
@@ -148,7 +149,7 @@ pub unsafe fn trap_player(row: usize, col: usize, mash: &mut MonsterMash, player
 		}
 		SleepingGasTrap => {
 			message(trap_message(t), 1);
-			take_a_nap(mash, player, level);
+			take_a_nap(mash, player, level, ground);
 		}
 		RustTrap => {
 			message(trap_message(t), 1);
@@ -251,7 +252,7 @@ pub unsafe fn show_traps(level: &Level) {
 	}
 }
 
-pub unsafe fn search(n: usize, is_auto: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn search(n: usize, is_auto: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	static mut reg_search: bool = false;
 
 	let mut found = 0;
@@ -297,7 +298,7 @@ pub unsafe fn search(n: usize, is_auto: bool, mash: &mut MonsterMash, player: &m
 		if !is_auto {
 			reg_search = !reg_search;
 			if reg_search {
-				reg_move(mash, player, level);
+				reg_move(mash, player, level, ground);
 			}
 		}
 	}

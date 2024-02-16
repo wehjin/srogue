@@ -11,13 +11,13 @@ use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
 use crate::message::{CANCEL, check_message, hunger_str, message, print_stats, rgetchar, sound_bell};
 use crate::monster::{MonsterMash, mv_mons, put_wanderer, wake_room};
-use crate::objects::LEVEL_OBJECTS;
+use crate::objects::ObjectPack;
 use crate::odds::R_TELE_PERCENT;
 use crate::pack::{pick_up, PickUpResult};
 use crate::play::interrupted;
 use crate::player::{Player, RoomMark};
-use crate::prelude::*;
 use crate::prelude::ending::Ending;
+use crate::prelude::MIN_ROW;
 use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
 use crate::r#use::{hallucinate_on_screen, tele, unblind, unconfuse, unhallucinate};
@@ -38,7 +38,14 @@ pub enum MoveResult {
 }
 
 
-pub unsafe fn one_move_rogue(dirch: char, pickup: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) -> MoveResult {
+pub unsafe fn one_move_rogue(
+	dirch: char,
+	pickup: bool,
+	mash: &mut MonsterMash,
+	player: &mut Player,
+	level: &mut Level,
+	ground: &mut ObjectPack,
+) -> MoveResult {
 	let dirch = if player.confused.is_active() {
 		Move::random8().to_char()
 	} else {
@@ -56,7 +63,7 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, mash: &mut MonsterMash, 
 				message("you are being held", 1);
 			} else {
 				message("you are still stuck in the bear trap", 0);
-				reg_move(mash, player, level);
+				reg_move(mash, player, level, ground);
 			}
 			return MoveFailed;
 		}
@@ -67,8 +74,8 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, mash: &mut MonsterMash, 
 	}
 	if level.dungeon[row as usize][col as usize].has_monster() {
 		let mon_id = mash.monster_id_at_spot(row, col).expect("monster in mash at monster spot one_move_rogue");
-		rogue_hit(mon_id, false, mash, player, level);
-		reg_move(mash, player, level);
+		rogue_hit(mon_id, false, mash, player, level, ground);
+		reg_move(mash, player, level, ground);
 		return MoveFailed;
 	}
 
@@ -112,55 +119,55 @@ pub unsafe fn one_move_rogue(dirch: char, pickup: bool, mash: &mut MonsterMash, 
 	let player_cell = level.dungeon[row as usize][col as usize];
 	if player_cell.has_object() {
 		if !pickup {
-			stopped_on_something_with_moved_onto_message(row, col, mash, player, level)
+			stopped_on_something_with_moved_onto_message(row, col, mash, player, level, ground)
 		} else {
 			if player.levitate.is_active() {
 				StoppedOnSomething
 			} else {
-				match pick_up(row, col, player, level) {
+				match pick_up(row, col, player, level, ground) {
 					PickUpResult::TurnedToDust => {
-						moved_unless_hungry_or_confused(mash, player, level)
+						moved_unless_hungry_or_confused(mash, player, level, ground)
 					}
 					PickUpResult::AddedToGold(obj) => {
 						let msg = get_obj_desc(&obj, player.settings.fruit.to_string(), &player.notes);
-						stopped_on_something_with_message(&msg, mash, player, level)
+						stopped_on_something_with_message(&msg, mash, player, level, ground)
 					}
 					PickUpResult::AddedToPack { added_id, .. } => {
 						let msg = player.get_obj_desc(added_id);
-						stopped_on_something_with_message(&msg, mash, player, level)
+						stopped_on_something_with_message(&msg, mash, player, level, ground)
 					}
 					PickUpResult::PackTooFull => {
-						stopped_on_something_with_moved_onto_message(row, col, mash, player, level)
+						stopped_on_something_with_moved_onto_message(row, col, mash, player, level, ground)
 					}
 				}
 			}
 		}
 	} else if player_cell.is_door() || player_cell.is_stairs() || player_cell.is_trap() {
 		if player.levitate.is_inactive() && player_cell.is_trap() {
-			trap_player(row as usize, col as usize, mash, player, level);
+			trap_player(row as usize, col as usize, mash, player, level, ground);
 		}
-		reg_move(mash, player, level);
+		reg_move(mash, player, level, ground);
 		StoppedOnSomething
 	} else {
-		moved_unless_hungry_or_confused(mash, player, level)
+		moved_unless_hungry_or_confused(mash, player, level, ground)
 	}
 }
 
-unsafe fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) -> MoveResult {
-	let obj = LEVEL_OBJECTS.find_object_at(row, col).expect("moved-on object");
+unsafe fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> MoveResult {
+	let obj = ground.find_object_at(row, col).expect("moved-on object");
 	let obj_desc = get_obj_desc(obj, player.settings.fruit.to_string(), &player.notes);
 	let desc = format!("moved onto {}", obj_desc);
-	return stopped_on_something_with_message(&desc, mash, player, level);
+	return stopped_on_something_with_message(&desc, mash, player, level, ground);
 }
 
-unsafe fn stopped_on_something_with_message(desc: &str, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) -> MoveResult {
+unsafe fn stopped_on_something_with_message(desc: &str, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> MoveResult {
 	message(desc, 1);
-	reg_move(mash, player, level);
+	reg_move(mash, player, level, ground);
 	return StoppedOnSomething;
 }
 
-unsafe fn moved_unless_hungry_or_confused(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) -> MoveResult {
-	if reg_move(mash, player, level) {
+unsafe fn moved_unless_hungry_or_confused(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> MoveResult {
+	if reg_move(mash, player, level, ground) {
 		/* fainted from hunger */
 		StoppedOnSomething
 	} else {
@@ -181,13 +188,13 @@ const NAK: char = '\x15';
 const SO: char = '\x0e';
 const STX: char = '\x02';
 
-pub unsafe fn multiple_move_rogue(dirch: i64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn multiple_move_rogue(dirch: i64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
 	let dirch = dirch as u8 as char;
 	match dirch {
 		BS | LF | VT | FF | EM | NAK | SO | STX => loop {
 			let row = player.rogue.row;
 			let col = player.rogue.col;
-			let m = one_move_rogue((dirch as u8 + 96) as char, true, mash, player, level);
+			let m = one_move_rogue((dirch as u8 + 96) as char, true, mash, player, level, ground);
 			if m == MoveFailed || m == StoppedOnSomething || interrupted {
 				break;
 			}
@@ -200,7 +207,7 @@ pub unsafe fn multiple_move_rogue(dirch: i64, mash: &mut MonsterMash, player: &m
 				if interrupted {
 					break;
 				}
-				let one_move_result = one_move_rogue((dirch as u8 + 32) as char, true, mash, player, level);
+				let one_move_result = one_move_rogue((dirch as u8 + 32) as char, true, mash, player, level, ground);
 				if one_move_result != Moved {
 					break;
 				}
@@ -301,11 +308,11 @@ pub fn can_move(row1: i64, col1: i64, row2: i64, col2: i64, level: &Level) -> bo
 	}
 }
 
-pub unsafe fn move_onto(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn move_onto(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
 	let ch = get_dir_or_cancel();
 	check_message();
 	if ch != CANCEL {
-		one_move_rogue(ch, false, mash, player, level);
+		one_move_rogue(ch, false, mash, player, level, ground);
 	}
 }
 
@@ -332,7 +339,7 @@ pub unsafe fn is_direction(c: char) -> bool {
 		|| c == CANCEL
 }
 
-pub unsafe fn check_hunger(messages_only: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) -> bool {
+pub unsafe fn check_hunger(messages_only: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> bool {
 	if player.rogue.moves_left == HUNGRY {
 		hunger_str = "hungry".to_string();
 		message(&hunger_str, 0);
@@ -360,7 +367,7 @@ pub unsafe fn check_hunger(messages_only: bool, mash: &mut MonsterMash, player: 
 			message("you faint", 1);
 			for _ in 0..n {
 				if coin_toss() {
-					mv_mons(mash, player, level);
+					mv_mons(mash, player, level, ground);
 				}
 			}
 			message(YOU_CAN_MOVE_AGAIN, 1);
@@ -382,12 +389,12 @@ pub unsafe fn check_hunger(messages_only: bool, mash: &mut MonsterMash, player: 
 		}
 		1 => {
 			player.rogue.moves_left -= 1;
-			check_hunger(true, mash, player, level);
+			check_hunger(true, mash, player, level, ground);
 			player.rogue.moves_left -= player.rogue.moves_left % 2;
 		}
 		2 => {
 			player.rogue.moves_left -= 1;
-			check_hunger(true, mash, player, level);
+			check_hunger(true, mash, player, level, ground);
 			player.rogue.moves_left -= 1;
 		}
 		_ => {
@@ -397,13 +404,13 @@ pub unsafe fn check_hunger(messages_only: bool, mash: &mut MonsterMash, player: 
 	return fainted;
 }
 
-pub unsafe fn reg_move(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) -> bool {
+pub unsafe fn reg_move(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> bool {
 	let fainted = if player.rogue.moves_left <= HUNGRY || player.cur_depth >= player.max_depth {
-		check_hunger(false, mash, player, level)
+		check_hunger(false, mash, player, level, ground)
 	} else {
 		false
 	};
-	mv_mons(mash, player, level);
+	mv_mons(mash, player, level, ground);
 	m_moves += 1;
 	if m_moves >= 120 {
 		m_moves = 0;
@@ -412,7 +419,7 @@ pub unsafe fn reg_move(mash: &mut MonsterMash, player: &mut Player, level: &mut 
 	if player.halluc.is_active() {
 		player.halluc.decr();
 		if player.halluc.is_active() {
-			hallucinate_on_screen(mash, player);
+			hallucinate_on_screen(mash, player, ground);
 		} else {
 			unhallucinate(mash, player, level);
 		}
@@ -420,7 +427,7 @@ pub unsafe fn reg_move(mash: &mut MonsterMash, player: &mut Player, level: &mut 
 	if player.blind.is_active() {
 		player.blind.decr();
 		if player.blind.is_inactive() {
-			unblind(mash, player, level);
+			unblind(mash, player, level, ground);
 		}
 	}
 	if player.confused.is_active() {
@@ -437,7 +444,7 @@ pub unsafe fn reg_move(mash: &mut MonsterMash, player: &mut Player, level: &mut 
 		if player.levitate.is_inactive() {
 			message("you float gently to the ground", 1);
 			if level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_trap() {
-				trap_player(player.rogue.row as usize, player.rogue.col as usize, mash, player, level);
+				trap_player(player.rogue.row as usize, player.rogue.col as usize, mash, player, level, ground);
 			}
 		}
 	}
@@ -451,18 +458,18 @@ pub unsafe fn reg_move(mash: &mut MonsterMash, player: &mut Player, level: &mut 
 
 	let auto_search = player.ring_effects.auto_search();
 	if auto_search > 0 {
-		search(auto_search as usize, auto_search > 0, mash, player, level);
+		search(auto_search as usize, auto_search > 0, mash, player, level, ground);
 	}
 	return fainted;
 }
 
-pub unsafe fn rest(count: libc::c_int, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn rest(count: libc::c_int, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	interrupted = false;
 	for _i in 0..count {
 		if interrupted {
 			break;
 		}
-		reg_move(mash, player, level);
+		reg_move(mash, player, level, ground);
 	}
 }
 

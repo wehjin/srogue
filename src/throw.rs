@@ -8,7 +8,7 @@ use crate::hit::{get_dir_rc, get_hit_chance, get_weapon_damage, HIT_MESSAGE, mon
 use crate::level::{DungeonCell, Level};
 use crate::message::{CANCEL, check_message, message, print_stats};
 use crate::monster::{MonsterMash, mv_aquatars};
-use crate::objects::{Object, ObjectId, place_at};
+use crate::objects::{Object, ObjectId, ObjectPack, place_at};
 use crate::pack::{CURSE_MESSAGE, pack_letter, unwear, unwield};
 use crate::player::Player;
 use crate::prelude::*;
@@ -28,7 +28,7 @@ use crate::weapons::constants::ARROW;
 use crate::weapons::kind::WeaponKind;
 use crate::zap::zap_monster;
 
-pub unsafe fn throw(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn throw(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
 	let dir = get_dir_or_cancel();
 	check_message();
 	if dir == CANCEL {
@@ -52,7 +52,7 @@ pub unsafe fn throw(mash: &mut MonsterMash, player: &mut Player, level: &mut Lev
 			if player.check_object(obj_id, |it| it.is_being_wielded() && it.quantity <= 1) {
 				unwield(player);
 			} else if player.check_object(obj_id, |it| it.is_being_worn()) {
-				mv_aquatars(mash, player, level);
+				mv_aquatars(mash, player, level, ground);
 				unwear(player);
 				print_stats(STAT_ARMOR, player);
 			} else if let Some(hand) = player.ring_hand(obj_id) {
@@ -83,18 +83,18 @@ pub unsafe fn throw(mash: &mut MonsterMash, player: &mut Player, level: &mut Lev
 					monster.wake_up();
 					clear_gold_seeker(monster);
 				}
-				if !throw_at_monster(mon_id, obj_id, mash, player, level) {
-					flop_weapon(obj_id, spot.row, spot.col, mash, player, level);
+				if !throw_at_monster(mon_id, obj_id, mash, player, level, ground) {
+					flop_weapon(obj_id, spot.row, spot.col, mash, player, level, ground);
 				}
 			} else {
-				flop_weapon(obj_id, spot.row, spot.col, mash, player, level);
+				flop_weapon(obj_id, spot.row, spot.col, mash, player, level, ground);
 			}
-			vanish(obj_id, true, mash, player, level);
+			vanish(obj_id, true, mash, player, level, ground);
 		}
 	}
 }
 
-unsafe fn throw_at_monster(mon_id: u64, obj_id: ObjectId, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) -> bool {
+unsafe fn throw_at_monster(mon_id: u64, obj_id: ObjectId, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) -> bool {
 	let hit_chance = {
 		let player_exp = player.buffed_exp();
 		let player_debuf = player.debuf_exp();
@@ -117,7 +117,7 @@ unsafe fn throw_at_monster(mon_id: u64, obj_id: ObjectId, mash: &mut MonsterMash
 
 	HIT_MESSAGE += " hit  ";
 	if player.object_what(obj_id) == Wand && rand_percent(75) {
-		zap_monster(mon_id, player.object_kind(obj_id), mash, player, level);
+		zap_monster(mon_id, player.object_kind(obj_id), mash, player, level, ground);
 	} else {
 		let player_str = player.buffed_strength();
 		let player_exp = player.buffed_exp();
@@ -132,7 +132,7 @@ unsafe fn throw_at_monster(mon_id: u64, obj_id: ObjectId, mash: &mut MonsterMash
 			}
 			damage
 		};
-		mon_damage(mon_id, damage, mash, player, level);
+		mon_damage(mon_id, damage, mash, player, level, ground);
 	}
 	return true;
 }
@@ -180,7 +180,7 @@ pub unsafe fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i
 	return None;
 }
 
-unsafe fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &mut Level) {
+unsafe fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &mut Level, ground: &mut ObjectPack) {
 	let mut found = false;
 	let mut walk = RandomWalk::new(row, col);
 	fn good_cell(cell: DungeonCell) -> bool {
@@ -208,7 +208,7 @@ unsafe fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, mash: &mut MonsterMa
 		new_obj.in_use_flags = NOT_USED;
 		new_obj.quantity = 1;
 		new_obj.ichar = 'L';
-		place_at(new_obj, row, col, level);
+		place_at(new_obj, row, col, level, ground);
 		if player.can_see(row, col, level) && !player.is_at(row, col) {
 			let was_monster = level.dungeon[row as usize][col as usize].has_monster();
 			level.dungeon[row as usize][col as usize].set_monster(false);

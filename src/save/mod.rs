@@ -117,6 +117,7 @@ pub unsafe fn restore(file_path: &str, game: &mut GameState) -> bool {
 		}
 	}
 	save_data.write_to_statics();
+	game.ground = save_data.ground;
 	game.mash = save_data.mash;
 	game.player = save_data.player;
 	game.level = save_data.level;

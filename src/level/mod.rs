@@ -13,7 +13,7 @@ use crate::level::constants::{DCOLS, DROWS, MAX_ROOM, MAX_TRAP};
 use crate::level::UpResult::UpLevel;
 use crate::message::{message, print_stats};
 use crate::monster::{MonsterMash, wake_room};
-use crate::objects::put_amulet;
+use crate::objects::{ObjectPack, put_amulet};
 use crate::pack::has_amulet;
 use crate::player::{Player, RoomMark};
 use crate::player::constants::INIT_HP;
@@ -128,7 +128,7 @@ impl Level {
 	}
 }
 
-pub unsafe fn make_level(player: &Player, level: &mut Level) {
+pub unsafe fn make_level(player: &Player, level: &mut Level, ground: &mut ObjectPack) {
 	let (must_exist1, must_exist2, must_exist3) = match get_rand(0, 5) {
 		0 => (0, 1, 2),
 		1 => (3, 4, 5),
@@ -178,7 +178,7 @@ pub unsafe fn make_level(player: &Player, level: &mut Level) {
 			fill_out_level(level, player.cur_depth);
 		}
 		if !has_amulet(player) && player.cur_depth >= AMULET_LEVEL {
-			put_amulet(player, level);
+			put_amulet(player, level, ground);
 		}
 	}
 }
@@ -260,7 +260,8 @@ impl GameState {
 		self.level.clear();
 		self.player.reset_spot();
 		self.player.cleaned_up = None;
-		self.mash.clear()
+		self.mash.clear();
+		self.ground.clear();
 	}
 }
 

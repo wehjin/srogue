@@ -7,7 +7,7 @@ use crate::inventory::get_obj_desc;
 use crate::level::Level;
 use crate::message::{CANCEL, check_message, message, print_stats, rgetchar};
 use crate::monster::MonsterMash;
-use crate::objects::{Object, ObjectId};
+use crate::objects::{Object, ObjectId, ObjectPack};
 use crate::pack::{CURSE_MESSAGE, pack_letter};
 use crate::player::Player;
 use crate::player::rings::HandUsage;
@@ -24,7 +24,7 @@ pub(crate) mod constants;
 pub(crate) mod ring_kind;
 pub(crate) mod ring_gem;
 
-pub unsafe fn put_on_ring(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn put_on_ring(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	if player.hand_usage() == HandUsage::Both {
 		message("wearing two rings already", 0);
 		return;
@@ -72,7 +72,7 @@ pub unsafe fn put_on_ring(mash: &mut MonsterMash, player: &mut Player, level: &m
 				let msg = player.get_obj_desc(ring_id);
 				message(&msg, 0);
 			}
-			reg_move(mash, player, level);
+			reg_move(mash, player, level, ground);
 		}
 	}
 }
@@ -98,7 +98,7 @@ unsafe fn ask_left_or_right() -> char {
 	ch
 }
 
-pub unsafe fn remove_ring(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn remove_ring(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {
 	let hand = match player.hand_usage() {
 		HandUsage::None => {
 			inv_rings(player);
@@ -130,7 +130,7 @@ pub unsafe fn remove_ring(mash: &mut MonsterMash, player: &mut Player, level: &m
 		let msg = format!("removed {}", removed_desc);
 		message(&msg, 0);
 	}
-	reg_move(mash, player, level);
+	reg_move(mash, player, level, ground);
 }
 
 pub unsafe fn un_put_hand(hand: PlayerHand, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) -> Option<ObjectId> {

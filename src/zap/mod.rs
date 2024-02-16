@@ -8,6 +8,7 @@ use crate::hit::{FIGHT_MONSTER, get_dir_rc, rogue_hit};
 use crate::level::Level;
 use crate::message::{CANCEL, check_message, get_input_line, message};
 use crate::monster::{gmc, gr_monster, Monster, MonsterKind, MonsterMash};
+use crate::objects::ObjectPack;
 use crate::pack::pack_letter;
 use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::Wand;
@@ -24,7 +25,7 @@ pub(crate) mod wand_materials;
 
 pub static mut wizard: bool = false;
 
-pub unsafe fn zapp(mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn zapp(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
 	let dir = get_dir_or_cancel();
 	check_message();
 	if dir == CANCEL {
@@ -56,11 +57,11 @@ pub unsafe fn zapp(mash: &mut MonsterMash, player: &mut Player, level: &mut Leve
 					let monster = mash.monster_mut(mon_id);
 					let obj_kind = player.object_kind(obj_id);
 					monster.wake_up();
-					zap_monster(monster.id(), obj_kind, mash, player, level);
+					zap_monster(monster.id(), obj_kind, mash, player, level, ground);
 					relight(mash, player, level);
 				}
 			}
-			reg_move(mash, player, level);
+			reg_move(mash, player, level, ground);
 		}
 	}
 }
@@ -83,7 +84,7 @@ pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, mash: 
 	}
 }
 
-pub unsafe fn zap_monster(mon_id: u64, which_kind: u16, mash: &mut MonsterMash, player: &mut Player, level: &mut Level) {
+pub unsafe fn zap_monster(mon_id: u64, which_kind: u16, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
 	let monster = mash.monster(mon_id);
 	let row = monster.spot.row;
 	let col = monster.spot.col;
@@ -143,7 +144,7 @@ pub unsafe fn zap_monster(mon_id: u64, which_kind: u16, mash: &mut MonsterMash, 
 			monster.nap_length = get_rand(3, 6);
 		}
 		WandKind::MagicMissile => {
-			rogue_hit(mon_id, true, mash, player, level);
+			rogue_hit(mon_id, true, mash, player, level, ground);
 		}
 		WandKind::Cancellation => {
 			if monster.m_flags.holds {

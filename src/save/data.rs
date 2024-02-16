@@ -8,7 +8,7 @@ use crate::level::Level;
 use crate::machdep::{get_current_time, RogueTime};
 use crate::message::hunger_str;
 use crate::monster::MonsterMash;
-use crate::objects::{foods, LEVEL_OBJECTS, ObjectPack};
+use crate::objects::{foods, ObjectPack};
 use crate::player::Player;
 use crate::r#move::m_moves;
 use crate::zap::wizard;
@@ -24,7 +24,7 @@ pub struct SaveData {
 	pub player: Player,
 	pub hunger_str: String,
 	pub mash: MonsterMash,
-	pub level_objects: ObjectPack,
+	pub ground: ObjectPack,
 	pub file_id: i64,
 	pub foods: i16,
 	pub level: Level,
@@ -39,7 +39,7 @@ impl SaveData {
 			player: game.player.clone(),
 			hunger_str: hunger_str.clone(),
 			mash: game.mash.clone(),
-			level_objects: LEVEL_OBJECTS.clone(),
+			ground: game.ground.clone(),
 			file_id,
 			foods,
 			level: game.level.clone(),
@@ -50,7 +50,6 @@ impl SaveData {
 	}
 	pub unsafe fn write_to_statics(&self) {
 		hunger_str = self.hunger_str.clone();
-		LEVEL_OBJECTS = self.level_objects.clone();
 		foods = self.foods;
 		wizard = self.wizard;
 		m_moves = self.m_moves;
