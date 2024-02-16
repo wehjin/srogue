@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::armors::ArmorKind;
 use crate::components::hunger::HungerLevel;
 use crate::level::{DungeonCell, Level};
+use crate::machdep::md_slurp;
 use crate::monster::Fighter;
 use crate::objects::{Object, ObjectId, ObjectPack};
 use crate::objects::note_tables::NoteTables;
@@ -80,6 +81,7 @@ impl Player {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
+	pub interrupted: bool,
 	pub fight_monster: Option<u64>,
 	pub hunger: HungerLevel,
 	pub foods: isize,
@@ -117,6 +119,10 @@ impl Player {
 }
 
 impl Player {
+	pub fn interrupt_and_slurp(&mut self) {
+		self.interrupted = true;
+		md_slurp();
+	}
 	pub fn is_at(&self, row: i64, col: i64) -> bool {
 		self.rogue.row == row && self.rogue.col == col
 	}
@@ -241,6 +247,7 @@ impl Player {
 	pub fn new(settings: Settings) -> Self {
 		const INIT_HP: isize = 12;
 		Player {
+			interrupted: false,
 			fight_monster: None,
 			hunger: HungerLevel::default(),
 			foods: 0,

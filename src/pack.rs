@@ -50,6 +50,7 @@ pub unsafe fn pick_up(row: i64, col: i64, game: &mut GameState) -> PickUpResult 
 		PickUpResult::AddedToGold(removed)
 	} else if game.player.pack_weight_with_new_object(game.ground.object(obj_id))
 		>= MAX_PACK_COUNT {
+		game.player.interrupt_and_slurp();
 		game.dialog.message("pack too full", 1);
 		PickUpResult::PackTooFull
 	} else {

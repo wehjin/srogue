@@ -331,11 +331,13 @@ pub fn is_monster_char(ch: chtype) -> bool {
 pub unsafe fn unhallucinate(game: &mut GameState) {
 	game.player.halluc.clear();
 	relight(game);
+	game.player.interrupt_and_slurp();
 	game.dialog.message("everything looks SO boring now", 1);
 }
 
 pub unsafe fn unblind(game: &mut GameState) {
 	game.player.blind.clear();
+	game.player.interrupt_and_slurp();
 	game.dialog.message("the veil of darkness lifts", 1);
 	relight(game);
 	if game.player.halluc.is_active() {
@@ -387,6 +389,7 @@ pub unsafe fn unconfuse(game: &mut GameState) {
 	game.player.confused.clear();
 	let feeling = if game.player.halluc.is_active() { "trippy" } else { "confused" };
 	let msg = format!("you feel less {} now", feeling);
+	game.player.interrupt_and_slurp();
 	game.dialog.message(&msg, 1);
 }
 

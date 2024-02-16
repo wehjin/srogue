@@ -10,7 +10,6 @@ use crate::level::constants::{DCOLS, DROWS};
 use crate::message::{CANCEL, print_stats, rgetchar, sound_bell};
 use crate::monster::{mon_name, Monster};
 use crate::objects::{get_armor_class, Object};
-use crate::play::interrupted;
 use crate::player::Player;
 use crate::prelude::{AMULET_LEVEL, MIN_ROW};
 use crate::prelude::ending::Ending;
@@ -46,7 +45,7 @@ pub unsafe fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, game: &mut 
 		hit_chance /= 2;
 	}
 	if game.player.fight_monster.is_none() {
-		interrupted = true;
+		game.player.interrupted = true;
 	}
 
 	if other.is_some() {
@@ -58,6 +57,7 @@ pub unsafe fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, game: &mut 
 	if !rand_percent(hit_chance) {
 		if game.player.fight_monster.is_none() {
 			HIT_MESSAGE = format!("{}the {} misses", HIT_MESSAGE, monster_name);
+			game.player.interrupt_and_slurp();
 			game.dialog.message(&HIT_MESSAGE, 1);
 			HIT_MESSAGE.clear();
 		}
@@ -65,6 +65,7 @@ pub unsafe fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, game: &mut 
 	}
 	if game.player.fight_monster.is_none() {
 		HIT_MESSAGE = format!("{}the {} hit", HIT_MESSAGE, monster_name);
+		game.player.interrupt_and_slurp();
 		game.dialog.message(&HIT_MESSAGE, 1);
 		HIT_MESSAGE.clear();
 	}
@@ -222,6 +223,7 @@ pub unsafe fn mon_damage(mon_id: u64, damage: isize, game: &mut GameState) -> Mo
 			let monster = game.mash.monster(mon_id);
 			let monster_name = mon_name(monster, &game.player, &game.level);
 			HIT_MESSAGE = format!("{}defeated the {}", HIT_MESSAGE, monster_name);
+			game.player.interrupt_and_slurp();
 			game.dialog.message(&HIT_MESSAGE, 1);
 			HIT_MESSAGE.clear();
 		}
@@ -281,7 +283,7 @@ pub unsafe fn fight(to_the_death: bool, game: &mut GameState) {
 	while game.player.fight_monster.is_some() {
 		one_move_rogue(ch, false, game);
 		if (!to_the_death && game.player.rogue.hp_current <= possible_damage)
-			|| interrupted
+			|| game.player.interrupted
 			|| !game.level.dungeon[row as usize][col as usize].has_monster() {
 			game.player.fight_monster = None;
 		} else {

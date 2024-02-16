@@ -14,7 +14,6 @@ use crate::message::{CANCEL, print_stats, rgetchar, sound_bell};
 use crate::monster::{mv_mons, put_wanderer, wake_room};
 use crate::odds::R_TELE_PERCENT;
 use crate::pack::{pick_up, PickUpResult};
-use crate::play::interrupted;
 use crate::player::{Player, RoomMark};
 use crate::prelude::ending::Ending;
 use crate::prelude::MIN_ROW;
@@ -56,6 +55,7 @@ pub unsafe fn one_move_rogue(
 	if game.level.being_held || game.level.bear_trap > 0 {
 		if !game.level.dungeon[row as usize][col as usize].has_monster() {
 			if game.level.being_held {
+				game.player.interrupt_and_slurp();
 				game.dialog.message("you are being held", 1);
 			} else {
 				game.dialog.message("you are still stuck in the bear trap", 0);
@@ -157,6 +157,7 @@ unsafe fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, game:
 }
 
 unsafe fn stopped_on_something_with_message(desc: &str, game: &mut GameState) -> MoveResult {
+	game.player.interrupt_and_slurp();
 	game.dialog.message(desc, 1);
 	reg_move(game);
 	return StoppedOnSomething;
@@ -191,7 +192,7 @@ pub unsafe fn multiple_move_rogue(dirch: i64, game: &mut GameState) {
 			let row = game.player.rogue.row;
 			let col = game.player.rogue.col;
 			let m = one_move_rogue((dirch as u8 + 96) as char, true, game);
-			if m == MoveFailed || m == StoppedOnSomething || interrupted {
+			if m == MoveFailed || m == StoppedOnSomething || game.player.interrupted {
 				break;
 			}
 			if next_to_something(row, col, &game.player, &game.level) {
@@ -200,7 +201,7 @@ pub unsafe fn multiple_move_rogue(dirch: i64, game: &mut GameState) {
 		},
 		'H' | 'J' | 'K' | 'L' | 'B' | 'Y' | 'U' | 'N' => {
 			loop {
-				if interrupted {
+				if game.player.interrupted {
 					break;
 				}
 				let one_move_result = one_move_rogue((dirch as u8 + 32) as char, true, game);
@@ -396,12 +397,14 @@ unsafe fn random_faint(game: &mut GameState) -> bool {
 		if rand_percent(40) {
 			game.player.rogue.moves_left += 1;
 		}
+		game.player.interrupt_and_slurp();
 		game.dialog.message("you faint", 1);
 		for _ in 0..n {
 			if coin_toss() {
 				mv_mons(game);
 			}
 		}
+		game.player.interrupt_and_slurp();
 		game.dialog.message(YOU_CAN_MOVE_AGAIN, 1);
 		true
 	} else {
@@ -450,6 +453,7 @@ pub unsafe fn reg_move(game: &mut GameState) -> bool {
 	if game.player.levitate.is_active() {
 		game.player.levitate.decr();
 		if game.player.levitate.is_inactive() {
+			game.player.interrupt_and_slurp();
 			game.dialog.message("you float gently to the ground", 1);
 			if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_trap() {
 				trap_player(game.player.rogue.row as usize, game.player.rogue.col as usize, game);
@@ -473,9 +477,9 @@ pub unsafe fn reg_move(game: &mut GameState) -> bool {
 }
 
 pub unsafe fn rest(count: libc::c_int, game: &mut GameState) {
-	interrupted = false;
+	game.player.interrupted = false;
 	for _i in 0..count {
-		if interrupted {
+		if game.player.interrupted {
 			break;
 		}
 		reg_move(game);

@@ -30,7 +30,6 @@ use crate::throw::throw;
 use crate::trap::{id_trap, search, show_traps};
 use crate::zap::{wizardize, zapp};
 
-pub static mut interrupted: bool = false;
 
 pub const UNKNOWN_COMMAND: &'static str = "unknown command";
 
@@ -62,8 +61,9 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 			let ch = match deck_ch {
 				Some(deck_ch) => deck_ch,
 				None => {
-					interrupted = false;
+					game.player.interrupted = false;
 					if !HIT_MESSAGE.is_empty() {
+						game.player.interrupt_and_slurp();
 						game.dialog.message(&HIT_MESSAGE, 1);
 						HIT_MESSAGE.clear();
 					}

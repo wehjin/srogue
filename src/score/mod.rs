@@ -109,6 +109,7 @@ pub unsafe fn ask_quit(from_intrpt: bool, game: &mut GameState) -> bool {
 		}
 	}
 	game.dialog.clear_message();
+	game.player.interrupt_and_slurp();
 	game.dialog.message("really quit?", 1);
 	if rgetchar() != 'y' {
 		md_heed_signals();
@@ -355,6 +356,7 @@ pub fn center(row: i64, msg: &str) {
 }
 
 pub unsafe fn score_file_error(game: &mut GameState) {
+	game.player.interrupt_and_slurp();
 	game.dialog.message("", 1);
 	clean_up("sorry, score file is out of order", &mut game.player);
 }

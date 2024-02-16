@@ -1,10 +1,8 @@
 use ncurses::chtype;
 use serde::{Deserialize, Serialize};
 
-use crate::init::{cant_int, did_int, onintr, };
-use crate::machdep::md_slurp;
+use crate::init::{cant_int, did_int, onintr};
 use crate::pack::wait_for_ack;
-use crate::play::interrupted;
 use crate::prelude::MIN_ROW;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -35,10 +33,6 @@ impl PlayerDialog {
 		// if !save_is_interactive {
 		// 	return;
 		// }
-		if intrpt != 0 {
-			interrupted = true;
-			md_slurp();
-		}
 		cant_int = true;
 		if !self.msg_cleared {
 			ncurses::mvaddstr((MIN_ROW - 1) as i32, self.msg_written.len() as i32, MORE);

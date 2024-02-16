@@ -10,7 +10,6 @@ use crate::init::GameState;
 use crate::level::{CellFixture, Level};
 use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
 use crate::message::{CANCEL, print_stats, rgetchar, sound_bell};
-use crate::play::interrupted;
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
@@ -114,6 +113,7 @@ pub unsafe fn trap_player(row: usize, col: usize, game: &mut GameState) {
 	}
 	game.level.dungeon[row][col].set_hidden(false);
 	if rand_percent(game.player.buffed_exp() as usize) {
+		game.player.interrupt_and_slurp();
 		game.dialog.message("the trap failed", 1);
 		return;
 	}
@@ -124,6 +124,7 @@ pub unsafe fn trap_player(row: usize, col: usize, game: &mut GameState) {
 			game.level.new_level_message = Some(trap_message(t).to_string());
 		}
 		BearTrap => {
+			game.player.interrupt_and_slurp();
 			game.dialog.message(trap_message(t), 1);
 			game.level.bear_trap = get_rand(4, 7);
 		}
@@ -132,6 +133,7 @@ pub unsafe fn trap_player(row: usize, col: usize, game: &mut GameState) {
 			tele(game);
 		}
 		DartTrap => {
+			game.player.interrupt_and_slurp();
 			game.dialog.message(trap_message(t), 1);
 			const DART_DAMAGE: DamageStat = DamageStat { hits: 1, damage: 6 };
 			game.player.rogue.hp_current -= get_damage(&[DART_DAMAGE], DamageEffect::Roll);
@@ -147,10 +149,12 @@ pub unsafe fn trap_player(row: usize, col: usize, game: &mut GameState) {
 			}
 		}
 		SleepingGasTrap => {
+			game.player.interrupt_and_slurp();
 			game.dialog.message(trap_message(t), 1);
 			take_a_nap(game);
 		}
 		RustTrap => {
+			game.player.interrupt_and_slurp();
 			game.dialog.message(trap_message(t), 1);
 			rust(None, game);
 		}
@@ -285,11 +289,12 @@ pub unsafe fn search(n: usize, is_auto: bool, game: &mut GameState) {
 						}
 						shown += 1;
 						if game.level.dungeon[row as usize][col as usize].is_trap() {
+							game.player.interrupt_and_slurp();
 							game.dialog.message(trap_at(row as usize, col as usize, &game.level).name(), 1);
 						}
 					}
 				}
-				if (shown == found && found > 0) || interrupted {
+				if (shown == found && found > 0) || game.player.interrupted {
 					return;
 				}
 			}

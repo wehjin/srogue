@@ -87,6 +87,7 @@ unsafe fn freeze(mon_id: u64, game: &mut GameState) {
 	freeze_percent -= game.player.rogue.hp_max / 3;
 	if freeze_percent > 10 {
 		game.mash.monster_flags_mut(mon_id).freezing_rogue = true;
+		game.player.interrupt_and_slurp();
 		game.dialog.message("you are frozen", 1);
 
 		let n = get_rand(4, 8);
@@ -99,6 +100,7 @@ unsafe fn freeze(mon_id: u64, game: &mut GameState) {
 			}
 			killed_by(Ending::Hypothermia, game);
 		}
+		game.player.interrupt_and_slurp();
 		game.dialog.message(YOU_CAN_MOVE_AGAIN, 1);
 		game.mash.monster_flags_mut(mon_id).freezing_rogue = false;
 	}
@@ -283,6 +285,7 @@ pub unsafe fn check_imitator(mon_id: u64, game: &mut GameState) -> bool {
 				mvaddch(monster.spot.row as i32, monster.spot.col as i32, dungeon_char);
 				game.dialog.clear_message();
 				let msg = format!("wait, that's a {}!", mon_name(monster, &game.player, &game.level));
+				game.player.interrupt_and_slurp();
 				game.dialog.message(&msg, 1);
 			}
 		}
@@ -384,6 +387,7 @@ pub unsafe fn m_confuse(mon_id: u64, game: &mut GameState) -> bool {
 	if rand_percent(55) {
 		monster.m_flags.confuses = false;
 		let msg = format!("the gaze of the {} has confused you", mon_name(monster, &game.player, &game.level));
+		game.player.interrupt_and_slurp();
 		game.dialog.message(&msg, 1);
 		confuse(&mut game.player);
 		return true;
