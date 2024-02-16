@@ -24,7 +24,6 @@ use crate::room::{DoorDirection, gr_row_col, is_all_connected, light_passage, li
 use crate::room::RoomType::Nothing;
 use crate::score::win;
 use crate::trap::Trap;
-use crate::zap::wizard;
 
 pub mod constants;
 mod cells;
@@ -645,7 +644,7 @@ pub unsafe fn put_player(avoid_room: RoomMark, mash: &mut MonsterMash, player: &
 }
 
 pub unsafe fn drop_check(player: &Player, level: &Level) -> bool {
-	if wizard {
+	if player.wizard {
 		return true;
 	}
 	if level.dungeon[player.rogue.row as usize][player.rogue.col as usize].is_stairs() {
@@ -666,7 +665,7 @@ pub enum UpResult {
 }
 
 pub unsafe fn check_up(game: &mut GameState) -> UpResult {
-	if !wizard {
+	if !game.player.wizard {
 		if !game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_stairs() {
 			message("I see no way up", 0);
 			return KeepLevel;
@@ -698,7 +697,7 @@ pub unsafe fn add_exp(e: isize, promotion: bool, player: &mut Player) {
 			let msg = format!("welcome to level {}", i);
 			message(&msg, 0);
 			if promotion {
-				let hp = hp_raise();
+				let hp = hp_raise(player);
 				player.rogue.hp_current += hp;
 				player.rogue.hp_max += hp;
 			}
@@ -719,8 +718,8 @@ pub unsafe fn get_exp_level(e: isize) -> isize {
 	return MAX_EXP_LEVEL as isize;
 }
 
-pub unsafe fn hp_raise() -> isize {
-	if wizard {
+pub unsafe fn hp_raise(player: &Player) -> isize {
+	if player.wizard {
 		10
 	} else {
 		get_rand(3, 10) as isize

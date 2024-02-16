@@ -20,7 +20,6 @@ use crate::ring::ring_kind::RingKind;
 use crate::score::is_vowel;
 use crate::scrolls::ScrollKind;
 use crate::zap::wand_kind::WandKind;
-use crate::zap::wizard;
 
 pub unsafe fn inventory(filter: PackFilter, player: &Player) {
 	if player.pack().is_empty() {
@@ -34,7 +33,7 @@ pub unsafe fn inventory(filter: PackFilter, player: &Player) {
 			if filter.includes(what) {
 				let close_char = if what == Armor && obj.is_protected != 0 { '}' } else { ')' };
 				let obj_ichar = obj.ichar;
-				let obj_desc = get_obj_desc(obj, player.settings.fruit.to_string(), &player.notes);
+				let obj_desc = get_obj_desc(obj, player.settings.fruit.to_string(), player);
 				let line = format!(" {}{} {}", obj_ichar, close_char, obj_desc);
 				item_lines.push(line);
 			}
@@ -95,30 +94,30 @@ fn get_id_real(obj: &Object) -> &'static str {
 	}
 }
 
-unsafe fn get_identified(obj: &Object, fruit: String, notes: &NoteTables) -> String {
+unsafe fn get_identified(obj: &Object, fruit: String, player: &Player) -> String {
 	let what = obj.what_is;
 	match what {
 		Scroll | Potion => {
 			let quantity = get_quantity(obj);
-			let name = name_of(obj, fruit, notes);
+			let name = name_of(obj, fruit, &player.notes);
 			let real_name = get_id_real(obj);
 			format!("{}{}{}", quantity, name, real_name)
 		}
 		Ring => {
-			let more_info = if (wizard || obj.identified) && (obj.which_kind == DEXTERITY || obj.which_kind == ADD_STRENGTH) {
+			let more_info = if (player.wizard || obj.identified) && (obj.which_kind == DEXTERITY || obj.which_kind == ADD_STRENGTH) {
 				format!("{}{} ", if obj.class > 0 { "+" } else { "" }, obj.class)
 			} else {
 				"".to_string()
 			};
-			let name = name_of(obj, fruit, notes);
+			let name = name_of(obj, fruit, &player.notes);
 			let real_name = get_id_real(obj);
 			format!("{}{}{}{}", get_quantity(obj), more_info, name, real_name)
 		}
 		Wand => format!("{}{}{}{}",
 		                get_quantity(obj),
-		                name_of(obj, fruit, notes),
+		                name_of(obj, fruit, &player.notes),
 		                get_id_real(obj),
-		                if wizard || obj.identified {
+		                if player.wizard || obj.identified {
 			                format!("[{}]", obj.class)
 		                } else {
 			                "".to_string()
@@ -127,14 +126,14 @@ unsafe fn get_identified(obj: &Object, fruit: String, notes: &NoteTables) -> Str
 			let armor_class = get_armor_class(Some(obj));
 			let enchantment = obj.d_enchant;
 			let plus_or_none = if enchantment >= 0 { "+" } else { "" };
-			let title = notes.title(what, obj.which_kind as usize);
+			let title = player.notes.title(what, obj.which_kind as usize);
 			format!("{}{} {}[{}] ", plus_or_none, enchantment, title.as_str(), armor_class)
 		}
 		Weapon => format!("{}{}{},{}{} {}",
 		                  get_quantity(obj),
 		                  if obj.hit_enchant >= 0 { "+" } else { "" }, obj.hit_enchant,
 		                  if obj.d_enchant >= 0 { "+" } else { "" }, obj.d_enchant,
-		                  name_of(obj, fruit, notes)
+		                  name_of(obj, fruit, &player.notes)
 		),
 		_ => panic!("invalid identified object")
 	}
@@ -152,37 +151,37 @@ unsafe fn get_called(obj: &Object, fruit: String, notes: &NoteTables) -> String 
 	}
 }
 
-unsafe fn get_unidentified(obj: &Object, fruit: String, notes: &NoteTables) -> String {
+unsafe fn get_unidentified(obj: &Object, fruit: String, player: &Player) -> String {
 	let what = obj.what_is;
 	let kind = obj.which_kind as usize;
 	match what {
 		Scroll => {
-			let title = notes.title(what, kind);
-			format!("{}{}entitled: {}", get_quantity(obj), name_of(obj, fruit, notes), title.as_str())
+			let title = player.notes.title(what, kind);
+			format!("{}{}entitled: {}", get_quantity(obj), name_of(obj, fruit, &player.notes), title.as_str())
 		}
 		Potion => {
-			let title = notes.title(what, kind);
-			format!("{}{}{}", get_quantity(obj), title.as_str(), name_of(obj, fruit, notes))
+			let title = player.notes.title(what, kind);
+			format!("{}{}{}", get_quantity(obj), title.as_str(), name_of(obj, fruit, &player.notes))
 		}
 		Wand | Ring => {
-			if obj.identified || notes.status(what, kind) == NoteStatus::Identified {
-				get_identified(obj, fruit, notes)
-			} else if notes.status(what, kind) == NoteStatus::Called {
-				get_called(obj, fruit, notes)
+			if obj.identified || player.notes.status(what, kind) == NoteStatus::Identified {
+				get_identified(obj, fruit, player)
+			} else if player.notes.status(what, kind) == NoteStatus::Called {
+				get_called(obj, fruit, &player.notes)
 			} else {
-				let title = notes.title(what, kind);
-				format!("{}{}{}", get_quantity(obj), title.as_str(), name_of(obj, fruit, notes))
+				let title = player.notes.title(what, kind);
+				format!("{}{}{}", get_quantity(obj), title.as_str(), name_of(obj, fruit, &player.notes))
 			}
 		}
 		Armor => if obj.identified {
-			get_identified(obj, fruit, notes)
+			get_identified(obj, fruit, player)
 		} else {
-			notes.title(what, kind).to_string()
+			player.notes.title(what, kind).to_string()
 		},
 		Weapon => if obj.identified {
-			get_identified(obj, fruit, notes)
+			get_identified(obj, fruit, player)
 		} else {
-			name_of(obj, fruit, notes)
+			name_of(obj, fruit, &player.notes)
 		},
 		_ => panic!("invalid unidentified object")
 	}
@@ -193,12 +192,12 @@ impl Player {
 		let obj = self.expect_object(obj_id);
 		let fruit = self.settings.fruit.to_string();
 		let obj_ichar = obj.ichar;
-		let obj_desc = get_obj_desc(&obj, fruit, &self.notes);
+		let obj_desc = get_obj_desc(&obj, fruit, self);
 		format!("{}({})", obj_desc, obj_ichar)
 	}
 }
 
-pub unsafe fn get_obj_desc(obj: &Object, fruit: String, notes: &NoteTables) -> String {
+pub unsafe fn get_obj_desc(obj: &Object, fruit: String, player: &Player) -> String {
 	let what = obj.what_is;
 	if what == Amulet {
 		return "the amulet of Yendor ".to_string();
@@ -217,20 +216,20 @@ pub unsafe fn get_obj_desc(obj: &Object, fruit: String, notes: &NoteTables) -> S
 		} else {
 			"a ".to_string()
 		};
-		format!("{}{}", quantity, name_of(obj, fruit, notes))
+		format!("{}{}", quantity, name_of(obj, fruit, &player.notes))
 	} else {
-		if wizard {
-			get_identified(obj, fruit, notes)
+		if player.wizard {
+			get_identified(obj, fruit, player)
 		} else {
 			match what {
 				Weapon | Armor | Wand | Ring => {
-					get_unidentified(obj, fruit, notes)
+					get_unidentified(obj, fruit, player)
 				}
 				_ => {
-					match notes.status(what, obj.which_kind as usize) {
-						NoteStatus::Unidentified => get_unidentified(obj, fruit, notes),
-						NoteStatus::Identified => get_identified(obj, fruit, notes),
-						NoteStatus::Called => get_called(obj, fruit, notes),
+					match player.notes.status(what, obj.which_kind as usize) {
+						NoteStatus::Unidentified => get_unidentified(obj, fruit, player),
+						NoteStatus::Identified => get_identified(obj, fruit, player),
+						NoteStatus::Called => get_called(obj, fruit, &player.notes),
 					}
 				}
 			}
@@ -282,7 +281,7 @@ pub unsafe fn single_inv(ichar: Option<char>, player: &mut Player) {
 	}
 	if let Some(obj) = player.object_with_letter(ch) {
 		let separator = if obj.what_is == Armor && obj.is_protected != 0 { '}' } else { ')' };
-		let obj_desc = get_obj_desc(obj, player.settings.fruit.to_string(), &player.notes);
+		let obj_desc = get_obj_desc(obj, player.settings.fruit.to_string(), player);
 		let msg = format!("{}{} {}", ch, separator, obj_desc);
 		message(&msg, 0);
 	} else {

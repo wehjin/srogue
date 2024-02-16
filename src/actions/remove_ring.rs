@@ -38,7 +38,7 @@ impl PlayerAction for RemoveRing {
 		let removed_id = unsafe { un_put_hand(hand, &mut game.mash, &mut game.player, &mut game.level) }.expect("some removed_id");
 		unsafe {
 			let removed_obj = game.player.object(removed_id).expect("some removed_obj");
-			let removed_desc = get_obj_desc(removed_obj, game.player.settings.fruit.to_string(), &game.player.notes);
+			let removed_desc = get_obj_desc(removed_obj, game.player.settings.fruit.to_string(), &game.player);
 			let msg = format!("removed {}", removed_desc);
 			message(&msg, 0);
 		}

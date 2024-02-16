@@ -28,7 +28,7 @@ use crate::save::save_game;
 use crate::score::ask_quit;
 use crate::throw::throw;
 use crate::trap::{id_trap, search, show_traps};
-use crate::zap::{wizard, wizardize, zapp};
+use crate::zap::{wizardize, zapp};
 
 pub static mut interrupted: bool = false;
 
@@ -157,28 +157,28 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 				}
 				' ' => {}
 				'\x09' => {
-					if wizard {
+					if game.player.wizard {
 						inventory(AllObjects, &game.player);
 					} else {
 						message(UNKNOWN_COMMAND, 0);
 					}
 				}
 				'\x13' => {
-					if wizard {
+					if game.player.wizard {
 						draw_magic_map(&mut game.mash, &mut game.level);
 					} else {
 						message(UNKNOWN_COMMAND, 0);
 					}
 				}
 				'\x14' => {
-					if wizard {
+					if game.player.wizard {
 						show_traps(&game.level);
 					} else {
 						message(UNKNOWN_COMMAND, 0);
 					}
 				}
 				'\x0f' => {
-					if wizard {
+					if game.player.wizard {
 						show_objects(&mut game.mash, &game.player, &game.level, &mut game.ground);
 					} else {
 						message(UNKNOWN_COMMAND, 0);
@@ -188,14 +188,14 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 					show_average_hp(&game.player);
 				}
 				'\x03' => {
-					if wizard {
+					if game.player.wizard {
 						new_object_for_wizard(&mut game.player);
 					} else {
 						message(UNKNOWN_COMMAND, 0);
 					}
 				}
 				'\x0d' => {
-					if wizard {
+					if game.player.wizard {
 						show_monsters(&mut game.mash, &game.player, &mut game.level);
 					} else {
 						message(UNKNOWN_COMMAND, 0);

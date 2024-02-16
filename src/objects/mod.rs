@@ -682,7 +682,7 @@ pub unsafe fn new_object_for_wizard(player: &mut Player) {
 			return;
 		}
 	}
-	let obj_desc = get_obj_desc(&obj, player.settings.fruit.to_string(), &player.notes);
+	let obj_desc = get_obj_desc(&obj, player.settings.fruit.to_string(), player);
 	message(&obj_desc, 0);
 	player.combine_or_add_item_to_pack(obj);
 }

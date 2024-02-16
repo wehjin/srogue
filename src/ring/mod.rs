@@ -13,7 +13,6 @@ use crate::prelude::object_what::ObjectWhat::Ring;
 use crate::prelude::stat_const::STAT_STRENGTH;
 use crate::r#use::relight;
 use crate::random::{coin_toss, get_rand};
-use crate::zap::wizard;
 
 pub(crate) mod constants;
 pub(crate) mod ring_kind;
@@ -85,7 +84,7 @@ pub unsafe fn inv_rings(player: &Player) {
 			}
 		}
 	}
-	if wizard {
+	if player.wizard {
 		message(
 			&format!("ste {}, r_r {}, e_r {}, r_t {}, s_s {}, a_s {}, reg {}, r_e {}, s_i {}, m_a {}, aus {}",
 			         player.ring_effects.stealthy(), hand_usage.count_hands(),

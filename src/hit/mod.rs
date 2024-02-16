@@ -20,7 +20,6 @@ use crate::random::rand_percent;
 use crate::room::get_dungeon_char;
 use crate::score::killed_by;
 use crate::spec_hit::{check_imitator, clear_gold_seeker, cough_up, special_hit};
-use crate::zap::wizard;
 
 pub static mut FIGHT_MONSTER: Option<u64> = None;
 pub static mut HIT_MESSAGE: String = String::new();
@@ -43,7 +42,7 @@ pub unsafe fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, mash: &mut 
 		let reduction = (2 * player.buffed_exp()) - player.debuf_exp();
 		reduce_chance(mash.monster(mon_id).m_hit_chance(), reduction)
 	};
-	if wizard {
+	if player.wizard {
 		hit_chance /= 2;
 	}
 	if FIGHT_MONSTER.is_none() {
@@ -91,7 +90,7 @@ pub unsafe fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, mash: &mut 
 		mash.monster_mut(mon_id).stationary_damage += 1;
 		original
 	};
-	if wizard {
+	if player.wizard {
 		damage /= 3;
 	}
 	if damage > 0 {
@@ -107,7 +106,7 @@ pub unsafe fn rogue_hit(mon_id: u64, force_hit: bool, mash: &mut MonsterMash, pl
 		return;
 	}
 	let hit_chance = if force_hit { 100 } else { get_hit_chance_player(player.weapon(), player) };
-	let hit_chance = if wizard { hit_chance * 2 } else { hit_chance };
+	let hit_chance = if player.wizard { hit_chance * 2 } else { hit_chance };
 	if !rand_percent(hit_chance) {
 		if FIGHT_MONSTER.is_none() {
 			HIT_MESSAGE = "you miss  ".to_string();
@@ -117,7 +116,7 @@ pub unsafe fn rogue_hit(mon_id: u64, force_hit: bool, mash: &mut MonsterMash, pl
 		let player_debuf = player.debuf_exp();
 		let player_str = player.buffed_strength();
 		let damage = get_weapon_damage(player.weapon(), player_str, player_exp, player_debuf);
-		let damage = if wizard { damage * 3 } else { damage };
+		let damage = if player.wizard { damage * 3 } else { damage };
 		match mon_damage(mon_id, damage, mash, player, level, ground) {
 			MonDamageEffect::MonsterDies(_) => {
 				// mon_id is no longer in the mash.

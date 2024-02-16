@@ -124,7 +124,7 @@ pub unsafe fn drop_0(mash: &mut MonsterMash, player: &mut Player, level: &mut Le
 				obj.ichar = 'L';
 				obj
 			};
-			let obj_desc = get_obj_desc(&place_obj, player.settings.fruit.to_string(), &player.notes);
+			let obj_desc = get_obj_desc(&place_obj, player.settings.fruit.to_string(), player);
 			place_at(place_obj, player.rogue.row, player.rogue.col, level, ground);
 			message(&format!("dropped {}", obj_desc), 0);
 			reg_move(mash, player, level, ground);
@@ -352,7 +352,7 @@ pub unsafe fn kick_into_pack(mash: &mut MonsterMash, player: &mut Player, level:
 				reg_move(mash, player, level, ground);
 			}
 			PickUpResult::AddedToGold(obj) => {
-				let msg = get_obj_desc(&obj, settings.fruit.to_string(), &player.notes);
+				let msg = get_obj_desc(&obj, settings.fruit.to_string(), player);
 				message(&msg, 0);
 			}
 			PickUpResult::AddedToPack { added_id: obj_id, .. } => {

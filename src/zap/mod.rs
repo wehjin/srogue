@@ -23,8 +23,6 @@ pub(crate) mod constants;
 pub(crate) mod wand_kind;
 pub(crate) mod wand_materials;
 
-pub static mut wizard: bool = false;
-
 pub unsafe fn zapp(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
 	let dir = get_dir_or_cancel();
 	check_message();
@@ -197,14 +195,16 @@ unsafe fn tele_away(monster: &mut Monster, player: &Player, level: &mut Level) {
 }
 
 pub unsafe fn wizardize(player: &mut Player) {
-	if wizard {
-		wizard = false;
+	if player.wizard {
+		player.wizard = false;
 		message("not wizard anymore", 0);
 	} else {
 		let line = get_input_line::<String>("wizard's password:", None, None, false, false);
 		if !line.is_empty() {
-			if line == "\u{A7}DV\u{BA}M\u{A3}\u{17}" {
-				wizard = true;
+			//const PW: &str = "\u{A7}DV\u{BA}M\u{A3}\u{17}";
+			const PW: &str = "neko?";
+			if line == PW {
+				player.wizard = true;
 				player.settings.score_only = true;
 				message("Welcome, mighty wizard!", 0);
 			} else {

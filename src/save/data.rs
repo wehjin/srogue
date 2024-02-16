@@ -11,7 +11,6 @@ use crate::monster::MonsterMash;
 use crate::objects::{foods, ObjectPack};
 use crate::player::Player;
 use crate::r#move::m_moves;
-use crate::zap::wizard;
 
 pub fn from_file(path: &str) -> Result<SaveData, Box<dyn Error>> {
 	let json = fs::read_to_string(path)?;
@@ -28,7 +27,6 @@ pub struct SaveData {
 	pub file_id: i64,
 	pub foods: i16,
 	pub level: Level,
-	pub wizard: bool,
 	pub m_moves: i16,
 	pub saved_time: RogueTime,
 }
@@ -43,7 +41,6 @@ impl SaveData {
 			file_id,
 			foods,
 			level: game.level.clone(),
-			wizard,
 			m_moves,
 			saved_time: get_current_time().add_seconds(10),
 		}
@@ -51,7 +48,6 @@ impl SaveData {
 	pub unsafe fn write_to_statics(&self) {
 		hunger_str = self.hunger_str.clone();
 		foods = self.foods;
-		wizard = self.wizard;
 		m_moves = self.m_moves;
 	}
 }

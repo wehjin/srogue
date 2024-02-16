@@ -137,7 +137,7 @@ unsafe fn steal_item(mon_id: u64, mash: &mut MonsterMash, player: &mut Player, l
 					if temp_obj.what_is != Weapon {
 						temp_obj.quantity = 1;
 					}
-					get_obj_desc(&temp_obj, player.settings.fruit.to_string(), &player.notes)
+					get_obj_desc(&temp_obj, player.settings.fruit.to_string(), player)
 				};
 				format!("she stole {}", obj_desc)
 			};
@@ -329,7 +329,7 @@ unsafe fn drop_level(player: &mut Player) {
 	player.rogue.exp_points = LEVEL_POINTS[player.rogue.exp as usize - 2] - get_rand(9, 29);
 	player.rogue.exp -= 2;
 
-	let hp = hp_raise();
+	let hp = hp_raise(player);
 	player.rogue.hp_current -= hp;
 	if player.rogue.hp_current <= 0 {
 		player.rogue.hp_current = 1;

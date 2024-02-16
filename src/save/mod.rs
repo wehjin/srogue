@@ -122,7 +122,7 @@ pub unsafe fn restore(file_path: &str, game: &mut GameState) -> bool {
 	game.player = save_data.player;
 	game.level = save_data.level;
 
-	if !save_data.wizard && !delete_file(file_path) {
+	if !game.player.wizard && !delete_file(file_path) {
 		clean_up("cannot delete file", &mut game.player);
 		return false;
 	}

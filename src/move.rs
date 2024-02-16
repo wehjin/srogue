@@ -129,7 +129,7 @@ pub unsafe fn one_move_rogue(
 						moved_unless_hungry_or_confused(mash, player, level, ground)
 					}
 					PickUpResult::AddedToGold(obj) => {
-						let msg = get_obj_desc(&obj, player.settings.fruit.to_string(), &player.notes);
+						let msg = get_obj_desc(&obj, player.settings.fruit.to_string(), player);
 						stopped_on_something_with_message(&msg, mash, player, level, ground)
 					}
 					PickUpResult::AddedToPack { added_id, .. } => {
@@ -155,7 +155,7 @@ pub unsafe fn one_move_rogue(
 
 unsafe fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> MoveResult {
 	let obj = ground.find_object_at(row, col).expect("moved-on object");
-	let obj_desc = get_obj_desc(obj, player.settings.fruit.to_string(), &player.notes);
+	let obj_desc = get_obj_desc(obj, player.settings.fruit.to_string(), player);
 	let desc = format!("moved onto {}", obj_desc);
 	return stopped_on_something_with_message(&desc, mash, player, level, ground);
 }
