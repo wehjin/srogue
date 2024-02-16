@@ -92,12 +92,12 @@ pub fn main() {
 		if !restored {
 			clear_level(&mut game);
 			game.player.descend();
-			unsafe { make_level(&game.player, &mut game.level, &mut game.ground) };
+			make_level(&game.player, &mut game.level, &mut game.ground);
 			unsafe { put_objects(&mut game.mash, &mut game.player, &mut game.level, &mut game.ground); }
 			unsafe { put_stairs(&mut game.player, &mut game.level); }
 			unsafe { add_traps(&game.player, &mut game.level); }
 			unsafe { put_mons(&mut game.mash, &game.player, &mut game.level); }
-			unsafe {
+			{
 				let avoid_room = match game.level.party_room {
 					None => RoomMark::None,
 					Some(rn) => RoomMark::Area(rn),

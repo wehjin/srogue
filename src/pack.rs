@@ -338,7 +338,7 @@ pub fn get_pack_op(c: char, default_filter: PackFilter) -> Option<PackOp> {
 	}
 }
 
-pub unsafe fn has_amulet(player: &Player) -> bool {
+pub fn has_amulet(player: &Player) -> bool {
 	mask_pack(&player.rogue.pack, Amulets)
 }
 

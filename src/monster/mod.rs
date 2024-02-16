@@ -344,7 +344,7 @@ pub unsafe fn mon_can_go(monster: &Monster, row: i64, col: i64, player: &Player,
 	return true;
 }
 
-pub unsafe fn wake_room(rn: usize, entering: bool, row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &Level) {
+pub fn wake_room(rn: usize, entering: bool, row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &Level) {
 	let normal_chance = level.room_wake_percent(rn);
 	let buffed_chance = player.ring_effects.apply_stealthy(normal_chance);
 	for monster in &mut mash.monsters {

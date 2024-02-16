@@ -264,7 +264,7 @@ pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: isize, le
 }
 
 
-pub unsafe fn place_at(mut obj: Object, row: i64, col: i64, level: &mut Level, ground: &mut ObjectPack) {
+pub fn place_at(mut obj: Object, row: i64, col: i64, level: &mut Level, ground: &mut ObjectPack) {
 	obj.row = row;
 	obj.col = col;
 	level.dungeon[row as usize][col as usize].set_object(obj.what_is);
@@ -595,13 +595,13 @@ pub unsafe fn show_objects(mash: &mut MonsterMash, player: &Player, level: &Leve
 	}
 }
 
-pub unsafe fn put_amulet(player: &Player, level: &mut Level, ground: &mut ObjectPack) {
+pub fn put_amulet(player: &Player, level: &mut Level, ground: &mut ObjectPack) {
 	let mut obj = alloc_object();
 	obj.what_is = Amulet;
 	rand_place(obj, player, level, ground);
 }
 
-pub unsafe fn rand_place(obj: Object, player: &Player, level: &mut Level, ground: &mut ObjectPack) {
+pub fn rand_place(obj: Object, player: &Player, level: &mut Level, ground: &mut ObjectPack) {
 	let mut row = 0;
 	let mut col = 0;
 	gr_row_col(&mut row, &mut col, |cell| cell.is_floor() || cell.is_tunnel(), player, level);

@@ -197,7 +197,7 @@ impl Room {
 	}
 }
 
-pub unsafe fn light_up_room(rn: usize, mash: &mut MonsterMash, player: &Player, level: &mut Level) {
+pub fn light_up_room(rn: usize, mash: &mut MonsterMash, player: &Player, level: &mut Level) {
 	if player.blind.is_active() {
 		return;
 	}
@@ -226,7 +226,7 @@ pub unsafe fn light_up_room(rn: usize, mash: &mut MonsterMash, player: &Player, 
 }
 
 
-pub unsafe fn light_passage(row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &Level) {
+pub fn light_passage(row: i64, col: i64, mash: &mut MonsterMash, player: &Player, level: &Level) {
 	if player.blind.is_active() {
 		return;
 	}
@@ -243,7 +243,7 @@ pub unsafe fn light_passage(row: i64, col: i64, mash: &mut MonsterMash, player: 
 	}
 }
 
-pub unsafe fn darken_room(rn: usize, mash: &mut MonsterMash, player: &Player, level: &Level) {
+pub fn darken_room(rn: usize, mash: &mut MonsterMash, player: &Player, level: &Level) {
 	let floor_bounds = level.rooms[rn].to_floor_bounds();
 	for i in floor_bounds.rows_usize() {
 		for j in floor_bounds.cols_usize() {
@@ -458,7 +458,7 @@ mod room_visitor {
 	}
 }
 
-pub unsafe fn is_all_connected(rooms: &[Room; MAX_ROOM]) -> bool {
+pub fn is_all_connected(rooms: &[Room; MAX_ROOM]) -> bool {
 	RoomVisitor::new(rooms).visit_rooms().to_is_all_connected()
 }
 
