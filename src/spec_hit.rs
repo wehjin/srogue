@@ -164,7 +164,7 @@ unsafe fn disappear(mon_id: u64, mash: &mut MonsterMash, player: &Player, level:
 }
 
 
-pub unsafe fn cough_up(mon_id: u64, mash: &mut MonsterMash, player: &Player, level: &mut Level, ground: &mut ObjectPack) {
+pub unsafe fn cough_up(mon_id: u64, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
 	if player.cur_depth < player.max_depth {
 		return;
 	}
@@ -177,7 +177,7 @@ pub unsafe fn cough_up(mon_id: u64, mash: &mut MonsterMash, player: &Player, lev
 		if !rand_percent(mash.monster(mon_id).drop_percent) {
 			return;
 		}
-		gr_object(player.cur_depth)
+		gr_object(player)
 	};
 	let monster = mash.monster(mon_id);
 	let row = monster.spot.row;

@@ -79,6 +79,7 @@ impl Player {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
+	pub foods: isize,
 	pub wizard: bool,
 	pub cur_room: RoomMark,
 	pub notes: NoteTables,
@@ -237,6 +238,7 @@ impl Player {
 	pub fn new(settings: Settings) -> Self {
 		const INIT_HP: isize = 12;
 		Player {
+			foods: 0,
 			wizard: false,
 			cur_room: RoomMark::None,
 			notes: NoteTables::new(),

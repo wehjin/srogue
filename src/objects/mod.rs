@@ -209,8 +209,6 @@ impl Object {
 	pub fn id(&self) -> ObjectId { self.id }
 }
 
-pub static mut foods: i16 = 0;
-
 pub unsafe fn put_objects(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
 	if player.cur_depth < player.max_depth {
 		return;
@@ -221,11 +219,11 @@ pub unsafe fn put_objects(mash: &mut MonsterMash, player: &mut Player, level: &m
 		n += 1;
 	}
 	if player.cur_depth == player.party_counter {
-		make_party(player.cur_depth, mash, level, ground);
+		make_party(player.cur_depth, mash, player, level, ground);
 		player.party_counter = next_party(player.cur_depth);
 	}
 	for _i in 0..n {
-		let obj = gr_object(player.cur_depth);
+		let obj = gr_object(player);
 		rand_place(obj, player, level, ground);
 	}
 	put_gold(player.cur_depth, level, ground);
@@ -335,11 +333,11 @@ pub fn name_of(obj: &Object, fruit: String, notes: &NoteTables) -> String {
 	}
 }
 
-pub unsafe fn gr_object(cur_level: isize) -> Object {
+pub unsafe fn gr_object(player: &mut Player) -> Object {
 	let mut obj = alloc_object();
-	if foods < (cur_level / 2) as i16 {
+	if player.foods < (player.cur_depth / 2) {
 		obj.what_is = Food;
-		foods += 1;
+		player.foods += 1;
 	} else {
 		obj.what_is = gr_what_is();
 	}
@@ -565,10 +563,10 @@ pub fn alloc_object() -> Object {
 	return obj;
 }
 
-pub unsafe fn make_party(level_depth: isize, mash: &mut MonsterMash, level: &mut Level, ground: &mut ObjectPack) {
+pub unsafe fn make_party(level_depth: isize, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) {
 	let party_room = gr_room(level);
 	level.party_room = Some(party_room);
-	let n = if rand_percent(99) { party_objects(party_room, level_depth, level, ground) } else { 11 };
+	let n = if rand_percent(99) { party_objects(party_room, player, level, ground) } else { 11 };
 	if rand_percent(99) {
 		party_monsters(party_room, n, level_depth, mash, level);
 	}

@@ -363,7 +363,7 @@ pub fn gr_room(level: &Level) -> usize {
 	}
 }
 
-pub unsafe fn party_objects(rn: usize, level_depth: isize, level: &mut Level, ground: &mut ObjectPack) -> usize {
+pub unsafe fn party_objects(rn: usize, player: &mut Player, level: &mut Level, ground: &mut ObjectPack) -> usize {
 	let N = (level.rooms[rn].bottom_row - level.rooms[rn].top_row - 1) * (level.rooms[rn].right_col - level.rooms[rn].left_col - 1);
 	let mut n = get_rand(5, 10);
 	if n > N {
@@ -382,7 +382,7 @@ pub unsafe fn party_objects(rn: usize, level_depth: isize, level: &mut Level, gr
 			}
 		}
 		if let Some(found) = found {
-			let obj = gr_object(level_depth);
+			let obj = gr_object(player);
 			place_at(obj, found.row, found.col, level, ground);
 			number_found += 1;
 		}
