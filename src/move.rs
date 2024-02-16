@@ -4,12 +4,12 @@ use ncurses::{chtype, mvaddch, refresh};
 
 use MoveResult::MoveFailed;
 
+use crate::components::hunger::{FAINT_MOVES_LEFT, HungerLevel, HUNGRY_MOVES_LEFT, STARVE_MOVES_LEFT, WEAK_MOVES_LEFT};
 use crate::hit::{get_dir_rc, rogue_hit};
-use crate::hunger::{FAINT, HUNGRY, STARVE, WEAK};
 use crate::inventory::get_obj_desc;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
-use crate::message::{CANCEL, check_message, hunger_str, message, print_stats, rgetchar, sound_bell};
+use crate::message::{CANCEL, check_message, message, print_stats, rgetchar, sound_bell};
 use crate::monster::{MonsterMash, mv_mons, put_wanderer, wake_room};
 use crate::objects::ObjectPack;
 use crate::odds::R_TELE_PERCENT;
@@ -339,77 +339,89 @@ pub unsafe fn is_direction(c: char) -> bool {
 		|| c == CANCEL
 }
 
-pub unsafe fn check_hunger(messages_only: bool, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> bool {
-	if player.rogue.moves_left == HUNGRY {
-		hunger_str = "hungry".to_string();
-		message(&hunger_str, 0);
-		print_stats(STAT_HUNGER, player);
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum HungerCheckResult {
+	StillWalking,
+	DidFaint,
+	DidStarve,
+}
+
+fn get_hunger_transition(moves_left: isize) -> Option<HungerLevel> {
+	match moves_left {
+		HUNGRY_MOVES_LEFT => Some(HungerLevel::Hungry),
+		WEAK_MOVES_LEFT => Some(HungerLevel::Weak),
+		FAINT_MOVES_LEFT => Some(HungerLevel::Faint),
+		STARVE_MOVES_LEFT => Some(HungerLevel::Starved),
+		_ => if moves_left < STARVE_MOVES_LEFT { Some(HungerLevel::Starved) } else { None },
 	}
-	if player.rogue.moves_left == WEAK {
-		hunger_str = "weak".to_string();
-		message(&hunger_str, 1);
+}
+
+fn get_hunger_transition_with_burn_count(moves_left: isize, moves_burned: isize) -> Option<HungerLevel> {
+	match moves_burned {
+		0 => None,
+		1 => get_hunger_transition(moves_left),
+		2 => get_hunger_transition(moves_left).or_else(|| get_hunger_transition(moves_left + 1)),
+		_ => panic!("invalid moves_burned")
+	}
+}
+
+pub unsafe fn check_hunger(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> HungerCheckResult {
+	let moves_to_burn = match player.ring_effects.calorie_burn() {
+		-2 => 0,
+		-1 => player.rogue.moves_left % 2,
+		0 => 1,
+		1 => 1 + (player.rogue.moves_left % 2),
+		2 => 2,
+		_ => panic!("invalid calorie burn")
+	};
+	if moves_to_burn == 0 {
+		return HungerCheckResult::StillWalking;
+	}
+	player.rogue.moves_left -= moves_to_burn;
+	if let Some(next_hunger) = get_hunger_transition_with_burn_count(player.rogue.moves_left, moves_to_burn) {
+		player.hunger = next_hunger;
+		message(&player.hunger.as_str(), 0);
 		print_stats(STAT_HUNGER, player);
 	}
 
-	let mut fainted = false;
-	if player.rogue.moves_left <= FAINT {
-		if player.rogue.moves_left == FAINT {
-			hunger_str = "faint".to_string();
-			message(&hunger_str, 1);
-			print_stats(STAT_HUNGER, player);
-		}
-		let n = get_rand(0, FAINT - player.rogue.moves_left);
-		if n > 0 {
-			fainted = true;
-			if rand_percent(40) {
-				player.rogue.moves_left += 1;
-			}
-			message("you faint", 1);
-			for _ in 0..n {
-				if coin_toss() {
-					mv_mons(mash, player, level, ground);
-				}
-			}
-			message(YOU_CAN_MOVE_AGAIN, 1);
-		}
-	}
-	if messages_only {
-		return fainted;
-	}
-	if player.rogue.moves_left <= STARVE {
+	if player.hunger == HungerLevel::Starved {
 		killed_by(Ending::Starvation, player);
+		return HungerCheckResult::DidStarve;
 	}
+	if player.hunger == HungerLevel::Faint && random_faint(mash, player, level, ground) {
+		return HungerCheckResult::DidFaint;
+	}
+	return HungerCheckResult::StillWalking;
+}
 
-	match player.ring_effects.calorie_burn() {
-		-1 => {
-			player.rogue.moves_left -= player.rogue.moves_left % 2;
+unsafe fn random_faint(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> bool {
+	let n = get_rand(0, FAINT_MOVES_LEFT - player.rogue.moves_left);
+	if n > 0 {
+		if rand_percent(40) {
+			player.rogue.moves_left += 1;
 		}
-		0 => {
-			player.rogue.moves_left -= 1;
+		message("you faint", 1);
+		for _ in 0..n {
+			if coin_toss() {
+				mv_mons(mash, player, level, ground);
+			}
 		}
-		1 => {
-			player.rogue.moves_left -= 1;
-			check_hunger(true, mash, player, level, ground);
-			player.rogue.moves_left -= player.rogue.moves_left % 2;
-		}
-		2 => {
-			player.rogue.moves_left -= 1;
-			check_hunger(true, mash, player, level, ground);
-			player.rogue.moves_left -= 1;
-		}
-		_ => {
-			// No burn for -2
-		}
+		message(YOU_CAN_MOVE_AGAIN, 1);
+		true
+	} else {
+		false
 	}
-	return fainted;
 }
 
 pub unsafe fn reg_move(mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) -> bool {
-	let fainted = if player.rogue.moves_left <= HUNGRY || player.cur_depth >= player.max_depth {
-		check_hunger(false, mash, player, level, ground)
+	let hunger_check = if player.rogue.moves_left <= HUNGRY_MOVES_LEFT || player.cur_depth >= player.max_depth {
+		check_hunger(mash, player, level, ground)
 	} else {
-		false
+		HungerCheckResult::StillWalking
 	};
+	if hunger_check == HungerCheckResult::DidStarve {
+		return true;
+	}
 	mv_mons(mash, player, level, ground);
 	m_moves += 1;
 	if m_moves >= 120 {
@@ -455,12 +467,13 @@ pub unsafe fn reg_move(mash: &mut MonsterMash, player: &mut Player, level: &mut 
 		}
 	}
 	heal(player);
-
-	let auto_search = player.ring_effects.auto_search();
-	if auto_search > 0 {
-		search(auto_search as usize, auto_search > 0, mash, player, level, ground);
+	{
+		let auto_search = player.ring_effects.auto_search();
+		if auto_search > 0 {
+			search(auto_search as usize, auto_search > 0, mash, player, level, ground);
+		}
 	}
-	return fainted;
+	return hunger_check == HungerCheckResult::DidFaint;
 }
 
 pub unsafe fn rest(count: libc::c_int, mash: &mut MonsterMash, player: &mut Player, level: &mut Level, ground: &ObjectPack) {

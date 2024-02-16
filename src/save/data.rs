@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use crate::init::GameState;
 use crate::level::Level;
 use crate::machdep::{get_current_time, RogueTime};
-use crate::message::hunger_str;
 use crate::monster::MonsterMash;
 use crate::objects::ObjectPack;
 use crate::player::Player;
@@ -21,7 +20,6 @@ pub fn from_file(path: &str) -> Result<SaveData, Box<dyn Error>> {
 #[derive(Serialize, Deserialize)]
 pub struct SaveData {
 	pub player: Player,
-	pub hunger_str: String,
 	pub mash: MonsterMash,
 	pub ground: ObjectPack,
 	pub file_id: i64,
@@ -34,7 +32,6 @@ impl SaveData {
 	pub unsafe fn read_from_statics(file_id: i64, game: &GameState) -> Self {
 		SaveData {
 			player: game.player.clone(),
-			hunger_str: hunger_str.clone(),
 			mash: game.mash.clone(),
 			ground: game.ground.clone(),
 			file_id,
@@ -44,7 +41,6 @@ impl SaveData {
 		}
 	}
 	pub unsafe fn write_to_statics(&self) {
-		hunger_str = self.hunger_str.clone();
 		m_moves = self.m_moves;
 	}
 }

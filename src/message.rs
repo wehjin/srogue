@@ -1,7 +1,9 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
-use libc::{c_int};
+use libc::c_int;
 use ncurses::{addch, chtype, clrtoeol, curscr, mvaddstr, wrefresh};
+
+use crate::components::hunger::HungerLevel;
 use crate::init::{cant_int, did_int, onintr, save_is_interactive};
 use crate::level::constants::DROWS;
 use crate::machdep::md_slurp;
@@ -14,7 +16,6 @@ use crate::prelude::stat_const::{STAT_ARMOR, STAT_EXP, STAT_GOLD, STAT_HP, STAT_
 
 pub static mut msg_written: String = String::new();
 pub static mut msg_cleared: bool = true;
-pub static mut hunger_str: String = String::new();
 
 pub unsafe fn message(msg: &str, intrpt: i64) {
 	if !save_is_interactive {
@@ -202,6 +203,7 @@ pub unsafe fn print_stats(stat_mask: usize, player: &mut Player) {
 		pad(&s, 11);
 	}
 	if stat_mask & STAT_HUNGER != 0 {
+		let hunger_str = if player.hunger == HungerLevel::Normal { "" } else { player.hunger.as_str() };
 		mvaddstr(STATS_ROW, 73, &hunger_str);
 		clrtoeol();
 	}

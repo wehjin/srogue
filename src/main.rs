@@ -13,6 +13,8 @@ use crate::prelude::stat_const::STAT_ALL;
 use crate::settings::SettingsError;
 use crate::trap::add_traps;
 
+pub mod components;
+
 mod message;
 mod level;
 mod monster;
@@ -45,7 +47,6 @@ mod scrolls;
 pub mod odds;
 pub mod console;
 pub mod settings;
-pub mod hunger;
 pub(crate) mod files;
 pub mod actions;
 

@@ -2,9 +2,10 @@
 
 use ncurses::{addch, chtype, mvaddch, mvinch};
 
+use crate::components::hunger::HungerLevel;
 use crate::level::{add_exp, Level, put_player};
 use crate::machdep::md_sleep;
-use crate::message::{CANCEL, check_message, hunger_str, message, print_stats};
+use crate::message::{CANCEL, check_message, message, print_stats};
 use crate::monster::{aggravate, create_monster, gr_obj_char, MonsterMash, mv_mons, show_monsters};
 use crate::objects::{ObjectId, ObjectPack};
 use crate::objects::NoteStatus::Identified;
@@ -248,7 +249,7 @@ pub unsafe fn eat(mash: &mut MonsterMash, player: &mut Player, level: &mut Level
 			};
 			player.rogue.moves_left /= 3;
 			player.rogue.moves_left += moves;
-			hunger_str.clear();
+			player.hunger = HungerLevel::Normal;
 			print_stats(STAT_HUNGER, player);
 			vanish(obj_id, true, mash, player, level, ground);
 		}

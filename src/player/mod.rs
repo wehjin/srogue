@@ -2,6 +2,7 @@ use ncurses::chtype;
 use serde::{Deserialize, Serialize};
 
 use crate::armors::ArmorKind;
+use crate::components::hunger::HungerLevel;
 use crate::level::{DungeonCell, Level};
 use crate::monster::Fighter;
 use crate::objects::{Object, ObjectId, ObjectPack};
@@ -79,6 +80,7 @@ impl Player {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
+	pub hunger: HungerLevel,
 	pub foods: isize,
 	pub wizard: bool,
 	pub cur_room: RoomMark,
@@ -238,6 +240,7 @@ impl Player {
 	pub fn new(settings: Settings) -> Self {
 		const INIT_HP: isize = 12;
 		Player {
+			hunger: HungerLevel::default(),
 			foods: 0,
 			wizard: false,
 			cur_room: RoomMark::None,
