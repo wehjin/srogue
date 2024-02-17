@@ -8,7 +8,7 @@ use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::message::rgetchar;
 
-static INSTRUCTIONS_FILE: &'static str = "/usr/games/player.rogue.instr";
+const INSTRUCTIONS_FILE: &'static str = "/usr/games/player.rogue.instr";
 
 pub fn Instructions(game: &mut GameState) {
 	let mut file = match File::open(INSTRUCTIONS_FILE) {
