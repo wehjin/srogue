@@ -24,12 +24,12 @@ pub struct SaveData {
 	pub player: Player,
 	pub level: Level,
 	pub ground: ObjectPack,
-	pub file_id: i64,
+	pub file_id: u64,
 	pub saved_time: RogueTime,
 }
 
 impl SaveData {
-	pub fn read_from_statics(file_id: i64, game: &GameState) -> Self {
+	pub fn read_from_statics(file_id: u64, game: &GameState) -> Self {
 		SaveData {
 			healer: game.healer.clone(),
 			mash: game.mash.clone(),

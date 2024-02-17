@@ -1,8 +1,9 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
-use std::{fs, process, thread};
+use std::{fs, io, process, thread};
 use std::error::Error;
 use std::ffi::CString;
+use std::os::macos::fs::MetadataExt;
 use std::time::Duration;
 
 use chrono::{Datelike, DateTime, Timelike, TimeZone, Utc};
@@ -103,10 +104,8 @@ pub fn md_ignore_signals() {
 	// signal(SIGTSTP, SIG_IGN);
 }
 
-pub fn md_get_file_id(file_path: &str) -> i64 {
-	let mut sbuf = libc::stat { st_dev: 0, st_mode: 0, st_nlink: 0, st_ino: 0, st_uid: 0, st_gid: 0, st_rdev: 0, st_atime: 0, st_atime_nsec: 0, st_mtime: 0, st_mtime_nsec: 0, st_ctime: 0, st_ctime_nsec: 0, st_birthtime: 0, st_size: 0, st_blocks: 0, st_blksize: 0, st_flags: 0, st_gen: 0, st_lspare: 0, st_qspare: [0; 2], st_birthtime_nsec: 0 };
-	let file_path = CString::new(file_path).unwrap();
-	unsafe { if stat(file_path.as_ptr(), &mut sbuf) == 0 { sbuf.st_ino as i64 } else { -1 } }
+pub fn md_get_file_id(file_path: &str) -> io::Result<u64> {
+	fs::metadata(file_path).map(|it| it.st_ino())
 }
 
 pub fn md_link_count(file_path: &str) -> i64 {

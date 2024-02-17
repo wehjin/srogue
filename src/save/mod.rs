@@ -40,10 +40,13 @@ fn save_into_file(save_path: &str, game: &mut GameState) -> bool {
 		}
 	};
 	let file_id = md_get_file_id(&save_path);
-	if file_id == -1 {
-		game.dialog.message("problem accessing the save file", 0);
-		return false;
-	}
+	let file_id = match file_id {
+		Ok(id) => id,
+		Err(_) => {
+			game.dialog.message("problem accessing the save file", 0);
+			return false;
+		}
+	};
 	md_ignore_signals();
 	let save_data = SaveData::read_from_statics(file_id, game);
 	let json = serde_json::to_string_pretty(&save_data).expect("serialize data");
@@ -79,10 +82,13 @@ fn expand_tilde(file: &str) -> String {
 pub fn restore(file_path: &str, game: &mut GameState) -> bool {
 	let cur_login_name = game.player.settings.login_name.clone();
 	let new_file_id = md_get_file_id(file_path);
-	if new_file_id == -1 {
-		clean_up("cannot open file", &mut game.player);
-		return false;
-	}
+	let new_file_id = match new_file_id {
+		Ok(id) => id,
+		Err(_) => {
+			clean_up("cannot open file", &mut game.player);
+			return false;
+		}
+	};
 	if md_link_count(file_path) > 1 {
 		clean_up("file has link", &mut game.player);
 		return false;
