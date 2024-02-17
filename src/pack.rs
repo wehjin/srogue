@@ -32,7 +32,7 @@ pub enum PickUpResult {
 	PackTooFull,
 }
 
-pub unsafe fn pick_up(row: i64, col: i64, game: &mut GameState) -> PickUpResult {
+pub fn pick_up(row: i64, col: i64, game: &mut GameState) -> PickUpResult {
 	let obj_id = game.ground.find_id_at(row, col).expect("obj_id in level-objects at pick-up spot");
 	if game.ground.check_object(obj_id, Object::is_used_scare_monster_scroll) {
 		game.dialog.message("the scroll turns to dust as you pick it up", 0);
@@ -75,7 +75,7 @@ impl Object {
 	}
 }
 
-pub unsafe fn drop_0(game: &mut GameState) {
+pub fn drop_0(game: &mut GameState) {
 	let player_cell = game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize];
 	if player_cell.has_object() || player_cell.is_stairs() || player_cell.is_trap() {
 		game.dialog.message("there's already something there", 0);
@@ -171,7 +171,7 @@ pub fn wait_for_ack() {
 	}
 }
 
-pub unsafe fn pack_letter(prompt: &str, filter: PackFilter, game: &mut GameState) -> char {
+pub fn pack_letter(prompt: &str, filter: PackFilter, game: &mut GameState) -> char {
 	if !mask_pack(&game.player.rogue.pack, filter.clone()) {
 		game.dialog.message("nothing appropriate", 0);
 		return CANCEL;
@@ -230,7 +230,7 @@ pub fn unwield(player: &mut Player) {
 	player.unwield_weapon();
 }
 
-pub unsafe fn call_it(game: &mut GameState) {
+pub fn call_it(game: &mut GameState) {
 	let ch = pack_letter("call what?", AnyFrom(vec![Scroll, Potion, Wand, Ring]), game);
 	if ch == CANCEL {
 		return;
@@ -347,7 +347,7 @@ pub fn has_amulet(player: &Player) -> bool {
 	mask_pack(&player.rogue.pack, Amulets)
 }
 
-pub unsafe fn kick_into_pack(game: &mut GameState) {
+pub fn kick_into_pack(game: &mut GameState) {
 	if !game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].has_object() {
 		game.dialog.message("nothing here", 0);
 	} else {

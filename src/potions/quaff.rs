@@ -9,7 +9,7 @@ use crate::potions::kind::PotionKind;
 use crate::r#use::STRANGE_FEELING;
 use crate::random::get_rand;
 
-pub unsafe fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
+pub fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
 	match potion_kind {
 		PotionKind::IncreaseStrength => {
 			game.dialog.message("you feel stronger now, what bulging muscles!", 0);
@@ -104,7 +104,7 @@ pub unsafe fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
 	}
 }
 
-unsafe fn potion_heal(extra: bool, game: &mut GameState) {
+fn potion_heal(extra: bool, game: &mut GameState) {
 	game.player.rogue.hp_current += game.player.rogue.exp;
 
 	let mut ratio = game.player.rogue.hp_current as f32 / game.player.rogue.hp_max as f32;
@@ -147,7 +147,7 @@ unsafe fn potion_heal(extra: bool, game: &mut GameState) {
 	}
 }
 
-unsafe fn show_blind(game: &mut GameState) {
+fn show_blind(game: &mut GameState) {
 	if game.level.detect_monster {
 		for monster in &game.mash.monsters {
 			mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.trail_char);

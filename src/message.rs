@@ -11,20 +11,10 @@ use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_EXP, STAT_GOLD, STAT_HP, STAT_HUNGER, STAT_LABEL, STAT_LEVEL, STAT_STRENGTH};
 
-pub static mut msg_written: String = String::new();
-pub static mut msg_cleared: bool = true;
-
-
-pub unsafe extern "C" fn remessage(game: &mut GameState) {
-	if !msg_written.is_empty() {
-		game.dialog.message(&msg_written, 0);
-	}
-}
-
 pub const CANCEL: char = '\u{1b}';
 pub const LIST: char = '*';
 
-pub unsafe fn get_input_line<T: AsRef<str>>(
+pub fn get_input_line<T: AsRef<str>>(
 	prompt: &str,
 	insert: Option<T>,
 	if_cancelled: Option<&str>,
@@ -105,7 +95,7 @@ pub fn rgetchar() -> char {
 	}
 }
 
-pub unsafe fn print_stats(stat_mask: usize, player: &mut Player) {
+pub fn print_stats(stat_mask: usize, player: &mut Player) {
 	const STATS_ROW: i32 = DROWS as i32 - 1;
 	let label = if stat_mask & STAT_LABEL != 0 { true } else { false };
 

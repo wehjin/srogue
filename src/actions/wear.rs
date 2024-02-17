@@ -11,19 +11,19 @@ pub struct Wear;
 impl PlayerAction for Wear {
 	fn commit(&self, game: &mut GameState) {
 		if game.player.armor_id().is_some() {
-			unsafe { game.dialog.message("your already wearing some", 0); }
+			game.dialog.message("your already wearing some", 0);
 			return;
 		}
-		let ch = unsafe { pack_letter("wear what?", Armors, game) };
+		let ch = pack_letter("wear what?", Armors, game);
 		if ch == CANCEL {
 			return;
 		}
 		match game.player.object_with_letter_mut(ch) {
-			None => unsafe {
+			None => {
 				game.dialog.message("no such item.", 0);
 				return;
 			}
-			Some(obj) => unsafe {
+			Some(obj) => {
 				if obj.what_is != Armor {
 					game.dialog.message("you can't wear that", 0);
 					return;

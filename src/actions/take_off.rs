@@ -12,22 +12,20 @@ impl PlayerAction for TakeOff {
 	fn commit(&self, game: &mut GameState) {
 		if let Some(armor_id) = game.player.armor_id() {
 			if game.player.pack().check_object(armor_id, Object::is_cursed) {
-				unsafe { game.dialog.message(CURSE_MESSAGE, 0); }
+				game.dialog.message(CURSE_MESSAGE, 0);
 			} else {
-				unsafe {
-					mv_aquatars(game);
-					if let Some(armor) = unwear(&mut game.player) {
-						let armor_id = armor.id();
-						let obj_desc = game.player.get_obj_desc(armor_id);
-						let msg = format!("was wearing {}", obj_desc);
-						game.dialog.message(&msg, 0);
-					}
+				mv_aquatars(game);
+				if let Some(armor) = unwear(&mut game.player) {
+					let armor_id = armor.id();
+					let obj_desc = game.player.get_obj_desc(armor_id);
+					let msg = format!("was wearing {}", obj_desc);
+					game.dialog.message(&msg, 0);
 				}
-				unsafe { print_stats(STAT_ARMOR, &mut game.player); }
+				print_stats(STAT_ARMOR, &mut game.player);
 				game.commit_player_turn();
 			}
 		} else {
-			unsafe { game.dialog.message("not wearing any", 0); }
+			game.dialog.message("not wearing any", 0);
 		}
 	}
 }

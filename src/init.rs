@@ -39,7 +39,7 @@ pub enum InitResult {
 	Initialized(GameState, Console),
 }
 
-pub unsafe fn init(settings: Settings) -> Result<InitResult, InitError> {
+pub fn init(settings: Settings) -> Result<InitResult, InitError> {
 	if !settings.score_only && settings.rest_file.is_none() {
 		print!("Hello {}, just a moment while I dig the dungeon...", settings.player_name());
 		io::stdout().flush().expect("flush stdout");
@@ -155,11 +155,11 @@ fn player_init(player: &mut Player) {
 	player.party_counter = get_rand(1, 10);
 }
 
-pub unsafe fn clean_up(estr: &str, player: &mut Player) {
+pub fn clean_up(estr: &str, player: &mut Player) {
 	player.cleaned_up = Some(estr.to_string());
 }
 
-// pub unsafe fn byebye(_ask_quit: bool, _player: &mut Player) {
+// pub fn byebye(_ask_quit: bool, _player: &mut Player) {
 // 	unimplemented!("bye bye");
 // 	// md_ignore_signals();
 // 	// if ask_quit {

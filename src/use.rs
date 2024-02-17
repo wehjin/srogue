@@ -28,7 +28,7 @@ use crate::trap::is_off_screen;
 
 pub const STRANGE_FEELING: &'static str = "you have a strange feeling for a moment, then it passes";
 
-pub unsafe fn quaff(game: &mut GameState) {
+pub fn quaff(game: &mut GameState) {
 	let ch = pack_letter("quaff what?", Potions, game);
 	if ch == CANCEL {
 		return;
@@ -55,7 +55,7 @@ pub unsafe fn quaff(game: &mut GameState) {
 	}
 }
 
-pub unsafe fn read_scroll(game: &mut GameState) {
+pub fn read_scroll(game: &mut GameState) {
 	if game.player.blind.is_active() {
 		game.dialog.message("You can't see to read the scroll.", 0);
 		return;
@@ -165,7 +165,7 @@ pub unsafe fn read_scroll(game: &mut GameState) {
 	}
 }
 
-pub unsafe fn vanish(obj_id: ObjectId, do_regular_move: bool, game: &mut GameState) {
+pub fn vanish(obj_id: ObjectId, do_regular_move: bool, game: &mut GameState) {
 	/* vanish() does NOT handle a quiver of weapons with more than one
 	   arrow (or whatever) in the quiver.  It will only decrement the count.
 	*/
@@ -187,7 +187,7 @@ pub unsafe fn vanish(obj_id: ObjectId, do_regular_move: bool, game: &mut GameSta
 	}
 }
 
-unsafe fn idntfy(game: &mut GameState) {
+fn idntfy(game: &mut GameState) {
 	loop {
 		let ch = pack_letter("what would you like to identify?", AllObjects, game);
 		if ch == CANCEL {
@@ -219,7 +219,7 @@ unsafe fn idntfy(game: &mut GameState) {
 }
 
 
-pub unsafe fn eat(game: &mut GameState) {
+pub fn eat(game: &mut GameState) {
 	let ch = pack_letter("eat what?", Foods, game);
 	if ch == CANCEL {
 		return;
@@ -257,7 +257,7 @@ pub unsafe fn eat(game: &mut GameState) {
 	}
 }
 
-unsafe fn hold_monster(game: &mut GameState) {
+fn hold_monster(game: &mut GameState) {
 	let mut mcount = 0;
 	for i in -2..=2 {
 		for j in -2..=2 {
@@ -283,7 +283,7 @@ unsafe fn hold_monster(game: &mut GameState) {
 	}
 }
 
-pub unsafe fn tele(game: &mut GameState) {
+pub fn tele(game: &mut GameState) {
 	mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, get_dungeon_char(game.player.rogue.row, game.player.rogue.col, game));
 	if let RoomMark::Area(cur_room) = game.player.cur_room {
 		darken_room(cur_room, game);
@@ -294,7 +294,7 @@ pub unsafe fn tele(game: &mut GameState) {
 	game.level.bear_trap = 0;
 }
 
-pub unsafe fn hallucinate_on_screen(game: &mut GameState) {
+pub fn hallucinate_on_screen(game: &mut GameState) {
 	if game.player.blind.is_active() {
 		return;
 	}
@@ -328,14 +328,14 @@ pub fn is_monster_char(ch: chtype) -> bool {
 	}
 }
 
-pub unsafe fn unhallucinate(game: &mut GameState) {
+pub fn unhallucinate(game: &mut GameState) {
 	game.player.halluc.clear();
 	relight(game);
 	game.player.interrupt_and_slurp();
 	game.dialog.message("everything looks SO boring now", 1);
 }
 
-pub unsafe fn unblind(game: &mut GameState) {
+pub fn unblind(game: &mut GameState) {
 	game.player.blind.clear();
 	game.player.interrupt_and_slurp();
 	game.dialog.message("the veil of darkness lifts", 1);
@@ -348,7 +348,7 @@ pub unsafe fn unblind(game: &mut GameState) {
 	}
 }
 
-pub unsafe fn relight(game: &mut GameState) {
+pub fn relight(game: &mut GameState) {
 	match game.player.cur_room {
 		RoomMark::None => {}
 		RoomMark::Passage => {
@@ -361,7 +361,7 @@ pub unsafe fn relight(game: &mut GameState) {
 	mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, chtype::from(game.player.rogue.fchar));
 }
 
-pub unsafe fn take_a_nap(game: &mut GameState) {
+pub fn take_a_nap(game: &mut GameState) {
 	let mut i = get_rand(2, 5);
 	md_sleep(1);
 	while i > 0 {
@@ -385,7 +385,7 @@ pub fn confuse(player: &mut Player) {
 	player.confused.extend(amount);
 }
 
-pub unsafe fn unconfuse(game: &mut GameState) {
+pub fn unconfuse(game: &mut GameState) {
 	game.player.confused.clear();
 	let feeling = if game.player.halluc.is_active() { "trippy" } else { "confused" };
 	let msg = format!("you feel less {} now", feeling);

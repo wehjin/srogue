@@ -9,11 +9,11 @@ use ncurses::clear;
 
 use crate::init::{clean_up, GameState};
 use crate::machdep::{delete_file, get_file_modification_time, md_get_file_id, md_ignore_signals, md_link_count, RogueTime};
-use crate::message::{get_input_line, msg_cleared, sound_bell};
+use crate::message::{get_input_line, sound_bell};
 use crate::ring::ring_stats;
 use crate::save::data::SaveData;
 
-pub unsafe fn save_game(game: &mut GameState) -> bool {
+pub fn save_game(game: &mut GameState) -> bool {
 	let save_file = game.player.settings.save_file.clone();
 	let cancellation_prompt = Some("game not saved");
 	let file_name = get_input_line("file name?", save_file, cancellation_prompt, false, true, game);
@@ -27,7 +27,7 @@ pub unsafe fn save_game(game: &mut GameState) -> bool {
 
 mod data;
 
-unsafe fn save_into_file(save_path: &str, game: &mut GameState) -> bool {
+fn save_into_file(save_path: &str, game: &mut GameState) -> bool {
 	let save_path = expand_tilde(&save_path);
 	let file = File::create(&save_path);
 	let mut file = match file {
@@ -76,7 +76,7 @@ fn expand_tilde(file: &str) -> String {
 	}
 }
 
-pub unsafe fn restore(file_path: &str, game: &mut GameState) -> bool {
+pub fn restore(file_path: &str, game: &mut GameState) -> bool {
 	let cur_login_name = game.player.settings.login_name.clone();
 	let new_file_id = md_get_file_id(file_path);
 	if new_file_id == -1 {
@@ -127,7 +127,6 @@ pub unsafe fn restore(file_path: &str, game: &mut GameState) -> bool {
 		return false;
 	}
 
-	msg_cleared = false;
 	ring_stats(false, game);
 	return true;
 }

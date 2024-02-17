@@ -29,7 +29,7 @@ use crate::weapons::constants::ARROW;
 use crate::weapons::kind::WeaponKind;
 use crate::zap::zap_monster;
 
-pub unsafe fn throw(game: &mut GameState) {
+pub fn throw(game: &mut GameState) {
 	let dir = get_dir_or_cancel(game);
 	game.dialog.clear_message();
 	if dir == CANCEL {
@@ -95,7 +95,7 @@ pub unsafe fn throw(game: &mut GameState) {
 	}
 }
 
-unsafe fn throw_at_monster(mon_id: u64, obj_id: ObjectId, game: &mut GameState) -> bool {
+fn throw_at_monster(mon_id: u64, obj_id: ObjectId, game: &mut GameState) -> bool {
 	let hit_chance = {
 		let player_exp = game.player.buffed_exp();
 		let player_debuf = game.player.debuf_exp();
@@ -110,13 +110,14 @@ unsafe fn throw_at_monster(mon_id: u64, obj_id: ObjectId, game: &mut GameState) 
 		}
 		hit_chance
 	};
-	HIT_MESSAGE = format!("the {}", game.player.to_object_name_with_quantity(obj_id, 1).trim());
-	if !rand_percent(hit_chance) {
-		HIT_MESSAGE += " misses  ";
-		return false;
+	{
+		unsafe { HIT_MESSAGE = format!("the {}", game.player.to_object_name_with_quantity(obj_id, 1).trim()); }
+		if !rand_percent(hit_chance) {
+			unsafe { HIT_MESSAGE += " misses  "; }
+			return false;
+		}
+		unsafe { HIT_MESSAGE += " hit  "; }
 	}
-
-	HIT_MESSAGE += " hit  ";
 	if game.player.object_what(obj_id) == Wand && rand_percent(75) {
 		zap_monster(mon_id, game.player.object_kind(obj_id), game);
 	} else {
@@ -143,7 +144,7 @@ fn rogue_weapon_is_bow(player: &Player) -> bool {
 }
 
 
-pub unsafe fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i64, col: &mut i64, game: &mut GameState) -> Option<u64> {
+pub fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i64, col: &mut i64, game: &mut GameState) -> Option<u64> {
 	let mut orow = *row;
 	let mut ocol = *col;
 	let obj_char = get_mask_char(obj_what);
@@ -181,7 +182,7 @@ pub unsafe fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i
 	return None;
 }
 
-unsafe fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, game: &mut GameState) {
+fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, game: &mut GameState) {
 	let mut found = false;
 	let mut walk = RandomWalk::new(row, col);
 	fn good_cell(cell: DungeonCell) -> bool {

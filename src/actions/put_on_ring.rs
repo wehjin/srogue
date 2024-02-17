@@ -13,19 +13,19 @@ pub struct PutOnRing;
 impl PlayerAction for PutOnRing {
 	fn commit(&self, game: &mut GameState) {
 		if game.player.hand_usage() == HandUsage::Both {
-			unsafe { game.dialog.message("wearing two rings already", 0); }
+			game.dialog.message("wearing two rings already", 0);
 			return;
 		}
-		let ch = unsafe { pack_letter("put on what?", Rings, game) };
+		let ch = pack_letter("put on what?", Rings, game);
 		if ch == CANCEL {
 			return;
 		}
 		match game.player.object_id_with_letter(ch) {
-			None => unsafe {
+			None => {
 				game.dialog.message("no such item.", 0);
 				return;
 			}
-			Some(obj_id) => unsafe {
+			Some(obj_id) => {
 				if game.player.object_what(obj_id) != Ring {
 					game.dialog.message("that's not a ring", 0);
 					return;

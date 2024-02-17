@@ -27,7 +27,7 @@ pub struct SaveData {
 }
 
 impl SaveData {
-	pub unsafe fn read_from_statics(file_id: i64, game: &GameState) -> Self {
+	pub fn read_from_statics(file_id: i64, game: &GameState) -> Self {
 		SaveData {
 			mash: game.mash.clone(),
 			player: game.player.clone(),
@@ -37,5 +37,5 @@ impl SaveData {
 			saved_time: get_current_time().add_seconds(10),
 		}
 	}
-	pub unsafe fn write_to_statics(&self) {}
+	pub fn write_to_statics(&self) {}
 }

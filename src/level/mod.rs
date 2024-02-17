@@ -638,13 +638,13 @@ pub fn put_player(avoid_room: RoomMark, game: &mut GameState) {
 		}
 	}
 	if let Some(msg) = &game.level.new_level_message {
-		unsafe { game.dialog.message(msg, 0) };
+		game.dialog.message(msg, 0);
 	}
 	game.level.new_level_message = None;
 	ncurses::mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, game.player.rogue.fchar as ncurses::chtype);
 }
 
-pub unsafe fn drop_check(game: &mut GameState) -> bool {
+pub fn drop_check(game: &mut GameState) -> bool {
 	if game.player.wizard {
 		return true;
 	}
@@ -665,7 +665,7 @@ pub enum UpResult {
 	WonGame,
 }
 
-pub unsafe fn check_up(game: &mut GameState) -> UpResult {
+pub fn check_up(game: &mut GameState) -> UpResult {
 	if !game.player.wizard {
 		if !game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_stairs() {
 			game.dialog.message("I see no way up", 0);
@@ -686,7 +686,7 @@ pub unsafe fn check_up(game: &mut GameState) -> UpResult {
 	}
 }
 
-pub unsafe fn add_exp(e: isize, promotion: bool, game: &mut GameState) {
+pub fn add_exp(e: isize, promotion: bool, game: &mut GameState) {
 	let player = &mut game.player;
 	player.rogue.exp_points += e;
 
@@ -728,7 +728,7 @@ pub fn hp_raise(player: &Player) -> isize {
 	}
 }
 
-pub unsafe fn show_average_hp(game: &mut GameState) {
+pub fn show_average_hp(game: &mut GameState) {
 	let player = &game.player;
 	let (real_average, effective_average) = if player.rogue.exp == 1 {
 		(0.0, 0.0)

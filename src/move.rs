@@ -36,11 +36,7 @@ pub enum MoveResult {
 }
 
 
-pub unsafe fn one_move_rogue(
-	dirch: char,
-	pickup: bool,
-	game: &mut GameState,
-) -> MoveResult {
+pub fn one_move_rogue(dirch: char, pickup: bool, game: &mut GameState) -> MoveResult {
 	let dirch = if game.player.confused.is_active() {
 		Move::random8().to_char()
 	} else {
@@ -149,21 +145,21 @@ pub unsafe fn one_move_rogue(
 	}
 }
 
-unsafe fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, game: &mut GameState) -> MoveResult {
+fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, game: &mut GameState) -> MoveResult {
 	let obj = game.ground.find_object_at(row, col).expect("moved-on object");
 	let obj_desc = get_obj_desc(obj, game.player.settings.fruit.to_string(), &game.player);
 	let desc = format!("moved onto {}", obj_desc);
 	return stopped_on_something_with_message(&desc, game);
 }
 
-unsafe fn stopped_on_something_with_message(desc: &str, game: &mut GameState) -> MoveResult {
+fn stopped_on_something_with_message(desc: &str, game: &mut GameState) -> MoveResult {
 	game.player.interrupt_and_slurp();
 	game.dialog.message(desc, 1);
 	reg_move(game);
 	return StoppedOnSomething;
 }
 
-unsafe fn moved_unless_hungry_or_confused(game: &mut GameState) -> MoveResult {
+fn moved_unless_hungry_or_confused(game: &mut GameState) -> MoveResult {
 	if reg_move(game) {
 		/* fainted from hunger */
 		StoppedOnSomething
@@ -185,7 +181,7 @@ const NAK: char = '\x15';
 const SO: char = '\x0e';
 const STX: char = '\x02';
 
-pub unsafe fn multiple_move_rogue(dirch: i64, game: &mut GameState) {
+pub fn multiple_move_rogue(dirch: i64, game: &mut GameState) {
 	let dirch = dirch as u8 as char;
 	match dirch {
 		BS | LF | VT | FF | EM | NAK | SO | STX => loop {
@@ -227,7 +223,7 @@ pub fn is_passable(row: i64, col: i64, level: &Level) -> bool {
 	}
 }
 
-pub unsafe fn next_to_something(drow: i64, dcol: i64, player: &Player, level: &Level) -> bool {
+pub fn next_to_something(drow: i64, dcol: i64, player: &Player, level: &Level) -> bool {
 	if player.confused.is_active() {
 		return true;
 	}
@@ -305,7 +301,7 @@ pub fn can_move(row1: i64, col1: i64, row2: i64, col2: i64, level: &Level) -> bo
 	}
 }
 
-pub unsafe fn move_onto(game: &mut GameState) {
+pub fn move_onto(game: &mut GameState) {
 	let ch = get_dir_or_cancel(game);
 	game.dialog.clear_message();
 	if ch != CANCEL {
@@ -313,7 +309,7 @@ pub unsafe fn move_onto(game: &mut GameState) {
 	}
 }
 
-pub unsafe fn get_dir_or_cancel(game: &mut GameState) -> char {
+pub fn get_dir_or_cancel(game: &mut GameState) -> char {
 	let mut dir: char;
 	let mut first_miss: bool = true;
 	loop {
@@ -330,7 +326,7 @@ pub unsafe fn get_dir_or_cancel(game: &mut GameState) -> char {
 	dir
 }
 
-pub unsafe fn is_direction(c: char) -> bool {
+pub fn is_direction(c: char) -> bool {
 	c == 'h' || c == 'j' || c == 'k' || c == 'l'
 		|| c == 'b' || c == 'y' || c == 'u' || c == 'n'
 		|| c == CANCEL
@@ -362,7 +358,7 @@ fn get_hunger_transition_with_burn_count(moves_left: isize, moves_burned: isize)
 	}
 }
 
-pub unsafe fn check_hunger(game: &mut GameState) -> HungerCheckResult {
+pub fn check_hunger(game: &mut GameState) -> HungerCheckResult {
 	let moves_to_burn = match game.player.ring_effects.calorie_burn() {
 		-2 => 0,
 		-1 => game.player.rogue.moves_left % 2,
@@ -391,7 +387,7 @@ pub unsafe fn check_hunger(game: &mut GameState) -> HungerCheckResult {
 	return HungerCheckResult::StillWalking;
 }
 
-unsafe fn random_faint(game: &mut GameState) -> bool {
+fn random_faint(game: &mut GameState) -> bool {
 	let n = get_rand(0, FAINT_MOVES_LEFT - game.player.rogue.moves_left);
 	if n > 0 {
 		if rand_percent(40) {
@@ -412,7 +408,7 @@ unsafe fn random_faint(game: &mut GameState) -> bool {
 	}
 }
 
-pub unsafe fn reg_move(game: &mut GameState) -> bool {
+pub fn reg_move(game: &mut GameState) -> bool {
 	let hunger_check = if game.player.rogue.moves_left <= HUNGRY_MOVES_LEFT || game.player.cur_depth >= game.player.max_depth {
 		check_hunger(game)
 	} else {
@@ -476,7 +472,7 @@ pub unsafe fn reg_move(game: &mut GameState) -> bool {
 	return hunger_check == HungerCheckResult::DidFaint;
 }
 
-pub unsafe fn rest(count: libc::c_int, game: &mut GameState) {
+pub fn rest(count: libc::c_int, game: &mut GameState) {
 	game.player.interrupted = false;
 	for _i in 0..count {
 		if game.player.interrupted {
@@ -487,41 +483,46 @@ pub unsafe fn rest(count: libc::c_int, game: &mut GameState) {
 }
 
 
-pub unsafe fn heal(player: &mut Player) {
+pub fn heal(player: &mut Player) {
 	static mut heal_level: isize = -1;
 	static mut time_between_heals: isize = 0;
 	static mut time_since_last_heal_or_damage: isize = 0;
 	static mut double_healing_toggle: bool = false;
 
 	if player.rogue.hp_current == player.rogue.hp_max {
-		time_since_last_heal_or_damage = 0;
+		unsafe { time_since_last_heal_or_damage = 0; }
 		return;
 	}
-	if player.rogue.exp != heal_level {
-		heal_level = player.rogue.exp;
-		time_between_heals = match heal_level {
-			1 => 20,
-			2 => 18,
-			3 => 17,
-			4 => 14,
-			5 => 13,
-			6 => 10,
-			7 => 9,
-			8 => 8,
-			9 => 7,
-			10 => 4,
-			11 => 3,
-			_ => 2,
+
+	if player.rogue.exp != unsafe { heal_level } {
+		unsafe { heal_level = player.rogue.exp; }
+		unsafe {
+			time_between_heals = match heal_level {
+				1 => 20,
+				2 => 18,
+				3 => 17,
+				4 => 14,
+				5 => 13,
+				6 => 10,
+				7 => 9,
+				8 => 8,
+				9 => 7,
+				10 => 4,
+				11 => 3,
+				_ => 2,
+			}
 		}
 	}
-	time_since_last_heal_or_damage += 1;
-	if time_since_last_heal_or_damage >= time_between_heals {
-		time_since_last_heal_or_damage = 0;
-		double_healing_toggle = !double_healing_toggle;
+
+	unsafe { time_since_last_heal_or_damage += 1; }
+
+	if unsafe { time_since_last_heal_or_damage } >= unsafe { time_between_heals } {
+		unsafe { time_since_last_heal_or_damage = 0; }
+		unsafe { double_healing_toggle = !double_healing_toggle; }
 
 		let mut healing = player.rogue.hp_current;
 		healing += 1;
-		if double_healing_toggle {
+		if unsafe { double_healing_toggle } {
 			healing += 1;
 		}
 		healing += player.ring_effects.regeneration();

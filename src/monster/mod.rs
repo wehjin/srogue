@@ -50,7 +50,7 @@ pub struct Fighter {
 
 pub static mut mon_disappeared: bool = false;
 
-pub unsafe fn put_mons(game: &mut GameState) {
+pub fn put_mons(game: &mut GameState) {
 	for _ in 0..get_rand(4, 6) {
 		let mut monster = gr_monster(game.player.cur_depth, 0, None);
 		if monster.m_flags.wanders && coin_toss() {
@@ -78,7 +78,7 @@ pub fn gr_monster(level_depth: isize, first_level_boost: isize, kind: Option<Mon
 	return monster;
 }
 
-pub unsafe fn mv_mons(game: &mut GameState) {
+pub fn mv_mons(game: &mut GameState) {
 	if game.player.haste_self.is_half_active() {
 		return;
 	}
@@ -86,9 +86,9 @@ pub unsafe fn mv_mons(game: &mut GameState) {
 	for mon_id in game.mash.monster_ids() {
 		let mut done_with_monster = false;
 		if game.mash.test_monster(mon_id, Monster::is_hasted) {
-			mon_disappeared = false;
+			unsafe { mon_disappeared = false; }
 			mv_monster(mon_id, game.player.rogue.row, game.player.rogue.col, game);
-			if mon_disappeared {
+			if unsafe { mon_disappeared } {
 				done_with_monster = true;
 			}
 		} else if game.mash.test_monster(mon_id, Monster::is_slowed) {
@@ -119,7 +119,7 @@ pub unsafe fn mv_mons(game: &mut GameState) {
 	}
 }
 
-pub unsafe fn party_monsters(rn: usize, n: usize, level_depth: isize, mash: &mut MonsterMash, level: &mut Level) {
+pub fn party_monsters(rn: usize, n: usize, level_depth: isize, mash: &mut MonsterMash, level: &mut Level) {
 	let first_level_shift = level_depth % 3;
 	let n = n + n;
 	for _i in 0..n {
@@ -165,7 +165,7 @@ pub fn gmc(monster: &Monster, player: &Player, level: &Level) -> chtype {
 	}
 }
 
-pub unsafe fn mv_monster(mon_id: u64, row: i64, col: i64, game: &mut GameState) {
+pub fn mv_monster(mon_id: u64, row: i64, col: i64, game: &mut GameState) {
 	if game.mash.monster_flags(mon_id).asleep {
 		if game.mash.monster_flags(mon_id).napping {
 			game.mash.monster_mut(mon_id).do_nap();
@@ -251,7 +251,7 @@ pub unsafe fn mv_monster(mon_id: u64, row: i64, col: i64, game: &mut GameState) 
 	}
 }
 
-pub unsafe fn mtry(monster: &mut Monster, row: i64, col: i64, player: &Player, level: &mut Level, ground: &ObjectPack) -> bool {
+pub fn mtry(monster: &mut Monster, row: i64, col: i64, player: &Player, level: &mut Level, ground: &ObjectPack) -> bool {
 	if mon_can_go(monster, row, col, player, level, ground) {
 		move_mon_to(monster, row, col, player, level);
 		return true;
@@ -259,7 +259,7 @@ pub unsafe fn mtry(monster: &mut Monster, row: i64, col: i64, player: &Player, l
 	return false;
 }
 
-pub unsafe fn move_mon_to(monster: &mut Monster, row: i64, col: i64, player: &Player, level: &mut Level) {
+pub fn move_mon_to(monster: &mut Monster, row: i64, col: i64, player: &Player, level: &mut Level) {
 	let (mrow, mcol) = (monster.spot.row, monster.spot.col);
 	level.dungeon[mrow as usize][mcol as usize].set_monster(false);
 	level.dungeon[row as usize][col as usize].set_monster(true);
@@ -303,7 +303,7 @@ pub unsafe fn move_mon_to(monster: &mut Monster, row: i64, col: i64, player: &Pl
 	}
 }
 
-pub unsafe fn mon_can_go(monster: &Monster, row: i64, col: i64, player: &Player, level: &Level, ground: &ObjectPack) -> bool {
+pub fn mon_can_go(monster: &Monster, row: i64, col: i64, player: &Player, level: &Level, ground: &ObjectPack) -> bool {
 	let dr = monster.spot.row as isize - row as isize;        /* check if move distance > 1 */
 	if (dr >= 2) || (dr <= -2) {
 		return false;
@@ -363,7 +363,7 @@ pub fn wake_room(rn: usize, entering: bool, row: i64, col: i64, game: &mut GameS
 	}
 }
 
-pub unsafe fn mon_name(monster: &Monster, player: &Player, level: &Level) -> &'static str {
+pub fn mon_name(monster: &Monster, player: &Player, level: &Level) -> &'static str {
 	if player.blind.is_active()
 		|| (monster.m_flags.invisible && !player_defeats_invisibility(player, level)) {
 		"something"
@@ -406,7 +406,7 @@ fn random_spot_for_wanderer(player: &Player, level: &Level) -> Option<DungeonSpo
 	None
 }
 
-pub unsafe fn put_wanderer(game: &mut GameState) {
+pub fn put_wanderer(game: &mut GameState) {
 	if let Some(mut monster) = random_wanderer(game.player.cur_depth) {
 		monster.wake_up();
 		if let Some(spot) = random_spot_for_wanderer(&game.player, &game.level) {
@@ -415,7 +415,7 @@ pub unsafe fn put_wanderer(game: &mut GameState) {
 	}
 }
 
-pub unsafe fn show_monsters(game: &mut GameState) {
+pub fn show_monsters(game: &mut GameState) {
 	game.level.detect_monster = true;
 	if game.player.blind.is_active() {
 		return;
@@ -445,7 +445,7 @@ fn random_spot_for_monster(start_row: i64, start_col: i64, level: &Level) -> Opt
 	None
 }
 
-pub unsafe fn create_monster(game: &mut GameState) {
+pub fn create_monster(game: &mut GameState) {
 	let player = &game.player;
 	if let Some(found) = random_spot_for_monster(player.rogue.row, player.rogue.col, &game.level) {
 		let monster = gr_monster(player.cur_depth, 0, None);
@@ -462,7 +462,7 @@ pub unsafe fn create_monster(game: &mut GameState) {
 	}
 }
 
-pub unsafe fn put_m_at(row: i64, col: i64, mut monster: Monster, mash: &mut MonsterMash, level: &mut Level) {
+pub fn put_m_at(row: i64, col: i64, mut monster: Monster, mash: &mut MonsterMash, level: &mut Level) {
 	monster.set_spot(row, col);
 	level.dungeon[row as usize][col as usize].set_monster(true);
 	monster.trail_char = ncurses::mvinch(row as i32, col as i32);
@@ -472,7 +472,7 @@ pub unsafe fn put_m_at(row: i64, col: i64, mut monster: Monster, mash: &mut Mons
 	}
 }
 
-pub unsafe fn move_confused(monster: &mut Monster, player: &Player, level: &mut Level, ground: &ObjectPack) -> bool {
+pub fn move_confused(monster: &mut Monster, player: &Player, level: &mut Level, ground: &ObjectPack) -> bool {
 	if !monster.m_flags.asleep {
 		monster.decrement_moves_confused();
 		if monster.m_flags.stationary {
@@ -496,7 +496,7 @@ pub unsafe fn move_confused(monster: &mut Monster, player: &Player, level: &mut 
 	false
 }
 
-pub unsafe fn flit(monster: &mut Monster, player: &Player, level: &mut Level, ground: &ObjectPack) -> bool {
+pub fn flit(monster: &mut Monster, player: &Player, level: &mut Level, ground: &ObjectPack) -> bool {
 	if !rand_percent(odds::FLIT_PERCENT) {
 		return false;
 	}
@@ -523,7 +523,7 @@ pub fn gr_obj_char() -> chtype {
 	chtype::from(OPTIONS[index])
 }
 
-pub unsafe fn aim_monster(monster: &mut Monster, level: &Level) {
+pub fn aim_monster(monster: &mut Monster, level: &Level) {
 	let rn = get_room_number(monster.spot.row, monster.spot.col, level) as usize;
 	let r = get_rand(0, 12);
 	for i in 0..4 {
@@ -552,7 +552,7 @@ pub fn no_spot_for_monster(rn: usize, level: &Level) -> bool {
 	return true;
 }
 
-pub unsafe fn aggravate(game: &mut GameState) {
+pub fn aggravate(game: &mut GameState) {
 	game.dialog.message("you hear a high pitched humming noise", 0);
 	for monster in &mut game.mash.monsters {
 		monster.wake_up();
@@ -563,7 +563,7 @@ pub unsafe fn aggravate(game: &mut GameState) {
 	}
 }
 
-pub unsafe fn mv_aquatars(game: &mut GameState) {
+pub fn mv_aquatars(game: &mut GameState) {
 	for mon_id in game.mash.monster_ids() {
 		let monster = game.mash.monster(mon_id);
 		if monster.kind == MonsterKind::Aquator

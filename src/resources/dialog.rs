@@ -29,6 +29,12 @@ impl PlayerDialog {
 		self.msg_written = String::new();
 		self.msg_cleared = true;
 	}
+	pub fn message_cleared(&self) -> bool {
+		self.msg_cleared
+	}
+	pub fn set_message_cleared(&mut self, value: bool) {
+		self.msg_cleared = value;
+	}
 	pub fn clear_message(&mut self) {
 		if self.msg_cleared {
 			return;
@@ -38,7 +44,7 @@ impl PlayerDialog {
 		ncurses::refresh();
 		self.msg_cleared = true;
 	}
-	pub unsafe fn message(&mut self, msg: &str, _intrpt: i64) {
+	pub fn message(&mut self, msg: &str, _intrpt: i64) {
 		// if !save_is_interactive {
 		// 	return;
 		// }
@@ -58,6 +64,12 @@ impl PlayerDialog {
 		if self.did_int {
 			self.did_int = false;
 			onintr();
+		}
+	}
+	pub fn remessage(&mut self) {
+		if !self.msg_written.is_empty() {
+			let string = self.msg_written.to_string();
+			self.message(string.as_str(), 0);
 		}
 	}
 }

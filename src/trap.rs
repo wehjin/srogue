@@ -94,7 +94,7 @@ pub fn trap_message(trap: TrapKind) -> &'static str {
 	}
 }
 
-pub unsafe fn trap_at(row: usize, col: usize, level: &Level) -> TrapKind {
+pub fn trap_at(row: usize, col: usize, level: &Level) -> TrapKind {
 	for i in 0..MAX_TRAP {
 		if level.traps[i].trap_type != NoTrap {
 			break;
@@ -106,7 +106,7 @@ pub unsafe fn trap_at(row: usize, col: usize, level: &Level) -> TrapKind {
 	return NoTrap;
 }
 
-pub unsafe fn trap_player(row: usize, col: usize, game: &mut GameState) {
+pub fn trap_player(row: usize, col: usize, game: &mut GameState) {
 	let t = trap_at(row, col, &game.level);
 	if t == NoTrap {
 		return;
@@ -161,7 +161,7 @@ pub unsafe fn trap_player(row: usize, col: usize, game: &mut GameState) {
 	}
 }
 
-pub unsafe fn add_traps(player: &Player, level: &mut Level) {
+pub fn add_traps(player: &Player, level: &mut Level) {
 	let n: usize;
 	let cur_level = player.cur_depth;
 	if cur_level <= 2 {
@@ -219,7 +219,7 @@ fn random_spot_with_floor_or_monster(player: &Player, level: &mut Level) -> (usi
 	(row as usize, col as usize)
 }
 
-pub unsafe fn id_trap(game: &mut GameState) {
+pub fn id_trap(game: &mut GameState) {
 	game.dialog.message("direction? ", 0);
 	let mut dir: char;
 	loop {
@@ -238,14 +238,14 @@ pub unsafe fn id_trap(game: &mut GameState) {
 	let mut col = game.player.rogue.col;
 	get_dir_rc(dir, &mut row, &mut col, false);
 	if game.level.dungeon[row as usize][col as usize].is_trap() && !game.level.dungeon[row as usize][col as usize].is_hidden() {
-		 game.dialog.message(trap_at(row as usize, col as usize, &game.level).name(), 0);
+		game.dialog.message(trap_at(row as usize, col as usize, &game.level).name(), 0);
 	} else {
 		game.dialog.message("no trap there", 0);
 	}
 }
 
 
-pub unsafe fn show_traps(level: &Level) {
+pub fn show_traps(level: &Level) {
 	for i in 0..DROWS {
 		for j in 0..DCOLS {
 			if level.dungeon[i][j].is_trap() {
@@ -255,7 +255,7 @@ pub unsafe fn show_traps(level: &Level) {
 	}
 }
 
-pub unsafe fn search(n: usize, is_auto: bool, game: &mut GameState) {
+pub fn search(n: usize, is_auto: bool, game: &mut GameState) {
 	static mut reg_search: bool = false;
 
 	let mut found = 0;
@@ -300,8 +300,8 @@ pub unsafe fn search(n: usize, is_auto: bool, game: &mut GameState) {
 			}
 		}
 		if !is_auto {
-			reg_search = !reg_search;
-			if reg_search {
+			unsafe { reg_search = !reg_search; }
+			if unsafe { reg_search } {
 				reg_move(game);
 			}
 		}

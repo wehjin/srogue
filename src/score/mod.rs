@@ -9,7 +9,7 @@ use ncurses::{mv, mvaddch, mvaddstr, mvinch, refresh, standend, standout};
 use crate::init::{BYEBYE_STRING, clean_up, GameState};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::machdep::{md_heed_signals, md_ignore_signals};
-use crate::message::{msg_cleared, rgetchar};
+use crate::message::rgetchar;
 use crate::pack::{has_amulet, unwear, unwield};
 use crate::player::Player;
 use crate::prelude::*;
@@ -22,7 +22,7 @@ mod values;
 
 pub const SCORE_FILE: &'static str = "/usr/games/player.rogue.scores";
 
-pub unsafe fn killed_by(ending: Ending, game: &mut GameState) {
+pub fn killed_by(ending: Ending, game: &mut GameState) {
 	md_ignore_signals();
 	if !ending.is_quit() {
 		game.player.rogue.gold = ((game.player.rogue.gold as f64 * 9.0) / 10.0) as usize;
@@ -58,7 +58,7 @@ pub unsafe fn killed_by(ending: Ending, game: &mut GameState) {
 	put_scores(Some(ending), game);
 }
 
-unsafe fn ending_string(ending: &Ending) -> String {
+fn ending_string(ending: &Ending) -> String {
 	match ending {
 		&Ending::Monster(ref name) => {
 			let article = if is_vowel(name.chars().nth(0).unwrap()) { "an" } else { "a" };
@@ -72,7 +72,7 @@ unsafe fn ending_string(ending: &Ending) -> String {
 	}
 }
 
-pub unsafe fn win(game: &mut GameState) {
+pub fn win(game: &mut GameState) {
 	unwield(&mut game.player);          /* disarm and relax */
 	unwear(&mut game.player);
 	for hand in PlayerHand::ALL_HANDS {
@@ -94,7 +94,7 @@ pub unsafe fn win(game: &mut GameState) {
 	put_scores(Some(Ending::Win), game);
 }
 
-pub unsafe fn ask_quit(from_intrpt: bool, game: &mut GameState) -> bool {
+pub fn ask_quit(from_intrpt: bool, game: &mut GameState) -> bool {
 	md_ignore_signals();
 	let mut orow = 0;
 	let mut ocol = 0;
@@ -103,7 +103,7 @@ pub unsafe fn ask_quit(from_intrpt: bool, game: &mut GameState) -> bool {
 	if from_intrpt {
 		orow = game.player.rogue.row;
 		ocol = game.player.rogue.col;
-		mc = msg_cleared;
+		mc = game.dialog.message_cleared();
 		for i in 0..DCOLS {
 			buf[i] = mvinch(0, i as i32);
 		}
@@ -118,7 +118,7 @@ pub unsafe fn ask_quit(from_intrpt: bool, game: &mut GameState) -> bool {
 			for i in 0..DCOLS {
 				mvaddch(0, i as i32, buf[i]);
 			}
-			msg_cleared = mc;
+			game.dialog.set_message_cleared(mc);
 			mv(orow as i32, ocol as i32);
 			refresh();
 		}
@@ -133,7 +133,7 @@ pub unsafe fn ask_quit(from_intrpt: bool, game: &mut GameState) -> bool {
 	return true;
 }
 
-pub unsafe fn put_scores(ending: Option<Ending>, game: &mut GameState) {
+pub fn put_scores(ending: Option<Ending>, game: &mut GameState) {
 	// TODO turn_into_games();
 	let mut file = match File::options().read(true).write(true).open(SCORE_FILE) {
 		Ok(file) => file,
@@ -254,7 +254,7 @@ fn gold_in_score(score: &str) -> Option<usize> {
 	trimmed.parse::<usize>().ok()
 }
 
-unsafe fn insert_score(
+fn insert_score(
 	scores: &mut Vec<String>,
 	n_names: &mut Vec<String>,
 	n_name: &str,
@@ -292,7 +292,7 @@ pub fn is_vowel(ch: char) -> bool {
 	}
 }
 
-pub unsafe fn sell_pack(game: &mut GameState)
+pub fn sell_pack(game: &mut GameState)
 {
 	ncurses::clear();
 	mvaddstr(1, 0, "Value      Item");
@@ -355,7 +355,7 @@ pub fn center(row: i64, msg: &str) {
 	mvaddstr(row as i32, margin as i32, msg);
 }
 
-pub unsafe fn score_file_error(game: &mut GameState) {
+pub fn score_file_error(game: &mut GameState) {
 	game.player.interrupt_and_slurp();
 	game.dialog.message("", 1);
 	clean_up("sorry, score file is out of order", &mut game.player);

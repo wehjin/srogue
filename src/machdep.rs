@@ -76,13 +76,13 @@ pub fn md_control_keybord(_mode: libc::c_short) {
 }
 
 
-unsafe fn sig_on_intr(_: c_int) { onintr(); }
+fn sig_on_intr(_: c_int) { onintr(); }
 
-// unsafe fn sig_on_quit(_: c_int) {
+// fn sig_on_quit(_: c_int) {
 // 	byebye(true, unimplemented!("Acquire max_level for quit"));
 // }
 
-unsafe fn sig_on_hup(_: c_int) {
+fn sig_on_hup(_: c_int) {
 	unimplemented!("Acquire game state for interrupt");
 	// save_is_interactive = false;
 	// crate::save::save_into_file(ERROR_FILE, game);
@@ -90,29 +90,29 @@ unsafe fn sig_on_hup(_: c_int) {
 }
 
 
-pub unsafe fn md_heed_signals() {
-	// signal(SIGINT, sig_on_intr as unsafe fn(c_int) as *mut c_void as sighandler_t);
-	// signal(SIGQUIT, sig_on_quit as unsafe fn(c_int) as *mut c_void as sighandler_t);
-	// signal(SIGHUP, sig_on_hup as unsafe fn(c_int) as *mut c_void as sighandler_t);
+pub fn md_heed_signals() {
+	// signal(SIGINT, sig_on_intr as fn(c_int) as *mut c_void as sighandler_t);
+	// signal(SIGQUIT, sig_on_quit as fn(c_int) as *mut c_void as sighandler_t);
+	// signal(SIGHUP, sig_on_hup as fn(c_int) as *mut c_void as sighandler_t);
 }
 
-pub unsafe fn md_ignore_signals() {
+pub fn md_ignore_signals() {
 	// signal(SIGQUIT, SIG_IGN);
 	// signal(SIGINT, SIG_IGN);
 	// signal(SIGHUP, SIG_IGN);
 	// signal(SIGTSTP, SIG_IGN);
 }
 
-pub unsafe fn md_get_file_id(file_path: &str) -> i64 {
+pub fn md_get_file_id(file_path: &str) -> i64 {
 	let mut sbuf = libc::stat { st_dev: 0, st_mode: 0, st_nlink: 0, st_ino: 0, st_uid: 0, st_gid: 0, st_rdev: 0, st_atime: 0, st_atime_nsec: 0, st_mtime: 0, st_mtime_nsec: 0, st_ctime: 0, st_ctime_nsec: 0, st_birthtime: 0, st_size: 0, st_blocks: 0, st_blksize: 0, st_flags: 0, st_gen: 0, st_lspare: 0, st_qspare: [0; 2], st_birthtime_nsec: 0 };
 	let file_path = CString::new(file_path).unwrap();
-	if stat(file_path.as_ptr(), &mut sbuf) == 0 { sbuf.st_ino as i64 } else { -1 }
+	unsafe { if stat(file_path.as_ptr(), &mut sbuf) == 0 { sbuf.st_ino as i64 } else { -1 } }
 }
 
-pub unsafe fn md_link_count(file_path: &str) -> i64 {
+pub fn md_link_count(file_path: &str) -> i64 {
 	let mut sbuf = stat { st_dev: 0, st_mode: 0, st_nlink: 0, st_ino: 0, st_uid: 0, st_gid: 0, st_rdev: 0, st_atime: 0, st_atime_nsec: 0, st_mtime: 0, st_mtime_nsec: 0, st_ctime: 0, st_ctime_nsec: 0, st_birthtime: 0, st_birthtime_nsec: 0, st_size: 0, st_blocks: 0, st_blksize: 0, st_flags: 0, st_gen: 0, st_lspare: 0, st_qspare: [0; 2] };
 	let file_path = CString::new(file_path).unwrap();
-	stat(file_path.as_ptr(), &mut sbuf);
+	unsafe { stat(file_path.as_ptr(), &mut sbuf); }
 	return sbuf.st_nlink as i64;
 }
 
@@ -148,8 +148,8 @@ pub fn md_sleep(nsecs: i64) {
 	thread::sleep(Duration::from_nanos(nsecs as u64));
 }
 
-pub unsafe fn md_getenv(name: *mut libc::c_char) -> *mut libc::c_char {
-	libc::getenv(name)
+pub fn md_getenv(name: *mut libc::c_char) -> *mut libc::c_char {
+	unsafe { libc::getenv(name) }
 }
 
 #[no_mangle]

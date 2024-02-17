@@ -14,7 +14,7 @@ use crate::init::{GameState, GameSystem};
 use crate::instruct::Instructions;
 use crate::inventory::{inv_armor_weapon, inventory, single_inv};
 use crate::level::{check_up, drop_check, show_average_hp, UpResult};
-use crate::message::{CANCEL, remessage, rgetchar};
+use crate::message::{CANCEL, rgetchar};
 use crate::monster::show_monsters;
 use crate::objects::{new_object_for_wizard, show_objects};
 use crate::pack::{call_it, drop_0, kick_into_pack};
@@ -30,7 +30,6 @@ use crate::throw::throw;
 use crate::trap::{id_trap, search, show_traps};
 use crate::zap::{wizardize, zapp};
 
-
 pub const UNKNOWN_COMMAND: &'static str = "unknown command";
 
 pub enum PlayResult {
@@ -43,7 +42,7 @@ pub enum PlayResult {
 	CleanedUp(String),
 }
 
-pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
+pub fn play_level(game: &mut GameState) -> PlayResult {
 	let mut count = 0;
 	let mut deck_ch = None;
 	let player_actions = PlayerActionSet::new(vec![
@@ -62,10 +61,10 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 				Some(deck_ch) => deck_ch,
 				None => {
 					game.player.interrupted = false;
-					if !HIT_MESSAGE.is_empty() {
+					if unsafe { !HIT_MESSAGE.is_empty() } {
 						game.player.interrupt_and_slurp();
-						game.dialog.message(&HIT_MESSAGE, 1);
-						HIT_MESSAGE.clear();
+						unsafe { game.dialog.message(&HIT_MESSAGE, 1); }
+						unsafe { HIT_MESSAGE.clear(); }
 					}
 					if game.level.trap_door {
 						game.level.trap_door = false;
@@ -105,7 +104,7 @@ pub unsafe fn play_level(game: &mut GameState) -> PlayResult {
 				'r' => read_scroll(game),
 				'm' => move_onto(game),
 				'd' => drop_0(game),
-				'\x10' => remessage(game),
+				'\x10' => game.dialog.remessage(),
 				'\x17' => wizardize(game),
 				'>' => {
 					if drop_check(game) {

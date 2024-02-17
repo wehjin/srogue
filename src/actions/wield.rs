@@ -10,19 +10,19 @@ pub struct Wield;
 impl PlayerAction for Wield {
 	fn commit(&self, game: &mut GameState) {
 		if game.player.wields_cursed_weapon() {
-			unsafe { game.dialog.message(CURSE_MESSAGE, 0); }
+			game.dialog.message(CURSE_MESSAGE, 0);
 			return;
 		}
-		let ch = unsafe { pack_letter("wield what?", Weapons, game) };
+		let ch = pack_letter("wield what?", Weapons, game);
 		if ch == CANCEL {
 			return;
 		}
 		match game.player.object_with_letter_mut(ch) {
-			None => unsafe {
+			None => {
 				game.dialog.message("No such item.", 0);
 				return;
 			}
-			Some(obj) => unsafe {
+			Some(obj) => {
 				if obj.what_is == Armor || obj.what_is == Ring {
 					let item_name = if obj.what_is == Armor { "armor" } else { "rings" };
 					let msg = format!("you can't wield {}", item_name);

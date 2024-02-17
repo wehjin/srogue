@@ -23,7 +23,7 @@ pub(crate) mod constants;
 pub(crate) mod wand_kind;
 pub(crate) mod wand_materials;
 
-pub unsafe fn zapp(game: &mut GameState) {
+pub fn zapp(game: &mut GameState) {
 	let dir = get_dir_or_cancel(game);
 	game.dialog.clear_message();
 	if dir == CANCEL {
@@ -64,7 +64,7 @@ pub unsafe fn zapp(game: &mut GameState) {
 	}
 }
 
-pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, mash: &mut MonsterMash, level: &Level) -> Option<u64> {
+pub fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, mash: &mut MonsterMash, level: &Level) -> Option<u64> {
 	loop {
 		let orow = *row;
 		let ocol = *col;
@@ -82,7 +82,7 @@ pub unsafe fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, mash: 
 	}
 }
 
-pub unsafe fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
+pub fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
 	let monster = game.mash.monster(mon_id);
 	let row = monster.spot.row;
 	let col = monster.spot.col;
@@ -169,7 +169,7 @@ pub unsafe fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
 	}
 }
 
-unsafe fn tele_away(monster: &mut Monster, player: &Player, level: &mut Level) {
+fn tele_away(monster: &mut Monster, player: &Player, level: &mut Level) {
 	if monster.m_flags.holds {
 		level.being_held = false;
 	}
@@ -194,7 +194,7 @@ unsafe fn tele_away(monster: &mut Monster, player: &Player, level: &mut Level) {
 	}
 }
 
-pub unsafe fn wizardize(game: &mut GameState) {
+pub fn wizardize(game: &mut GameState) {
 	if game.player.wizard {
 		game.player.wizard = false;
 		game.dialog.message("not wizard anymore", 0);

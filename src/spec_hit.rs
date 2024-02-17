@@ -23,7 +23,7 @@ use crate::score::killed_by;
 
 pub const FLAME_NAME: &'static str = "flame";
 
-pub unsafe fn special_hit(mon_id: u64, game: &mut GameState) {
+pub fn special_hit(mon_id: u64, game: &mut GameState) {
 	if game.mash.monster_flags(mon_id).confused && rand_percent(66) {
 		return;
 	}
@@ -52,7 +52,7 @@ pub unsafe fn special_hit(mon_id: u64, game: &mut GameState) {
 	}
 }
 
-pub unsafe fn rust(mon_id: Option<u64>, game: &mut GameState) {
+pub fn rust(mon_id: Option<u64>, game: &mut GameState) {
 	if game.player.armor().is_none()
 		|| get_armor_class(game.player.armor()) <= 1
 		|| game.player.armor_kind() == Some(ArmorKind::Leather) {
@@ -76,7 +76,7 @@ pub unsafe fn rust(mon_id: Option<u64>, game: &mut GameState) {
 	}
 }
 
-unsafe fn freeze(mon_id: u64, game: &mut GameState) {
+fn freeze(mon_id: u64, game: &mut GameState) {
 	if rand_percent(12) {
 		return;
 	}
@@ -106,7 +106,7 @@ unsafe fn freeze(mon_id: u64, game: &mut GameState) {
 	}
 }
 
-unsafe fn steal_gold(mon_id: u64, game: &mut GameState) {
+fn steal_gold(mon_id: u64, game: &mut GameState) {
 	if game.player.rogue.gold <= 0 || rand_percent(10) {
 		return;
 	}
@@ -119,7 +119,7 @@ unsafe fn steal_gold(mon_id: u64, game: &mut GameState) {
 	disappear(mon_id, game);
 }
 
-unsafe fn steal_item(mon_id: u64, game: &mut GameState) {
+fn steal_item(mon_id: u64, game: &mut GameState) {
 	if rand_percent(15) {
 		return;
 	}
@@ -150,7 +150,7 @@ unsafe fn steal_item(mon_id: u64, game: &mut GameState) {
 	}
 }
 
-unsafe fn disappear(mon_id: u64, game: &mut GameState) {
+fn disappear(mon_id: u64, game: &mut GameState) {
 	let monster_spot = {
 		let monster = game.mash.monster(mon_id);
 		game.level.dungeon[monster.spot.row as usize][monster.spot.col as usize].set_monster(false);
@@ -162,11 +162,11 @@ unsafe fn disappear(mon_id: u64, game: &mut GameState) {
 		mvaddch(row as i32, col as i32, dungeon_char);
 	}
 	game.mash.remove_monster(mon_id);
-	mon_disappeared = true;
+	unsafe { mon_disappeared = true; }
 }
 
 
-pub unsafe fn cough_up(mon_id: u64, game: &mut GameState) {
+pub fn cough_up(mon_id: u64, game: &mut GameState) {
 	if game.player.cur_depth < game.player.max_depth {
 		return;
 	}
@@ -206,7 +206,7 @@ pub unsafe fn cough_up(mon_id: u64, game: &mut GameState) {
 	}
 }
 
-unsafe fn try_to_cough(row: i64, col: i64, obj: &Object, game: &mut GameState) -> bool {
+fn try_to_cough(row: i64, col: i64, obj: &Object, game: &mut GameState) -> bool {
 	if row < MIN_ROW || row > (DROWS - 2) as i64 || col < 0 || col > (DCOLS - 1) as i64 {
 		return false;
 	}
@@ -223,7 +223,7 @@ unsafe fn try_to_cough(row: i64, col: i64, obj: &Object, game: &mut GameState) -
 	return false;
 }
 
-pub unsafe fn seek_gold(mon_id: u64, game: &mut GameState) -> bool {
+pub fn seek_gold(mon_id: u64, game: &mut GameState) -> bool {
 	let rn = {
 		let monster = game.mash.monster(mon_id);
 		get_room_number(monster.spot.row, monster.spot.col, &game.level)
@@ -259,7 +259,7 @@ pub unsafe fn seek_gold(mon_id: u64, game: &mut GameState) -> bool {
 	return false;
 }
 
-unsafe fn gold_at(row: i64, col: i64, level: &Level, ground: &ObjectPack) -> bool {
+fn gold_at(row: i64, col: i64, level: &Level, ground: &ObjectPack) -> bool {
 	if level.dungeon[row as usize][col as usize].has_object() {
 		if let Some(obj) = ground.find_object_at(row, col) {
 			if obj.what_is == Gold {
@@ -274,7 +274,7 @@ pub fn clear_gold_seeker(monster: &mut Monster) {
 	monster.m_flags.seeks_gold = false;
 }
 
-pub unsafe fn check_imitator(mon_id: u64, game: &mut GameState) -> bool {
+pub fn check_imitator(mon_id: u64, game: &mut GameState) -> bool {
 	if game.mash.monster_flags(mon_id).imitates {
 		game.mash.monster_mut(mon_id).wake_up();
 		if game.player.blind.is_inactive() {
@@ -305,7 +305,7 @@ pub fn imitating(row: i64, col: i64, mash: &mut MonsterMash, level: &Level) -> b
 	return false;
 }
 
-unsafe fn sting(mon_id: u64, game: &mut GameState) {
+fn sting(mon_id: u64, game: &mut GameState) {
 	if game.player.rogue.str_current <= 3 || game.player.ring_effects.has_sustain_strength() {
 		return;
 	}
@@ -325,7 +325,7 @@ unsafe fn sting(mon_id: u64, game: &mut GameState) {
 	}
 }
 
-unsafe fn drop_level(game: &mut GameState) {
+fn drop_level(game: &mut GameState) {
 	if rand_percent(80) || game.player.rogue.exp <= 5 {
 		return;
 	}
@@ -345,7 +345,7 @@ unsafe fn drop_level(game: &mut GameState) {
 	add_exp(1, false, game);
 }
 
-unsafe fn drain_life(game: &mut GameState) {
+fn drain_life(game: &mut GameState) {
 	if rand_percent(60) || game.player.rogue.hp_max <= 30 || game.player.rogue.hp_current < 10 {
 		return;
 	}
@@ -371,7 +371,7 @@ unsafe fn drain_life(game: &mut GameState) {
 	print_stats(STAT_STRENGTH | STAT_HP, &mut game.player);
 }
 
-pub unsafe fn m_confuse(mon_id: u64, game: &mut GameState) -> bool {
+pub fn m_confuse(mon_id: u64, game: &mut GameState) -> bool {
 	let monster = game.mash.monster(mon_id);
 	let row = monster.spot.row;
 	let col = monster.spot.col;
@@ -395,7 +395,7 @@ pub unsafe fn m_confuse(mon_id: u64, game: &mut GameState) -> bool {
 	return false;
 }
 
-pub unsafe fn flame_broil(mon_id: u64, game: &mut GameState) -> bool {
+pub fn flame_broil(mon_id: u64, game: &mut GameState) -> bool {
 	if !game.mash.monster(mon_id).sees(game.player.rogue.row, game.player.rogue.col, &game.level) || coin_toss() {
 		return false;
 	}

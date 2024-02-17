@@ -22,7 +22,7 @@ use crate::score::is_vowel;
 use crate::scrolls::ScrollKind;
 use crate::zap::wand_kind::WandKind;
 
-pub unsafe fn inventory(filter: PackFilter, game: &mut GameState) {
+pub fn inventory(filter: PackFilter, game: &mut GameState) {
 	if game.player.pack().is_empty() {
 		game.dialog.message("your pack is empty", 0);
 		return;
@@ -95,7 +95,7 @@ fn get_id_real(obj: &Object) -> &'static str {
 	}
 }
 
-unsafe fn get_identified(obj: &Object, fruit: String, player: &Player) -> String {
+fn get_identified(obj: &Object, fruit: String, player: &Player) -> String {
 	let what = obj.what_is;
 	match what {
 		Scroll | Potion => {
@@ -140,7 +140,7 @@ unsafe fn get_identified(obj: &Object, fruit: String, player: &Player) -> String
 	}
 }
 
-unsafe fn get_called(obj: &Object, fruit: String, notes: &NoteTables) -> String {
+fn get_called(obj: &Object, fruit: String, notes: &NoteTables) -> String {
 	let what = obj.what_is;
 	match what {
 		Scroll | Potion | Wand | Ring => {
@@ -152,7 +152,7 @@ unsafe fn get_called(obj: &Object, fruit: String, notes: &NoteTables) -> String 
 	}
 }
 
-unsafe fn get_unidentified(obj: &Object, fruit: String, player: &Player) -> String {
+fn get_unidentified(obj: &Object, fruit: String, player: &Player) -> String {
 	let what = obj.what_is;
 	let kind = obj.which_kind as usize;
 	match what {
@@ -189,7 +189,7 @@ unsafe fn get_unidentified(obj: &Object, fruit: String, player: &Player) -> Stri
 }
 
 impl Player {
-	pub unsafe fn get_obj_desc(&self, obj_id: ObjectId) -> String {
+	pub fn get_obj_desc(&self, obj_id: ObjectId) -> String {
 		let obj = self.expect_object(obj_id);
 		let fruit = self.settings.fruit.to_string();
 		let obj_ichar = obj.ichar;
@@ -198,7 +198,7 @@ impl Player {
 	}
 }
 
-pub unsafe fn get_obj_desc(obj: &Object, fruit: String, player: &Player) -> String {
+pub fn get_obj_desc(obj: &Object, fruit: String, player: &Player) -> String {
 	let what = obj.what_is;
 	if what == Amulet {
 		return "the amulet of Yendor ".to_string();
@@ -271,7 +271,7 @@ fn take_unused<const N: usize>(used: &mut [bool; N]) -> usize {
 	j
 }
 
-pub unsafe fn single_inv(ichar: Option<char>, game: &mut GameState) {
+pub fn single_inv(ichar: Option<char>, game: &mut GameState) {
 	let ch = if let Some(ichar) = ichar {
 		ichar
 	} else {
@@ -290,7 +290,7 @@ pub unsafe fn single_inv(ichar: Option<char>, game: &mut GameState) {
 	}
 }
 
-pub unsafe fn inv_armor_weapon(is_weapon: bool, game: &mut GameState) {
+pub fn inv_armor_weapon(is_weapon: bool, game: &mut GameState) {
 	if is_weapon {
 		if let Some(weapon) = game.player.weapon() {
 			single_inv(Some(weapon.ichar), game);

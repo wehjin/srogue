@@ -167,7 +167,7 @@ impl Object {
 		new.id = ObjectId::random();
 		new
 	}
-	pub unsafe fn to_name_with_new_quantity(&self, quantity: i16, fruit: String, notes: &NoteTables) -> String {
+	pub fn to_name_with_new_quantity(&self, quantity: i16, fruit: String, notes: &NoteTables) -> String {
 		let mut temp_obj = self.clone();
 		temp_obj.quantity = quantity;
 		name_of(&temp_obj, fruit, notes)
@@ -210,7 +210,7 @@ impl Object {
 	pub fn id(&self) -> ObjectId { self.id }
 }
 
-pub unsafe fn put_objects(game: &mut GameState) {
+pub fn put_objects(game: &mut GameState) {
 	if game.player.cur_depth < game.player.max_depth {
 		return;
 	}
@@ -230,7 +230,7 @@ pub unsafe fn put_objects(game: &mut GameState) {
 	put_gold(game.player.cur_depth, &mut game.level, &mut game.ground);
 }
 
-pub unsafe fn put_gold(level_depth: isize, level: &mut Level, ground: &mut ObjectPack) {
+pub fn put_gold(level_depth: isize, level: &mut Level, ground: &mut ObjectPack) {
 	for i in 0..MAX_ROOM {
 		let is_maze = level.rooms[i].room_type == RoomType::Maze;
 		let is_room = level.rooms[i].room_type == RoomType::Room;
@@ -251,7 +251,7 @@ pub unsafe fn put_gold(level_depth: isize, level: &mut Level, ground: &mut Objec
 	}
 }
 
-pub unsafe fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: isize, level: &mut Level, ground: &mut ObjectPack) {
+pub fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: isize, level: &mut Level, ground: &mut ObjectPack) {
 	let mut obj = alloc_object();
 	obj.row = row;
 	obj.col = col;
@@ -334,7 +334,7 @@ pub fn name_of(obj: &Object, fruit: String, notes: &NoteTables) -> String {
 	}
 }
 
-pub unsafe fn gr_object(player: &mut Player) -> Object {
+pub fn gr_object(player: &mut Player) -> Object {
 	let mut obj = alloc_object();
 	if player.foods < (player.cur_depth / 2) {
 		obj.what_is = Food;
@@ -370,7 +370,7 @@ pub unsafe fn gr_object(player: &mut Player) -> Object {
 }
 
 
-pub unsafe fn gr_what_is() -> ObjectWhat {
+pub fn gr_what_is() -> ObjectWhat {
 	let percent = get_rand(1, 91);
 	if percent <= 30 {
 		Scroll
@@ -538,7 +538,7 @@ pub fn get_food(obj: &mut Object, force_ration: bool) {
 	}
 }
 
-pub unsafe fn put_stairs(player: &Player, level: &mut Level) {
+pub fn put_stairs(player: &Player, level: &mut Level) {
 	let mut row = 0;
 	let mut col = 0;
 	gr_row_col(&mut row, &mut col,
@@ -564,7 +564,7 @@ pub fn alloc_object() -> Object {
 	return obj;
 }
 
-pub unsafe fn make_party(level_depth: isize, game: &mut GameState) {
+pub fn make_party(level_depth: isize, game: &mut GameState) {
 	let party_room = gr_room(&game.level);
 	game.level.party_room = Some(party_room);
 	let n = if rand_percent(99) { party_objects(party_room, game) } else { 11 };
@@ -573,7 +573,7 @@ pub unsafe fn make_party(level_depth: isize, game: &mut GameState) {
 	}
 }
 
-pub unsafe fn show_objects(game: &mut GameState) {
+pub fn show_objects(game: &mut GameState) {
 	for obj in game.ground.objects() {
 		let row = (*obj).row;
 		let col = (*obj).col;
@@ -609,7 +609,7 @@ pub fn rand_place(obj: Object, game: &mut GameState) {
 	place_at(obj, row, col, &mut game.level, &mut game.ground);
 }
 
-pub unsafe fn new_object_for_wizard(game: &mut GameState) {
+pub fn new_object_for_wizard(game: &mut GameState) {
 	if game.player.pack_weight_with_new_object(None) >= MAX_PACK_COUNT {
 		game.dialog.message("pack full", 0);
 		return;
@@ -686,7 +686,7 @@ pub unsafe fn new_object_for_wizard(game: &mut GameState) {
 	game.player.combine_or_add_item_to_pack(obj);
 }
 
-unsafe fn get_kind(max_kind: usize, game: &mut GameState) -> Option<usize> {
+fn get_kind(max_kind: usize, game: &mut GameState) -> Option<usize> {
 	let good_kind = {
 		let good_kind;
 		loop {

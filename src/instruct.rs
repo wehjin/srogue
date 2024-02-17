@@ -10,8 +10,7 @@ use crate::message::rgetchar;
 
 static INSTRUCTIONS_FILE: &'static str = "/usr/games/player.rogue.instr";
 
-#[no_mangle]
-pub unsafe extern "C" fn Instructions(game: &mut GameState) {
+pub fn Instructions(game: &mut GameState) {
 	let mut file = match File::open(INSTRUCTIONS_FILE) {
 		Ok(file) => file,
 		Err(_) => {

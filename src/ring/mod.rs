@@ -18,7 +18,7 @@ pub(crate) mod ring_kind;
 pub(crate) mod ring_gem;
 
 
-pub(crate) unsafe fn ask_ring_hand(game: &mut GameState) -> Option<PlayerHand> {
+pub(crate) fn ask_ring_hand(game: &mut GameState) -> Option<PlayerHand> {
 	match ask_left_or_right(game) {
 		'l' => Some(PlayerHand::Left),
 		'r' => Some(PlayerHand::Right),
@@ -26,7 +26,7 @@ pub(crate) unsafe fn ask_ring_hand(game: &mut GameState) -> Option<PlayerHand> {
 	}
 }
 
-unsafe fn ask_left_or_right(game: &mut GameState) -> char {
+fn ask_left_or_right(game: &mut GameState) -> char {
 	game.dialog.message("left or right hand?", 0);
 	let mut ch;
 	loop {
@@ -39,7 +39,7 @@ unsafe fn ask_left_or_right(game: &mut GameState) -> char {
 	ch
 }
 
-pub unsafe fn un_put_hand(hand: PlayerHand, game: &mut GameState) -> Option<ObjectId> {
+pub fn un_put_hand(hand: PlayerHand, game: &mut GameState) -> Option<ObjectId> {
 	let un_put_id = game.player.un_put_ring(hand);
 	ring_stats(true, game);
 	un_put_id
@@ -71,7 +71,7 @@ pub fn gr_ring(ring: &mut Object, assign_wk: bool) {
 	}
 }
 
-pub unsafe fn inv_rings(game: &mut GameState) {
+pub fn inv_rings(game: &mut GameState) {
 	let hand_usage = game.player.hand_usage();
 	if hand_usage == HandUsage::None {
 		game.dialog.message("not wearing any rings", 0);
@@ -119,7 +119,7 @@ impl PlayerHand {
 pub(crate) mod effects;
 
 
-pub unsafe fn ring_stats(print: bool, game: &mut GameState) {
+pub fn ring_stats(print: bool, game: &mut GameState) {
 	game.player.ring_effects.clear_stealthy();
 	game.player.ring_effects.clear_calorie_burn();
 	game.player.ring_effects.set_teleport(false);

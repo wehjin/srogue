@@ -62,7 +62,7 @@ pub fn main() {
 			return;
 		}
 	};
-	let result = match unsafe { init(settings) } {
+	let result = match init(settings) {
 		Ok(result) => result,
 		Err(error) => match error {
 			InitError::NoConsole(error) => match error {
@@ -93,10 +93,10 @@ pub fn main() {
 			clear_level(&mut game);
 			game.player.descend();
 			make_level(&mut game);
-			unsafe { put_objects(&mut game); }
-			unsafe { put_stairs(&mut game.player, &mut game.level); }
-			unsafe { add_traps(&game.player, &mut game.level); }
-			unsafe { put_mons(&mut game); }
+			put_objects(&mut game);
+			put_stairs(&mut game.player, &mut game.level);
+			add_traps(&game.player, &mut game.level);
+			put_mons(&mut game);
 			{
 				let avoid_room = match game.level.party_room {
 					None => RoomMark::None,
@@ -104,10 +104,10 @@ pub fn main() {
 				};
 				put_player(avoid_room, &mut game);
 			}
-			unsafe { print_stats(STAT_ALL, &mut game.player); }
+			print_stats(STAT_ALL, &mut game.player);
 		}
 		restored = false;
-		match unsafe { play_level(&mut game) } {
+		match play_level(&mut game) {
 			PlayResult::TrapDoorDown | PlayResult::StairsDown | PlayResult::StairsUp => {
 				// Ignore and stay in loop
 			}

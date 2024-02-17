@@ -364,7 +364,7 @@ pub fn gr_room(level: &Level) -> usize {
 	}
 }
 
-pub unsafe fn party_objects(rn: usize, game: &mut GameState) -> usize {
+pub fn party_objects(rn: usize, game: &mut GameState) -> usize {
 	let N = (game.level.rooms[rn].bottom_row - game.level.rooms[rn].top_row - 1) * (game.level.rooms[rn].right_col - game.level.rooms[rn].left_col - 1);
 	let mut n = get_rand(5, 10);
 	if n > N {
@@ -463,7 +463,7 @@ pub fn is_all_connected(rooms: &[Room; MAX_ROOM]) -> bool {
 	RoomVisitor::new(rooms).visit_rooms().to_is_all_connected()
 }
 
-pub unsafe fn draw_magic_map(mash: &mut MonsterMash, level: &mut Level) {
+pub fn draw_magic_map(mash: &mut MonsterMash, level: &mut Level) {
 	for i in 0..DROWS {
 		for j in 0..DCOLS {
 			let s = level.dungeon[i][j];
@@ -513,7 +513,7 @@ pub unsafe fn draw_magic_map(mash: &mut MonsterMash, level: &mut Level) {
 
 const ROOM_OR_MAZE: [RoomType; 2] = [RoomType::Room, RoomType::Maze];
 
-pub unsafe fn dr_course(monster: &mut Monster, is_entering: bool, row: i64, col: i64, player: &Player, level: &Level) {
+pub fn dr_course(monster: &mut Monster, is_entering: bool, row: i64, col: i64, player: &Player, level: &Level) {
 	monster.spot.row = row;
 	monster.spot.col = col;
 	if monster.sees(player.rogue.row, player.rogue.col, level) {

@@ -28,7 +28,7 @@ fn reduce_chance(chance: usize, reduction: isize) -> usize {
 	if chance <= reduction { 0 } else { chance - reduction }
 }
 
-pub unsafe fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, game: &mut GameState) {
+pub fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, game: &mut GameState) {
 	if let Some(fight_id) = game.player.fight_monster {
 		if mon_id == fight_id {
 			game.player.fight_monster = None;
@@ -56,18 +56,18 @@ pub unsafe fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, game: &mut 
 	let monster_name = if let Some(name) = other { name } else { &base_monster_name };
 	if !rand_percent(hit_chance) {
 		if game.player.fight_monster.is_none() {
-			HIT_MESSAGE = format!("{}the {} misses", HIT_MESSAGE, monster_name);
+			unsafe { HIT_MESSAGE = format!("{}the {} misses", HIT_MESSAGE, monster_name); }
 			game.player.interrupt_and_slurp();
-			game.dialog.message(&HIT_MESSAGE, 1);
-			HIT_MESSAGE.clear();
+			unsafe { game.dialog.message(&HIT_MESSAGE, 1); }
+			unsafe { HIT_MESSAGE.clear(); }
 		}
 		return;
 	}
 	if game.player.fight_monster.is_none() {
-		HIT_MESSAGE = format!("{}the {} hit", HIT_MESSAGE, monster_name);
+		unsafe { HIT_MESSAGE = format!("{}the {} hit", HIT_MESSAGE, monster_name); }
 		game.player.interrupt_and_slurp();
-		game.dialog.message(&HIT_MESSAGE, 1);
-		HIT_MESSAGE.clear();
+		unsafe { game.dialog.message(&HIT_MESSAGE, 1); }
+		unsafe { HIT_MESSAGE.clear(); }
 	}
 	let mut damage: isize = if !game.mash.monster_flags(mon_id).stationary {
 		let mut damage = get_damage(game.mash.monster(mon_id).m_damage(), DamageEffect::Roll);
@@ -102,7 +102,7 @@ pub unsafe fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, game: &mut 
 	}
 }
 
-pub unsafe fn rogue_hit(mon_id: u64, force_hit: bool, game: &mut GameState) {
+pub fn rogue_hit(mon_id: u64, force_hit: bool, game: &mut GameState) {
 	if check_imitator(mon_id, game) {
 		return;
 	}
@@ -110,7 +110,7 @@ pub unsafe fn rogue_hit(mon_id: u64, force_hit: bool, game: &mut GameState) {
 	let hit_chance = if game.player.wizard { hit_chance * 2 } else { hit_chance };
 	if !rand_percent(hit_chance) {
 		if game.player.fight_monster.is_none() {
-			HIT_MESSAGE = "you miss  ".to_string();
+			unsafe { HIT_MESSAGE = "you miss  ".to_string(); }
 		}
 	} else {
 		let player_exp = game.player.buffed_exp();
@@ -125,7 +125,7 @@ pub unsafe fn rogue_hit(mon_id: u64, force_hit: bool, game: &mut GameState) {
 			}
 			MonDamageEffect::MonsterSurvives => {
 				if game.player.fight_monster.is_none() {
-					HIT_MESSAGE = "you hit  ".to_string();
+					unsafe { HIT_MESSAGE = "you hit  ".to_string(); }
 				}
 			}
 		}
@@ -135,7 +135,7 @@ pub unsafe fn rogue_hit(mon_id: u64, force_hit: bool, game: &mut GameState) {
 	monster.wake_up();
 }
 
-pub unsafe fn rogue_damage(d: isize, mon_id: u64, game: &mut GameState) {
+pub fn rogue_damage(d: isize, mon_id: u64, game: &mut GameState) {
 	if d >= game.player.rogue.hp_current {
 		game.player.rogue.hp_current = 0;
 		print_stats(STAT_HP, &mut game.player);
@@ -163,11 +163,11 @@ pub fn get_w_damage(obj: Option<&Object>) -> isize {
 	-1
 }
 
-pub unsafe fn get_number(s: *const c_char) -> usize {
+pub fn get_number(s: *const c_char) -> usize {
 	let mut total = 0;
 	let mut i = 0;
 	loop {
-		let c = *s.offset(i) as u8 as char;
+		let c = unsafe { *s.offset(i) as u8 as char };
 		if c < '0' || c > '9' {
 			break;
 		}
@@ -177,7 +177,7 @@ pub unsafe fn get_number(s: *const c_char) -> usize {
 	return total;
 }
 
-pub unsafe fn damage_for_strength(strength: isize) -> isize {
+pub fn damage_for_strength(strength: isize) -> isize {
 	if strength <= 6 {
 		return strength - 5;
 	}
@@ -207,7 +207,7 @@ pub enum MonDamageEffect {
 	MonsterSurvives,
 }
 
-pub unsafe fn mon_damage(mon_id: u64, damage: isize, game: &mut GameState) -> MonDamageEffect {
+pub fn mon_damage(mon_id: u64, damage: isize, game: &mut GameState) -> MonDamageEffect {
 	game.mash.monster_mut(mon_id).hp_to_kill -= damage;
 	if game.mash.monster(mon_id).hp_to_kill <= 0 {
 		{
@@ -222,10 +222,10 @@ pub unsafe fn mon_damage(mon_id: u64, damage: isize, game: &mut GameState) -> Mo
 		{
 			let monster = game.mash.monster(mon_id);
 			let monster_name = mon_name(monster, &game.player, &game.level);
-			HIT_MESSAGE = format!("{}defeated the {}", HIT_MESSAGE, monster_name);
+			unsafe { HIT_MESSAGE = format!("{}defeated the {}", HIT_MESSAGE, monster_name); }
 			game.player.interrupt_and_slurp();
-			game.dialog.message(&HIT_MESSAGE, 1);
-			HIT_MESSAGE.clear();
+			unsafe { game.dialog.message(&HIT_MESSAGE, 1); }
+			unsafe { HIT_MESSAGE.clear(); }
 		}
 		add_exp(game.mash.monster(mon_id).kill_exp(), true, game);
 		if game.mash.monster_flags(mon_id).holds {
@@ -237,7 +237,7 @@ pub unsafe fn mon_damage(mon_id: u64, damage: isize, game: &mut GameState) -> Mo
 	return MonDamageEffect::MonsterSurvives;
 }
 
-pub unsafe fn fight(to_the_death: bool, game: &mut GameState) {
+pub fn fight(to_the_death: bool, game: &mut GameState) {
 	let mut first_miss: bool = true;
 	let mut ch: char;
 	loop {
@@ -345,13 +345,13 @@ pub fn get_dir_rc(dir: char, row: &mut i64, col: &mut i64, allow_off_screen: boo
 	}
 }
 
-pub unsafe fn get_hit_chance_player(weapon: Option<&Object>, player: &Player) -> usize {
+pub fn get_hit_chance_player(weapon: Option<&Object>, player: &Player) -> usize {
 	let player_exp = player.buffed_exp();
 	let player_debuf = player.debuf_exp();
 	get_hit_chance(weapon, player_exp, player_debuf)
 }
 
-pub unsafe fn get_hit_chance(obj: Option<&Object>, buffed_exp: isize, debuf_exp: isize) -> usize {
+pub fn get_hit_chance(obj: Option<&Object>, buffed_exp: isize, debuf_exp: isize) -> usize {
 	let mut hit_chance = 40isize;
 	hit_chance += 3 * to_hit(obj) as isize;
 	hit_chance += (2 * buffed_exp) - debuf_exp;
@@ -366,7 +366,7 @@ fn to_hit(obj: Option<&Object>) -> usize {
 	}
 }
 
-pub unsafe fn get_weapon_damage(weapon: Option<&Object>, buffed_str: isize, buffed_exp: isize, debuf_exp: isize) -> isize {
+pub fn get_weapon_damage(weapon: Option<&Object>, buffed_str: isize, buffed_exp: isize, debuf_exp: isize) -> isize {
 	let mut damage = get_w_damage(weapon);
 	damage += damage_for_strength(buffed_str);
 	damage += (buffed_exp - debuf_exp + 1) / 2;

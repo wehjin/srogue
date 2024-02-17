@@ -15,7 +15,7 @@ use crate::weapons::constants::WEAPONS;
 use crate::zap::constants::{ALL_WAND_MATERIALS, MAX_WAND_MATERIAL, WANDS};
 
 impl NoteTables {
-	pub unsafe fn assign_dynamic_titles(&mut self) {
+	pub fn assign_dynamic_titles(&mut self) {
 		self.shuffle_potions_colors();
 		self.make_scroll_titles();
 		self.assign_wand_materials();
@@ -50,7 +50,7 @@ impl NoteTables {
 		}
 	}
 
-	pub unsafe fn assign_wand_materials(&mut self) {
+	pub fn assign_wand_materials(&mut self) {
 		let mut unused_material = (0..MAX_WAND_MATERIAL).collect::<Vec<_>>();
 		unused_material.shuffle(&mut thread_rng());
 		for i in 0..WANDS {
