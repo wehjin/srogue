@@ -12,6 +12,7 @@ use crate::prelude::DungeonSpot;
 pub struct MonsterMash {
 	pub monsters: Vec<Monster>,
 	pub m_moves: usize,
+	pub mon_disappeared: bool,
 }
 
 impl MonsterMash {
@@ -19,6 +20,7 @@ impl MonsterMash {
 		MonsterMash {
 			monsters: Vec::new(),
 			m_moves: 0,
+			mon_disappeared: false,
 		}
 	}
 

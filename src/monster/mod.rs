@@ -48,7 +48,6 @@ pub struct Fighter {
 	pub moves_left: isize,
 }
 
-pub static mut mon_disappeared: bool = false;
 
 pub fn put_mons(game: &mut GameState) {
 	for _ in 0..get_rand(4, 6) {
@@ -86,9 +85,9 @@ pub fn mv_mons(game: &mut GameState) {
 	for mon_id in game.mash.monster_ids() {
 		let mut done_with_monster = false;
 		if game.mash.test_monster(mon_id, Monster::is_hasted) {
-			unsafe { mon_disappeared = false; }
+			game.mash.mon_disappeared = false;
 			mv_monster(mon_id, game.player.rogue.row, game.player.rogue.col, game);
-			if unsafe { mon_disappeared } {
+			if game.mash.mon_disappeared {
 				done_with_monster = true;
 			}
 		} else if game.mash.test_monster(mon_id, Monster::is_slowed) {

@@ -207,8 +207,3 @@ pub fn sound_bell() {
 	// putchar(7);
 	// fflush(stdout);
 }
-
-#[no_mangle]
-pub unsafe extern "C" fn is_digit(ch: libc::c_short) -> libc::c_char {
-	return (ch as i64 >= '0' as i64 && ch as i64 <= '9' as i64) as libc::c_char;
-}

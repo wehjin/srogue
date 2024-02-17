@@ -9,7 +9,7 @@ use crate::inventory::get_obj_desc;
 use crate::level::{add_exp, hp_raise, Level, LEVEL_POINTS};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::message::print_stats;
-use crate::monster::{mon_can_go, mon_disappeared, mon_name, Monster, MonsterMash, move_mon_to, mv_mons, mv_monster};
+use crate::monster::{mon_can_go, mon_name, Monster, MonsterMash, move_mon_to, mv_mons, mv_monster};
 use crate::objects::{alloc_object, get_armor_class, gr_object, Object, ObjectPack, place_at};
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
@@ -162,7 +162,7 @@ fn disappear(mon_id: u64, game: &mut GameState) {
 		mvaddch(row as i32, col as i32, dungeon_char);
 	}
 	game.mash.remove_monster(mon_id);
-	unsafe { mon_disappeared = true; }
+	game.mash.mon_disappeared = true;
 }
 
 

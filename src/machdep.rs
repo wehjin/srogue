@@ -152,12 +152,6 @@ pub fn md_getenv(name: *mut libc::c_char) -> *mut libc::c_char {
 	unsafe { libc::getenv(name) }
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn md_malloc(n: i64) -> *mut libc::c_char {
-	let t = libc::malloc(n as libc::size_t);
-	return t as *mut libc::c_char;
-}
-
 pub fn md_get_seed() -> u32 {
 	process::id()
 }
