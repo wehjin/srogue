@@ -7,6 +7,7 @@ pub mod remove_ring;
 pub mod take_off;
 pub mod wear;
 pub mod wield;
+pub mod instruct;
 
 pub trait PlayerAction {
 	fn commit(&self, game: &mut GameState);

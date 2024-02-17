@@ -3,6 +3,7 @@
 use libc::c_int;
 use ncurses::{mv, refresh};
 
+use crate::actions::instruct::Instruct;
 use crate::actions::PlayerActionSet;
 use crate::actions::put_on_ring::PutOnRing;
 use crate::actions::remove_ring::RemoveRing;
@@ -11,7 +12,6 @@ use crate::actions::wear::Wear;
 use crate::actions::wield::Wield;
 use crate::hit::fight;
 use crate::init::{GameState, GameSystem};
-use crate::instruct::Instructions;
 use crate::inventory::{inv_armor_weapon, inventory, single_inv};
 use crate::level::{check_up, drop_check, show_average_hp, UpResult};
 use crate::message::{CANCEL, rgetchar};
@@ -51,6 +51,7 @@ pub fn play_level(game: &mut GameState) -> PlayResult {
 		('T', Box::new(TakeOff)),
 		('W', Box::new(Wear)),
 		('w', Box::new(Wield)),
+		('?', Box::new(Instruct)),
 	]);
 	loop {
 		if let Some(exit) = &game.player.cleaned_up {
@@ -89,7 +90,6 @@ pub fn play_level(game: &mut GameState) -> PlayResult {
 			}
 		} else {
 			match ch {
-				'?' => Instructions(game),
 				'.' => rest(if count > 0 { count } else { 1 } as c_int, game),
 				's' => search(if count > 0 { count } else { 1 } as usize, false, game),
 				'i' => inventory(AllObjects, game),
