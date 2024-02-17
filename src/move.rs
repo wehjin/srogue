@@ -17,7 +17,7 @@ use crate::pack::{pick_up, PickUpResult};
 use crate::player::{Player, RoomMark};
 use crate::prelude::ending::Ending;
 use crate::prelude::MIN_ROW;
-use crate::prelude::stat_const::{STAT_HP, STAT_HUNGER};
+use crate::prelude::stat_const::STAT_HUNGER;
 use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
 use crate::r#use::{hallucinate_on_screen, tele, unblind, unconfuse, unhallucinate};
 use crate::random::{coin_toss, get_rand, rand_percent};
@@ -462,7 +462,7 @@ pub fn reg_move(game: &mut GameState) -> bool {
 			game.dialog.message("you feel yourself slowing down", 0);
 		}
 	}
-	heal(&mut game.player);
+	game.healer.heal(&mut game.player);
 	{
 		let auto_search = game.player.ring_effects.auto_search();
 		if auto_search > 0 {
@@ -483,50 +483,3 @@ pub fn rest(count: libc::c_int, game: &mut GameState) {
 }
 
 
-pub fn heal(player: &mut Player) {
-	static mut heal_level: isize = -1;
-	static mut time_between_heals: isize = 0;
-	static mut time_since_last_heal_or_damage: isize = 0;
-	static mut double_healing_toggle: bool = false;
-
-	if player.rogue.hp_current == player.rogue.hp_max {
-		unsafe { time_since_last_heal_or_damage = 0; }
-		return;
-	}
-
-	if player.rogue.exp != unsafe { heal_level } {
-		unsafe { heal_level = player.rogue.exp; }
-		unsafe {
-			time_between_heals = match heal_level {
-				1 => 20,
-				2 => 18,
-				3 => 17,
-				4 => 14,
-				5 => 13,
-				6 => 10,
-				7 => 9,
-				8 => 8,
-				9 => 7,
-				10 => 4,
-				11 => 3,
-				_ => 2,
-			}
-		}
-	}
-
-	unsafe { time_since_last_heal_or_damage += 1; }
-
-	if unsafe { time_since_last_heal_or_damage } >= unsafe { time_between_heals } {
-		unsafe { time_since_last_heal_or_damage = 0; }
-		unsafe { double_healing_toggle = !double_healing_toggle; }
-
-		let mut healing = player.rogue.hp_current;
-		healing += 1;
-		if unsafe { double_healing_toggle } {
-			healing += 1;
-		}
-		healing += player.ring_effects.regeneration();
-		player.rogue.hp_current = healing.min(player.rogue.hp_max);
-		print_stats(STAT_HP, player);
-	}
-}

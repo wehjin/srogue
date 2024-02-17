@@ -115,12 +115,7 @@ pub fn restore(file_path: &str, game: &mut GameState) -> bool {
 			return false;
 		}
 	}
-	save_data.write_to_statics();
-	game.ground = save_data.ground;
-	game.mash = save_data.mash;
-	game.player = save_data.player;
-	game.dialog.reset();
-	game.level = save_data.level;
+	save_data.write_to_statics(game);
 
 	if !game.player.wizard && !delete_file(file_path) {
 		clean_up("cannot delete file", &mut game.player);

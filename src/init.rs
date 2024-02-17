@@ -18,6 +18,7 @@ use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::{Armor, Weapon};
 use crate::random::get_rand;
 use crate::resources::dialog::PlayerDialog;
+use crate::resources::healer::Healer;
 use crate::ring::ring_stats;
 use crate::save::restore;
 use crate::score::put_scores;
@@ -53,6 +54,7 @@ pub fn init(settings: Settings) -> Result<InitResult, InitError> {
 	md_heed_signals();
 
 	let mut game = GameState {
+		healer: Healer::default(),
 		dialog: PlayerDialog::default(),
 		player: Player::new(settings.clone()),
 		level: Level::new(),
@@ -84,6 +86,7 @@ pub enum GameSystem {
 }
 
 pub struct GameState {
+	pub healer: Healer,
 	pub dialog: PlayerDialog,
 	pub player: Player,
 	pub level: Level,
