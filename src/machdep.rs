@@ -148,10 +148,6 @@ pub fn md_sleep(nsecs: i64) {
 	thread::sleep(Duration::from_nanos(nsecs as u64));
 }
 
-pub fn md_getenv(name: *mut libc::c_char) -> *mut libc::c_char {
-	unsafe { libc::getenv(name) }
-}
-
 pub fn md_get_seed() -> u32 {
 	process::id()
 }
