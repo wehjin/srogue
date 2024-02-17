@@ -81,6 +81,7 @@ impl Player {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
+	pub hit_message: String,
 	pub interrupted: bool,
 	pub fight_monster: Option<u64>,
 	pub hunger: HungerLevel,
@@ -247,6 +248,7 @@ impl Player {
 	pub fn new(settings: Settings) -> Self {
 		const INIT_HP: isize = 12;
 		Player {
+			hit_message: "".to_string(),
 			interrupted: false,
 			fight_monster: None,
 			hunger: HungerLevel::default(),

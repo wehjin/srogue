@@ -21,8 +21,6 @@ use crate::room::get_dungeon_char;
 use crate::score::killed_by;
 use crate::spec_hit::{check_imitator, clear_gold_seeker, cough_up, special_hit};
 
-pub static mut HIT_MESSAGE: String = String::new();
-
 fn reduce_chance(chance: usize, reduction: isize) -> usize {
 	let reduction: usize = reduction.max(0) as usize;
 	if chance <= reduction { 0 } else { chance - reduction }
@@ -56,18 +54,18 @@ pub fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, game: &mut GameSta
 	let monster_name = if let Some(name) = other { name } else { &base_monster_name };
 	if !rand_percent(hit_chance) {
 		if game.player.fight_monster.is_none() {
-			unsafe { HIT_MESSAGE = format!("{}the {} misses", HIT_MESSAGE, monster_name); }
+			let msg = format!("{}the {} misses", game.player.hit_message, monster_name);
+			game.player.hit_message.clear();
 			game.player.interrupt_and_slurp();
-			unsafe { game.dialog.message(&HIT_MESSAGE, 1); }
-			unsafe { HIT_MESSAGE.clear(); }
+			game.dialog.message(&msg, 1);
 		}
 		return;
 	}
 	if game.player.fight_monster.is_none() {
-		unsafe { HIT_MESSAGE = format!("{}the {} hit", HIT_MESSAGE, monster_name); }
+		let msg = format!("{}the {} hit", game.player.hit_message, monster_name);
+		game.player.hit_message.clear();
 		game.player.interrupt_and_slurp();
-		unsafe { game.dialog.message(&HIT_MESSAGE, 1); }
-		unsafe { HIT_MESSAGE.clear(); }
+		game.dialog.message(&msg, 1);
 	}
 	let mut damage: isize = if !game.mash.monster_flags(mon_id).stationary {
 		let mut damage = get_damage(game.mash.monster(mon_id).m_damage(), DamageEffect::Roll);
@@ -110,7 +108,7 @@ pub fn rogue_hit(mon_id: u64, force_hit: bool, game: &mut GameState) {
 	let hit_chance = if game.player.wizard { hit_chance * 2 } else { hit_chance };
 	if !rand_percent(hit_chance) {
 		if game.player.fight_monster.is_none() {
-			unsafe { HIT_MESSAGE = "you miss  ".to_string(); }
+			game.player.hit_message = "you miss  ".to_string();
 		}
 	} else {
 		let player_exp = game.player.buffed_exp();
@@ -125,7 +123,7 @@ pub fn rogue_hit(mon_id: u64, force_hit: bool, game: &mut GameState) {
 			}
 			MonDamageEffect::MonsterSurvives => {
 				if game.player.fight_monster.is_none() {
-					unsafe { HIT_MESSAGE = "you hit  ".to_string(); }
+					game.player.hit_message = "you hit  ".to_string();
 				}
 			}
 		}
@@ -222,10 +220,10 @@ pub fn mon_damage(mon_id: u64, damage: isize, game: &mut GameState) -> MonDamage
 		{
 			let monster = game.mash.monster(mon_id);
 			let monster_name = mon_name(monster, &game.player, &game.level);
-			unsafe { HIT_MESSAGE = format!("{}defeated the {}", HIT_MESSAGE, monster_name); }
+			let msg = format!("{}defeated the {}", game.player.hit_message, monster_name);
+			game.player.hit_message.clear();
 			game.player.interrupt_and_slurp();
-			unsafe { game.dialog.message(&HIT_MESSAGE, 1); }
-			unsafe { HIT_MESSAGE.clear(); }
+			game.dialog.message(&msg, 1);
 		}
 		add_exp(game.mash.monster(mon_id).kill_exp(), true, game);
 		if game.mash.monster_flags(mon_id).holds {

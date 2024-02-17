@@ -9,7 +9,7 @@ use crate::actions::remove_ring::RemoveRing;
 use crate::actions::take_off::TakeOff;
 use crate::actions::wear::Wear;
 use crate::actions::wield::Wield;
-use crate::hit::{fight, HIT_MESSAGE};
+use crate::hit::fight;
 use crate::init::{GameState, GameSystem};
 use crate::instruct::Instructions;
 use crate::inventory::{inv_armor_weapon, inventory, single_inv};
@@ -61,10 +61,10 @@ pub fn play_level(game: &mut GameState) -> PlayResult {
 				Some(deck_ch) => deck_ch,
 				None => {
 					game.player.interrupted = false;
-					if unsafe { !HIT_MESSAGE.is_empty() } {
+					if !game.player.hit_message.is_empty() {
 						game.player.interrupt_and_slurp();
-						unsafe { game.dialog.message(&HIT_MESSAGE, 1); }
-						unsafe { HIT_MESSAGE.clear(); }
+						game.dialog.message(&game.player.hit_message, 1);
+						game.player.hit_message.clear();
 					}
 					if game.level.trap_door {
 						game.level.trap_door = false;

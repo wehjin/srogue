@@ -4,7 +4,7 @@ use ncurses::{chtype, mvaddch, mvinch, refresh};
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 
-use crate::hit::{get_dir_rc, get_hit_chance, get_weapon_damage, HIT_MESSAGE, mon_damage};
+use crate::hit::{get_dir_rc, get_hit_chance, get_weapon_damage, mon_damage};
 use crate::init::GameState;
 use crate::level::DungeonCell;
 use crate::message::{CANCEL, print_stats};
@@ -111,12 +111,12 @@ fn throw_at_monster(mon_id: u64, obj_id: ObjectId, game: &mut GameState) -> bool
 		hit_chance
 	};
 	{
-		unsafe { HIT_MESSAGE = format!("the {}", game.player.to_object_name_with_quantity(obj_id, 1).trim()); }
+		game.player.hit_message = format!("the {}", game.player.to_object_name_with_quantity(obj_id, 1).trim());
 		if !rand_percent(hit_chance) {
-			unsafe { HIT_MESSAGE += " misses  "; }
+			game.player.hit_message += " misses  ";
 			return false;
 		}
-		unsafe { HIT_MESSAGE += " hit  "; }
+		game.player.hit_message += " hit  ";
 	}
 	if game.player.object_what(obj_id) == Wand && rand_percent(75) {
 		zap_monster(mon_id, game.player.object_kind(obj_id), game);
