@@ -256,8 +256,6 @@ pub fn show_traps(level: &Level) {
 }
 
 pub fn search(n: usize, is_auto: bool, game: &mut GameState) {
-	static mut reg_search: bool = false;
-
 	let mut found = 0;
 	for i in -1..=1 {
 		for j in -1..=1 {
@@ -300,8 +298,8 @@ pub fn search(n: usize, is_auto: bool, game: &mut GameState) {
 			}
 		}
 		if !is_auto {
-			unsafe { reg_search = !reg_search; }
-			if unsafe { reg_search } {
+			game.player.reg_search_count += 1;
+			if 1 == game.player.reg_search_count % 1 {
 				reg_move(game);
 			}
 		}

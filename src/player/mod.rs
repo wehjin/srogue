@@ -81,6 +81,7 @@ impl Player {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
+	pub reg_search_count: usize,
 	pub hit_message: String,
 	pub interrupted: bool,
 	pub fight_monster: Option<u64>,
@@ -248,6 +249,7 @@ impl Player {
 	pub fn new(settings: Settings) -> Self {
 		const INIT_HP: isize = 12;
 		Player {
+			reg_search_count: 0,
 			hit_message: "".to_string(),
 			interrupted: false,
 			fight_monster: None,

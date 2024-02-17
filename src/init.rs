@@ -159,6 +159,7 @@ fn player_init(player: &mut Player) {
 }
 
 pub fn clean_up(estr: &str, player: &mut Player) {
+	player.interrupted = true;
 	player.cleaned_up = Some(estr.to_string());
 }
 
