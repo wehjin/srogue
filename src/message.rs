@@ -80,7 +80,7 @@ const CTRL_R_CHAR: c_int = 0o022 as c_int;
 
 pub fn rgetchar() -> char {
 	loop {
-		let ch = { unsafe { libc::getchar() } };
+		let ch = ncurses::getch();
 		match ch {
 			CTRL_R_CHAR => {
 				wrefresh(curscr());
