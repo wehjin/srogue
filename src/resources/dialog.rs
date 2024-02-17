@@ -1,7 +1,7 @@
 use ncurses::chtype;
 use serde::{Deserialize, Serialize};
 
-use crate::init::{cant_int, did_int, onintr};
+use crate::init::onintr;
 use crate::pack::wait_for_ack;
 use crate::prelude::MIN_ROW;
 
@@ -9,10 +9,19 @@ use crate::prelude::MIN_ROW;
 pub struct PlayerDialog {
 	msg_written: String,
 	msg_cleared: bool,
+	cant_int: bool,
+	did_int: bool,
 }
 
 impl Default for PlayerDialog {
-	fn default() -> Self { Self { msg_written: String::new(), msg_cleared: true } }
+	fn default() -> Self {
+		Self {
+			msg_written: String::new(),
+			msg_cleared: true,
+			cant_int: false,
+			did_int: false,
+		}
+	}
 }
 
 impl PlayerDialog {
@@ -29,11 +38,11 @@ impl PlayerDialog {
 		ncurses::refresh();
 		self.msg_cleared = true;
 	}
-	pub unsafe fn message(&mut self, msg: &str, intrpt: i64) {
+	pub unsafe fn message(&mut self, msg: &str, _intrpt: i64) {
 		// if !save_is_interactive {
 		// 	return;
 		// }
-		cant_int = true;
+		self.cant_int = true;
 		if !self.msg_cleared {
 			ncurses::mvaddstr((MIN_ROW - 1) as i32, self.msg_written.len() as i32, MORE);
 			ncurses::refresh();
@@ -45,9 +54,9 @@ impl PlayerDialog {
 		ncurses::refresh();
 		self.msg_written = msg.to_string();
 		self.msg_cleared = false;
-		cant_int = false;
-		if did_int {
-			did_int = false;
+		self.cant_int = false;
+		if self.did_int {
+			self.did_int = false;
 			onintr();
 		}
 	}

@@ -24,8 +24,6 @@ use crate::score::put_scores;
 use crate::settings::Settings;
 use crate::weapons::constants::{ARROW, BOW, MACE};
 
-pub static mut cant_int: bool = false;
-pub static mut did_int: bool = false;
 //pub static mut save_is_interactive: bool = true;
 pub const ERROR_FILE: &'static str = "player.rogue.esave";
 pub const BYEBYE_STRING: &'static str = "Okay, bye bye!";
@@ -172,13 +170,15 @@ pub unsafe fn clean_up(estr: &str, player: &mut Player) {
 // 	// md_heed_signals();
 // }
 
-pub unsafe fn onintr() {
+pub fn onintr() {
+	// TODO Will need to restructure this code to use message passing to interrupt the Player and clear the PlayerDialog.
 	// md_ignore_signals();
 	// if cant_int {
 	// 	did_int = true;
 	// } else {
 	//  game.diary.clear_message();
-	//   game.diary.message("interrupt", 1);
+	//  game.player.interrupt_and_slurp();
+	//  game.diary.message("interrupt", 1);
 	// }
 	// md_heed_signals();
 }
