@@ -2,12 +2,11 @@
 
 use std::{fs, io, process, thread};
 use std::error::Error;
-use std::ffi::CString;
 use std::os::macos::fs::MetadataExt;
 use std::time::Duration;
 
 use chrono::{Datelike, DateTime, Timelike, TimeZone, Utc};
-use libc::{c_int, stat};
+use libc::c_int;
 use serde::{Deserialize, Serialize};
 
 use crate::init::onintr;
@@ -108,11 +107,8 @@ pub fn md_get_file_id(file_path: &str) -> io::Result<u64> {
 	fs::metadata(file_path).map(|it| it.st_ino())
 }
 
-pub fn md_link_count(file_path: &str) -> i64 {
-	let mut sbuf = stat { st_dev: 0, st_mode: 0, st_nlink: 0, st_ino: 0, st_uid: 0, st_gid: 0, st_rdev: 0, st_atime: 0, st_atime_nsec: 0, st_mtime: 0, st_mtime_nsec: 0, st_ctime: 0, st_ctime_nsec: 0, st_birthtime: 0, st_birthtime_nsec: 0, st_size: 0, st_blocks: 0, st_blksize: 0, st_flags: 0, st_gen: 0, st_lspare: 0, st_qspare: [0; 2] };
-	let file_path = CString::new(file_path).unwrap();
-	unsafe { stat(file_path.as_ptr(), &mut sbuf); }
-	return sbuf.st_nlink as i64;
+pub fn md_link_count(file_path: &str) -> io::Result<u64> {
+	fs::metadata(file_path).map(|it| it.st_nlink())
 }
 
 pub fn get_current_time() -> RogueTime {

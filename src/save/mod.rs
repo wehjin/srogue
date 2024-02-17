@@ -89,9 +89,12 @@ pub fn restore(file_path: &str, game: &mut GameState) -> bool {
 			return false;
 		}
 	};
-	if md_link_count(file_path) > 1 {
-		clean_up("file has link", &mut game.player);
-		return false;
+	match md_link_count(file_path) {
+		Ok(count) if count == 1 => (),
+		_ => {
+			clean_up("file has link", &mut game.player);
+			return false;
+		}
 	}
 	let save_data = match data::from_file(file_path) {
 		Ok(result) => result,
