@@ -1,7 +1,5 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
-use libc::c_char;
-
 pub use damage_stat::*;
 
 use crate::init::GameState;
@@ -159,20 +157,6 @@ pub fn get_w_damage(obj: Option<&Object>) -> isize {
 		}
 	}
 	-1
-}
-
-pub fn get_number(s: *const c_char) -> usize {
-	let mut total = 0;
-	let mut i = 0;
-	loop {
-		let c = unsafe { *s.offset(i) as u8 as char };
-		if c < '0' || c > '9' {
-			break;
-		}
-		total = (10 * total) + c.to_digit(10).expect("digit") as usize;
-		i += 1;
-	}
-	return total;
 }
 
 pub fn damage_for_strength(strength: isize) -> isize {
