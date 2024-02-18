@@ -20,7 +20,7 @@ use crate::objects::{new_object_for_wizard, show_objects};
 use crate::pack::{call_it, drop_0, kick_into_pack};
 use crate::play::PlayResult::{CleanedUp, ExitWon, StairsDown, StairsUp};
 use crate::prelude::object_what::PackFilter::AllObjects;
-use crate::r#move::{move_onto, multiple_move_rogue, one_move_rogue, reg_move, rest};
+use crate::motion::{move_onto, multiple_move_rogue, one_move_rogue, reg_move, rest};
 use crate::r#use::{eat, quaff, read_scroll};
 use crate::ring::inv_rings;
 use crate::room::draw_magic_map;

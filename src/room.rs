@@ -1,5 +1,3 @@
-
-
 use std::ops::RangeInclusive;
 
 use ncurses::{addch, chtype, mvaddch, mvinch};
@@ -10,11 +8,10 @@ use crate::level::{DungeonCell, Level, same_col, same_row};
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM};
 use crate::level::materials::{CellMaterial, Fixture, Visibility};
 use crate::monster::{gmc_row_col, Monster, MonsterMash};
+use crate::motion::can_move;
 use crate::objects::{gr_object, place_at};
 use crate::player::{Player, RoomMark};
 use crate::prelude::*;
-use crate::prelude::object_what::ObjectWhat;
-use crate::r#move::can_move;
 use crate::random::get_rand;
 use crate::room::DoorDirection::{Down, Left, Right, Up};
 use crate::room::room_visitor::RoomVisitor;
@@ -274,24 +271,10 @@ pub fn get_dungeon_char(row: i64, col: i64, game: &mut GameState) -> chtype {
 		return gmc_row_col(row, col, game);
 	}
 	if cell.has_object() {
-		return get_mask_char(cell.object_what()) as chtype;
+		let mask = cell.object_what();
+		return mask.to_char() as chtype;
 	}
 	cell.material().to_chtype()
-}
-
-pub fn get_mask_char(mask: ObjectWhat) -> char {
-	match mask {
-		ObjectWhat::Scroll => '?',
-		ObjectWhat::Potion => '!',
-		ObjectWhat::Gold => '*',
-		ObjectWhat::Food => ':',
-		ObjectWhat::Wand => '/',
-		ObjectWhat::Armor => ']',
-		ObjectWhat::Weapon => ')',
-		ObjectWhat::Ring => '=',
-		ObjectWhat::Amulet => ',',
-		_ => '~',
-	}
 }
 
 pub fn random_spot_with_flag(is_good_cell: impl Fn(&DungeonCell) -> bool, player: &Player, level: &Level) -> DungeonSpot {

@@ -18,12 +18,12 @@ use crate::player::{Player, RoomMark};
 use crate::prelude::ending::Ending;
 use crate::prelude::MIN_ROW;
 use crate::prelude::stat_const::STAT_HUNGER;
-use crate::r#move::MoveResult::{Moved, StoppedOnSomething};
+use crate::motion::MoveResult::{Moved, StoppedOnSomething};
 use crate::r#use::{hallucinate_on_screen, tele, unblind, unconfuse, unhallucinate};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::room::{darken_room, get_dungeon_char, light_passage, light_up_room};
 use crate::score::killed_by;
-use crate::throw::Move;
+use crate::throw::Motion;
 use crate::trap::{is_off_screen, search, trap_player};
 
 pub const YOU_CAN_MOVE_AGAIN: &'static str = "you can move again";
@@ -38,7 +38,7 @@ pub enum MoveResult {
 
 pub fn one_move_rogue(dirch: char, pickup: bool, game: &mut GameState) -> MoveResult {
 	let dirch = if game.player.confused.is_active() {
-		Move::random8().to_char()
+		Motion::random8().to_char()
 	} else {
 		dirch
 	};

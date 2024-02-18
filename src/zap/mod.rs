@@ -13,7 +13,7 @@ use crate::pack::pack_letter;
 use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Wands;
-use crate::r#move::{get_dir_or_cancel, reg_move};
+use crate::motion::{get_dir_or_cancel, reg_move};
 use crate::r#use::relight;
 use crate::random::get_rand;
 use crate::room::gr_row_col;

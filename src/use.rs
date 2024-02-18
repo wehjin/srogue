@@ -1,13 +1,11 @@
-
-
 use ncurses::{addch, chtype, mvaddch, mvinch};
 
 use crate::components::hunger::HungerLevel;
 use crate::init::GameState;
 use crate::level::{add_exp, put_player};
-use crate::machdep::md_sleep;
 use crate::message::{CANCEL, print_stats};
 use crate::monster::{aggravate, create_monster, gr_obj_char, mv_mons, show_monsters};
+use crate::motion::{reg_move, YOU_CAN_MOVE_AGAIN};
 use crate::objects::NoteStatus::Identified;
 use crate::objects::ObjectId;
 use crate::pack::{pack_letter, take_from_pack, unwear, unwield};
@@ -19,8 +17,8 @@ use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::{AllObjects, Foods, Potions, Scrolls};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_HP, STAT_HUNGER, STAT_STRENGTH};
-use crate::r#move::{reg_move, YOU_CAN_MOVE_AGAIN};
 use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::render_system;
 use crate::ring::un_put_hand;
 use crate::room::{darken_room, draw_magic_map, get_dungeon_char, light_passage, light_up_room};
 use crate::scrolls::ScrollKind;
@@ -363,12 +361,12 @@ pub fn relight(game: &mut GameState) {
 
 pub fn take_a_nap(game: &mut GameState) {
 	let mut i = get_rand(2, 5);
-	md_sleep(1);
+	render_system::await_frame();
 	while i > 0 {
 		i -= 1;
 		mv_mons(game);
+		render_system::await_frame()
 	}
-	md_sleep(1);
 	game.dialog.message(YOU_CAN_MOVE_AGAIN, 0);
 }
 

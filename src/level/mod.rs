@@ -1,5 +1,3 @@
-
-
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
@@ -75,6 +73,9 @@ impl Level {
 	}
 	pub fn cell(&self, row: i64, col: i64) -> &DungeonCell {
 		&self.dungeon[row as usize][col as usize]
+	}
+	pub fn cell_at_spot(&self, spot: DungeonSpot) -> &DungeonCell {
+		self.cell(spot.row, spot.col)
 	}
 }
 

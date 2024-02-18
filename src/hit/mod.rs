@@ -13,11 +13,11 @@ use crate::prelude::{AMULET_LEVEL, MIN_ROW};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::stat_const::STAT_HP;
-use crate::r#move::{can_move, is_direction, one_move_rogue};
+use crate::motion::{can_move, is_direction, one_move_rogue};
 use crate::random::rand_percent;
 use crate::room::get_dungeon_char;
 use crate::score::killed_by;
-use crate::spec_hit::{check_imitator, clear_gold_seeker, cough_up, special_hit};
+use crate::spec_hit::{check_imitator, cough_up, special_hit};
 
 fn reduce_chance(chance: usize, reduction: isize) -> usize {
 	let reduction: usize = reduction.max(0) as usize;
@@ -127,7 +127,7 @@ pub fn rogue_hit(mon_id: u64, force_hit: bool, game: &mut GameState) {
 		}
 	}
 	let monster = game.mash.monster_mut(mon_id);
-	clear_gold_seeker(monster);
+	monster.m_flags.seeks_gold = false;
 	monster.wake_up();
 }
 

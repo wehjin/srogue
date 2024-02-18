@@ -15,6 +15,8 @@ pub struct MonsterMash {
 	pub mon_disappeared: bool,
 }
 
+pub type MonsterIndex = u64;
+
 impl MonsterMash {
 	pub const fn new() -> Self {
 		MonsterMash {

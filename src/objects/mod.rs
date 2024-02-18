@@ -33,7 +33,7 @@ use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::ring::constants::RINGS;
 use crate::ring::gr_ring;
 use crate::ring::ring_gem::RingGem;
-use crate::room::{get_mask_char, gr_room, gr_row_col, party_objects, RoomType};
+use crate::room::{gr_room, gr_row_col, party_objects, RoomType};
 use crate::scrolls::constants::SCROLLS;
 use crate::scrolls::ScrollKind;
 use crate::weapons::constants::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
@@ -573,9 +573,9 @@ pub fn make_party(level_depth: isize, game: &mut GameState) {
 
 pub fn show_objects(game: &mut GameState) {
 	for obj in game.ground.objects() {
-		let row = (*obj).row;
-		let col = (*obj).col;
-		let rc = get_mask_char((*obj).what_is) as chtype;
+		let row = obj.row;
+		let col = obj.col;
+		let rc = obj.what_is.to_char() as chtype;
 		if game.level.dungeon[row as usize][col as usize].has_monster() {
 			let monster = game.mash.monster_at_spot_mut(row, col);
 			if let Some(monster) = monster {

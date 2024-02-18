@@ -1,31 +1,53 @@
-use ncurses::{chtype, mvaddch, mvinch, refresh};
+use ncurses::{mvaddch, mvinch};
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 
-use crate::hit::{get_dir_rc, get_hit_chance, get_weapon_damage, mon_damage};
+use crate::hit::{get_hit_chance, get_weapon_damage, mon_damage};
 use crate::init::GameState;
 use crate::level::DungeonCell;
 use crate::message::{CANCEL, print_stats};
-use crate::monster::mv_aquatars;
+use crate::monster::{MonsterIndex, mv_aquatars};
+use crate::motion::{get_dir_or_cancel, is_passable};
 use crate::objects::{Object, ObjectId, place_at};
 use crate::pack::{CURSE_MESSAGE, pack_letter, unwear, unwield};
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::item_usage::NOT_USED;
-use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Weapons;
 use crate::prelude::stat_const::STAT_ARMOR;
-use crate::r#move::get_dir_or_cancel;
 use crate::r#use::vanish;
 use crate::random::{get_rand, rand_percent};
+use crate::render_system;
 use crate::ring::un_put_hand;
-use crate::room::{get_dungeon_char, get_mask_char};
-use crate::spec_hit::{clear_gold_seeker, imitating};
-use crate::throw::Move::{Down, DownLeft, DownRight, Left, Right, Same, Up, UpLeft, UpRight};
+use crate::room::get_dungeon_char;
+use crate::throw::Motion::{Down, DownLeft, DownRight, Left, Right, Same, Up, UpLeft, UpRight};
 use crate::weapons::constants::ARROW;
 use crate::weapons::kind::WeaponKind;
 use crate::zap::zap_monster;
+
+impl GameState {
+	fn has_non_imitating_monster_at(&self, spot: DungeonSpot) -> bool {
+		let mon_id = self.mash.monster_id_at_spot(spot.row, spot.col);
+		match mon_id {
+			None => false,
+			Some(id) if self.mash.monster_flags(id).imitates => false,
+			Some(_) => true
+		}
+	}
+	pub fn is_impassable_at(&self, spot: DungeonSpot) -> bool {
+		!is_passable(spot.row, spot.col, &self.level)
+	}
+	pub fn mon_id_at(&self, spot: DungeonSpot) -> MonsterIndex {
+		self.mash.monster_id_at_spot(spot.row, spot.col).expect("monster at spot")
+	}
+	pub fn cell_at(&self, spot: DungeonSpot) -> &DungeonCell {
+		self.level.cell_at_spot(spot)
+	}
+	pub fn player_can_see(&self, spot: DungeonSpot) -> bool {
+		self.player.can_see_spot(&spot, &self.level)
+	}
+}
 
 pub fn throw(game: &mut GameState) {
 	let dir = get_dir_or_cancel(game);
@@ -57,28 +79,24 @@ pub fn throw(game: &mut GameState) {
 			} else if let Some(hand) = game.player.ring_hand(obj_id) {
 				un_put_hand(hand, game);
 			}
-			let throwing_what = game.player.object_what(obj_id);
-			let throw_ending = get_thrown_at_monster(throwing_what, dir, game);
+			let throw_ending = simulate_throw(Motion::from(dir), game);
+			render_system::animate_throw(obj_id, &throw_ending, game);
 			match throw_ending {
-				ThrowEnding::HitWall { obj_spot } => {
-					let rogue_spot = game.player.to_spot();
-					if game.player.can_see_spot(&obj_spot, &game.level) && obj_spot != rogue_spot {
-						mvaddch(obj_spot.row as i32, obj_spot.col as i32, get_dungeon_char(obj_spot.row, obj_spot.col, game));
-					}
-					flop_weapon(obj_id, obj_spot.row, obj_spot.col, game);
+				ThrowEnding::StrikesWall { bounce_spot, .. } => {
+					flop_object_from_spot(obj_id, bounce_spot, game);
 				}
-				ThrowEnding::Monster { mon_id, mon_spot } => {
+				ThrowEnding::ReachesMonster { mon_id, mon_spot, .. } => {
 					{
 						let monster = game.mash.monster_mut(mon_id);
 						monster.wake_up();
-						clear_gold_seeker(monster);
+						monster.m_flags.seeks_gold = false;
 					}
 					if !throw_at_monster(mon_id, obj_id, game) {
-						flop_weapon(obj_id, mon_spot.row, mon_spot.col, game);
+						flop_object_from_spot(obj_id, mon_spot, game);
 					}
 				}
-				ThrowEnding::NeverHit { last_seen } => {
-					flop_weapon(obj_id, last_seen.row, last_seen.col, game);
+				ThrowEnding::LandsOnGround { landing_spot, .. } => {
+					flop_object_from_spot(obj_id, landing_spot, game);
 				}
 			}
 			vanish(obj_id, true, game);
@@ -134,52 +152,64 @@ fn rogue_weapon_is_bow(player: &Player) -> bool {
 	player.weapon_kind() == Some(WeaponKind::Bow)
 }
 
-enum ThrowEnding {
-	HitWall { obj_spot: DungeonSpot },
-	Monster { mon_id: u64, mon_spot: DungeonSpot },
-	NeverHit { last_seen: DungeonSpot },
-}
-
-fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, game: &mut GameState) -> ThrowEnding {
-	let mut obj_spot = game.player.to_spot();
-	let obj_char = get_mask_char(obj_what);
-	let mut i = 0;
-	while i < 24 {
-		let DungeonSpot { mut row, mut col } = obj_spot;
-		get_dir_rc(dir, &mut row, &mut col, false);
-
-		let cell = game.level.dungeon[row as usize][col as usize];
-		if cell.is_nothing() || ((cell.is_any_wall() || cell.is_any_hidden()) && !cell.is_any_trap()) {
-			return ThrowEnding::HitWall { obj_spot };
+fn simulate_throw(motion: Motion, game: &GameState) -> ThrowEnding {
+	let rogue_spot = game.player.to_spot();
+	let mut flight_path = Vec::new();
+	let mut timeout = 0;
+	loop {
+		if timeout >= 24 {
+			break;
 		}
-		if i != 0 && game.player.can_see(obj_spot.row, obj_spot.col, &game.level) {
-			// Un-draw the object draw in the previous loop.
-			let dungeon_char = get_dungeon_char(obj_spot.row, obj_spot.col, game);
-			mvaddch(obj_spot.row as i32, obj_spot.col as i32, dungeon_char);
-		}
-		// Draw the object in the new location.
-		if game.player.can_see(row, col, &game.level) {
-			if !cell.has_monster() {
-				mvaddch(row as i32, col as i32, chtype::from(obj_char));
+		let cur_spot = match flight_path.last() {
+			None => &rogue_spot,
+			Some(last_spot) => last_spot,
+		};
+		match cur_spot.after_motion(motion) {
+			None => {
+				return ThrowEnding::StrikesWall { bounce_spot: *cur_spot, flight_path, rogue_spot };
 			}
-			refresh();
-		}
-		obj_spot = DungeonSpot { row, col };
-		if cell.has_monster() {
-			if !imitating(row, col, &mut game.mash, &game.level) {
-				let mon_id = game.mash.monster_id_at_spot(row, col).expect("thrown-at monster");
-				return ThrowEnding::Monster { mon_id, mon_spot: obj_spot };
+			Some(next_spot) if next_spot == *cur_spot => {
+				return ThrowEnding::LandsOnGround { landing_spot: rogue_spot, flight_path, rogue_spot };
+			}
+			Some(next_spot) if game.is_impassable_at(next_spot) => {
+				return ThrowEnding::StrikesWall { bounce_spot: *cur_spot, flight_path, rogue_spot };
+			}
+			Some(next_spot) if game.has_non_imitating_monster_at(next_spot) => {
+				let mon_id: MonsterIndex = game.mon_id_at(next_spot);
+				return ThrowEnding::ReachesMonster { mon_spot: next_spot, mon_id, flight_path, rogue_spot };
+			}
+			Some(next_spot) => {
+				if game.cell_at(next_spot).is_any_tunnel() {
+					// This causes the thrown object to land closer to the rogue when flying through a tunnel.
+					timeout += 2;
+				}
+				flight_path.push(next_spot);
 			}
 		}
-		if cell.is_any_tunnel() {
-			i += 2;
-		}
-		i += 1;
 	}
-	return ThrowEnding::NeverHit { last_seen: obj_spot };
+	let landing_spot = *flight_path.last().expect("spot in flight path");
+	return ThrowEnding::LandsOnGround { landing_spot, flight_path, rogue_spot };
 }
 
-fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, game: &mut GameState) {
+pub enum ThrowEnding {
+	StrikesWall { bounce_spot: DungeonSpot, flight_path: Vec<DungeonSpot>, rogue_spot: DungeonSpot },
+	ReachesMonster { mon_spot: DungeonSpot, mon_id: u64, flight_path: Vec<DungeonSpot>, rogue_spot: DungeonSpot },
+	LandsOnGround { landing_spot: DungeonSpot, flight_path: Vec<DungeonSpot>, rogue_spot: DungeonSpot },
+}
+
+impl ThrowEnding {
+	pub fn flight_path(&self) -> &Vec<DungeonSpot> {
+		match self {
+			ThrowEnding::StrikesWall { flight_path, .. } => flight_path,
+			ThrowEnding::ReachesMonster { flight_path, .. } => flight_path,
+			ThrowEnding::LandsOnGround { flight_path, .. } => flight_path,
+		}
+	}
+}
+
+fn flop_object_from_spot(obj_id: ObjectId, spot: DungeonSpot, game: &mut GameState) {
+	let row = spot.row;
+	let col = spot.col;
 	let mut found = false;
 	let mut walk = RandomWalk::new(row, col);
 	fn good_cell(cell: DungeonCell) -> bool {
@@ -233,7 +263,7 @@ fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, game: &mut GameState) {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum Move {
+pub enum Motion {
 	DownRight,
 	DownLeft,
 	UpRight,
@@ -245,7 +275,24 @@ pub enum Move {
 	Left,
 }
 
-impl Move {
+impl From<char> for Motion {
+	fn from(value: char) -> Self {
+		match value {
+			'n' => DownRight,
+			'b' => DownLeft,
+			'u' => UpRight,
+			'y' => UpLeft,
+			'l' => Right,
+			'k' => Down,
+			' ' => Same,
+			'j' => Up,
+			'h' => Left,
+			_ => panic!("Invalid char '{value}' for Motion")
+		}
+	}
+}
+
+impl Motion {
 	pub fn delta(&self) -> (isize, isize) {
 		match self {
 			DownRight => (1, 1),
@@ -293,14 +340,14 @@ impl Move {
 }
 
 pub struct RandomWalk {
-	moves: [Move; 9],
+	moves: [Motion; 9],
 	spot: DungeonSpot,
 	pub steps_taken: usize,
 }
 
 impl RandomWalk {
 	pub fn new(row: i64, col: i64) -> Self {
-		let mut moves: [Move; 9] = [Left, Up, DownLeft, UpLeft, Right, Down, UpRight, Same, DownRight];
+		let mut moves: [Motion; 9] = [Left, Up, DownLeft, UpLeft, Right, Down, UpRight, Same, DownRight];
 		moves.shuffle(&mut thread_rng());
 		RandomWalk { spot: DungeonSpot { row, col }, moves, steps_taken: 0 }
 	}

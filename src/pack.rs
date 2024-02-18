@@ -13,7 +13,7 @@ use crate::prelude::object_what::ObjectWhat::{Food, Potion, Ring, Scroll, Wand, 
 use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD};
-use crate::r#move::reg_move;
+use crate::motion::reg_move;
 use crate::ring::un_put_hand;
 use crate::scrolls::ScrollKind::ScareMonster;
 use crate::weapons::kind::WeaponKind;

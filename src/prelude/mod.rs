@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+use crate::hit::get_dir_rc;
 use crate::level::constants::{DCOLS, DROWS};
+use crate::throw::Motion;
 
 pub const NO_ROOM: i64 = -1;
 pub const PASSAGE: i64 = -3;
@@ -27,6 +29,17 @@ pub struct DungeonSpot {
 }
 
 impl DungeonSpot {
+	pub fn distance_from(&self, other: DungeonSpot) -> i64 {
+		let row_delta = other.row - self.row;
+		let col_delta = other.col - self.col;
+		let max_delta = row_delta.abs().max(col_delta.abs());
+		max_delta
+	}
+	pub fn after_motion(&self, motion: Motion) -> Option<Self> {
+		let mut after = self.clone();
+		get_dir_rc(motion.to_char(), &mut after.row, &mut after.col, true);
+		if after.is_out_of_bounds() { None } else { Some(after) }
+	}
 	pub fn from_usize(row: usize, col: usize) -> Self {
 		DungeonSpot { row: row as i64, col: col as i64 }
 	}
@@ -92,6 +105,20 @@ pub mod object_what {
 	impl ObjectWhat {
 		pub fn is_object(&self) -> bool {
 			self != &ObjectWhat::None
+		}
+		pub fn to_char(&self) -> char {
+			match self {
+				ObjectWhat::Scroll => '?',
+				ObjectWhat::Potion => '!',
+				ObjectWhat::Gold => '*',
+				ObjectWhat::Food => ':',
+				ObjectWhat::Wand => '/',
+				ObjectWhat::Armor => ']',
+				ObjectWhat::Weapon => ')',
+				ObjectWhat::Ring => '=',
+				ObjectWhat::Amulet => ',',
+				ObjectWhat::None => '~'
+			}
 		}
 	}
 

@@ -1,5 +1,3 @@
-
-
 use ncurses::{chtype, mvaddch, refresh, standend, standout};
 
 use crate::armors::ArmorKind;
@@ -9,13 +7,13 @@ use crate::inventory::get_obj_desc;
 use crate::level::{add_exp, hp_raise, Level, LEVEL_POINTS};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::message::print_stats;
-use crate::monster::{mon_can_go, mon_name, Monster, MonsterMash, move_mon_to, mv_mons, mv_monster};
+use crate::monster::{mon_can_go, mon_name, MonsterMash, move_mon_to, mv_mons, mv_monster};
+use crate::motion::YOU_CAN_MOVE_AGAIN;
 use crate::objects::{alloc_object, get_armor_class, gr_object, Object, ObjectPack, place_at};
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD, STAT_HP, STAT_STRENGTH};
-use crate::r#move::YOU_CAN_MOVE_AGAIN;
 use crate::r#use::{confuse, vanish};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::room::{get_dungeon_char, get_room_number};
@@ -268,10 +266,6 @@ fn gold_at(row: i64, col: i64, level: &Level, ground: &ObjectPack) -> bool {
 		}
 	}
 	return false;
-}
-
-pub fn clear_gold_seeker(monster: &mut Monster) {
-	monster.m_flags.seeks_gold = false;
 }
 
 pub fn check_imitator(mon_id: u64, game: &mut GameState) -> bool {

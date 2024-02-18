@@ -16,7 +16,7 @@ use crate::odds;
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::object_what::ObjectWhat::Scroll;
-use crate::r#move::is_passable;
+use crate::motion::is_passable;
 use crate::random::{coin_toss, get_rand, get_rand_indices, rand_percent};
 use crate::room::{dr_course, get_room_number, gr_row_col, random_spot_with_flag};
 use crate::scrolls::ScrollKind;

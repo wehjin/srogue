@@ -14,7 +14,7 @@ use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_STRENGTH};
-use crate::r#move::{is_direction, reg_move};
+use crate::motion::{is_direction, reg_move};
 use crate::r#use::{take_a_nap, tele};
 use crate::random::{get_rand, rand_percent};
 use crate::room::{get_dungeon_char, gr_row_col};

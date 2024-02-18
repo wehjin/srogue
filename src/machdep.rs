@@ -1,4 +1,4 @@
-use std::{fs, io, thread};
+use std::{fs, io};
 use std::error::Error;
 use std::os::macos::fs::MetadataExt;
 use std::time::Duration;
@@ -115,9 +115,4 @@ pub fn get_login_name() -> Option<String> {
 	} else {
 		Some(username)
 	}
-}
-
-
-pub fn md_sleep(nsecs: i64) {
-	thread::sleep(Duration::from_nanos(nsecs as u64));
 }
