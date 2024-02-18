@@ -40,7 +40,7 @@ impl MonsterMash {
 	pub fn add_monster(&mut self, monster: Monster) {
 		self.monsters.push(monster);
 	}
-	pub fn remove_monster(&mut self, id: u64) -> Monster {
+	pub fn remove_monster(&mut self, id: MonsterIndex) -> Monster {
 		let index = self.monsters.iter().position(|m| m.id == id);
 		let index = index.expect("monster to remove must be in the list");
 		self.monsters.remove(index)
@@ -71,30 +71,30 @@ impl MonsterMash {
 		}
 		return None;
 	}
-	pub fn monster_flags(&self, id: u64) -> &MonsterFlags {
+	pub fn monster_flags(&self, id: MonsterIndex) -> &MonsterFlags {
 		let monster = self.monster(id);
 		let flags = &monster.m_flags;
 		flags
 	}
-	pub fn monster_flags_mut(&mut self, id: u64) -> &mut MonsterFlags {
+	pub fn monster_flags_mut(&mut self, id: MonsterIndex) -> &mut MonsterFlags {
 		let monster = self.monster_mut(id);
 		let flags = &mut monster.m_flags;
 		flags
 	}
-	pub fn test_monster(&self, id: u64, f: impl Fn(&Monster) -> bool) -> bool {
+	pub fn test_monster(&self, id: MonsterIndex, f: impl Fn(&Monster) -> bool) -> bool {
 		let monster = self.monster(id);
 		f(monster)
 	}
-	pub fn monster(&self, id: u64) -> &Monster {
+	pub fn monster(&self, id: MonsterIndex) -> &Monster {
 		let index = self.monster_index(id);
 		&self.monsters[index]
 	}
 
-	pub fn monster_mut(&mut self, id: u64) -> &mut Monster {
+	pub fn monster_mut(&mut self, id: MonsterIndex) -> &mut Monster {
 		let index = self.monster_index(id);
 		&mut self.monsters[index]
 	}
-	fn monster_index(&self, id: u64) -> usize {
+	fn monster_index(&self, id: MonsterIndex) -> usize {
 		for i in 0..self.monsters.len() {
 			if self.monsters[i].id == id {
 				return i;

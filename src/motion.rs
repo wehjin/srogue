@@ -14,8 +14,8 @@ use crate::motion::MoveResult::{Moved, StoppedOnSomething};
 use crate::odds::R_TELE_PERCENT;
 use crate::pack::{pick_up, PickUpResult};
 use crate::player::{Player, RoomMark};
+use crate::prelude::{DungeonSpot, MIN_ROW};
 use crate::prelude::ending::Ending;
-use crate::prelude::MIN_ROW;
 use crate::prelude::stat_const::STAT_HUNGER;
 use crate::r#use::{hallucinate_on_screen, tele, unblind, unconfuse, unhallucinate};
 use crate::random::{coin_toss, get_rand, rand_percent};
@@ -69,7 +69,7 @@ pub fn one_move_rogue(dirch: char, pickup: bool, game: &mut GameState) -> MoveRe
 		return MoveFailed;
 	}
 
-	let to_cell = game.level.cell(row, col);
+	let to_cell = game.level.cell(DungeonSpot { row, col });
 	if to_cell.is_any_door() {
 		match game.player.cur_room {
 			RoomMark::None => {}

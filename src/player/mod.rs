@@ -79,10 +79,12 @@ impl Player {
 	pub fn can_see(&self, row: i64, col: i64, level: &Level) -> bool {
 		if self.blind.is_active() {
 			false
-		} else if self.cur_room.is_room(level.room(row, col)) && !self.cur_room.is_maze(level) {
-			true
 		} else {
-			self.is_near(row, col)
+			if self.cur_room.is_room(level.room(row, col)) && !self.cur_room.is_maze(level) {
+				true
+			} else {
+				self.is_near(row, col)
+			}
 		}
 	}
 	pub fn cur_cell<'a>(&self, level: &'a Level) -> &'a DungeonCell {

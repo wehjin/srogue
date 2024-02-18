@@ -1,22 +1,18 @@
-
-
-use ncurses::{mvaddch, mvinch};
-
 use wand_kind::WandKind;
 
 use crate::hit::{get_dir_rc, rogue_hit};
 use crate::init::GameState;
 use crate::level::Level;
 use crate::message::{CANCEL, get_input_line};
-use crate::monster::{gmc, gr_monster, Monster, MonsterKind, MonsterMash};
+use crate::monster::{gr_monster, MonsterIndex, MonsterKind, MonsterMash};
+use crate::motion::{get_dir_or_cancel, reg_move};
 use crate::pack::pack_letter;
-use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Wands;
-use crate::motion::{get_dir_or_cancel, reg_move};
 use crate::r#use::relight;
 use crate::random::get_rand;
-use crate::room::gr_row_col;
+use crate::render_system;
+use crate::room::gr_spot;
 use crate::spec_hit::imitating;
 
 pub(crate) mod constants;
@@ -105,8 +101,7 @@ pub fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
 			}
 		}
 		WandKind::TeleAway => {
-			let monster = game.mash.monster_mut(mon_id);
-			tele_away(monster, &game.player, &mut game.level);
+			tele_away(mon_id, game);
 		}
 		WandKind::ConfuseMonster => {
 			let monster = game.mash.monster_mut(mon_id);
@@ -169,29 +164,21 @@ pub fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
 	}
 }
 
-fn tele_away(monster: &mut Monster, player: &Player, level: &mut Level) {
-	if monster.m_flags.holds {
-		level.being_held = false;
+fn tele_away(mon_id: MonsterIndex, game: &mut GameState) {
+	if game.mash.monster_flags(mon_id).holds {
+		game.level.being_held = false;
 	}
-	let (row, col) = {
-		let mut row = 0;
-		let mut col = 0;
-		gr_row_col(&mut row, &mut col,
-		           |cell| cell.is_any_floor() || cell.is_any_tunnel() || cell.is_stairs() || cell.has_object(),
-		           player, level);
-		(row, col)
-	};
-
-	mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.trail_char);
-	level.dungeon[monster.spot.row as usize][monster.spot.col as usize].set_monster(false);
-	monster.spot.row = row;
-	monster.spot.col = col;
-	level.dungeon[row as usize][col as usize].set_monster(true);
-	monster.trail_char = mvinch(row as i32, col as i32);
-
-	if level.detect_monster || player.can_see(row, col, level) {
-		mvaddch(row as i32, col as i32, gmc(monster, player, level));
-	}
+	let tele_from = game.mash.monster(mon_id).spot;
+	let tele_to =
+		gr_spot(
+			|cell| cell.is_any_floor() || cell.is_any_tunnel() || cell.is_stairs() || cell.has_object(),
+			&game.player,
+			&game.level,
+		);
+	game.level.cell_mut(tele_from).set_monster(false);
+	game.mash.monster_mut(mon_id).spot = tele_to;
+	game.level.cell_mut(tele_to).set_monster(true);
+	render_system::show_monster_movement(mon_id, tele_from, tele_to, game);
 }
 
 pub fn wizardize(game: &mut GameState) {

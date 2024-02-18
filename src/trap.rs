@@ -1,5 +1,3 @@
-
-
 use ncurses::{chtype, mvaddch};
 use serde::{Deserialize, Serialize};
 
@@ -10,14 +8,14 @@ use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
 use crate::level::Level;
 use crate::message::{CANCEL, print_stats, rgetchar, sound_bell};
+use crate::motion::{is_direction, reg_move};
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_STRENGTH};
-use crate::motion::{is_direction, reg_move};
 use crate::r#use::{take_a_nap, tele};
 use crate::random::{get_rand, rand_percent};
-use crate::room::{get_dungeon_char, gr_row_col};
+use crate::room::{get_dungeon_char, gr_spot};
 use crate::score::killed_by;
 use crate::spec_hit::rust;
 use crate::trap::trap_kind::TrapKind;
@@ -212,10 +210,8 @@ pub fn add_traps(player: &Player, level: &mut Level) {
 }
 
 fn random_spot_with_floor_or_monster(player: &Player, level: &mut Level) -> (usize, usize) {
-	let mut row = 0;
-	let mut col = 0;
-	gr_row_col(&mut row, &mut col, |cell| cell.is_any_floor() || cell.has_monster(), player, level);
-	(row as usize, col as usize)
+	let spot = gr_spot(|cell| cell.is_any_floor() || cell.has_monster(), player, level);
+	(spot.row as usize, spot.col as usize)
 }
 
 pub fn id_trap(game: &mut GameState) {

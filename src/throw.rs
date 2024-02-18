@@ -41,7 +41,7 @@ impl GameState {
 		self.mash.monster_id_at_spot(spot.row, spot.col).expect("monster at spot")
 	}
 	pub fn cell_at(&self, spot: DungeonSpot) -> &DungeonCell {
-		self.level.cell_at_spot(spot)
+		self.level.cell(spot)
 	}
 	pub fn player_can_see(&self, spot: DungeonSpot) -> bool {
 		self.player.can_see_spot(&spot, &self.level)

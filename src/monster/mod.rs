@@ -1,5 +1,3 @@
-
-
 use ncurses::chtype;
 use serde::{Deserialize, Serialize};
 
@@ -11,14 +9,14 @@ use crate::hit::mon_hit;
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
+use crate::motion::is_passable;
 use crate::objects::{ObjectId, ObjectPack};
 use crate::odds;
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::object_what::ObjectWhat::Scroll;
-use crate::motion::is_passable;
 use crate::random::{coin_toss, get_rand, get_rand_indices, rand_percent};
-use crate::room::{dr_course, get_room_number, gr_row_col, random_spot_with_flag};
+use crate::room::{dr_course, get_room_number, gr_spot};
 use crate::scrolls::ScrollKind;
 use crate::scrolls::ScrollKind::ScareMonster;
 use crate::spec_hit::{flame_broil, m_confuse, seek_gold};
@@ -55,12 +53,12 @@ pub fn put_mons(game: &mut GameState) {
 		if monster.m_flags.wanders && coin_toss() {
 			monster.wake_up();
 		}
-		let DungeonSpot { row, col } = random_spot_with_flag(
+		let spot = gr_spot(
 			|cell| cell.is_any_floor() || cell.is_any_tunnel() || cell.is_stairs() || cell.has_object(),
 			&game.player,
 			&game.level,
 		);
-		put_m_at(row, col, monster, &mut game.mash, &mut game.level);
+		put_m_at(spot.row, spot.col, monster, &mut game.mash, &mut game.level);
 	}
 }
 
@@ -145,7 +143,7 @@ pub fn party_monsters(rn: usize, n: usize, level_depth: isize, mash: &mut Monste
 	}
 }
 
-pub fn gmc_row_col(row: i64, col: i64, game: &mut GameState) -> chtype {
+pub fn gmc_row_col(row: i64, col: i64, game: &GameState) -> chtype {
 	if let Some(monster) = game.mash.monster_at_spot(row, col) {
 		gmc(monster, &game.player, &game.level)
 	} else {
@@ -388,18 +386,14 @@ fn random_wanderer(level_depth: isize) -> Option<Monster> {
 }
 
 fn random_spot_for_wanderer(player: &Player, level: &Level) -> Option<DungeonSpot> {
-	let mut row = 0;
-	let mut col = 0;
 	for _ in 0..25 {
-		gr_row_col(
-			&mut row,
-			&mut col,
+		let spot = gr_spot(
 			|cell| cell.is_any_floor() || cell.is_any_tunnel() || cell.is_stairs() || cell.has_object(),
 			player,
 			level,
 		);
-		if !player.can_see(row, col, level) {
-			return Some(DungeonSpot { row, col });
+		if !player.can_see(spot.row, spot.col, level) {
+			return Some(spot);
 		}
 	}
 	None

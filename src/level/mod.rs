@@ -19,7 +19,7 @@ use crate::player::constants::INIT_HP;
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
 use crate::random::{coin_toss, get_rand, rand_percent};
-use crate::room::{DoorDirection, gr_row_col, is_all_connected, light_passage, light_up_room, Room, RoomBounds, RoomType};
+use crate::room::{DoorDirection, gr_spot, is_all_connected, light_passage, light_up_room, Room, RoomBounds, RoomType};
 use crate::room::RoomType::Nothing;
 use crate::score::win;
 use crate::trap::Trap;
@@ -71,11 +71,11 @@ impl Level {
 		}
 		return RoomMark::None;
 	}
-	pub fn cell(&self, row: i64, col: i64) -> &DungeonCell {
-		&self.dungeon[row as usize][col as usize]
+	pub fn cell(&self, spot: DungeonSpot) -> &DungeonCell {
+		&self.dungeon[spot.row as usize][spot.col as usize]
 	}
-	pub fn cell_at_spot(&self, spot: DungeonSpot) -> &DungeonCell {
-		self.cell(spot.row, spot.col)
+	pub fn cell_mut(&mut self, spot: DungeonSpot) -> &mut DungeonCell {
+		&mut self.dungeon[spot.row as usize][spot.col as usize]
 	}
 }
 
@@ -606,29 +606,27 @@ fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: i64, level_
 
 pub fn put_player(avoid_room: RoomMark, game: &mut GameState) {
 	{
-		let mut row: i64 = 0;
-		let mut col: i64 = 0;
+		let mut spot = DungeonSpot::default();
 		let mut to_room = avoid_room;
 		for _misses in 0..2 {
 			if to_room != avoid_room {
 				break;
 			}
-			gr_row_col(
-				&mut row,
-				&mut col,
+			spot = gr_spot(
 				|cell| cell.is_any_floor() || cell.is_any_tunnel() || cell.has_object() || cell.is_stairs(),
 				&game.player,
 				&game.level,
 			);
-			to_room = game.level.room(row, col);
+			to_room = game.level.room(spot.row, spot.col);
 		}
-		game.player.rogue.row = row;
-		game.player.rogue.col = col;
-		game.player.cur_room = if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_any_tunnel() {
-			RoomMark::Passage
-		} else {
-			to_room
-		};
+		game.player.rogue.row = spot.row;
+		game.player.rogue.col = spot.col;
+		game.player.cur_room =
+			if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_any_tunnel() {
+				RoomMark::Passage
+			} else {
+				to_room
+			};
 	}
 	match game.player.cur_room {
 		RoomMark::None => {}

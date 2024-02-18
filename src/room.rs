@@ -201,7 +201,7 @@ pub fn light_up_room(rn: usize, game: &mut GameState) {
 	let wall_bounds = game.level.rooms[rn].to_wall_bounds();
 	for i in wall_bounds.rows() {
 		for j in wall_bounds.cols() {
-			if game.level.cell(i, j).has_monster() {
+			if game.level.cell(DungeonSpot { row: i, col: j }).has_monster() {
 				if let Some(mon_id) = game.mash.monster_id_at_spot(i, j) {
 					let monster_spot = {
 						let monster = game.mash.monster_mut(mon_id);
@@ -265,43 +265,36 @@ pub fn darken_room(rn: usize, game: &mut GameState) {
 	}
 }
 
-pub fn get_dungeon_char_spot(spot: DungeonSpot, game: &mut GameState) -> chtype {
+pub fn get_dungeon_char_spot(spot: DungeonSpot, game: &GameState) -> chtype {
 	get_dungeon_char(spot.row, spot.col, game)
 }
 
-pub fn get_dungeon_char(row: i64, col: i64, game: &mut GameState) -> chtype {
+pub fn get_dungeon_char(row: i64, col: i64, game: &GameState) -> chtype {
 	let cell = game.level.dungeon[row as usize][col as usize];
 	if cell.has_monster() {
-		return gmc_row_col(row, col, game);
+		gmc_row_col(row, col, game)
+	} else {
+		let ch = cell.to_char_ignoring_any_monster();
+		chtype::from(ch)
 	}
-	let ch = cell.to_char_ignoring_any_monster();
-	chtype::from(ch)
 }
 
-pub fn random_spot_with_flag(is_good_cell: impl Fn(&DungeonCell) -> bool, player: &Player, level: &Level) -> DungeonSpot {
-	let mut row: i64 = 0;
-	let mut col: i64 = 0;
-	gr_row_col(&mut row, &mut col, is_good_cell, player, level);
-	DungeonSpot { row, col }
-}
-
-pub fn gr_row_col(row: &mut i64, col: &mut i64, is_good_cell: impl Fn(&DungeonCell) -> bool, player: &Player, level: &Level) {
-	let mut r;
-	let mut c;
+pub fn gr_spot(is_good_cell: impl Fn(&DungeonCell) -> bool, player: &Player, level: &Level) -> DungeonSpot {
+	let mut row;
+	let mut col;
 	loop {
-		r = get_rand(MIN_ROW, DROWS as i64 - 2);
-		c = get_rand(0, DCOLS as i64 - 1);
-		let rn = get_room_number(r, c, level);
+		row = get_rand(MIN_ROW, DROWS as i64 - 2);
+		col = get_rand(0, DCOLS as i64 - 1);
+		let rn = get_room_number(row, col, level);
 		let keep_looking = rn == NO_ROOM
-			|| !is_good_cell(&level.dungeon[r as usize][c as usize])
+			|| !is_good_cell(&level.dungeon[row as usize][col as usize])
 			|| !(level.rooms[rn as usize].room_type == RoomType::Room || level.rooms[rn as usize].room_type == RoomType::Maze)
-			|| ((r == player.rogue.row) && (c == player.rogue.col));
+			|| ((row == player.rogue.row) && (col == player.rogue.col));
 		if !keep_looking {
 			break;
 		}
 	}
-	*row = r;
-	*col = c;
+	DungeonSpot { row, col }
 }
 
 pub fn gr_room(level: &Level) -> usize {

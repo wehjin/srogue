@@ -33,7 +33,7 @@ use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::ring::constants::RINGS;
 use crate::ring::gr_ring;
 use crate::ring::ring_gem::RingGem;
-use crate::room::{gr_room, gr_row_col, party_objects, RoomType};
+use crate::room::{gr_room, gr_spot, party_objects, RoomType};
 use crate::scrolls::constants::SCROLLS;
 use crate::scrolls::ScrollKind;
 use crate::weapons::constants::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
@@ -539,10 +539,8 @@ pub fn get_food(obj: &mut Object, force_ration: bool) {
 }
 
 pub fn put_stairs(player: &Player, level: &mut Level) {
-	let mut row = 0;
-	let mut col = 0;
-	gr_row_col(&mut row, &mut col, |cell| cell.is_any_floor() || cell.is_any_tunnel(), player, level);
-	level.dungeon[row as usize][col as usize].add_stairs();
+	let spot = gr_spot(|cell| cell.is_any_floor() || cell.is_any_tunnel(), player, level);
+	level.dungeon[spot.row as usize][spot.col as usize].add_stairs();
 }
 
 pub fn get_armor_class(obj: Option<&Object>) -> isize {
@@ -601,10 +599,8 @@ pub fn put_amulet(game: &mut GameState) {
 }
 
 pub fn rand_place(obj: Object, game: &mut GameState) {
-	let mut row = 0;
-	let mut col = 0;
-	gr_row_col(&mut row, &mut col, |cell| cell.is_any_floor() || cell.is_any_tunnel(), &game.player, &game.level);
-	place_at(obj, row, col, &mut game.level, &mut game.ground);
+	let spot = gr_spot(|cell| cell.is_any_floor() || cell.is_any_tunnel(), &game.player, &game.level);
+	place_at(obj, spot.row, spot.col, &mut game.level, &mut game.ground);
 }
 
 pub fn new_object_for_wizard(game: &mut GameState) {

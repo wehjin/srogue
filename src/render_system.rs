@@ -3,9 +3,40 @@ use ncurses::mvaddch;
 
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
+use crate::monster::{gmc, MonsterIndex};
 use crate::objects::ObjectId;
 use crate::prelude::DungeonSpot;
 use crate::throw::ThrowEnding;
+
+pub fn animate_throw(obj_id: ObjectId, throw_ending: &ThrowEnding, game: &GameState) {
+	let what = game.player.object_what(obj_id);
+	let ch = ncurses::chtype::from(what.to_char());
+	for spot in throw_ending.flight_path() {
+		if game.player_can_see(*spot) {
+			let restore_ch = swap_ch(ch, spot);
+			move_curs(spot);
+			await_frame();
+			set_ch(restore_ch, spot);
+		}
+	}
+}
+
+pub fn show_monster_movement(mon_id: MonsterIndex, start_spot: DungeonSpot, end_spot: DungeonSpot, game: &mut GameState) {
+	// Restore char on screen at the abandoned spot.
+	{
+		let from_ch = game.mash.monster(mon_id).trail_char;
+		set_ch(from_ch, &start_spot);
+	}
+	// Save the char from the entered spot, then write the monster's char to the screen.
+	{
+		let end_trail_ch = get_ch(&end_spot);
+		game.mash.monster_mut(mon_id).trail_char = end_trail_ch;
+		if game.level.detect_monster || game.player.can_see_spot(&end_spot, &game.level) {
+			let mon_ch = gmc(game.mash.monster(mon_id), &game.player, &game.level);
+			set_ch(mon_ch, &end_spot);
+		}
+	}
+}
 
 pub fn detect_all_rows() -> Vec<String> {
 	let mut rows = Vec::new();
@@ -59,17 +90,4 @@ pub fn move_curs(spot: &DungeonSpot) {
 pub fn await_frame() {
 	ncurses::refresh();
 	ncurses::napms(16);
-}
-
-pub fn animate_throw(obj_id: ObjectId, throw_ending: &ThrowEnding, game: &GameState) {
-	let what = game.player.object_what(obj_id);
-	let ch = ncurses::chtype::from(what.to_char());
-	for spot in throw_ending.flight_path() {
-		if game.player_can_see(*spot) {
-			let restore_ch = swap_ch(ch, spot);
-			move_curs(spot);
-			await_frame();
-			set_ch(restore_ch, spot);
-		}
-	}
 }
