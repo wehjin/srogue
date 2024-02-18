@@ -31,6 +31,16 @@ pub enum RoomMark {
 	Cavern(usize),
 }
 
+impl From<Option<usize>> for RoomMark {
+	fn from(value: Option<usize>) -> Self {
+		if let Some(rn) = value {
+			RoomMark::Cavern(rn)
+		} else {
+			RoomMark::None
+		}
+	}
+}
+
 impl RoomMark {
 	pub fn is_none(&self) -> bool { self == &Self::None }
 	pub fn is_area(&self) -> bool {
@@ -46,9 +56,7 @@ impl RoomMark {
 		match self {
 			RoomMark::None => false,
 			RoomMark::Passage => false,
-			RoomMark::Cavern(rn) => {
-				level.rooms[*rn].room_type.is_type(room_type)
-			}
+			RoomMark::Cavern(rn) => level.rooms[*rn].room_type.is_type(room_type),
 		}
 	}
 	pub fn is_room(&self, room: RoomMark) -> bool {

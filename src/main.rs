@@ -7,7 +7,6 @@ use crate::message::print_stats;
 use crate::monster::put_mons;
 use crate::objects::{put_objects, put_stairs};
 use crate::play::{play_level, PlayResult};
-use crate::player::RoomMark;
 use crate::prelude::stat_const::STAT_ALL;
 use crate::settings::SettingsError;
 use crate::trap::add_traps;
@@ -98,10 +97,7 @@ pub fn main() {
 			put_stairs(&mut game.player, &mut game.level);
 			add_traps(&game.player, &mut game.level);
 			put_mons(&mut game);
-			put_player(
-				game.level.party_room.map(RoomMark::Cavern).unwrap_or(RoomMark::None),
-				&mut game,
-			);
+			put_player(game.level.party_room.into(), &mut game);
 			print_stats(STAT_ALL, &mut game.player);
 		}
 		restored = false;
