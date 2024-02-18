@@ -136,6 +136,9 @@ impl Player {
 		self.interrupted = true;
 		md_slurp();
 	}
+	pub fn is_at_spot(&self, spot: DungeonSpot) -> bool {
+		self.rogue.row == spot.row && self.rogue.col == spot.col
+	}
 	pub fn is_at(&self, row: i64, col: i64) -> bool {
 		self.rogue.row == row && self.rogue.col == col
 	}

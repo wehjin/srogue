@@ -16,7 +16,7 @@ use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD, STAT_HP, STAT_STRENGTH};
 use crate::r#use::{confuse, vanish};
 use crate::random::{coin_toss, get_rand, rand_percent};
-use crate::room::{get_dungeon_char, get_room_number};
+use crate::room::{get_dungeon_char, get_dungeon_char_spot, get_room_number};
 use crate::score::killed_by;
 
 pub const FLAME_NAME: &'static str = "flame";
@@ -273,7 +273,7 @@ pub fn check_imitator(mon_id: u64, game: &mut GameState) -> bool {
 		game.mash.monster_mut(mon_id).wake_up();
 		if game.player.blind.is_inactive() {
 			let monster = game.mash.monster(mon_id);
-			let dungeon_char = get_dungeon_char(monster.spot.row, monster.spot.col, game);
+			let dungeon_char = get_dungeon_char_spot(monster.spot, game);
 			{
 				let monster = game.mash.monster(mon_id);
 				mvaddch(monster.spot.row as i32, monster.spot.col as i32, dungeon_char);

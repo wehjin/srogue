@@ -1,5 +1,3 @@
-
-
 use ncurses::{chtype, mvaddch, refresh};
 
 use MoveResult::MoveFailed;
@@ -12,13 +10,13 @@ use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
 use crate::message::{CANCEL, print_stats, rgetchar, sound_bell};
 use crate::monster::{mv_mons, put_wanderer, wake_room};
+use crate::motion::MoveResult::{Moved, StoppedOnSomething};
 use crate::odds::R_TELE_PERCENT;
 use crate::pack::{pick_up, PickUpResult};
 use crate::player::{Player, RoomMark};
 use crate::prelude::ending::Ending;
 use crate::prelude::MIN_ROW;
 use crate::prelude::stat_const::STAT_HUNGER;
-use crate::motion::MoveResult::{Moved, StoppedOnSomething};
 use crate::r#use::{hallucinate_on_screen, tele, unblind, unconfuse, unhallucinate};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::room::{darken_room, get_dungeon_char, light_passage, light_up_room};

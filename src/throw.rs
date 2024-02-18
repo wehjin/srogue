@@ -1,4 +1,4 @@
-use ncurses::{mvaddch, mvinch};
+use ncurses::chtype;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 
@@ -20,7 +20,6 @@ use crate::r#use::vanish;
 use crate::random::{get_rand, rand_percent};
 use crate::render_system;
 use crate::ring::un_put_hand;
-use crate::room::get_dungeon_char;
 use crate::throw::Motion::{Down, DownLeft, DownRight, Left, Right, Same, Up, UpLeft, UpRight};
 use crate::weapons::constants::ARROW;
 use crate::weapons::kind::WeaponKind;
@@ -46,6 +45,9 @@ impl GameState {
 	}
 	pub fn player_can_see(&self, spot: DungeonSpot) -> bool {
 		self.player.can_see_spot(&spot, &self.level)
+	}
+	pub fn player_is_at(&self, spot: DungeonSpot) -> bool {
+		self.player.is_at_spot(spot)
 	}
 }
 
@@ -210,7 +212,7 @@ impl ThrowEnding {
 fn flop_object_from_spot(obj_id: ObjectId, spot: DungeonSpot, game: &mut GameState) {
 	let row = spot.row;
 	let col = spot.col;
-	let mut found = false;
+	let mut found_good_spot = false;
 	let mut walk = RandomWalk::new(row, col);
 	fn good_cell(cell: DungeonCell) -> bool {
 		!(cell.has_object() || cell.is_any_trap() || cell.is_stairs() || cell.is_any_hidden())
@@ -227,32 +229,34 @@ fn flop_object_from_spot(obj_id: ObjectId, spot: DungeonSpot, game: &mut GameSta
 		if spot.is_out_of_bounds() || spot_cell.is_nothing() || !good_cell(spot_cell) {
 			continue;
 		}
-		found = true;
+		found_good_spot = true;
 		break;
 	}
-	let DungeonSpot { row, col } = walk.spot().clone();
-	if found || walk.steps_taken == 0 {
-		let obj = game.player.object(obj_id).expect("obj in pack");
-		let mut new_obj = obj.clone_with_new_id();
-		new_obj.in_use_flags = NOT_USED;
-		new_obj.quantity = 1;
-		new_obj.ichar = 'L';
-		place_at(new_obj, row, col, &mut game.level, &mut game.ground);
-		if game.player.can_see(row, col, &game.level) && !game.player.is_at(row, col) {
-			let was_monster = game.level.dungeon[row as usize][col as usize].has_monster();
-			game.level.dungeon[row as usize][col as usize].set_monster(false);
-			let dungeon_char = get_dungeon_char(row, col, game);
-			if was_monster {
-				let monster_char = mvinch(row as i32, col as i32) as u8 as char;
-				if let Some(monster) = game.mash.monster_at_spot_mut(row, col) {
-					monster.trail_char = dungeon_char;
+	let spot = walk.spot().clone();
+	if found_good_spot || walk.steps_taken == 0 {
+		let mut new_obj = {
+			let obj = game.player.object(obj_id).expect("obj in pack");
+			obj.clone_with_new_id()
+		};
+		{
+			new_obj.in_use_flags = NOT_USED;
+			new_obj.quantity = 1;
+			new_obj.ichar = 'L';
+		}
+		place_at(new_obj, spot.row, spot.col, &mut game.level, &mut game.ground);
+		if game.player_can_see(spot) && !game.player_is_at(spot) {
+			let flop_char = game.level.dungeon[row as usize][col as usize].to_char_ignoring_any_monster();
+			if game.level.dungeon[row as usize][col as usize].has_monster() {
+				{
+					let monster = game.mash.monster_at_spot_mut(row, col).expect("monster with spot {spot}");
+					monster.trail_char = chtype::from(flop_char);
 				}
-				if (monster_char < 'A') || (monster_char > 'Z') {
-					mvaddch(row as i32, col as i32, dungeon_char);
+				let rendered_char = render_system::get_char(&spot);
+				if (rendered_char < 'A') || (rendered_char > 'Z') {
+					render_system::set_char(flop_char, &spot);
 				}
-				game.level.dungeon[row as usize][col as usize].set_monster(true);
 			} else {
-				mvaddch(row as i32, col as i32, dungeon_char);
+				render_system::set_char(flop_char, &spot);
 			}
 		}
 	} else {

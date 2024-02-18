@@ -11,6 +11,16 @@ pub struct DungeonCell {
 }
 
 impl DungeonCell {
+	pub fn to_char_ignoring_any_monster(&self) -> char {
+		let object_what = self.object_what();
+		if object_what != ObjectWhat::None {
+			return object_what.to_char();
+		}
+		self.material().to_char()
+	}
+}
+
+impl DungeonCell {
 	pub fn is_any_wall(&self) -> bool { self.material.is_any_wall() }
 	pub fn is_horizontal_wall(&self) -> bool { self.material.is_horizontal_wall() }
 	pub fn is_vertical_wall(&self) -> bool { self.material.is_vertical_wall() }

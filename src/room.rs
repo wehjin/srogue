@@ -208,7 +208,7 @@ pub fn light_up_room(rn: usize, game: &mut GameState) {
 						monster.cell_mut(&mut game.level).set_monster(false);
 						monster.spot
 					};
-					let dungeon_char = get_dungeon_char(monster_spot.row, monster_spot.col, game);
+					let dungeon_char = get_dungeon_char_spot(monster_spot, game);
 					{
 						let monster = game.mash.monster_mut(mon_id);
 						monster.trail_char = dungeon_char;
@@ -265,16 +265,17 @@ pub fn darken_room(rn: usize, game: &mut GameState) {
 	}
 }
 
+pub fn get_dungeon_char_spot(spot: DungeonSpot, game: &mut GameState) -> chtype {
+	get_dungeon_char(spot.row, spot.col, game)
+}
+
 pub fn get_dungeon_char(row: i64, col: i64, game: &mut GameState) -> chtype {
 	let cell = game.level.dungeon[row as usize][col as usize];
 	if cell.has_monster() {
 		return gmc_row_col(row, col, game);
 	}
-	if cell.has_object() {
-		let mask = cell.object_what();
-		return mask.to_char() as chtype;
-	}
-	cell.material().to_chtype()
+	let ch = cell.to_char_ignoring_any_monster();
+	chtype::from(ch)
 }
 
 pub fn random_spot_with_flag(is_good_cell: impl Fn(&DungeonCell) -> bool, player: &Player, level: &Level) -> DungeonSpot {

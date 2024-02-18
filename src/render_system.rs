@@ -29,6 +29,14 @@ pub fn render_all_rows<'a>(f: impl Fn(usize) -> &'a str) {
 	ncurses::refresh();
 }
 
+pub fn get_char(spot: &DungeonSpot) -> char {
+	get_ch(spot) as u8 as char
+}
+
+pub fn set_char(value: char, spot: &DungeonSpot) {
+	set_ch(ncurses::chtype::from(value), spot);
+}
+
 pub fn get_ch(spot: &DungeonSpot) -> ncurses::chtype {
 	let ch_at_spot = ncurses::mvinch(spot.row as c_int, spot.col as c_int);
 	ch_at_spot
