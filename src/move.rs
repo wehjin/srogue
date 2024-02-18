@@ -72,7 +72,7 @@ pub fn one_move_rogue(dirch: char, pickup: bool, game: &mut GameState) -> MoveRe
 	}
 
 	let to_cell = game.level.cell(row, col);
-	if to_cell.is_door() {
+	if to_cell.is_any_door() {
 		match game.player.cur_room {
 			RoomMark::None => {}
 			RoomMark::Passage => {
@@ -87,14 +87,14 @@ pub fn one_move_rogue(dirch: char, pickup: bool, game: &mut GameState) -> MoveRe
 				light_passage(row, col, game);
 			}
 		}
-	} else if game.player.cur_cell(&game.level).is_door() && to_cell.is_tunnel() {
+	} else if game.player.cur_cell(&game.level).is_any_door() && to_cell.is_any_tunnel() {
 		// door to tunnel
 		light_passage(row, col, game);
 		let rn = game.player.cur_room.rn().expect("player room not an area moving from door to passage");
 		wake_room(rn, false, game.player.rogue.row, game.player.rogue.col, game);
 		darken_room(rn, game);
 		game.player.cur_room = RoomMark::Passage;
-	} else if to_cell.is_tunnel() {
+	} else if to_cell.is_any_tunnel() {
 		// tunnel to tunnel.
 		light_passage(row, col, game);
 	} else {
@@ -134,8 +134,8 @@ pub fn one_move_rogue(dirch: char, pickup: bool, game: &mut GameState) -> MoveRe
 				}
 			}
 		}
-	} else if player_cell.is_door() || player_cell.is_stairs() || player_cell.is_trap() {
-		if game.player.levitate.is_inactive() && player_cell.is_trap() {
+	} else if player_cell.is_any_door() || player_cell.is_stairs() || player_cell.is_any_trap() {
+		if game.player.levitate.is_inactive() && player_cell.is_any_trap() {
 			trap_player(row as usize, col as usize, game);
 		}
 		reg_move(game);
@@ -215,10 +215,10 @@ pub fn is_passable(row: i64, col: i64, level: &Level) -> bool {
 		false
 	} else {
 		let cell = level.dungeon[row as usize][col as usize];
-		if cell.is_hidden() {
-			cell.is_trap()
+		if cell.is_any_hidden() {
+			cell.is_any_trap()
 		} else {
-			cell.is_floor() || cell.is_tunnel() || cell.is_door() || cell.is_stairs() || cell.is_trap()
+			cell.is_any_floor() || cell.is_any_tunnel() || cell.is_any_door() || cell.is_stairs() || cell.is_any_trap()
 		}
 	}
 }
@@ -248,7 +248,7 @@ pub fn next_to_something(drow: i64, dcol: i64, player: &Player, level: &Level) -
 			row = player.rogue.row + i;
 			col = player.rogue.col + j;
 			let s = level.dungeon[row as usize][col as usize];
-			if s.is_hidden() {
+			if s.is_any_hidden() {
 				continue;
 			}
 			/* If the rogue used to be right, up, left, down, or right of
@@ -260,8 +260,8 @@ pub fn next_to_something(drow: i64, dcol: i64, player: &Player, level: &Level) -
 				}
 				return true;
 			}
-			if s.is_trap() {
-				if !s.is_hidden() {
+			if s.is_any_trap() {
+				if !s.is_any_hidden() {
 					if ((row == drow) || (col == dcol)) &&
 						(!((row == player.rogue.row) || (col == player.rogue.col))) {
 						continue;
@@ -269,13 +269,13 @@ pub fn next_to_something(drow: i64, dcol: i64, player: &Player, level: &Level) -
 					return true;
 				}
 			}
-			if (((i - j) == 1) || ((i - j) == -1)) && s.is_tunnel() {
+			if (((i - j) == 1) || ((i - j) == -1)) && s.is_any_tunnel() {
 				pass_count += 1;
 				if pass_count > 1 {
 					return true;
 				}
 			}
-			if s.is_door() && ((i == 0) || (j == 0)) {
+			if s.is_any_door() && ((i == 0) || (j == 0)) {
 				return true;
 			}
 		}
@@ -288,8 +288,8 @@ pub fn can_move(row1: i64, col1: i64, row2: i64, col2: i64, level: &Level) -> bo
 		false
 	} else {
 		if row1 != row2 && col1 != col2 {
-			if level.dungeon[row1 as usize][col1 as usize].is_door()
-				|| level.dungeon[row2 as usize][col2 as usize].is_door() {
+			if level.dungeon[row1 as usize][col1 as usize].is_any_door()
+				|| level.dungeon[row2 as usize][col2 as usize].is_any_door() {
 				return false;
 			}
 			if level.dungeon[row1 as usize][col2 as usize].is_nothing()
@@ -451,7 +451,7 @@ pub fn reg_move(game: &mut GameState) -> bool {
 		if game.player.levitate.is_inactive() {
 			game.player.interrupt_and_slurp();
 			game.dialog.message("you float gently to the ground", 1);
-			if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_trap() {
+			if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_any_trap() {
 				trap_player(game.player.rogue.row as usize, game.player.rogue.col as usize, game);
 			}
 		}

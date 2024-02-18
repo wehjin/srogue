@@ -70,7 +70,7 @@ pub fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, mash: &mut Mo
 		let ocol = *col;
 		get_dir_rc(dir, row, col, false);
 		if (*row == orow && *col == ocol)
-			|| level.dungeon[*row as usize][*col as usize].is_wall()
+			|| level.dungeon[*row as usize][*col as usize].is_any_wall()
 			|| level.dungeon[*row as usize][*col as usize].is_nothing() {
 			return None;
 		}
@@ -177,7 +177,7 @@ fn tele_away(monster: &mut Monster, player: &Player, level: &mut Level) {
 		let mut row = 0;
 		let mut col = 0;
 		gr_row_col(&mut row, &mut col,
-		           |cell| cell.is_floor() || cell.is_tunnel() || cell.is_stairs() || cell.has_object(),
+		           |cell| cell.is_any_floor() || cell.is_any_tunnel() || cell.is_stairs() || cell.has_object(),
 		           player, level);
 		(row, col)
 	};

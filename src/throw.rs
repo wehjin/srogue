@@ -152,7 +152,7 @@ pub fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i64, col
 	while i < 24 {
 		get_dir_rc(dir, row, col, false);
 		let cell = game.level.dungeon[*row as usize][*col as usize];
-		if cell.is_nothing() || ((cell.is_wall() || cell.is_hidden()) && !cell.is_trap()) {
+		if cell.is_nothing() || ((cell.is_any_wall() || cell.is_any_hidden()) && !cell.is_any_trap()) {
 			*row = orow;
 			*col = ocol;
 			return None;
@@ -172,7 +172,7 @@ pub fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i64, col
 				return game.mash.monster_at_spot(*row, *col).map(|m| m.id());
 			}
 		}
-		if cell.is_tunnel() {
+		if cell.is_any_tunnel() {
 			i += 2;
 		}
 		orow = *row;
@@ -186,8 +186,8 @@ fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, game: &mut GameState) {
 	let mut found = false;
 	let mut walk = RandomWalk::new(row, col);
 	fn good_cell(cell: DungeonCell) -> bool {
-		!(cell.has_object() || cell.is_trap() || cell.is_stairs() || cell.is_hidden())
-			&& (cell.is_floor() || cell.is_tunnel() || cell.is_door() || cell.has_monster())
+		!(cell.has_object() || cell.is_any_trap() || cell.is_stairs() || cell.is_any_hidden())
+			&& (cell.is_any_floor() || cell.is_any_tunnel() || cell.is_any_door() || cell.has_monster())
 	}
 	for _ in 0..9 {
 		let cell = game.level.dungeon[walk.spot().row as usize][walk.spot().col as usize];

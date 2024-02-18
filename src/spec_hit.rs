@@ -211,8 +211,8 @@ fn try_to_cough(row: i64, col: i64, obj: &Object, game: &mut GameState) -> bool 
 		return false;
 	}
 	let dungeon_cell = game.level.dungeon[row as usize][col as usize];
-	if !(dungeon_cell.has_object() || dungeon_cell.is_stairs() || dungeon_cell.is_trap())
-		&& (dungeon_cell.is_tunnel() || dungeon_cell.is_floor() || dungeon_cell.is_door()) {
+	if !(dungeon_cell.has_object() || dungeon_cell.is_stairs() || dungeon_cell.is_any_trap())
+		&& (dungeon_cell.is_any_tunnel() || dungeon_cell.is_any_floor() || dungeon_cell.is_any_door()) {
 		place_at(obj.clone(), row, col, &mut game.level, &mut game.ground);
 		if (row != game.player.rogue.row || col != game.player.rogue.col)
 			&& !dungeon_cell.has_monster() {

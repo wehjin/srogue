@@ -56,7 +56,7 @@ pub fn put_mons(game: &mut GameState) {
 			monster.wake_up();
 		}
 		let DungeonSpot { row, col } = random_spot_with_flag(
-			|cell| cell.is_floor() || cell.is_tunnel() || cell.is_stairs() || cell.has_object(),
+			|cell| cell.is_any_floor() || cell.is_any_tunnel() || cell.is_stairs() || cell.has_object(),
 			&game.player,
 			&game.level,
 		);
@@ -130,7 +130,7 @@ pub fn party_monsters(rn: usize, n: usize, level_depth: isize, mash: &mut Monste
 			let row = get_rand(level.rooms[rn].top_row + 1, level.rooms[rn].bottom_row - 1);
 			let col = get_rand(level.rooms[rn].left_col + 1, level.rooms[rn].right_col - 1);
 			let dungeon_spot = level.dungeon[row as usize][col as usize];
-			if !dungeon_spot.has_monster() && (dungeon_spot.is_floor() || dungeon_spot.is_tunnel()) {
+			if !dungeon_spot.has_monster() && (dungeon_spot.is_any_floor() || dungeon_spot.is_any_tunnel()) {
 				found = Some((row, col));
 				break;
 			}
@@ -212,11 +212,11 @@ pub fn mv_monster(mon_id: u64, row: i64, col: i64, game: &mut GameState) {
 	let monster = game.mash.monster_mut(mon_id);
 	let target_spot = monster.target_spot_or(DungeonSpot { row, col });
 	let row = monster.spot.next_closest_row(target_spot.row);
-	if game.level.dungeon[row as usize][monster.spot.col as usize].is_door() && mtry(monster, row, monster.spot.col, &game.player, &mut game.level, &game.ground) {
+	if game.level.dungeon[row as usize][monster.spot.col as usize].is_any_door() && mtry(monster, row, monster.spot.col, &game.player, &mut game.level, &game.ground) {
 		return;
 	}
 	let col = monster.spot.next_closest_col(target_spot.col);
-	if game.level.dungeon[monster.spot.row as usize][col as usize].is_door() && mtry(monster, monster.spot.row, col, &game.player, &mut game.level, &game.ground) {
+	if game.level.dungeon[monster.spot.row as usize][col as usize].is_any_door() && mtry(monster, monster.spot.row, col, &game.player, &mut game.level, &game.ground) {
 		return;
 	}
 	if mtry(monster, row, col, &game.player, &mut game.level, &game.ground) {
@@ -288,14 +288,14 @@ pub fn move_mon_to(monster: &mut Monster, row: i64, col: i64, player: &Player, l
 			ncurses::mvaddch(row as i32, col as i32, gmc(monster, player, level));
 		}
 	}
-	if level.dungeon[row as usize][col as usize].is_door()
+	if level.dungeon[row as usize][col as usize].is_any_door()
 		&& !player.in_room(row, col, level)
-		&& level.dungeon[mrow as usize][mcol as usize].is_floor()
+		&& level.dungeon[mrow as usize][mcol as usize].is_any_floor()
 		&& player.blind.is_inactive() {
 		ncurses::mvaddch(mrow as i32, mcol as i32, chtype::from(' '));
 	}
-	if level.dungeon[row as usize][col as usize].is_door() {
-		let entering = level.dungeon[monster.spot.row as usize][monster.spot.col as usize].is_tunnel();
+	if level.dungeon[row as usize][col as usize].is_any_door() {
+		let entering = level.dungeon[monster.spot.row as usize][monster.spot.col as usize].is_any_tunnel();
 		dr_course(monster, entering, row, col, player, level);
 	} else {
 		monster.spot.set(row, col);
@@ -319,7 +319,7 @@ pub fn mon_can_go(monster: &Monster, row: i64, col: i64, player: &Player, level:
 		return false;
 	}
 	if (monster.spot.row != row) && (monster.spot.col != col)
-		&& (level.dungeon[row as usize][col as usize].is_door() || level.dungeon[monster.spot.row as usize][monster.spot.col as usize].is_door()) {
+		&& (level.dungeon[row as usize][col as usize].is_any_door() || level.dungeon[monster.spot.row as usize][monster.spot.col as usize].is_any_door()) {
 		return false;
 	}
 	if monster.target_spot.is_none()
@@ -394,7 +394,7 @@ fn random_spot_for_wanderer(player: &Player, level: &Level) -> Option<DungeonSpo
 		gr_row_col(
 			&mut row,
 			&mut col,
-			|cell| cell.is_floor() || cell.is_tunnel() || cell.is_stairs() || cell.has_object(),
+			|cell| cell.is_any_floor() || cell.is_any_tunnel() || cell.is_stairs() || cell.has_object(),
 			player,
 			level,
 		);
@@ -437,7 +437,7 @@ fn random_spot_for_monster(start_row: i64, start_col: i64, level: &Level) -> Opt
 			continue;
 		}
 		let cell = level.dungeon[spot.row as usize][spot.col as usize];
-		if !cell.has_monster() && (cell.is_floor() || cell.is_tunnel() || cell.is_stairs() || cell.is_door()) {
+		if !cell.has_monster() && (cell.is_any_floor() || cell.is_any_tunnel() || cell.is_stairs() || cell.is_any_door()) {
 			return Some(spot.clone());
 		}
 	}

@@ -26,7 +26,8 @@ impl Drop for Console {
 	fn drop(&mut self) {
 		assert_eq!(self.stopped, false);
 		self.stopped = true;
-		ncurses::endwin();
+		// TODO Uncomment after adding logging. Calling it erases the backtrace during a crash.
+		//ncurses::endwin();
 		md_control_keybord(1);
 	}
 }

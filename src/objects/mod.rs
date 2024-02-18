@@ -15,8 +15,9 @@ use crate::armors::constants::{ARMORS, PLATE, SPLINT};
 use crate::hit::DamageStat;
 use crate::init::GameState;
 use crate::inventory::get_obj_desc;
-use crate::level::{CellFixture, CellMaterial, Level};
 use crate::level::constants::MAX_ROOM;
+use crate::level::Level;
+use crate::level::materials::{CellMaterial, Fixture, Visibility};
 use crate::message::{CANCEL, get_input_line, rgetchar, sound_bell};
 use crate::monster::party_monsters;
 use crate::objects::note_tables::NoteTables;
@@ -241,8 +242,8 @@ pub fn put_gold(level_depth: isize, level: &mut Level, ground: &mut ObjectPack) 
 			for _j in 0..50 {
 				let row = get_rand(level.rooms[i].top_row + 1, level.rooms[i].bottom_row - 1);
 				let col = get_rand(level.rooms[i].left_col + 1, level.rooms[i].right_col - 1);
-				if level.dungeon[row as usize][col as usize].is_material_only(CellMaterial::Floor)
-					|| level.dungeon[row as usize][col as usize].is_material_only(CellMaterial::Tunnel) {
+				if level.dungeon[row as usize][col as usize].is_material_no_others(CellMaterial::Floor(Fixture::None))
+					|| level.dungeon[row as usize][col as usize].is_material_no_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None)) {
 					plant_gold(row, col, is_maze, level_depth, level, ground);
 					break;
 				}
@@ -541,10 +542,8 @@ pub fn get_food(obj: &mut Object, force_ration: bool) {
 pub fn put_stairs(player: &Player, level: &mut Level) {
 	let mut row = 0;
 	let mut col = 0;
-	gr_row_col(&mut row, &mut col,
-	           |cell| cell.is_floor() || cell.is_tunnel(),
-	           player, level);
-	level.dungeon[row as usize][col as usize].set_fixture(CellFixture::Stairs);
+	gr_row_col(&mut row, &mut col, |cell| cell.is_any_floor() || cell.is_any_tunnel(), player, level);
+	level.dungeon[row as usize][col as usize].add_stairs();
 }
 
 pub fn get_armor_class(obj: Option<&Object>) -> isize {
@@ -605,7 +604,7 @@ pub fn put_amulet(game: &mut GameState) {
 pub fn rand_place(obj: Object, game: &mut GameState) {
 	let mut row = 0;
 	let mut col = 0;
-	gr_row_col(&mut row, &mut col, |cell| cell.is_floor() || cell.is_tunnel(), &game.player, &game.level);
+	gr_row_col(&mut row, &mut col, |cell| cell.is_any_floor() || cell.is_any_tunnel(), &game.player, &game.level);
 	place_at(obj, row, col, &mut game.level, &mut game.ground);
 }
 

@@ -6,8 +6,9 @@ use ncurses::{addch, chtype, mvaddch, mvinch};
 use serde::{Deserialize, Serialize};
 
 use crate::init::GameState;
-use crate::level::{CellMaterial, DungeonCell, Level, same_col, same_row};
+use crate::level::{DungeonCell, Level, same_col, same_row};
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM};
+use crate::level::materials::{CellMaterial, Fixture, Visibility};
 use crate::monster::{gmc_row_col, Monster, MonsterMash};
 use crate::objects::{gr_object, place_at};
 use crate::player::{Player, RoomMark};
@@ -118,13 +119,13 @@ pub struct RoomBounds {
 }
 
 impl RoomBounds {
-	pub fn cell_kind_for_spot(&self, spot: &DungeonSpot) -> CellMaterial {
+	pub fn cell_material_for_spot(&self, spot: &DungeonSpot) -> CellMaterial {
 		if spot.row == self.top || spot.row == self.bottom {
 			CellMaterial::HorizontalWall
 		} else if spot.col == self.left || spot.col == self.right {
 			CellMaterial::VerticalWall
 		} else {
-			CellMaterial::Floor
+			CellMaterial::Floor(Fixture::None)
 		}
 	}
 	pub fn rows(&self) -> RangeInclusive<i64> {
@@ -260,7 +261,7 @@ pub fn darken_room(rn: usize, game: &mut GameState) {
 					if !imitating(i as i64, j as i64, &mut game.mash, &game.level) {
 						mvaddch(i as i32, j as i32, chtype::from(' '));
 					}
-					if cell.is_trap() && !game.level.dungeon[i][j].is_hidden() {
+					if cell.is_any_trap() && !game.level.dungeon[i][j].is_any_hidden() {
 						mvaddch(i as i32, j as i32, chtype::from('^'));
 					}
 				}
@@ -277,41 +278,7 @@ pub fn get_dungeon_char(row: i64, col: i64, game: &mut GameState) -> chtype {
 	if cell.has_object() {
 		return get_mask_char(cell.object_what()) as chtype;
 	}
-	if cell.is_stairs() {
-		return if cell.is_hidden() {
-			chtype::from(' ')
-		} else {
-			chtype::from('%')
-		};
-	}
-	match cell.material() {
-		CellMaterial::None => chtype::from(' '),
-		CellMaterial::HorizontalWall => chtype::from('-'),
-		CellMaterial::VerticalWall => chtype::from('|'),
-		CellMaterial::Door(dir) => {
-			if cell.is_hidden() {
-				if dir.is_up_or_down() {
-					chtype::from('-')
-				} else {
-					chtype::from('|')
-				}
-			} else {
-				chtype::from('+')
-			}
-		}
-		CellMaterial::Floor => {
-			if cell.is_trap() && !cell.is_hidden() {
-				chtype::from('^')
-			} else {
-				chtype::from('.')
-			}
-		}
-		CellMaterial::Tunnel => if cell.is_hidden() {
-			chtype::from(' ')
-		} else {
-			chtype::from('#')
-		},
-	}
+	cell.material().to_chtype()
 }
 
 pub fn get_mask_char(mask: ObjectWhat) -> char {
@@ -376,8 +343,8 @@ pub fn party_objects(rn: usize, game: &mut GameState) -> usize {
 		for _j in 0..250 {
 			let row = get_rand(game.level.rooms[rn].top_row + 1, game.level.rooms[rn].bottom_row - 1);
 			let col = get_rand(game.level.rooms[rn].left_col + 1, game.level.rooms[rn].right_col - 1);
-			if game.level.dungeon[row as usize][col as usize].is_material_only(CellMaterial::Floor)
-				|| game.level.dungeon[row as usize][col as usize].is_material_only(CellMaterial::Tunnel) {
+			if game.level.dungeon[row as usize][col as usize].is_material_no_others(CellMaterial::Floor(Fixture::None))
+				|| game.level.dungeon[row as usize][col as usize].is_material_no_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None)) {
 				found = Some(DungeonSpot { row, col });
 				break;
 			}
@@ -463,44 +430,47 @@ pub fn is_all_connected(rooms: &[Room; MAX_ROOM]) -> bool {
 	RoomVisitor::new(rooms).visit_rooms().to_is_all_connected()
 }
 
+mod magic_map {
+	use crate::level::DungeonCell;
+
+	pub fn reveals_cell(cell: &DungeonCell) -> bool {
+		cell.is_any_wall()
+			|| cell.is_any_door()
+			|| cell.is_any_tunnel()
+			|| cell.is_any_trap()
+			|| cell.is_stairs()
+			|| cell.has_monster()
+	}
+}
+
 pub fn draw_magic_map(mash: &mut MonsterMash, level: &mut Level) {
 	for i in 0..DROWS {
 		for j in 0..DCOLS {
-			let s = level.dungeon[i][j];
-			let s_is_magic_material = match s.material() {
-				CellMaterial::HorizontalWall |
-				CellMaterial::VerticalWall |
-				CellMaterial::Door(_) |
-				CellMaterial::Tunnel => true,
-				_ => false,
-			};
-			if s_is_magic_material || s.is_trap() || s.has_monster() || s.is_stairs() {
-				let mut ch = mvinch(i as i32, j as i32) as u8 as char;
-				if ch == ' '
-					|| ch.is_ascii_uppercase()
-					|| s.is_trap()
-					|| s.is_hidden() {
-					let och = ch;
-					level.dungeon[i][j].set_hidden(false);
-					if s.is_material(CellMaterial::HorizontalWall) {
+			let cell = level.dungeon[i][j];
+			if magic_map::reveals_cell(&cell) {
+				let old_ch = mvinch(i as i32, j as i32) as u8 as char;
+				if old_ch == ' ' || old_ch.is_ascii_uppercase() || cell.is_any_trap() || cell.is_any_hidden() {
+					level.dungeon[i][j].set_visible();
+					let ch;
+					if cell.is_horizontal_wall() {
 						ch = '-';
-					} else if s.is_material(CellMaterial::VerticalWall) {
+					} else if cell.is_vertical_wall() {
 						ch = '|';
-					} else if s.is_door() {
+					} else if cell.is_any_door() {
 						ch = '+';
-					} else if s.is_trap() {
+					} else if cell.is_any_trap() {
 						ch = '^';
-					} else if s.is_stairs() {
+					} else if cell.is_stairs() {
 						ch = '%';
-					} else if s.is_tunnel() {
+					} else if cell.is_any_tunnel() {
 						ch = '#';
 					} else {
 						continue;
 					}
-					if !s.has_monster() || och == ' ' {
+					if !cell.has_monster() || old_ch == ' ' {
 						addch(chtype::from(ch));
 					}
-					if s.has_monster() {
+					if cell.has_monster() {
 						if let Some(monster) = mash.monster_at_spot_mut(i as i64, j as i64) {
 							monster.trail_char = chtype::from(ch);
 						}
@@ -554,7 +524,7 @@ pub fn dr_course(monster: &mut Monster, is_entering: bool, row: i64, col: i64, p
 			for i in wall_bounds.rows_usize() {
 				for j in wall_bounds.cols_usize() {
 					let spot = DungeonSpot::from_usize(i, j);
-					if level.dungeon[i][j].is_door() && !spot.shares_axis(&monster.spot) {
+					if level.dungeon[i][j].is_any_door() && !spot.shares_axis(&monster.spot) {
 						monster.set_target_spot(i as i64, j as i64);
 						return;
 					}

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 pub use cells::*;
 pub use dungeon::*;
+use materials::{CellMaterial, Fixture, Visibility};
 use UpResult::{KeepLevel, WonGame};
 
 use crate::init::GameState;
@@ -28,6 +29,7 @@ use crate::trap::Trap;
 pub mod constants;
 mod cells;
 mod dungeon;
+pub mod materials;
 
 pub const LEVEL_POINTS: [isize; MAX_EXP_LEVEL] = [
 	10,
@@ -227,8 +229,8 @@ pub fn make_room(rn: i64, r1: i64, r2: i64, r3: i64, level: &mut Level) {
 		for row in room_bounds.rows() {
 			for col in room_bounds.cols() {
 				let spot = &DungeonSpot { row, col };
-				let cell_kind = room_bounds.cell_kind_for_spot(&spot);
-				level.dungeon[spot.row as usize][spot.col as usize].set_material_and_clear_others(cell_kind);
+				let cell_mat = room_bounds.cell_material_for_spot(&spot);
+				level.dungeon[spot.row as usize][spot.col as usize].set_material_remove_others(cell_mat);
 			}
 		}
 	}
@@ -282,7 +284,7 @@ pub fn put_door(rn: usize, door_dir: DoorDirection, level_depth: isize, level: &
 			loop {
 				col = get_rand(room.left_col + wall_width, room.right_col - wall_width);
 				let cell = level.dungeon[row as usize][col as usize];
-				if cell.is_tunnel() || cell.is_material(CellMaterial::HorizontalWall) {
+				if cell.is_any_tunnel() || cell.is_horizontal_wall() {
 					break;
 				}
 			}
@@ -294,7 +296,7 @@ pub fn put_door(rn: usize, door_dir: DoorDirection, level_depth: isize, level: &
 			loop {
 				row = get_rand(room.top_row + wall_width, room.bottom_row - wall_width);
 				let cell = level.dungeon[row as usize][col as usize];
-				if cell.is_tunnel() || cell.is_material(CellMaterial::VerticalWall) {
+				if cell.is_any_tunnel() || cell.is_vertical_wall() {
 					break;
 				}
 			}
@@ -303,10 +305,10 @@ pub fn put_door(rn: usize, door_dir: DoorDirection, level_depth: isize, level: &
 	};
 	if room.room_type == RoomType::Room {
 		let cell = &mut level.dungeon[door_spot.row as usize][door_spot.col as usize];
-		cell.set_material_and_clear_others(CellMaterial::Door(door_dir));
+		cell.set_material_remove_others(CellMaterial::Door(door_dir, Visibility::Visible));
 	}
 	if (level_depth > 2) && rand_percent(HIDE_PERCENT) {
-		level.dungeon[door_spot.row as usize][door_spot.col as usize].set_hidden(true);
+		level.dungeon[door_spot.row as usize][door_spot.col as usize].set_hidden();
 	}
 	let door_index = door_dir.to_index();
 	room.doors[door_index].door_row = door_spot.row;
@@ -325,16 +327,16 @@ pub fn draw_simple_passage(spot1: &DungeonSpot, spot2: &DungeonSpot, dir: DoorDi
 				};
 				let middle = get_rand(col1 + 1, col2 - 1);
 				for i in (col1 + 1)..middle {
-					level.dungeon[row1 as usize][i as usize].set_material_and_clear_others(CellMaterial::Tunnel);
+					level.dungeon[row1 as usize][i as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
 				}
 				let mut i = row1;
 				let step = if row1 > row2 { -1 } else { 1 };
 				while i != row2 {
-					level.dungeon[i as usize][middle as usize].set_material_and_clear_others(CellMaterial::Tunnel);
+					level.dungeon[i as usize][middle as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
 					i = (i) + step;
 				}
 				for i in middle..col2 {
-					level.dungeon[row2 as usize][i as usize].set_material_and_clear_others(CellMaterial::Tunnel);
+					level.dungeon[row2 as usize][i as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
 				}
 				(col1, row1, col2, row2)
 			}
@@ -346,16 +348,16 @@ pub fn draw_simple_passage(spot1: &DungeonSpot, spot2: &DungeonSpot, dir: DoorDi
 				};
 				let middle = get_rand(row1 + 1, row2 - 1);
 				for i in (row1 + 1)..middle {
-					level.dungeon[i as usize][col1 as usize].set_material_and_clear_others(CellMaterial::Tunnel);
+					level.dungeon[i as usize][col1 as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
 				}
 				let mut i = col1;
 				let step = if col1 > col2 { -1 } else { 1 };
 				while i != col2 {
-					level.dungeon[middle as usize][i as usize].set_material_and_clear_others(CellMaterial::Tunnel);
+					level.dungeon[middle as usize][i as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
 					i = (i) + step;
 				}
 				for i in middle..row2 {
-					level.dungeon[i as usize][col2 as usize].set_material_and_clear_others(CellMaterial::Tunnel);
+					level.dungeon[i as usize][col2 as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
 				}
 				(col1, row1, col2, row2)
 			}
@@ -456,7 +458,7 @@ fn fill_it(rn: usize, do_rec_de: bool, level_depth: isize, level: &mut Level) {
 		rooms_found += 1;
 		draw_simple_passage(&start_spot, &end_spot, tunnel_dir, level_depth, level);
 		level.rooms[rn].room_type = RoomType::DeadEnd;
-		level.dungeon[srow as usize][scol as usize].set_material_and_clear_others(CellMaterial::Tunnel);
+		level.dungeon[srow as usize][scol as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
 		if (i < 3) && !did_this {
 			did_this = true;
 			if coin_toss() {
@@ -472,7 +474,7 @@ fn fill_it(rn: usize, do_rec_de: bool, level_depth: isize, level: &mut Level) {
 
 fn recursive_deadend(rn: usize, s_spot: &DungeonSpot, level_depth: isize, level: &mut Level) {
 	level.rooms[rn].room_type = RoomType::DeadEnd;
-	level.dungeon[s_spot.row as usize][s_spot.col as usize].set_material_and_clear_others(CellMaterial::Tunnel);
+	level.dungeon[s_spot.row as usize][s_spot.col as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
 
 	for i in 0..4 {
 		let de: isize = rn as isize + level.target_room_offsets[i];
@@ -506,7 +508,7 @@ fn find_tunnel_in_room(rn: usize, row: &mut i64, col: &mut i64, level: &Level) -
 	let bounds = level.rooms[rn].to_wall_bounds();
 	for room_row in bounds.rows() {
 		for room_col in bounds.cols() {
-			if level.dungeon[room_row as usize][room_col as usize].is_material(CellMaterial::Tunnel) {
+			if level.dungeon[room_row as usize][room_col as usize].is_any_tunnel() {
 				*row = room_row;
 				*col = room_col;
 				return true;
@@ -518,7 +520,7 @@ fn find_tunnel_in_room(rn: usize, row: &mut i64, col: &mut i64, level: &Level) -
 
 fn make_maze(r: usize, c: usize, tr: usize, br: usize, lc: usize, rc: usize, level: &mut Level) {
 	let mut dirs: [DoorDirection; 4] = [DoorDirection::Up, DoorDirection::Down, DoorDirection::Left, DoorDirection::Right];
-	level.dungeon[r][c].set_material_and_clear_others(CellMaterial::Tunnel);
+	level.dungeon[r][c].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
 
 	if rand_percent(33) {
 		for _i in 0..10 {
@@ -533,37 +535,37 @@ fn make_maze(r: usize, c: usize, tr: usize, br: usize, lc: usize, rc: usize, lev
 		match dirs[i] {
 			DoorDirection::Up => {
 				if ((r - 1) >= tr) &&
-					(level.dungeon[r - 1][c].is_not_material(CellMaterial::Tunnel)) &&
-					(level.dungeon[r - 1][c - 1].is_not_material(CellMaterial::Tunnel)) &&
-					(level.dungeon[r - 1][c + 1].is_not_material(CellMaterial::Tunnel)) &&
-					(r >= 2 && level.dungeon[r - 2][c].is_not_material(CellMaterial::Tunnel)) {
+					(level.dungeon[r - 1][c].is_not_tunnel()) &&
+					(level.dungeon[r - 1][c - 1].is_not_tunnel()) &&
+					(level.dungeon[r - 1][c + 1].is_not_tunnel()) &&
+					(r >= 2 && level.dungeon[r - 2][c].is_not_tunnel()) {
 					make_maze(r - 1, c, tr, br, lc, rc, level);
 				}
 			}
 			DoorDirection::Down => {
 				if ((r + 1) <= br) &&
-					(level.dungeon[r + 1][c].is_not_material(CellMaterial::Tunnel)) &&
-					(level.dungeon[r + 1][c - 1].is_not_material(CellMaterial::Tunnel)) &&
-					(level.dungeon[r + 1][c + 1].is_not_material(CellMaterial::Tunnel)) &&
-					((r + 2 < DROWS) && level.dungeon[r + 2][c].is_not_material(CellMaterial::Tunnel)) {
+					(level.dungeon[r + 1][c].is_not_tunnel()) &&
+					(level.dungeon[r + 1][c - 1].is_not_tunnel()) &&
+					(level.dungeon[r + 1][c + 1].is_not_tunnel()) &&
+					((r + 2 < DROWS) && level.dungeon[r + 2][c].is_not_tunnel()) {
 					make_maze(r + 1, c, tr, br, lc, rc, level);
 				}
 			}
 			DoorDirection::Left => {
 				if ((c - 1) >= lc) &&
-					(level.dungeon[r][c - 1].is_not_material(CellMaterial::Tunnel)) &&
-					(level.dungeon[r - 1][c - 1].is_not_material(CellMaterial::Tunnel)) &&
-					(level.dungeon[r + 1][c - 1].is_not_material(CellMaterial::Tunnel)) &&
-					(c >= 2 && level.dungeon[r][c - 2].is_not_material(CellMaterial::Tunnel)) {
+					(level.dungeon[r][c - 1].is_not_tunnel()) &&
+					(level.dungeon[r - 1][c - 1].is_not_tunnel()) &&
+					(level.dungeon[r + 1][c - 1].is_not_tunnel()) &&
+					(c >= 2 && level.dungeon[r][c - 2].is_not_tunnel()) {
 					make_maze(r, c - 1, tr, br, lc, rc, level);
 				}
 			}
 			DoorDirection::Right => {
 				if ((c + 1) <= rc) &&
-					(level.dungeon[r][c + 1].is_not_material(CellMaterial::Tunnel)) &&
-					(level.dungeon[r - 1][c + 1].is_not_material(CellMaterial::Tunnel)) &&
-					(level.dungeon[r + 1][c + 1].is_not_material(CellMaterial::Tunnel)) &&
-					((c + 2) < DCOLS && level.dungeon[r][c + 2].is_not_material(CellMaterial::Tunnel)) {
+					(level.dungeon[r][c + 1].is_not_tunnel()) &&
+					(level.dungeon[r - 1][c + 1].is_not_tunnel()) &&
+					(level.dungeon[r + 1][c + 1].is_not_tunnel()) &&
+					((c + 2) < DCOLS && level.dungeon[r][c + 2].is_not_tunnel()) {
 					make_maze(r, c + 1, tr, br, lc, rc, level);
 				}
 			}
@@ -591,8 +593,8 @@ fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: i64, level_
 				for _j in 0..10 {
 					let row = get_rand(row1 + row_cut, row2 - row_cut) as usize;
 					let col = get_rand(col1 + col_cut, col2 - col_cut) as usize;
-					if level.dungeon[row][col].is_material(CellMaterial::Tunnel) {
-						level.dungeon[row][col].set_hidden(true);
+					if level.dungeon[row][col].is_any_tunnel() {
+						level.dungeon[row][col].set_hidden();
 						break;
 					}
 				}
@@ -613,7 +615,7 @@ pub fn put_player(avoid_room: RoomMark, game: &mut GameState) {
 			gr_row_col(
 				&mut row,
 				&mut col,
-				|cell| cell.is_floor() || cell.is_tunnel() || cell.has_object() || cell.is_stairs(),
+				|cell| cell.is_any_floor() || cell.is_any_tunnel() || cell.has_object() || cell.is_stairs(),
 				&game.player,
 				&game.level,
 			);
@@ -621,7 +623,7 @@ pub fn put_player(avoid_room: RoomMark, game: &mut GameState) {
 		}
 		game.player.rogue.row = row;
 		game.player.rogue.col = col;
-		game.player.cur_room = if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_tunnel() {
+		game.player.cur_room = if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_any_tunnel() {
 			RoomMark::Passage
 		} else {
 			to_room

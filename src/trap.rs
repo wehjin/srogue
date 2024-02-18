@@ -7,8 +7,8 @@ use TrapKind::NoTrap;
 
 use crate::hit::{DamageEffect, DamageStat, get_damage, get_dir_rc};
 use crate::init::GameState;
-use crate::level::{CellFixture, Level};
 use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
+use crate::level::Level;
 use crate::message::{CANCEL, print_stats, rgetchar, sound_bell};
 use crate::player::Player;
 use crate::prelude::*;
@@ -111,7 +111,7 @@ pub fn trap_player(row: usize, col: usize, game: &mut GameState) {
 	if t == NoTrap {
 		return;
 	}
-	game.level.dungeon[row][col].set_hidden(false);
+	game.level.dungeon[row][col].set_visible();
 	if rand_percent(game.player.buffed_exp() as usize) {
 		game.player.interrupt_and_slurp();
 		game.dialog.message("the trap failed", 1);
@@ -192,7 +192,7 @@ pub fn add_traps(player: &Player, level: &mut Level) {
 				col = get_rand((level.rooms[cur_party_room].left_col + 1) as usize, (level.rooms[cur_party_room].right_col - 1) as usize);
 				tries += 1;
 				let cell = level.dungeon[row][col];
-				let keep_looking = (cell.has_object() || cell.is_stairs() || cell.is_trap() || cell.is_tunnel() || cell.is_nothing())
+				let keep_looking = (cell.has_object() || cell.is_stairs() || cell.is_any_trap() || cell.is_any_tunnel() || cell.is_nothing())
 					&& tries < MAX_TRIES;
 				if !keep_looking {
 					break;
@@ -207,15 +207,14 @@ pub fn add_traps(player: &Player, level: &mut Level) {
 			random_spot_with_floor_or_monster(player, level)
 		};
 		level.traps[i].set_spot(row, col);
-		level.dungeon[row][col].set_fixture(CellFixture::Trap);
-		level.dungeon[row][col].set_hidden(true);
+		level.dungeon[row][col].add_hidden_trap();
 	}
 }
 
 fn random_spot_with_floor_or_monster(player: &Player, level: &mut Level) -> (usize, usize) {
 	let mut row = 0;
 	let mut col = 0;
-	gr_row_col(&mut row, &mut col, |cell| cell.is_floor() || cell.has_monster(), player, level);
+	gr_row_col(&mut row, &mut col, |cell| cell.is_any_floor() || cell.has_monster(), player, level);
 	(row as usize, col as usize)
 }
 
@@ -237,7 +236,7 @@ pub fn id_trap(game: &mut GameState) {
 	let mut row = game.player.rogue.row;
 	let mut col = game.player.rogue.col;
 	get_dir_rc(dir, &mut row, &mut col, false);
-	if game.level.dungeon[row as usize][col as usize].is_trap() && !game.level.dungeon[row as usize][col as usize].is_hidden() {
+	if game.level.dungeon[row as usize][col as usize].is_any_trap() && !game.level.dungeon[row as usize][col as usize].is_any_hidden() {
 		game.dialog.message(trap_at(row as usize, col as usize, &game.level).name(), 0);
 	} else {
 		game.dialog.message("no trap there", 0);
@@ -248,7 +247,7 @@ pub fn id_trap(game: &mut GameState) {
 pub fn show_traps(level: &Level) {
 	for i in 0..DROWS {
 		for j in 0..DCOLS {
-			if level.dungeon[i][j].is_trap() {
+			if level.dungeon[i][j].is_any_trap() {
 				mvaddch(i as i32, j as i32, chtype::from('^'));
 			}
 		}
@@ -264,7 +263,7 @@ pub fn search(n: usize, is_auto: bool, game: &mut GameState) {
 			if is_off_screen(row, col) {
 				continue;
 			}
-			if game.level.dungeon[row as usize][col as usize].is_hidden() {
+			if game.level.dungeon[row as usize][col as usize].is_any_hidden() {
 				found += 1;
 			}
 		}
@@ -279,14 +278,14 @@ pub fn search(n: usize, is_auto: bool, game: &mut GameState) {
 				if is_off_screen(row, col) {
 					continue;
 				}
-				if game.level.dungeon[row as usize][col as usize].is_hidden() {
+				if game.level.dungeon[row as usize][col as usize].is_any_hidden() {
 					if rand_percent(17 + game.player.buffed_exp() as usize) {
-						game.level.dungeon[row as usize][col as usize].set_hidden(false);
+						game.level.dungeon[row as usize][col as usize].set_visible();
 						if game.player.blind.is_inactive() && !game.player.is_at(row, col) {
 							mvaddch(row as i32, col as i32, get_dungeon_char(row, col, game));
 						}
 						shown += 1;
-						if game.level.dungeon[row as usize][col as usize].is_trap() {
+						if game.level.dungeon[row as usize][col as usize].is_any_trap() {
 							game.player.interrupt_and_slurp();
 							game.dialog.message(trap_at(row as usize, col as usize, &game.level).name(), 1);
 						}

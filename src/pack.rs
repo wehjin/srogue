@@ -77,7 +77,7 @@ impl Object {
 
 pub fn drop_0(game: &mut GameState) {
 	let player_cell = game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize];
-	if player_cell.has_object() || player_cell.is_stairs() || player_cell.is_trap() {
+	if player_cell.has_object() || player_cell.is_stairs() || player_cell.is_any_trap() {
 		game.dialog.message("there's already something there", 0);
 		return;
 	}
