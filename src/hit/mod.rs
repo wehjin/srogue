@@ -1,5 +1,3 @@
-
-
 pub use damage_stat::*;
 
 use crate::init::GameState;
@@ -7,17 +5,18 @@ use crate::level::add_exp;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::message::{CANCEL, print_stats, rgetchar, sound_bell};
 use crate::monster::{mon_name, Monster};
+use crate::motion::{can_move, is_direction, one_move_rogue};
 use crate::objects::{get_armor_class, Object};
 use crate::player::Player;
 use crate::prelude::{AMULET_LEVEL, MIN_ROW};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::stat_const::STAT_HP;
-use crate::motion::{can_move, is_direction, one_move_rogue};
 use crate::random::rand_percent;
-use crate::room::get_dungeon_char;
+use crate::render_system;
 use crate::score::killed_by;
 use crate::spec_hit::{check_imitator, cough_up, special_hit};
+use crate::throw::Motion;
 
 fn reduce_chance(chance: usize, reduction: isize) -> usize {
 	let reduction: usize = reduction.max(0) as usize;
@@ -193,11 +192,9 @@ pub fn mon_damage(mon_id: u64, damage: isize, game: &mut GameState) -> MonDamage
 	game.mash.monster_mut(mon_id).hp_to_kill -= damage;
 	if game.mash.monster(mon_id).hp_to_kill <= 0 {
 		{
-			let monster = game.mash.monster(mon_id);
-			let row = monster.spot.row;
-			let col = monster.spot.col;
-			game.level.dungeon[row as usize][col as usize].set_monster(false);
-			ncurses::mvaddch(row as i32, col as i32, get_dungeon_char(row, col, game));
+			let spot = game.mash.monster(mon_id).spot;
+			game.level.cell_mut(spot).set_monster(false);
+			render_system::show_monster_gone(spot, game);
 		}
 		game.player.fight_monster = None;
 		cough_up(mon_id, game);
@@ -221,38 +218,42 @@ pub fn mon_damage(mon_id: u64, damage: isize, game: &mut GameState) -> MonDamage
 
 pub fn fight(to_the_death: bool, game: &mut GameState) {
 	let mut first_miss: bool = true;
-	let mut ch: char;
-	loop {
-		ch = rgetchar() as u8 as char;
-		if is_direction(ch) {
-			break;
+	let motion = {
+		let mut ch: char;
+		loop {
+			ch = rgetchar() as u8 as char;
+			if is_direction(ch) {
+				break;
+			}
+			sound_bell();
+			if first_miss {
+				game.dialog.message("direction?", 0);
+				first_miss = false;
+			}
 		}
-		sound_bell();
-		if first_miss {
-			game.dialog.message("direction?", 0);
-			first_miss = false;
-		}
-	}
-	game.dialog.clear_message();
-	if ch == CANCEL {
-		return;
-	}
-	let mut row = game.player.rogue.row;
-	let mut col = game.player.rogue.col;
-	get_dir_rc(ch, &mut row, &mut col, false);
-	let c = ncurses::mvinch(row as i32, col as i32);
-	{
-		let not_a_monster = (c as i64) < 'A' as i64 || c as i64 > 'Z' as i64;
-		let cannot_move = !can_move(game.player.rogue.row, game.player.rogue.col, row, col, &game.level);
-		if not_a_monster || cannot_move {
-			game.dialog.message("I see no monster there", 0);
+		game.dialog.clear_message();
+		if ch == CANCEL {
 			return;
 		}
+		Motion::from(ch)
+	};
+	let fight_spot = match game.player.to_spot().after_motion(motion) {
+		None => {
+			return;
+		}
+		Some(on_screen_spot) => on_screen_spot,
+	};
+	let cannot_move = !can_move(game.player.rogue.row, game.player.rogue.col, fight_spot.row, fight_spot.col, &game.level);
+	let not_a_monster = !game.has_non_imitating_monster_at(fight_spot);
+	if not_a_monster || cannot_move {
+		game.dialog.message("I see no monster there", 0);
+		return;
 	}
-	game.player.fight_monster = game.mash.monster_at_spot(row, col).map(|m| m.id());
+	game.player.fight_monster = game.mash.monster_at_spot(fight_spot.row, fight_spot.col).map(|m| m.id());
 	if game.player.fight_monster.is_none() {
 		return;
 	}
+
 	let possible_damage = {
 		let fight_id = game.player.fight_monster.expect("some fight-monster id");
 		let fight_monster = game.mash.monster_mut(fight_id);
@@ -263,14 +264,15 @@ pub fn fight(to_the_death: bool, game: &mut GameState) {
 		}
 	};
 	while game.player.fight_monster.is_some() {
-		one_move_rogue(ch, false, game);
+		one_move_rogue(motion.to_char(), false, game);
 		if (!to_the_death && game.player.rogue.hp_current <= possible_damage)
 			|| game.player.interrupted
-			|| !game.level.dungeon[row as usize][col as usize].has_monster() {
+			|| game.player.cleaned_up.is_some()
+			|| !game.cell_at(fight_spot).has_monster() {
 			game.player.fight_monster = None;
 		} else {
-			let monster_id = game.mash.monster_at_spot(row, col).map(|m| m.id());
-			if monster_id != game.player.fight_monster {
+			let mon_id = game.mash.monster_id_at_spot(fight_spot.row, fight_spot.col);
+			if mon_id != game.player.fight_monster {
 				game.player.fight_monster = None;
 			}
 		}

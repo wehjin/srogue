@@ -81,6 +81,9 @@ pub fn mv_mons(game: &mut GameState) {
 	}
 
 	for mon_id in game.mash.monster_ids() {
+		if game.player.cleaned_up.is_some() {
+			break;
+		}
 		let mut done_with_monster = false;
 		if game.mash.test_monster(mon_id, Monster::is_hasted) {
 			game.mash.mon_disappeared = false;

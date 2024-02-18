@@ -6,19 +6,12 @@ use crate::level::constants::{DCOLS, DROWS};
 use crate::monster::{gmc, MonsterIndex};
 use crate::objects::ObjectId;
 use crate::prelude::DungeonSpot;
+use crate::room::get_dungeon_char_spot;
 use crate::throw::ThrowEnding;
 
-pub fn animate_throw(obj_id: ObjectId, throw_ending: &ThrowEnding, game: &GameState) {
-	let what = game.player.object_what(obj_id);
-	let ch = ncurses::chtype::from(what.to_char());
-	for spot in throw_ending.flight_path() {
-		if game.player_can_see(*spot) {
-			let restore_ch = swap_ch(ch, spot);
-			move_curs(spot);
-			await_frame();
-			set_ch(restore_ch, spot);
-		}
-	}
+pub fn show_monster_gone(spot: DungeonSpot, game: &GameState) {
+	let ch = get_dungeon_char_spot(spot, game);
+	set_ch(ch, &spot);
 }
 
 pub fn show_monster_movement(mon_id: MonsterIndex, start_spot: DungeonSpot, end_spot: DungeonSpot, game: &mut GameState) {
@@ -34,6 +27,19 @@ pub fn show_monster_movement(mon_id: MonsterIndex, start_spot: DungeonSpot, end_
 		if game.level.detect_monster || game.player.can_see_spot(&end_spot, &game.level) {
 			let mon_ch = gmc(game.mash.monster(mon_id), &game.player, &game.level);
 			set_ch(mon_ch, &end_spot);
+		}
+	}
+}
+
+pub fn animate_throw(obj_id: ObjectId, throw_ending: &ThrowEnding, game: &GameState) {
+	let what = game.player.object_what(obj_id);
+	let ch = ncurses::chtype::from(what.to_char());
+	for spot in throw_ending.flight_path() {
+		if game.player_can_see(*spot) {
+			let restore_ch = swap_ch(ch, spot);
+			move_curs(spot);
+			await_frame();
+			set_ch(restore_ch, spot);
 		}
 	}
 }

@@ -26,7 +26,7 @@ use crate::weapons::kind::WeaponKind;
 use crate::zap::zap_monster;
 
 impl GameState {
-	fn has_non_imitating_monster_at(&self, spot: DungeonSpot) -> bool {
+	pub fn has_non_imitating_monster_at(&self, spot: DungeonSpot) -> bool {
 		let mon_id = self.mash.monster_id_at_spot(spot.row, spot.col);
 		match mon_id {
 			None => false,
