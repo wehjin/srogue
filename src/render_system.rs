@@ -9,6 +9,10 @@ use crate::prelude::DungeonSpot;
 use crate::room::get_dungeon_char_spot;
 use crate::throw::ThrowEnding;
 
+pub fn erase_screen() {
+	ncurses::clear();
+}
+
 pub fn show_monster_gone(spot: DungeonSpot, game: &GameState) {
 	let ch = get_dungeon_char_spot(spot, game);
 	set_ch(ch, &spot);
@@ -96,4 +100,8 @@ pub fn move_curs(spot: &DungeonSpot) {
 pub fn await_frame() {
 	ncurses::refresh();
 	ncurses::napms(16);
+}
+
+pub(crate) fn show_player(game: &GameState) {
+	ncurses::mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, game.player.rogue.fchar as ncurses::chtype);
 }

@@ -19,6 +19,7 @@ use crate::player::constants::INIT_HP;
 use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
 use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::render_system;
 use crate::room::{DoorDirection, gr_spot, is_all_connected, light_passage, light_up_room, Room, RoomBounds, RoomType};
 use crate::room::RoomType::Nothing;
 use crate::score::win;
@@ -272,7 +273,7 @@ impl GameState {
 
 pub fn clear_level(game: &mut GameState) {
 	game.clear_level();
-	ncurses::clear();
+	render_system::erase_screen();
 }
 
 pub fn put_door(rn: usize, door_dir: DoorDirection, level_depth: isize, level: &mut Level) -> DungeonSpot {
@@ -642,7 +643,7 @@ pub fn put_player(avoid_room: RoomMark, game: &mut GameState) {
 		game.dialog.message(msg, 0);
 	}
 	game.level.new_level_message = None;
-	ncurses::mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, game.player.rogue.fchar as ncurses::chtype);
+	render_system::show_player(game);
 }
 
 pub fn drop_check(game: &mut GameState) -> bool {
