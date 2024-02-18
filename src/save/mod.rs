@@ -1,11 +1,6 @@
-
-
-
 use std::env;
 use std::fs::File;
 use std::io::Write;
-
-use ncurses::clear;
 
 use crate::init::{clean_up, GameState};
 use crate::machdep::{delete_file, get_file_modification_time, md_get_file_id, md_ignore_signals, md_link_count, RogueTime};
@@ -114,7 +109,6 @@ pub fn restore(file_path: &str, game: &mut GameState) -> bool {
 	match get_file_modification_time(file_path) {
 		Ok(mod_time) => {
 			if has_been_touched(&save_data.saved_time, &mod_time) {
-				clear();
 				clean_up("sorry, file has been touched", &mut game.player);
 				return false;
 			}
