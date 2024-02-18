@@ -1,4 +1,3 @@
-
 #![feature(extern_types)]
 
 use crate::console::ConsoleError;
@@ -65,20 +64,22 @@ pub fn main() {
 	let result = match init(settings) {
 		Ok(result) => result,
 		Err(error) => match error {
-			InitError::NoConsole(error) => match error {
-				ConsoleError::ScreenTooSmall { min_rows, min_cols } => {
-					println!();
-					println!("must be played on {} x {} or better screen", min_rows, min_cols);
-					return;
+			InitError::NoConsole(error) => {
+				match error {
+					ConsoleError::ScreenTooSmall { min_rows, min_cols } => {
+						println!();
+						println!("must be played on {} x {} or better screen", min_rows, min_cols);
+					}
 				}
-			},
+				return;
+			}
 			InitError::BadRestore(exit) => {
 				if let Some(exit) = exit {
 					eprintln!("\n{}", exit);
 				}
 				return;
 			}
-		}
+		},
 	};
 	let (mut game, console, mut restored) = match result {
 		InitResult::ScoreOnly(_player, _console, _settings) => {
@@ -97,13 +98,10 @@ pub fn main() {
 			put_stairs(&mut game.player, &mut game.level);
 			add_traps(&game.player, &mut game.level);
 			put_mons(&mut game);
-			{
-				let avoid_room = match game.level.party_room {
-					None => RoomMark::None,
-					Some(rn) => RoomMark::Area(rn),
-				};
-				put_player(avoid_room, &mut game);
-			}
+			put_player(
+				game.level.party_room.map(RoomMark::Cavern).unwrap_or(RoomMark::None),
+				&mut game,
+			);
 			print_stats(STAT_ALL, &mut game.player);
 		}
 		restored = false;

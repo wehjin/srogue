@@ -68,7 +68,7 @@ impl Level {
 	pub fn room(&self, row: i64, col: i64) -> RoomMark {
 		for i in 0..MAX_ROOM {
 			if self.rooms[i].contains_spot(row, col) {
-				return RoomMark::Area(i);
+				return RoomMark::Cavern(i);
 			}
 		}
 		return RoomMark::None;
@@ -634,7 +634,7 @@ pub fn put_player(avoid_room: RoomMark, game: &mut GameState) {
 		RoomMark::Passage => {
 			light_passage(game.player.rogue.row, game.player.rogue.col, game);
 		}
-		RoomMark::Area(cur_room) => {
+		RoomMark::Cavern(cur_room) => {
 			light_up_room(cur_room, game);
 			wake_room(cur_room, true, game.player.rogue.row, game.player.rogue.col, game);
 		}

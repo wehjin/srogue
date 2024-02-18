@@ -285,7 +285,7 @@ fn hold_monster(game: &mut GameState) {
 
 pub fn tele(game: &mut GameState) {
 	mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, get_dungeon_char(game.player.rogue.row, game.player.rogue.col, game));
-	if let RoomMark::Area(cur_room) = game.player.cur_room {
+	if let RoomMark::Cavern(cur_room) = game.player.cur_room {
 		darken_room(cur_room, game);
 	}
 	let avoid_room = game.player.cur_room;
@@ -354,7 +354,7 @@ pub fn relight(game: &mut GameState) {
 		RoomMark::Passage => {
 			light_passage(game.player.rogue.row, game.player.rogue.col, game);
 		}
-		RoomMark::Area(cur_room) => {
+		RoomMark::Cavern(cur_room) => {
 			light_up_room(cur_room, game);
 		}
 	}

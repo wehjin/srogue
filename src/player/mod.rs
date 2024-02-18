@@ -28,16 +28,16 @@ pub mod constants;
 pub enum RoomMark {
 	None,
 	Passage,
-	Area(usize),
+	Cavern(usize),
 }
 
 impl RoomMark {
 	pub fn is_none(&self) -> bool { self == &Self::None }
 	pub fn is_area(&self) -> bool {
-		if let RoomMark::Area(_) = self { true } else { false }
+		if let RoomMark::Cavern(_) = self { true } else { false }
 	}
 	pub fn rn(&self) -> Option<usize> {
-		if let RoomMark::Area(rn) = self { Some(*rn) } else { None }
+		if let RoomMark::Cavern(rn) = self { Some(*rn) } else { None }
 	}
 	pub fn is_maze(&self, level: &Level) -> bool {
 		self.is_type(&[Maze], level)
@@ -46,7 +46,7 @@ impl RoomMark {
 		match self {
 			RoomMark::None => false,
 			RoomMark::Passage => false,
-			RoomMark::Area(rn) => {
+			RoomMark::Cavern(rn) => {
 				level.rooms[*rn].room_type.is_type(room_type)
 			}
 		}

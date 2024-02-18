@@ -361,7 +361,7 @@ pub fn get_room_number(row: i64, col: i64, level: &Level) -> i64 {
 	match room {
 		RoomMark::None => NO_ROOM,
 		RoomMark::Passage => PASSAGE,
-		RoomMark::Area(rn) => rn as i64
+		RoomMark::Cavern(rn) => rn as i64
 	}
 }
 
@@ -495,7 +495,7 @@ pub fn dr_course(monster: &mut Monster, is_entering: bool, row: i64, col: i64, p
 		for i in 0..MAX_ROOM {
 			let rr = (random_start + i) % MAX_ROOM;
 			let room = level.rooms[rr];
-			let room_mark = RoomMark::Area(rr);
+			let room_mark = RoomMark::Cavern(rr);
 			if !room.is_type(&ROOM_OR_MAZE) || room_mark == mon_room {
 				continue;
 			}

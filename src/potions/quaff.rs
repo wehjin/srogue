@@ -153,7 +153,7 @@ fn show_blind(game: &mut GameState) {
 			mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.trail_char);
 		}
 	}
-	if let RoomMark::Area(cur_room) = game.player.cur_room {
+	if let RoomMark::Cavern(cur_room) = game.player.cur_room {
 		const BLACK_FLOOR: char = ' ';
 		let floor_bounds = game.level.rooms[cur_room].to_floor_bounds();
 		for i in floor_bounds.rows() {

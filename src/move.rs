@@ -82,7 +82,7 @@ pub fn one_move_rogue(dirch: char, pickup: bool, game: &mut GameState) -> MoveRe
 				light_up_room(cur_rn, game);
 				wake_room(cur_rn, true, row, col, game);
 			}
-			RoomMark::Area(_) => {
+			RoomMark::Cavern(_) => {
 				// room to door
 				light_passage(row, col, game);
 			}

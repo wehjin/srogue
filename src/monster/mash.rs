@@ -228,7 +228,7 @@ impl Monster {
 	pub fn wanders_or_wakens(&self) -> bool { self.m_flags.wakens || self.m_flags.wanders }
 	pub fn name(&self) -> &'static str { self.kind.name() }
 	pub fn in_room(&self, rn: usize, level: &Level) -> bool {
-		if let RoomMark::Area(mon_room) = self.cur_room(level) {
+		if let RoomMark::Cavern(mon_room) = self.cur_room(level) {
 			mon_room == rn
 		} else {
 			false
