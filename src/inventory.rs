@@ -1,5 +1,3 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
-
 use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
 
 use crate::init::GameState;
@@ -15,8 +13,6 @@ use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_LEFT_HAND, ON_RIG
 use crate::prelude::object_what::ObjectWhat::{Amulet, Armor, Food, Gold, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::PackFilter::AllObjects;
-use crate::random::get_rand;
-use crate::ring::constants::{ADD_STRENGTH, DEXTERITY};
 use crate::ring::ring_kind::RingKind;
 use crate::score::is_vowel;
 use crate::scrolls::ScrollKind;
@@ -105,11 +101,13 @@ fn get_identified(obj: &Object, fruit: String, player: &Player) -> String {
 			format!("{}{}{}", quantity, name, real_name)
 		}
 		Ring => {
-			let more_info = if (player.wizard || obj.identified) && (obj.which_kind == DEXTERITY || obj.which_kind == ADD_STRENGTH) {
-				format!("{}{} ", if obj.class > 0 { "+" } else { "" }, obj.class)
-			} else {
-				"".to_string()
-			};
+			let more_info =
+				if (player.wizard || obj.identified)
+					&& (obj.which_kind == RingKind::Dexterity.to_index() as u16 || obj.which_kind == RingKind::AddStrength.to_index() as u16) {
+					format!("{}{} ", if obj.class > 0 { "+" } else { "" }, obj.class)
+				} else {
+					"".to_string()
+				};
 			let name = name_of(obj, fruit, &player.notes);
 			let real_name = get_id_real(obj);
 			format!("{}{}{}{}", get_quantity(obj), more_info, name, real_name)
@@ -257,18 +255,6 @@ fn get_in_use_description(obj: &Object) -> &'static str {
 	} else {
 		""
 	}
-}
-
-fn take_unused<const N: usize>(used: &mut [bool; N]) -> usize {
-	let mut j;
-	loop {
-		j = get_rand(0, used.len() - 1);
-		if !used[j] {
-			break;
-		}
-	}
-	used[j] = true;
-	j
 }
 
 pub fn single_inv(ichar: Option<char>, game: &mut GameState) {

@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
+
 
 use std::io;
 use std::io::Write;
@@ -26,7 +26,7 @@ use crate::settings::Settings;
 use crate::weapons::constants::{ARROW, BOW, MACE};
 
 //pub static mut save_is_interactive: bool = true;
-pub const ERROR_FILE: &'static str = "player.rogue.esave";
+//pub const ERROR_FILE: &'static str = "player.rogue.esave";
 pub const BYEBYE_STRING: &'static str = "Okay, bye bye!";
 
 pub enum InitError {
@@ -187,8 +187,8 @@ pub fn onintr() {
 	// md_heed_signals();
 }
 
-pub fn error_save() {
-	// save_is_interactive = false;
-	// save_into_file(error_file);
-	// clean_up("");
-}
+// pub fn error_save() {
+// 	save_is_interactive = false;
+// 	save_into_file(error_file);
+// 	clean_up("");
+// }

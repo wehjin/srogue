@@ -1,6 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
-
-use constants::{ADD_STRENGTH, ADORNMENT, DEXTERITY, R_TELEPORT, RINGS};
+use constants::RINGS;
 use ring_kind::RingKind;
 
 use crate::init::GameState;
@@ -51,11 +49,11 @@ pub fn gr_ring(ring: &mut Object, assign_wk: bool) {
 		ring.which_kind = get_rand(0, (RINGS - 1) as u16);
 	}
 	ring.class = 0;
-	match ring.which_kind {
-		R_TELEPORT => {
+	match RingKind::from_index(ring.which_kind as usize) {
+		RingKind::RTeleport => {
 			ring.is_cursed = 1;
 		}
-		ADD_STRENGTH | DEXTERITY => {
+		RingKind::AddStrength | RingKind::Dexterity => {
 			loop {
 				ring.class = get_rand(0, 4) - 2;
 				if ring.class != 0 {
@@ -64,10 +62,10 @@ pub fn gr_ring(ring: &mut Object, assign_wk: bool) {
 			}
 			ring.is_cursed = if ring.class < 0 { 1 } else { 0 };
 		}
-		ADORNMENT => {
+		RingKind::Adornment => {
 			ring.is_cursed = if coin_toss() { 1 } else { 0 };
 		}
-		_ => {}
+		_ => ()
 	}
 }
 

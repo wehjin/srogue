@@ -114,30 +114,3 @@ impl MonsterFlags {
 	}
 }
 
-pub const HASTED: u64 = 0o1;
-pub const SLOWED: u64 = 0o2;
-pub const INVISIBLE: u64 = 0o4;
-pub const ASLEEP: u64 = 0o10;
-pub const WAKENS: u64 = 0o20;
-pub const WANDERS: u64 = 0o40;
-pub const FLIES: u64 = 0o100;
-pub const FLITS: u64 = 0o200;
-pub const CAN_FLIT: u64 = 0o400;
-pub const CONFUSED: u64 = 0o1000;
-pub const RUSTS: u64 = 0o2000;
-pub const HOLDS: u64 = 0o4000;
-pub const FREEZES: u64 = 0o10000;
-pub const STEALS_GOLD: u64 = 0o20000;
-pub const STEALS_ITEM: u64 = 0o40000;
-pub const STINGS: u64 = 0o100000;
-pub const DRAINS_LIFE: u64 = 0o200000;
-pub const DROPS_LEVEL: u64 = 0o400000;
-pub const SEEKS_GOLD: u64 = 0o1000000;
-pub const FREEZING_ROGUE: u64 = 0o2000000;
-pub const RUST_VANISHED: u64 = 0o4000000;
-pub const CONFUSES: u64 = 0o10000000;
-pub const IMITATES: u64 = 0o20000000;
-pub const FLAMES: u64 = 0o40000000;
-pub const STATIONARY: u64 = 0o100000000;
-pub const NAPPING: u64 = 0o200000000;
-pub const ALREADY_MOVED: u64 = 0o400000000;

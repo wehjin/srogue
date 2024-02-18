@@ -1,4 +1,4 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
+
 
 use std::ops::RangeInclusive;
 
@@ -21,7 +21,7 @@ use crate::room::room_visitor::RoomVisitor;
 use crate::spec_hit::imitating;
 
 #[derive(Copy, Clone, Default, Serialize, Deserialize)]
-pub struct dr {
+pub struct Dr {
 	pub oth_room: Option<usize>,
 	pub oth_row: Option<i64>,
 	pub oth_col: Option<i64>,
@@ -29,15 +29,13 @@ pub struct dr {
 	pub door_col: i64,
 }
 
-impl dr {
+impl Dr {
 	pub fn set_others(&mut self, other_rn: usize, other_spot: &DungeonSpot) {
 		self.oth_room = Some(other_rn);
 		self.oth_row = Some(other_spot.row);
 		self.oth_col = Some(other_spot.col);
 	}
 }
-
-pub type door = dr;
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum RoomType {
@@ -148,7 +146,7 @@ pub struct Room {
 	pub right_col: i64,
 	pub left_col: i64,
 	pub top_row: i64,
-	pub doors: [door; 4],
+	pub doors: [Dr; 4],
 	pub room_type: RoomType,
 }
 
@@ -332,10 +330,10 @@ pub fn gr_room(level: &Level) -> usize {
 }
 
 pub fn party_objects(rn: usize, game: &mut GameState) -> usize {
-	let N = (game.level.rooms[rn].bottom_row - game.level.rooms[rn].top_row - 1) * (game.level.rooms[rn].right_col - game.level.rooms[rn].left_col - 1);
+	let area = (game.level.rooms[rn].bottom_row - game.level.rooms[rn].top_row - 1) * (game.level.rooms[rn].right_col - game.level.rooms[rn].left_col - 1);
 	let mut n = get_rand(5, 10);
-	if n > N {
-		n = N - 2;
+	if n > area {
+		n = area - 2;
 	}
 	let mut number_found: usize = 0;
 	for _i in 0..n {

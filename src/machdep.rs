@@ -1,15 +1,10 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
-
-use std::{fs, io, process, thread};
+use std::{fs, io, thread};
 use std::error::Error;
 use std::os::macos::fs::MetadataExt;
 use std::time::Duration;
 
 use chrono::{Datelike, DateTime, Timelike, TimeZone, Utc};
-use libc::c_int;
 use serde::{Deserialize, Serialize};
-
-use crate::init::onintr;
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct RogueTime {
@@ -41,22 +36,6 @@ impl From<DateTime<Utc>> for RogueTime {
 	}
 }
 
-pub type tcflag_t = libc::c_ulong;
-pub type cc_t = libc::c_uchar;
-pub type speed_t = libc::c_ulong;
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct termios {
-	pub c_iflag: tcflag_t,
-	pub c_oflag: tcflag_t,
-	pub c_cflag: tcflag_t,
-	pub c_lflag: tcflag_t,
-	pub c_cc: [cc_t; 20],
-	pub c_ispeed: speed_t,
-	pub c_ospeed: speed_t,
-}
-
 /* md_slurp:
  *
  * This routine throws away all keyboard input that has not
@@ -75,19 +54,19 @@ pub fn md_control_keybord(_mode: libc::c_short) {
 	// See machdep.c for more details
 }
 
-
-fn sig_on_intr(_: c_int) { onintr(); }
-
-// fn sig_on_quit(_: c_int) {
-// 	byebye(true, unimplemented!("Acquire max_level for quit"));
+//
+// fn sig_on_intr(_: c_int) { onintr(); }
+//
+// // fn sig_on_quit(_: c_int) {
+// // 	byebye(true, unimplemented!("Acquire max_level for quit"));
+// // }
+//
+// fn sig_on_hup(_: c_int) {
+// 	unimplemented!("Acquire game state for interrupt");
+// 	// save_is_interactive = false;
+// 	// crate::save::save_into_file(ERROR_FILE, game);
+// 	// clean_up("");
 // }
-
-fn sig_on_hup(_: c_int) {
-	unimplemented!("Acquire game state for interrupt");
-	// save_is_interactive = false;
-	// crate::save::save_into_file(ERROR_FILE, game);
-	// clean_up("");
-}
 
 
 pub fn md_heed_signals() {
@@ -141,12 +120,4 @@ pub fn get_login_name() -> Option<String> {
 
 pub fn md_sleep(nsecs: i64) {
 	thread::sleep(Duration::from_nanos(nsecs as u64));
-}
-
-pub fn md_get_seed() -> u32 {
-	process::id()
-}
-
-pub fn md_exit(status: i32) {
-	process::exit(status)
 }

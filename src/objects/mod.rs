@@ -1,5 +1,3 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
-
 use std::clone::Clone;
 use std::string::ToString;
 
@@ -40,7 +38,8 @@ use crate::scrolls::constants::SCROLLS;
 use crate::scrolls::ScrollKind;
 use crate::weapons::constants::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
 use crate::weapons::kind::WeaponKind;
-use crate::zap::constants::{CANCELLATION, MAGIC_MISSILE, WANDS};
+use crate::zap::constants::WANDS;
+use crate::zap::wand_kind::WandKind;
 use crate::zap::wand_materials::WandMaterial;
 
 mod object_id;
@@ -519,14 +518,14 @@ pub fn gr_armor(obj: &mut Object) {
 }
 
 pub fn gr_wand(obj: &mut Object) {
-	(*obj).what_is = Wand;
-	(*obj).which_kind = get_rand(0, (WANDS - 1) as u16);
-	if (*obj).which_kind == MAGIC_MISSILE {
-		(*obj).class = get_rand(6, 12);
-	} else if (*obj).which_kind == CANCELLATION {
-		(*obj).class = get_rand(5, 9);
+	obj.what_is = Wand;
+	obj.which_kind = get_rand(0, (WANDS - 1) as u16);
+	if obj.which_kind == WandKind::MagicMissile.to_index() as u16 {
+		obj.class = get_rand(6, 12);
+	} else if obj.which_kind == WandKind::Cancellation.to_index() as u16 {
+		obj.class = get_rand(5, 9);
 	} else {
-		(*obj).class = get_rand(3, 6);
+		obj.class = get_rand(3, 6);
 	}
 }
 

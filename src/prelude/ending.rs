@@ -1,10 +1,3 @@
-const HYPOTHERMIA: usize = 1;
-const STARVATION: usize = 2;
-const POISON_DART: usize = 3;
-const QUIT: usize = 4;
-const WIN: usize = 5;
-
-
 #[derive(Clone)]
 pub enum Ending {
 	Monster(String),

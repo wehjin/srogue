@@ -1,5 +1,3 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
-
 use libc::c_int;
 use ncurses::{addch, chtype, clrtoeol, curscr, mvaddstr, wrefresh};
 
@@ -119,9 +117,9 @@ pub fn print_stats(stat_mask: usize, player: &mut Player) {
 	if stat_mask & STAT_HP != 0 {
 		if label {
 			mvaddstr(STATS_ROW, 23, "Hp: ");
-			if player.rogue.hp_max > 800 {
-				player.rogue.hp_current -= player.rogue.hp_max - 800;
-				player.rogue.hp_max = 800;
+			if player.rogue.hp_max > MAX_HP {
+				player.rogue.hp_current -= player.rogue.hp_max - MAX_HP;
+				player.rogue.hp_max = MAX_HP;
 			}
 		}
 		let s = format!("{}({})", player.rogue.hp_current, player.rogue.hp_max);

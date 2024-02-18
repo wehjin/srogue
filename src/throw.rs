@@ -1,6 +1,3 @@
-#![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
-
-
 use ncurses::{chtype, mvaddch, mvinch, refresh};
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
@@ -289,20 +286,6 @@ impl Move {
 			Left => 'h',
 		}
 	}
-	pub fn from_char(ch: char) -> Self {
-		match ch {
-			'n' => DownRight,
-			'b' => DownLeft,
-			'u' => UpRight,
-			'y' => UpLeft,
-			'l' => Right,
-			'k' => Down,
-			'j' => Up,
-			'h' => Left,
-			_ => Same,
-		}
-	}
-
 	pub fn apply(&self, row: i64, col: i64) -> (i64, i64) {
 		let (r_delta, c_delta) = self.delta();
 		(row + r_delta as i64, col + c_delta as i64)
