@@ -1,5 +1,6 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
+
 use ncurses::{chtype, mvaddch, mvinch, refresh};
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
@@ -59,36 +60,29 @@ pub fn throw(game: &mut GameState) {
 			} else if let Some(hand) = game.player.ring_hand(obj_id) {
 				un_put_hand(hand, game);
 			}
-
-			let obj_what = game.player.object_what(obj_id);
-			let rogue_spot = game.player.to_spot();
-			let rogue_char = game.player.to_curses_char();
-			let (monster_id, spot) = {
-				let mut row = rogue_spot.row;
-				let mut col = rogue_spot.col;
-				let monster_id = get_thrown_at_monster(obj_what, dir, &mut row, &mut col, game);
-				(monster_id, DungeonSpot { row, col })
-			};
-			mvaddch(rogue_spot.row as i32, rogue_spot.col as i32, rogue_char);
-			refresh();
-
-			let row = spot.row;
-			let col = spot.col;
-			if game.player.can_see(row, col, &game.level)
-				&& !(spot == rogue_spot) {
-				mvaddch(spot.row as i32, spot.col as i32, get_dungeon_char(spot.row, spot.col, game));
-			}
-			if let Some(mon_id) = monster_id {
-				{
-					let monster = game.mash.monster_mut(mon_id);
-					monster.wake_up();
-					clear_gold_seeker(monster);
+			let throwing_what = game.player.object_what(obj_id);
+			let throw_ending = get_thrown_at_monster(throwing_what, dir, game);
+			match throw_ending {
+				ThrowEnding::HitWall { obj_spot } => {
+					let rogue_spot = game.player.to_spot();
+					if game.player.can_see_spot(&obj_spot, &game.level) && obj_spot != rogue_spot {
+						mvaddch(obj_spot.row as i32, obj_spot.col as i32, get_dungeon_char(obj_spot.row, obj_spot.col, game));
+					}
+					flop_weapon(obj_id, obj_spot.row, obj_spot.col, game);
 				}
-				if !throw_at_monster(mon_id, obj_id, game) {
-					flop_weapon(obj_id, spot.row, spot.col, game);
+				ThrowEnding::Monster { mon_id, mon_spot } => {
+					{
+						let monster = game.mash.monster_mut(mon_id);
+						monster.wake_up();
+						clear_gold_seeker(monster);
+					}
+					if !throw_at_monster(mon_id, obj_id, game) {
+						flop_weapon(obj_id, mon_spot.row, mon_spot.col, game);
+					}
 				}
-			} else {
-				flop_weapon(obj_id, spot.row, spot.col, game);
+				ThrowEnding::NeverHit { last_seen } => {
+					flop_weapon(obj_id, last_seen.row, last_seen.col, game);
+				}
 			}
 			vanish(obj_id, true, game);
 		}
@@ -143,43 +137,49 @@ fn rogue_weapon_is_bow(player: &Player) -> bool {
 	player.weapon_kind() == Some(WeaponKind::Bow)
 }
 
+enum ThrowEnding {
+	HitWall { obj_spot: DungeonSpot },
+	Monster { mon_id: u64, mon_spot: DungeonSpot },
+	NeverHit { last_seen: DungeonSpot },
+}
 
-pub fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, row: &mut i64, col: &mut i64, game: &mut GameState) -> Option<u64> {
-	let mut orow = *row;
-	let mut ocol = *col;
+fn get_thrown_at_monster(obj_what: ObjectWhat, dir: char, game: &mut GameState) -> ThrowEnding {
+	let mut obj_spot = game.player.to_spot();
 	let obj_char = get_mask_char(obj_what);
 	let mut i = 0;
 	while i < 24 {
-		get_dir_rc(dir, row, col, false);
-		let cell = game.level.dungeon[*row as usize][*col as usize];
-		if cell.is_nothing() || ((cell.is_any_wall() || cell.is_any_hidden()) && !cell.is_any_trap()) {
-			*row = orow;
-			*col = ocol;
-			return None;
-		}
+		let DungeonSpot { mut row, mut col } = obj_spot;
+		get_dir_rc(dir, &mut row, &mut col, false);
 
-		if i != 0 && game.player.can_see(orow, ocol, &game.level) {
-			mvaddch(orow as i32, ocol as i32, get_dungeon_char(orow, ocol, game));
+		let cell = game.level.dungeon[row as usize][col as usize];
+		if cell.is_nothing() || ((cell.is_any_wall() || cell.is_any_hidden()) && !cell.is_any_trap()) {
+			return ThrowEnding::HitWall { obj_spot };
 		}
-		if game.player.can_see(*row, *col, &game.level) {
+		if i != 0 && game.player.can_see(obj_spot.row, obj_spot.col, &game.level) {
+			// Un-draw the object draw in the previous loop.
+			let dungeon_char = get_dungeon_char(obj_spot.row, obj_spot.col, game);
+			mvaddch(obj_spot.row as i32, obj_spot.col as i32, dungeon_char);
+		}
+		// Draw the object in the new location.
+		if game.player.can_see(row, col, &game.level) {
 			if !cell.has_monster() {
-				mvaddch(*row as i32, *col as i32, chtype::from(obj_char));
+				mvaddch(row as i32, col as i32, chtype::from(obj_char));
 			}
 			refresh();
 		}
+		obj_spot = DungeonSpot { row, col };
 		if cell.has_monster() {
-			if !imitating(*row, *col, &mut game.mash, &game.level) {
-				return game.mash.monster_at_spot(*row, *col).map(|m| m.id());
+			if !imitating(row, col, &mut game.mash, &game.level) {
+				let mon_id = game.mash.monster_id_at_spot(row, col).expect("thrown-at monster");
+				return ThrowEnding::Monster { mon_id, mon_spot: obj_spot };
 			}
 		}
 		if cell.is_any_tunnel() {
 			i += 2;
 		}
-		orow = *row;
-		ocol = *col;
 		i += 1;
 	}
-	return None;
+	return ThrowEnding::NeverHit { last_seen: obj_spot };
 }
 
 fn flop_weapon(obj_id: ObjectId, row: i64, col: i64, game: &mut GameState) {

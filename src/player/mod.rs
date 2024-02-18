@@ -65,6 +65,9 @@ impl Player {
 		let col_diff = col - self.rogue.col;
 		(row_diff >= -1) && (row_diff <= 1) && (col_diff >= -1) && (col_diff <= 1)
 	}
+	pub fn can_see_spot(&self, spot: &DungeonSpot, level: &Level) -> bool {
+		self.can_see(spot.row, spot.col, level)
+	}
 	pub fn can_see(&self, row: i64, col: i64, level: &Level) -> bool {
 		if self.blind.is_active() {
 			false
