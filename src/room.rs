@@ -12,6 +12,7 @@ use crate::objects::{gr_object, place_at};
 use crate::player::{Player, RoomMark};
 use crate::prelude::*;
 use crate::random::get_rand;
+use crate::render_system;
 use crate::room::DoorDirection::{Down, Left, Right, Up};
 use crate::room::room_visitor::RoomVisitor;
 
@@ -217,7 +218,7 @@ pub fn light_up_room(rn: usize, game: &mut GameState) {
 			mvaddch(i as i32, j as i32, get_dungeon_char(i, j, game));
 		}
 	}
-	mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, game.player.rogue.fchar as chtype);
+	render_system::show_player(game);
 }
 
 

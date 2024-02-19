@@ -43,7 +43,6 @@ pub struct Fighter {
 	pub exp_points: isize,
 	pub row: i64,
 	pub col: i64,
-	pub fchar: char,
 	pub moves_left: isize,
 }
 

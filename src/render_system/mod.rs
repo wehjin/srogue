@@ -1,6 +1,7 @@
 use libc::c_int;
 use ncurses::{chtype, mvaddch};
 
+pub use constants::*;
 pub use hallucinate::*;
 
 use crate::init::GameState;
@@ -15,6 +16,7 @@ use crate::room::{get_dungeon_char, get_dungeon_char_spot};
 use crate::throw::ThrowEnding;
 
 mod hallucinate;
+pub(crate) mod constants;
 
 pub fn gr_obj_ch() -> chtype {
 	const OPTIONS: [char; 9] = ['%', '!', '?', ']', '=', '/', ')', ':', '*'];
@@ -120,7 +122,11 @@ pub fn await_frame() {
 }
 
 pub(crate) fn show_player(game: &GameState) {
-	ncurses::mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, game.player.rogue.fchar as ncurses::chtype);
+	mvaddch(
+		game.player.rogue.row as i32,
+		game.player.rogue.col as i32,
+		chtype::from(PLAYER_CHAR),
+	);
 }
 
 pub fn show_spot_surroundings(row: i64, col: i64, game: &mut GameState) {

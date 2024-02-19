@@ -1,4 +1,3 @@
-use ncurses::chtype;
 use serde::{Deserialize, Serialize};
 
 use crate::armors::ArmorKind;
@@ -147,9 +146,6 @@ impl Player {
 	pub fn to_spot(&self) -> DungeonSpot {
 		DungeonSpot { col: self.rogue.col, row: self.rogue.row }
 	}
-	pub fn to_curses_char(&self) -> chtype {
-		chtype::from(self.rogue.fchar)
-	}
 	pub fn wields_cursed_weapon(&self) -> bool {
 		match self.weapon() {
 			None => false,
@@ -293,7 +289,6 @@ impl Player {
 				exp_points: 0,
 				row: 0,
 				col: 0,
-				fchar: '@',
 				moves_left: 1250,
 			},
 			party_counter: 0,

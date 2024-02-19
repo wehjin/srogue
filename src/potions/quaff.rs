@@ -8,6 +8,7 @@ use crate::player::RoomMark;
 use crate::potions::kind::PotionKind;
 use crate::r#use::STRANGE_FEELING;
 use crate::random::get_rand;
+use crate::render_system;
 
 pub fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
 	match potion_kind {
@@ -162,5 +163,5 @@ fn show_blind(game: &mut GameState) {
 			}
 		}
 	}
-	mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, chtype::from(game.player.rogue.fchar));
+	render_system::show_player(game);
 }
