@@ -60,7 +60,7 @@ pub fn init(settings: Settings) -> Result<InitResult, InitError> {
 		dialog: PlayerDialog::default(),
 		player: Player::new(settings.clone()),
 		level: Level::new(),
-		mash: MonsterMash::new(),
+		mash: MonsterMash::default(),
 		ground: ObjectPack::new(),
 		next_system: GameSystem::PlayerActions,
 		render_queue: Vec::new(),

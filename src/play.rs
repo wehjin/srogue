@@ -173,7 +173,7 @@ pub fn play_level(game: &mut GameState) -> PlayResult {
 				}
 				'\x14' => {
 					if game.player.wizard {
-						show_traps(&game.level);
+						show_traps(game);
 					} else {
 						game.dialog.message(UNKNOWN_COMMAND, 0);
 					}

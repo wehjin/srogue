@@ -408,6 +408,7 @@ pub fn flame_broil(mon_id: u64, game: &mut GameState) -> bool {
 		get_closer(&mut row, &mut col, game.player.rogue.row, game.player.rogue.col);
 		standout();
 		loop {
+			// TODO This must be done as an animation like the throw animation.
 			mvaddch(row as i32, col as i32, chtype::from('~'));
 			refresh();
 			get_closer(&mut row, &mut col, game.player.rogue.row, game.player.rogue.col);

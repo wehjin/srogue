@@ -562,7 +562,7 @@ pub fn show_objects(game: &mut GameState) {
 			game.render_spot(obj_spot);
 		}
 	}
-	let imitating_mon_spots = game.mash.monsters.iter()
+	let imitating_mon_spots = game.mash.monsters().iter()
 		.filter(|it| it.imitates())
 		.map(|it| it.spot)
 		.collect::<Vec<_>>();

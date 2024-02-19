@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use ncurses::chtype;
 use rand::{RngCore, thread_rng};
 use serde::{Deserialize, Serialize};
@@ -11,7 +13,7 @@ use crate::render_system::PLAYER_CHAR;
 
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct MonsterMash {
-	pub monsters: Vec<Monster>,
+	pub monsters: HashMap<MonsterIndex, Monster>,
 	pub m_moves: usize,
 	pub mon_disappeared: bool,
 }
@@ -19,14 +21,6 @@ pub struct MonsterMash {
 pub type MonsterIndex = u64;
 
 impl MonsterMash {
-	pub const fn new() -> Self {
-		MonsterMash {
-			monsters: Vec::new(),
-			m_moves: 0,
-			mon_disappeared: false,
-		}
-	}
-
 	pub fn clear(&mut self) {
 		self.monsters.clear();
 		self.m_moves = 0;
@@ -35,42 +29,39 @@ impl MonsterMash {
 
 impl MonsterMash {
 	pub fn is_empty(&self) -> bool { self.monsters.is_empty() }
-	pub fn monster_ids(&self) -> Vec<u64> {
-		self.monsters.iter().map(Monster::id).collect()
+	pub fn monster_ids(&self) -> Vec<MonsterIndex> {
+		self.monsters.keys().cloned().collect()
+	}
+	pub fn monsters(&self) -> Vec<&Monster> {
+		self.monsters.values().collect::<Vec<_>>()
 	}
 	pub fn add_monster(&mut self, monster: Monster) {
-		self.monsters.push(monster);
+		self.monsters.insert(monster.id(), monster);
 	}
 	pub fn remove_monster(&mut self, id: MonsterIndex) -> Monster {
-		let index = self.monsters.iter().position(|m| m.id == id);
-		let index = index.expect("monster to remove must be in the list");
-		self.monsters.remove(index)
+		let removed = self.monsters.remove(&id).expect("monster with removal id");
+		removed
 	}
-	pub fn monster_id_at_spot(&self, row: i64, col: i64) -> Option<u64> {
-		match self.monster_index_at_spot(row, col) {
-			Some(index) => Some(self.monsters[index].id),
-			None => None,
+	pub fn monster_id_at_spot(&self, row: i64, col: i64) -> Option<MonsterIndex> {
+		let spot = DungeonSpot { row, col };
+		for (id, mon) in &self.monsters {
+			if mon.spot == spot {
+				return Some(*id);
+			}
 		}
+		return None;
 	}
 	pub fn monster_at_spot(&self, row: i64, col: i64) -> Option<&Monster> {
-		match self.monster_index_at_spot(row, col) {
-			Some(index) => Some(&self.monsters[index]),
+		match self.monster_id_at_spot(row, col) {
+			Some(id) => self.monsters.get(&id),
 			None => None,
 		}
 	}
 	pub fn monster_at_spot_mut(&mut self, row: i64, col: i64) -> Option<&mut Monster> {
-		match self.monster_index_at_spot(row, col) {
-			Some(index) => Some(&mut self.monsters[index]),
+		match self.monster_id_at_spot(row, col) {
+			Some(id) => self.monsters.get_mut(&id),
 			None => None,
 		}
-	}
-	fn monster_index_at_spot(&self, row: i64, col: i64) -> Option<usize> {
-		for i in 0..self.monsters.len() {
-			if self.monsters[i].spot.is_at(row, col) {
-				return Some(i);
-			}
-		}
-		return None;
 	}
 	pub fn monster_flags(&self, id: MonsterIndex) -> &MonsterFlags {
 		let monster = self.monster(id);
@@ -87,21 +78,11 @@ impl MonsterMash {
 		f(monster)
 	}
 	pub fn monster(&self, id: MonsterIndex) -> &Monster {
-		let index = self.monster_index(id);
-		&self.monsters[index]
+		&self.monsters[&id]
 	}
 
 	pub fn monster_mut(&mut self, id: MonsterIndex) -> &mut Monster {
-		let index = self.monster_index(id);
-		&mut self.monsters[index]
-	}
-	fn monster_index(&self, id: MonsterIndex) -> usize {
-		for i in 0..self.monsters.len() {
-			if self.monsters[i].id == id {
-				return i;
-			}
-		}
-		panic!("id not in monsters")
+		self.monsters.get_mut(&id).expect("id is in monsters")
 	}
 }
 

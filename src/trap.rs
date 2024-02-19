@@ -1,4 +1,3 @@
-use ncurses::{chtype, mvaddch};
 use serde::{Deserialize, Serialize};
 
 use TrapKind::NoTrap;
@@ -127,7 +126,7 @@ pub fn trap_player(row: usize, col: usize, game: &mut GameState) {
 			game.level.bear_trap = get_rand(4, 7);
 		}
 		TeleTrap => {
-			mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, chtype::from('^'));
+			game.render_spot(game.player.to_spot());
 			tele(game);
 		}
 		DartTrap => {
@@ -240,11 +239,14 @@ pub fn id_trap(game: &mut GameState) {
 }
 
 
-pub fn show_traps(level: &Level) {
-	for i in 0..DROWS {
-		for j in 0..DCOLS {
-			if level.dungeon[i][j].is_any_trap() {
-				mvaddch(i as i32, j as i32, chtype::from('^'));
+pub fn show_traps(game: &mut GameState) {
+	let bounds = game.dungeon_bounds();
+	for row in bounds.rows() {
+		for col in bounds.cols() {
+			let spot = DungeonSpot { row, col };
+			if game.cell_at(spot).is_any_trap() {
+				game.cell_at_mut(spot).set_visible();
+				game.render_spot(spot);
 			}
 		}
 	}

@@ -28,7 +28,7 @@ pub fn show_hallucination(game: &mut GameState) {
 			set_ch(random_ch, spot);
 		}
 	}
-	for monster in &game.mash.monsters {
+	for monster in &game.mash.monsters() {
 		let ch = get_ch(monster.spot);
 		if is_monster_ch(ch) {
 			let random_ch = get_rand(chtype::from('A'), chtype::from('Z'));

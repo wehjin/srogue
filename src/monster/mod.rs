@@ -300,7 +300,8 @@ pub fn mon_can_go(monster: &Monster, row: i64, col: i64, player: &Player, level:
 pub fn wake_room(rn: usize, entering: bool, row: i64, col: i64, game: &mut GameState) {
 	let normal_chance = game.level.room_wake_percent(rn);
 	let buffed_chance = game.player.ring_effects.apply_stealthy(normal_chance);
-	for monster in &mut game.mash.monsters {
+	for mon_id in game.mash.monster_ids() {
+		let monster = game.mash.monster_mut(mon_id);
 		if monster.in_room(rn, &game.level) {
 			if entering {
 				monster.clear_target_spot();
@@ -369,8 +370,10 @@ pub fn show_monsters(game: &mut GameState) {
 	if game.player.blind.is_active() {
 		return;
 	}
-	for monster in &mut game.mash.monsters {
-		ncurses::mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.m_char());
+	for mon_id in game.mash.monster_ids() {
+		let monster = game.mash.monster(mon_id);
+		game.render_spot(monster.spot);
+		let monster = game.mash.monster_mut(mon_id);
 		if monster.m_flags.imitates {
 			monster.m_flags.imitates = false;
 			monster.m_flags.wakens = true;
@@ -499,11 +502,13 @@ pub fn no_spot_for_monster(rn: usize, level: &Level) -> bool {
 
 pub fn aggravate(game: &mut GameState) {
 	game.dialog.message("you hear a high pitched humming noise", 0);
-	for monster in &mut game.mash.monsters {
+	for monster in game.mash.monster_ids() {
+		let monster = game.mash.monster_mut(monster);
 		monster.wake_up();
 		monster.m_flags.imitates = false;
-		if game.player.can_see(monster.spot.row, monster.spot.col, &game.level) {
-			ncurses::mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.m_char());
+		let mon_spot = monster.spot;
+		if game.player.can_see(mon_spot.row, mon_spot.col, &game.level) {
+			game.render_spot(mon_spot);
 		}
 	}
 }
