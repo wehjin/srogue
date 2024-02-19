@@ -61,6 +61,9 @@ pub fn shuffled_rns() -> [usize; MAX_ROOM] {
 }
 
 impl Level {
+	pub fn room_at_spot(&self, spot: DungeonSpot) -> RoomMark {
+		self.room(spot.row, spot.col)
+	}
 	pub fn expect_room(&self, row: i64, col: i64) -> usize {
 		self.room(row, col).rn().expect("not an area")
 	}

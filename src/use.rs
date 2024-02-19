@@ -1,5 +1,4 @@
 use ncurses::{addch, chtype, mvaddch, mvinch};
-
 use crate::components::hunger::HungerLevel;
 use crate::init::GameState;
 use crate::level::{add_exp, put_player};
@@ -20,7 +19,7 @@ use crate::prelude::stat_const::{STAT_ARMOR, STAT_HP, STAT_HUNGER, STAT_STRENGTH
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
 use crate::ring::un_put_hand;
-use crate::room::{darken_room, draw_magic_map, get_dungeon_char, light_passage, light_up_room};
+use crate::room::{draw_magic_map, light_passage, light_up_room};
 use crate::scrolls::ScrollKind;
 use crate::trap::is_off_screen;
 
@@ -282,10 +281,8 @@ fn hold_monster(game: &mut GameState) {
 }
 
 pub fn tele(game: &mut GameState) {
-	mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, get_dungeon_char(game.player.rogue.row, game.player.rogue.col, game));
-	if let RoomMark::Cavern(cur_room) = game.player.cur_room {
-		darken_room(cur_room, game);
-	}
+	let exit_spot = game.player.to_spot();
+	render_system::show_room_after_player_exit(exit_spot, game);
 	let avoid_room = game.player.cur_room;
 	put_player(avoid_room, game);
 	game.level.being_held = false;

@@ -288,7 +288,7 @@ pub fn check_imitator(mon_id: u64, game: &mut GameState) -> bool {
 	return false;
 }
 
-pub fn imitating(row: i64, col: i64, mash: &mut MonsterMash, level: &Level) -> bool {
+pub fn imitating(row: i64, col: i64, mash: &MonsterMash, level: &Level) -> bool {
 	if level.dungeon[row as usize][col as usize].has_monster() {
 		if let Some(monster) = mash.monster_at_spot(row, col) {
 			if monster.m_flags.imitates {

@@ -65,6 +65,16 @@ impl CellMaterial {
 	pub fn is_any_trap(&self) -> bool {
 		self.fixture().map(Fixture::is_any_trap).unwrap_or(false)
 	}
+	pub fn is_visible_trap(&self) -> bool {
+		CellMaterial::Floor(Fixture::Trap(Visibility::Visible)) == *self
+	}
+	pub fn with_hidden_trap(&self) -> Self {
+		match self {
+			CellMaterial::Floor(_) => CellMaterial::Floor(Fixture::Trap(Visibility::Hidden)),
+			CellMaterial::Tunnel(viz, _) => CellMaterial::Tunnel(*viz, Fixture::Trap(Visibility::Hidden)),
+			_ => self.clone(),
+		}
+	}
 	pub fn is_stairs(&self) -> bool {
 		self.fixture().map(Fixture::is_stairs).unwrap_or(false)
 	}
@@ -72,13 +82,6 @@ impl CellMaterial {
 		match self {
 			CellMaterial::Floor(_) => CellMaterial::Floor(Fixture::Stairs),
 			CellMaterial::Tunnel(viz, _) => CellMaterial::Tunnel(*viz, Fixture::Stairs),
-			_ => self.clone(),
-		}
-	}
-	pub fn with_hidden_trap(&self) -> Self {
-		match self {
-			CellMaterial::Floor(_) => CellMaterial::Floor(Fixture::Trap(Visibility::Hidden)),
-			CellMaterial::Tunnel(viz, _) => CellMaterial::Tunnel(*viz, Fixture::Trap(Visibility::Hidden)),
 			_ => self.clone(),
 		}
 	}

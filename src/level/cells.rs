@@ -30,6 +30,7 @@ impl DungeonCell {
 		self.material = self.material.with_stairs();
 	}
 	pub fn is_any_trap(&self) -> bool { self.material.is_any_trap() }
+	pub fn is_visible_trap(&self) -> bool { self.material.is_visible_trap() }
 	pub fn add_hidden_trap(&mut self) {
 		self.material = self.material.with_hidden_trap();
 	}

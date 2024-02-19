@@ -1,10 +1,11 @@
 use libc::c_int;
-use ncurses::mvaddch;
+use ncurses::{chtype, mvaddch};
 
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::monster::{gmc, MonsterIndex};
 use crate::objects::ObjectId;
+use crate::player::RoomMark;
 use crate::prelude::DungeonSpot;
 use crate::room::get_dungeon_char_spot;
 use crate::throw::ThrowEnding;
@@ -99,9 +100,35 @@ pub fn move_curs(spot: &DungeonSpot) {
 
 pub fn await_frame() {
 	ncurses::refresh();
-	ncurses::napms(16);
+	ncurses::napms(17);
 }
 
 pub(crate) fn show_player(game: &GameState) {
 	ncurses::mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, game.player.rogue.fchar as ncurses::chtype);
+}
+
+pub(crate) fn show_room_after_player_exit(vacated_spot: DungeonSpot, game: &GameState) {
+	set_ch(get_dungeon_char_spot(vacated_spot, game), &vacated_spot);
+	if let RoomMark::Cavern(rn) = game.level.room_at_spot(vacated_spot) {
+		darken_room(rn, game);
+	}
+}
+
+pub(crate) fn darken_room(rn: usize, game: &GameState) {
+	fn spot_remains_lit_in_dark_room(spot: DungeonSpot, game: &GameState) -> bool {
+		(game.level.detect_monster && game.cell_at(spot).has_monster())
+			|| game.cell_at(spot).is_stairs()
+			|| game.cell_at(spot).has_object()
+			|| game.has_imitating_monster_at_spot(spot)
+			|| game.cell_at(spot).is_visible_trap()
+	}
+	let floor_bounds = game.level.rooms[rn].to_floor_bounds();
+	for row in floor_bounds.rows() {
+		for col in floor_bounds.cols() {
+			if game.player.blind.is_active()
+				|| !spot_remains_lit_in_dark_room(DungeonSpot { row, col }, game) {
+				set_ch(chtype::from(' '), &DungeonSpot { row, col });
+			}
+		}
+	}
 }

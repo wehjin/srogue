@@ -15,7 +15,6 @@ use crate::prelude::*;
 use crate::random::get_rand;
 use crate::room::DoorDirection::{Down, Left, Right, Up};
 use crate::room::room_visitor::RoomVisitor;
-use crate::spec_hit::imitating;
 
 #[derive(Copy, Clone, Default, Serialize, Deserialize)]
 pub struct Dr {
@@ -240,30 +239,6 @@ pub fn light_passage(row: i64, col: i64, game: &mut GameState) {
 	}
 }
 
-pub fn darken_room(rn: usize, game: &mut GameState) {
-	let floor_bounds = game.level.rooms[rn].to_floor_bounds();
-	for i in floor_bounds.rows_usize() {
-		for j in floor_bounds.cols_usize() {
-			if game.player.blind.is_active() {
-				mvaddch(i as i32, j as i32, chtype::from(' '));
-			} else {
-				let cell = &game.level.dungeon[i][j];
-				let cell_remains_lit = {
-					let cell_is_detected_monster = game.level.detect_monster && cell.has_monster();
-					cell_is_detected_monster || cell.has_object() || cell.is_stairs()
-				};
-				if !cell_remains_lit {
-					if !imitating(i as i64, j as i64, &mut game.mash, &game.level) {
-						mvaddch(i as i32, j as i32, chtype::from(' '));
-					}
-					if cell.is_any_trap() && !game.level.dungeon[i][j].is_any_hidden() {
-						mvaddch(i as i32, j as i32, chtype::from('^'));
-					}
-				}
-			}
-		}
-	}
-}
 
 pub fn get_dungeon_char_spot(spot: DungeonSpot, game: &GameState) -> chtype {
 	get_dungeon_char(spot.row, spot.col, game)

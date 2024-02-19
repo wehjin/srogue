@@ -13,6 +13,7 @@ use crate::trap::add_traps;
 
 pub mod components;
 pub mod resources;
+pub mod queries;
 mod message;
 mod level;
 mod monster;
