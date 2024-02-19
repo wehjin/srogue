@@ -1,9 +1,8 @@
-use ncurses::{addch, chtype, mvaddch, mvinch};
 use crate::components::hunger::HungerLevel;
 use crate::init::GameState;
 use crate::level::{add_exp, put_player};
 use crate::message::{CANCEL, print_stats};
-use crate::monster::{aggravate, create_monster, gr_obj_char, mv_mons, show_monsters};
+use crate::monster::{aggravate, create_monster, mv_mons, show_monsters};
 use crate::motion::{reg_move, YOU_CAN_MOVE_AGAIN};
 use crate::objects::NoteStatus::Identified;
 use crate::objects::ObjectId;
@@ -19,7 +18,7 @@ use crate::prelude::stat_const::{STAT_ARMOR, STAT_HP, STAT_HUNGER, STAT_STRENGTH
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
 use crate::ring::un_put_hand;
-use crate::room::{draw_magic_map, light_passage, light_up_room};
+use crate::room::{draw_magic_map, light_up_room};
 use crate::scrolls::ScrollKind;
 use crate::trap::is_off_screen;
 
@@ -289,39 +288,6 @@ pub fn tele(game: &mut GameState) {
 	game.level.bear_trap = 0;
 }
 
-pub fn hallucinate_on_screen(game: &mut GameState) {
-	if game.player.blind.is_active() {
-		return;
-	}
-
-	for obj in game.ground.objects() {
-		let ch = mvinch(obj.row as i32, obj.col as i32);
-		let row = obj.row;
-		let col = obj.col;
-		if !is_monster_char(ch) && !game.player.is_at(row, col) {
-			let should_overdraw = match ch as u8 as char {
-				' ' | '.' | '#' | '+' => false,
-				_ => true
-			};
-			if should_overdraw {
-				addch(gr_obj_char() as chtype);
-			}
-		}
-	}
-	for monster in &game.mash.monsters {
-		let ch = mvinch(monster.spot.row as i32, monster.spot.col as i32);
-		if is_monster_char(ch) {
-			addch(get_rand(chtype::from('A'), chtype::from('Z')));
-		}
-	}
-}
-
-pub fn is_monster_char(ch: chtype) -> bool {
-	match ch as u8 as char {
-		'A'..='Z' => true,
-		_ => false,
-	}
-}
 
 pub fn unhallucinate(game: &mut GameState) {
 	game.player.halluc.clear();
@@ -336,7 +302,7 @@ pub fn unblind(game: &mut GameState) {
 	game.dialog.message("the veil of darkness lifts", 1);
 	relight(game);
 	if game.player.halluc.is_active() {
-		hallucinate_on_screen(game);
+		render_system::show_hallucination(game);
 	}
 	if game.level.detect_monster {
 		show_monsters(game);
@@ -347,13 +313,13 @@ pub fn relight(game: &mut GameState) {
 	match game.player.cur_room {
 		RoomMark::None => {}
 		RoomMark::Passage => {
-			light_passage(game.player.rogue.row, game.player.rogue.col, game);
+			render_system::show_spot_surroundings(game.player.rogue.row, game.player.rogue.col, game);
 		}
 		RoomMark::Cavern(cur_room) => {
 			light_up_room(cur_room, game);
 		}
 	}
-	mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, chtype::from(game.player.rogue.fchar));
+	render_system::show_player(game);
 }
 
 pub fn take_a_nap(game: &mut GameState) {

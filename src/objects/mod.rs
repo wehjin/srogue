@@ -25,6 +25,7 @@ use crate::player::Player;
 use crate::potions::colors::PotionColor;
 use crate::potions::kind::{PotionKind, POTIONS};
 use crate::potions::kind::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
+use crate::prelude::DungeonSpot;
 use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::item_usage::{BEING_USED, BEING_WIELDED, BEING_WORN, NOT_USED, ON_EITHER_HAND, ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat;
@@ -206,6 +207,9 @@ impl Object {
 		let hits = hits + self.hit_enchant as usize;
 		let damage = damage + self.d_enchant as usize;
 		DamageStat { hits, damage }
+	}
+	pub fn to_spot(&self) -> DungeonSpot {
+		DungeonSpot { row: self.row, col: self.col }
 	}
 	pub fn id(&self) -> ObjectId { self.id }
 }

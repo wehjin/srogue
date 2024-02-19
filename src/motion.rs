@@ -17,10 +17,11 @@ use crate::player::{Player, RoomMark};
 use crate::prelude::{DungeonSpot, MIN_ROW};
 use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::STAT_HUNGER;
-use crate::r#use::{hallucinate_on_screen, tele, unblind, unconfuse, unhallucinate};
+use crate::r#use::{tele, unblind, unconfuse, unhallucinate};
 use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::render_system;
 use crate::render_system::darken_room;
-use crate::room::{get_dungeon_char, light_passage, light_up_room};
+use crate::room::{get_dungeon_char, light_up_room};
 use crate::score::killed_by;
 use crate::throw::Motion;
 use crate::trap::{is_off_screen, search, trap_player};
@@ -83,19 +84,19 @@ pub fn one_move_rogue(dirch: char, pickup: bool, game: &mut GameState) -> MoveRe
 			}
 			RoomMark::Cavern(_) => {
 				// room to door
-				light_passage(row, col, game);
+				render_system::show_spot_surroundings(row, col, game);
 			}
 		}
 	} else if game.player.cur_cell(&game.level).is_any_door() && to_cell.is_any_tunnel() {
 		// door to tunnel
-		light_passage(row, col, game);
+		render_system::show_spot_surroundings(row, col, game);
 		let rn = game.player.cur_room.rn().expect("player room not an area moving from door to passage");
 		wake_room(rn, false, game.player.rogue.row, game.player.rogue.col, game);
 		darken_room(rn, game);
 		game.player.cur_room = RoomMark::Passage;
 	} else if to_cell.is_any_tunnel() {
 		// tunnel to tunnel.
-		light_passage(row, col, game);
+		render_system::show_spot_surroundings(row, col, game);
 	} else {
 		// room to room, door to room
 	}
@@ -425,7 +426,7 @@ pub fn reg_move(game: &mut GameState) -> bool {
 	if game.player.halluc.is_active() {
 		game.player.halluc.decr();
 		if game.player.halluc.is_active() {
-			hallucinate_on_screen(game);
+			render_system::show_hallucination(game);
 		} else {
 			unhallucinate(game);
 		}

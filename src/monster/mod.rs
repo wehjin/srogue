@@ -16,6 +16,7 @@ use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::object_what::ObjectWhat::Scroll;
 use crate::random::{coin_toss, get_rand, get_rand_indices, rand_percent};
+use crate::render_system::gr_obj_ch;
 use crate::room::{dr_course, get_room_number, gr_spot};
 use crate::scrolls::ScrollKind;
 use crate::scrolls::ScrollKind::ScareMonster;
@@ -66,7 +67,7 @@ pub fn gr_monster(level_depth: isize, first_level_boost: isize, kind: Option<Mon
 	let kind = kind.unwrap_or_else(|| MonsterKind::random(level_depth, first_level_boost));
 	let mut monster = Monster::create(kind);
 	if monster.m_flags.imitates {
-		monster.disguise_char = gr_obj_char();
+		monster.disguise_char = gr_obj_ch();
 	}
 	if level_depth > AMULET_LEVEL + 2 {
 		monster.m_flags.hasted = true;
@@ -513,11 +514,6 @@ pub fn flit(monster: &mut Monster, player: &Player, level: &mut Level, ground: &
 	true
 }
 
-pub fn gr_obj_char() -> chtype {
-	const OPTIONS: [char; 9] = ['%', '!', '?', ']', '=', '/', ')', ':', '*'];
-	let index = get_rand(0, OPTIONS.len() - 1);
-	chtype::from(OPTIONS[index])
-}
 
 pub fn aim_monster(monster: &mut Monster, level: &Level) {
 	let rn = get_room_number(monster.spot.row, monster.spot.col, level) as usize;

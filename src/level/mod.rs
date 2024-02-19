@@ -20,7 +20,7 @@ use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
-use crate::room::{DoorDirection, gr_spot, is_all_connected, light_passage, light_up_room, Room, RoomBounds, RoomType};
+use crate::room::{DoorDirection, gr_spot, is_all_connected, light_up_room, Room, RoomBounds, RoomType};
 use crate::room::RoomType::Nothing;
 use crate::score::win;
 use crate::trap::Trap;
@@ -635,7 +635,7 @@ pub fn put_player(avoid_room: RoomMark, game: &mut GameState) {
 	match game.player.cur_room {
 		RoomMark::None => {}
 		RoomMark::Passage => {
-			light_passage(game.player.rogue.row, game.player.rogue.col, game);
+			render_system::show_spot_surroundings(game.player.rogue.row, game.player.rogue.col, game);
 		}
 		RoomMark::Cavern(cur_room) => {
 			light_up_room(cur_room, game);

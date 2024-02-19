@@ -1,14 +1,26 @@
 use libc::c_int;
 use ncurses::{chtype, mvaddch};
 
+pub use hallucinate::*;
+
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::monster::{gmc, MonsterIndex};
+use crate::motion::can_move;
 use crate::objects::ObjectId;
 use crate::player::RoomMark;
 use crate::prelude::DungeonSpot;
-use crate::room::get_dungeon_char_spot;
+use crate::random::get_rand;
+use crate::room::{get_dungeon_char, get_dungeon_char_spot};
 use crate::throw::ThrowEnding;
+
+mod hallucinate;
+
+pub fn gr_obj_ch() -> chtype {
+	const OPTIONS: [char; 9] = ['%', '!', '?', ']', '=', '/', ')', ':', '*'];
+	let index = get_rand(0, OPTIONS.len() - 1);
+	chtype::from(OPTIONS[index])
+}
 
 pub fn erase_screen() {
 	ncurses::clear();
@@ -105,6 +117,24 @@ pub fn await_frame() {
 
 pub(crate) fn show_player(game: &GameState) {
 	ncurses::mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, game.player.rogue.fchar as ncurses::chtype);
+}
+
+pub fn show_spot_surroundings(row: i64, col: i64, game: &mut GameState) {
+	if game.player.blind.is_active() {
+		return;
+	}
+	for i in (row - 1)..=(row + 1) {
+		for j in (col - 1)..=(col + 1) {
+			let spot = DungeonSpot { row: i, col: j };
+			if spot.is_out_of_bounds() {
+				continue;
+			}
+			if can_move(row, col, spot.row, spot.col, &game.level) {
+				let ch = get_dungeon_char(spot.row, spot.col, game);
+				set_ch(ch, &spot);
+			}
+		}
+	}
 }
 
 pub(crate) fn show_room_after_player_exit(vacated_spot: DungeonSpot, game: &GameState) {

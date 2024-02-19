@@ -8,7 +8,6 @@ use crate::level::{DungeonCell, Level, same_col, same_row};
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM};
 use crate::level::materials::{CellMaterial, Fixture, Visibility};
 use crate::monster::{gmc_row_col, Monster, MonsterMash};
-use crate::motion::can_move;
 use crate::objects::{gr_object, place_at};
 use crate::player::{Player, RoomMark};
 use crate::prelude::*;
@@ -219,24 +218,6 @@ pub fn light_up_room(rn: usize, game: &mut GameState) {
 		}
 	}
 	mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, game.player.rogue.fchar as chtype);
-}
-
-
-pub fn light_passage(row: i64, col: i64, game: &mut GameState) {
-	if game.player.blind.is_active() {
-		return;
-	}
-	let i_end = if row < DROWS as i64 - 2 { 1 } else { 0 };
-	let j_end = if col < DCOLS as i64 - 1 { 1 } else { 0 };
-	let i_start = if row > MIN_ROW { -1 } else { 0 };
-	let j_start = if col > 0 { -1 } else { 0 };
-	for i in i_start..=i_end {
-		for j in j_start..=j_end {
-			if can_move(row, col, row + i, col + j, &game.level) {
-				mvaddch((row + i) as i32, (col + j) as i32, get_dungeon_char(row + i, col + j, game));
-			}
-		}
-	}
 }
 
 
