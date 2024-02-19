@@ -1,5 +1,6 @@
 use libc::c_int;
 use ncurses::{chtype, mvaddch};
+use ncurses::CURSOR_VISIBILITY::{CURSOR_INVISIBLE, CURSOR_VISIBLE};
 
 pub use constants::*;
 pub use hallucinate::*;
@@ -11,6 +12,7 @@ use crate::player::RoomMark;
 use crate::prelude::DungeonSpot;
 use crate::random::get_rand;
 use crate::render_system::appearance::appearance_for_spot;
+use crate::room::RoomBounds;
 use crate::throw::ThrowEnding;
 
 mod hallucinate;
@@ -96,19 +98,89 @@ pub fn move_curs(spot: &DungeonSpot) {
 	ncurses::mv(spot.row as i32, spot.col as i32);
 }
 
+struct ExpanderBounds {
+	top_row: i64,
+	right_col: i64,
+	bottom_row: i64,
+	left_col: i64,
+}
+
+impl Default for ExpanderBounds {
+	fn default() -> Self {
+		Self {
+			top_row: DROWS as i64 - 2,
+			right_col: 0,
+			bottom_row: 1,
+			left_col: DCOLS as i64 - 1,
+		}
+	}
+}
+
+impl ExpanderBounds {
+	fn expand_spot(&mut self, spot: DungeonSpot) {
+		self.top_row = self.top_row.min(spot.row);
+		self.bottom_row = self.bottom_row.max(spot.row);
+		self.left_col = self.left_col.min(spot.col);
+		self.right_col = self.right_col.max(spot.col);
+	}
+	fn into_dungeon_bounds(mut self) -> Option<RoomBounds> {
+		self.top_row = self.top_row.max(0);
+		self.left_col = self.left_col.max(0);
+		self.bottom_row = self.bottom_row.min(DROWS as i64 - 2);
+		self.right_col = self.right_col.min(DCOLS as i64 - 1);
+		if self.right_col >= self.left_col && self.bottom_row >= self.top_row {
+			let bounds = RoomBounds {
+				top: self.top_row,
+				right: self.right_col,
+				bottom: self.bottom_row,
+				left: self.left_col,
+			};
+			Some(bounds)
+		} else {
+			None
+		}
+	}
+}
+
+
 pub fn refresh(game: &mut GameState) {
-	if game.render_queue.len() > 0 {
-		let bounds = game.dungeon_bounds();
-		for row in bounds.rows() {
-			for col in bounds.cols() {
-				let spot = DungeonSpot { row, col };
-				let appearance = appearance_for_spot(spot, game);
-				let char = appearance.to_char();
-				set_char(char, spot);
+	let mut expander_bounds = ExpanderBounds::default();
+	let mut use_dungeon_bounds = false;
+	for action in &game.render_queue {
+		match action {
+			RenderAction::Spot(spot) => {
+				expander_bounds.expand_spot(*spot);
+			}
+			RenderAction::MonstersFloorAndPlayer
+			| RenderAction::RoomAndPlayer(_)
+			| RenderAction::Room(_)
+			| RenderAction::Init => {
+				use_dungeon_bounds = true;
+				break;
 			}
 		}
 	}
-	set_char(PLAYER_CHAR, game.player.to_spot());
+	let bounds = if use_dungeon_bounds {
+		Some(game.dungeon_bounds())
+	} else {
+		expander_bounds.into_dungeon_bounds()
+	};
+	match bounds {
+		Some(bounds) if bounds.area() >= 1 => {
+			ncurses::curs_set(CURSOR_INVISIBLE);
+			for row in bounds.rows() {
+				for col in bounds.cols() {
+					let spot = DungeonSpot { row, col };
+					let appearance = appearance_for_spot(spot, game);
+					let char = appearance.to_char();
+					set_char(char, spot);
+				}
+			}
+			set_char(PLAYER_CHAR, game.player.to_spot());
+			ncurses::curs_set(CURSOR_VISIBLE);
+		}
+		Some(_) | None => {}
+	}
 	game.render_queue.clear();
 	ncurses::refresh();
 }

@@ -113,6 +113,9 @@ pub struct RoomBounds {
 }
 
 impl RoomBounds {
+	pub fn area(&self) -> i64 {
+		(self.bottom - self.top + 1) * (self.right - self.left + 1)
+	}
 	pub fn cell_material_for_spot(&self, spot: &DungeonSpot) -> CellMaterial {
 		if spot.row == self.top || spot.row == self.bottom {
 			CellMaterial::HorizontalWall
