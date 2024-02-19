@@ -121,8 +121,7 @@ Object {
 	pub is_cursed: i16,
 	pub class: isize,
 	pub identified: bool,
-	pub row: i64,
-	pub col: i64,
+	pub spot: DungeonSpot,
 	pub hit_enchant: i16,
 	pub d_enchant: isize,
 	pub quiver: i16,
@@ -139,8 +138,7 @@ pub fn empty_obj() -> Object {
 		class: 0,
 		identified: false,
 		which_kind: 0,
-		row: 0,
-		col: 0,
+		spot: DungeonSpot::default(),
 		d_enchant: 0,
 		quiver: 0,
 		hit_enchant: 0,
@@ -174,7 +172,7 @@ impl Object {
 	pub fn is_on_left_hand(&self) -> bool { self.in_use_flags & ON_LEFT_HAND != 0 }
 	pub fn is_on_right_hand(&self) -> bool { self.in_use_flags & ON_RIGHT_HAND != 0 }
 	pub fn is_at(&self, row: i64, col: i64) -> bool {
-		self.row == row && self.col == col
+		self.spot.row == row && self.spot.col == col
 	}
 	pub fn gold_quantity(&self) -> Option<usize> {
 		if self.what_is == Gold {
@@ -196,9 +194,7 @@ impl Object {
 		let damage = damage + self.d_enchant as usize;
 		DamageStat { hits, damage }
 	}
-	pub fn to_spot(&self) -> DungeonSpot {
-		DungeonSpot { row: self.row, col: self.col }
-	}
+	pub fn to_spot(&self) -> DungeonSpot { self.spot }
 	pub fn id(&self) -> ObjectId { self.id }
 }
 
@@ -245,8 +241,7 @@ pub fn put_gold(level_depth: isize, level: &mut Level, ground: &mut ObjectPack) 
 
 pub fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: isize, level: &mut Level, ground: &mut ObjectPack) {
 	let mut obj = alloc_object();
-	obj.row = row;
-	obj.col = col;
+	obj.spot.set(row, col);
 	obj.what_is = Gold;
 	obj.quantity = get_rand((2 * cur_level) as i16, (16 * cur_level) as i16);
 	if is_maze {
@@ -258,8 +253,7 @@ pub fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: isize, level: &m
 
 
 pub fn place_at(mut obj: Object, row: i64, col: i64, level: &mut Level, ground: &mut ObjectPack) {
-	obj.row = row;
-	obj.col = col;
+	obj.spot.set(row, col);
 	level.dungeon[row as usize][col as usize].set_object(obj.what_is);
 	ground.add(obj);
 }
@@ -563,8 +557,7 @@ pub fn make_party(level_depth: isize, game: &mut GameState) {
 
 pub fn show_objects(game: &mut GameState) {
 	for obj in game.ground.objects() {
-		let row = obj.row;
-		let col = obj.col;
+		let DungeonSpot { row, col } = obj.spot;
 		let rc = obj.what_is.to_char() as chtype;
 		if game.level.dungeon[row as usize][col as usize].has_monster() {
 			let monster = game.mash.monster_at_spot_mut(row, col);
