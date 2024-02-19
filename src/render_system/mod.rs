@@ -110,6 +110,10 @@ pub fn move_curs(spot: &DungeonSpot) {
 	ncurses::mv(spot.row as i32, spot.col as i32);
 }
 
+pub fn refresh() {
+	ncurses::refresh();
+}
+
 pub fn await_frame() {
 	ncurses::refresh();
 	ncurses::napms(17);
@@ -137,11 +141,15 @@ pub fn show_spot_surroundings(row: i64, col: i64, game: &mut GameState) {
 	}
 }
 
-pub(crate) fn show_room_after_player_exit(vacated_spot: DungeonSpot, game: &GameState) {
-	set_ch(get_dungeon_char_spot(vacated_spot, game), &vacated_spot);
+pub(crate) fn show_darkened_room_after_player_exit(vacated_spot: DungeonSpot, game: &GameState) {
+	show_vacated_spot(vacated_spot, game);
 	if let RoomMark::Cavern(rn) = game.level.room_at_spot(vacated_spot) {
 		darken_room(rn, game);
 	}
+}
+
+pub(crate) fn show_vacated_spot(vacated_spot: DungeonSpot, game: &GameState) {
+	set_ch(get_dungeon_char_spot(vacated_spot, game), &vacated_spot);
 }
 
 pub(crate) fn darken_room(rn: usize, game: &GameState) {

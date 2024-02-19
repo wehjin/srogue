@@ -1,5 +1,3 @@
-use ncurses::{chtype, mvaddch, refresh};
-
 use MoveResult::MoveFailed;
 
 use crate::components::hunger::{FAINT_MOVES_LEFT, HungerLevel, HUNGRY_MOVES_LEFT, STARVE_MOVES_LEFT, WEAK_MOVES_LEFT};
@@ -21,7 +19,7 @@ use crate::r#use::{tele, unblind, unconfuse, unhallucinate};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
 use crate::render_system::darken_room;
-use crate::room::{get_dungeon_char, light_up_room};
+use crate::room::light_up_room;
 use crate::score::killed_by;
 use crate::throw::Motion;
 use crate::trap::{is_off_screen, search, trap_player};
@@ -100,14 +98,13 @@ pub fn one_move_rogue(dirch: char, pickup: bool, game: &mut GameState) -> MoveRe
 	} else {
 		// room to room, door to room
 	}
-	mvaddch(game.player.rogue.row as i32, game.player.rogue.col as i32, get_dungeon_char(game.player.rogue.row, game.player.rogue.col, game));
-	mvaddch(row as i32, col as i32, chtype::from(game.player.rogue.fchar));
-	if !game.player.settings.jump {
-		refresh();
-	}
-
+	render_system::show_vacated_spot(game.player.to_spot(), game);
 	game.player.rogue.row = row;
 	game.player.rogue.col = col;
+	render_system::show_player(game);
+	if !game.player.settings.jump {
+		render_system::refresh();
+	}
 	let player_cell = game.level.dungeon[row as usize][col as usize];
 	if player_cell.has_object() {
 		if !pickup {

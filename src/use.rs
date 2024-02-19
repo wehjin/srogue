@@ -281,7 +281,7 @@ fn hold_monster(game: &mut GameState) {
 
 pub fn tele(game: &mut GameState) {
 	let exit_spot = game.player.to_spot();
-	render_system::show_room_after_player_exit(exit_spot, game);
+	render_system::show_darkened_room_after_player_exit(exit_spot, game);
 	let avoid_room = game.player.cur_room;
 	put_player(avoid_room, game);
 	game.level.being_held = false;
