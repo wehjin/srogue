@@ -1,5 +1,3 @@
-
-
 use libc::c_int;
 use ncurses::{mv, refresh};
 
@@ -16,12 +14,14 @@ use crate::inventory::{inv_armor_weapon, inventory, single_inv};
 use crate::level::{check_up, drop_check, show_average_hp, UpResult};
 use crate::message::{CANCEL, rgetchar};
 use crate::monster::show_monsters;
+use crate::motion::{move_onto, multiple_move_rogue, one_move_rogue, reg_move, rest};
 use crate::objects::{new_object_for_wizard, show_objects};
 use crate::pack::{call_it, drop_0, kick_into_pack};
 use crate::play::PlayResult::{CleanedUp, ExitWon, StairsDown, StairsUp};
 use crate::prelude::object_what::PackFilter::AllObjects;
-use crate::motion::{move_onto, multiple_move_rogue, one_move_rogue, reg_move, rest};
 use crate::r#use::{eat, quaff, read_scroll};
+use crate::render_system;
+use crate::render_system::RenderAction;
 use crate::ring::inv_rings;
 use crate::room::draw_magic_map;
 use crate::save::save_game;
@@ -43,6 +43,8 @@ pub enum PlayResult {
 }
 
 pub fn play_level(game: &mut GameState) -> PlayResult {
+	render_system::refresh(game);
+	game.render(&[RenderAction::Init]);
 	let mut count = 0;
 	let mut deck_ch = None;
 	let player_actions = PlayerActionSet::new(vec![
@@ -164,7 +166,7 @@ pub fn play_level(game: &mut GameState) -> PlayResult {
 				}
 				'\x13' => {
 					if game.player.wizard {
-						draw_magic_map(&mut game.mash, &mut game.level);
+						draw_magic_map(game);
 					} else {
 						game.dialog.message(UNKNOWN_COMMAND, 0);
 					}
@@ -213,5 +215,6 @@ pub fn play_level(game: &mut GameState) -> PlayResult {
 				}
 			}
 		}
+		render_system::refresh(game);
 	}
 }

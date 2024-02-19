@@ -1,7 +1,6 @@
 use std::clone::Clone;
 use std::string::ToString;
 
-use ncurses::{chtype, mvaddch, mvinch};
 use serde::{Deserialize, Serialize};
 
 pub use object_id::*;
@@ -556,23 +555,21 @@ pub fn make_party(level_depth: isize, game: &mut GameState) {
 }
 
 pub fn show_objects(game: &mut GameState) {
-	for obj in game.ground.objects() {
-		let DungeonSpot { row, col } = obj.spot;
-		let rc = obj.what_is.to_char() as chtype;
-		if game.level.dungeon[row as usize][col as usize].has_monster() {
-			let monster = game.mash.monster_at_spot_mut(row, col);
-			if let Some(monster) = monster {
-				monster.trail_char = rc;
-			}
-		}
-		let mc = mvinch(row as i32, col as i32);
-		if (mc < 'A' as chtype || mc > 'Z' as chtype) && (row != game.player.rogue.row || col != game.player.rogue.col) {
-			mvaddch(row as i32, col as i32, rc);
+	let obj_spots = game.ground.objects().iter().map(|it| it.spot).collect::<Vec<_>>();
+	for obj_spot in obj_spots {
+		if !game.cell_at(obj_spot).is_visited() {
+			game.cell_at_mut(obj_spot).visit();
+			game.render_spot(obj_spot);
 		}
 	}
-	for monster in &game.mash.monsters {
-		if monster.m_flags.imitates {
-			mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.disguise_char);
+	let imitating_mon_spots = game.mash.monsters.iter()
+		.filter(|it| it.imitates())
+		.map(|it| it.spot)
+		.collect::<Vec<_>>();
+	for mon_spot in imitating_mon_spots {
+		if !game.cell_at(mon_spot).is_visited() {
+			game.cell_at_mut(mon_spot).visit();
+			game.render_spot(mon_spot);
 		}
 	}
 }

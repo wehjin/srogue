@@ -11,7 +11,6 @@ use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Wands;
 use crate::r#use::relight;
 use crate::random::get_rand;
-use crate::render_system;
 use crate::room::gr_spot;
 use crate::spec_hit::imitating;
 
@@ -118,7 +117,6 @@ pub fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
 			}
 			let mut morph_monster = gr_monster(game.player.cur_depth, 0, Some(MonsterKind::random_any()));
 			morph_monster.set_spot(row, col);
-			morph_monster.trail_char = monster.trail_char;
 			if !morph_monster.m_flags.imitates {
 				morph_monster.wake_up();
 			}
@@ -178,7 +176,8 @@ fn tele_away(mon_id: MonsterIndex, game: &mut GameState) {
 	game.level.cell_mut(tele_from).set_monster(false);
 	game.mash.monster_mut(mon_id).spot = tele_to;
 	game.level.cell_mut(tele_to).set_monster(true);
-	render_system::show_monster_movement(mon_id, tele_from, tele_to, game);
+	game.render_spot(tele_from);
+	game.render_spot(tele_to);
 }
 
 pub fn wizardize(game: &mut GameState) {

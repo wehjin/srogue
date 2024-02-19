@@ -6,48 +6,36 @@ pub use hallucinate::*;
 
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
-use crate::monster::{gmc, MonsterIndex};
-use crate::motion::can_move;
 use crate::objects::ObjectId;
 use crate::player::RoomMark;
 use crate::prelude::DungeonSpot;
 use crate::random::get_rand;
-use crate::room::{get_dungeon_char, get_dungeon_char_spot};
+use crate::render_system::appearance::appearance_for_spot;
 use crate::throw::ThrowEnding;
 
 mod hallucinate;
 pub(crate) mod constants;
+pub(crate) mod appearance;
 
-pub fn gr_obj_ch() -> chtype {
-	const OPTIONS: [char; 9] = ['%', '!', '?', ']', '=', '/', ')', ':', '*'];
-	let index = get_rand(0, OPTIONS.len() - 1);
-	chtype::from(OPTIONS[index])
+#[derive(Copy, Clone)]
+pub enum RenderAction {
+	Spot(DungeonSpot),
+	MonstersFloorAndPlayer,
+	RoomAndPlayer(usize),
+	Room(usize),
+	Init,
 }
+
+pub fn gr_obj_char() -> char {
+	let index = get_rand(0, DISGUISE_CHARS.len() - 1);
+	let char = DISGUISE_CHARS[index];
+	char
+}
+
+pub fn gr_obj_ch() -> chtype { chtype::from(gr_obj_char()) }
 
 pub fn erase_screen() {
 	ncurses::clear();
-}
-
-pub fn show_monster_gone(spot: DungeonSpot, game: &GameState) {
-	let ch = get_dungeon_char_spot(spot, game);
-	set_ch(ch, &spot);
-}
-
-pub fn show_monster_movement(mon_id: MonsterIndex, start_spot: DungeonSpot, end_spot: DungeonSpot, game: &mut GameState) {
-	// Restore char on screen at the abandoned spot.
-	{
-		let from_ch = game.mash.monster(mon_id).trail_char;
-		set_ch(from_ch, &start_spot);
-	}
-	// Save the char from the entered spot, then write the monster's char to the screen.
-	{
-		let end_trail_ch = get_ch(&end_spot);
-		game.mash.monster_mut(mon_id).trail_char = end_trail_ch;
-		if game.level.detect_monster || game.player.can_see_spot(&end_spot, &game.level) {
-			let mon_ch = gmc(game.mash.monster(mon_id), &game.player, &game.level);
-			set_ch(mon_ch, &end_spot);
-		}
-	}
 }
 
 pub fn animate_throw(obj_id: ObjectId, throw_ending: &ThrowEnding, game: &GameState) {
@@ -55,10 +43,10 @@ pub fn animate_throw(obj_id: ObjectId, throw_ending: &ThrowEnding, game: &GameSt
 	let ch = ncurses::chtype::from(what.to_char());
 	for spot in throw_ending.flight_path() {
 		if game.player_can_see(*spot) {
-			let restore_ch = swap_ch(ch, spot);
+			let restore_ch = swap_ch(ch, *spot);
 			move_curs(spot);
 			await_frame();
-			set_ch(restore_ch, spot);
+			set_ch(restore_ch, *spot);
 		}
 	}
 }
@@ -85,24 +73,20 @@ pub fn render_all_rows<'a>(f: impl Fn(usize) -> &'a str) {
 	ncurses::refresh();
 }
 
-pub fn get_char(spot: &DungeonSpot) -> char {
-	get_ch(spot) as u8 as char
-}
-
-pub fn set_char(value: char, spot: &DungeonSpot) {
+fn set_char(value: char, spot: DungeonSpot) {
 	set_ch(ncurses::chtype::from(value), spot);
 }
 
-pub fn get_ch(spot: &DungeonSpot) -> ncurses::chtype {
+fn get_ch(spot: DungeonSpot) -> chtype {
 	let ch_at_spot = ncurses::mvinch(spot.row as c_int, spot.col as c_int);
 	ch_at_spot
 }
 
-pub fn set_ch(ch: ncurses::chtype, spot: &DungeonSpot) {
+fn set_ch(ch: chtype, spot: DungeonSpot) {
 	mvaddch(spot.row as i32, spot.col as i32, ch);
 }
 
-pub fn swap_ch(ch: ncurses::chtype, spot: &DungeonSpot) -> ncurses::chtype {
+pub fn swap_ch(ch: chtype, spot: DungeonSpot) -> chtype {
 	let old_ch = get_ch(spot);
 	set_ch(ch, spot);
 	old_ch
@@ -112,7 +96,20 @@ pub fn move_curs(spot: &DungeonSpot) {
 	ncurses::mv(spot.row as i32, spot.col as i32);
 }
 
-pub fn refresh() {
+pub fn refresh(game: &mut GameState) {
+	if game.render_queue.len() > 0 {
+		let bounds = game.dungeon_bounds();
+		for row in bounds.rows() {
+			for col in bounds.cols() {
+				let spot = DungeonSpot { row, col };
+				let appearance = appearance_for_spot(spot, game);
+				let char = appearance.to_char();
+				set_char(char, spot);
+			}
+		}
+	}
+	set_char(PLAYER_CHAR, game.player.to_spot());
+	game.render_queue.clear();
 	ncurses::refresh();
 }
 
@@ -121,58 +118,13 @@ pub fn await_frame() {
 	ncurses::napms(17);
 }
 
-pub(crate) fn show_player(game: &GameState) {
-	mvaddch(
-		game.player.rogue.row as i32,
-		game.player.rogue.col as i32,
-		chtype::from(PLAYER_CHAR),
-	);
-}
-
-pub fn show_spot_surroundings(row: i64, col: i64, game: &mut GameState) {
-	if game.player.blind.is_active() {
-		return;
-	}
-	for i in (row - 1)..=(row + 1) {
-		for j in (col - 1)..=(col + 1) {
-			let spot = DungeonSpot { row: i, col: j };
-			if spot.is_out_of_bounds() {
-				continue;
-			}
-			if can_move(row, col, spot.row, spot.col, &game.level) {
-				let ch = get_dungeon_char(spot.row, spot.col, game);
-				set_ch(ch, &spot);
-			}
-		}
-	}
-}
-
-pub(crate) fn show_darkened_room_after_player_exit(vacated_spot: DungeonSpot, game: &GameState) {
-	show_vacated_spot(vacated_spot, game);
+pub(crate) fn show_darkened_room_after_player_exit(vacated_spot: DungeonSpot, game: &mut GameState) {
+	game.render_spot(vacated_spot);
 	if let RoomMark::Cavern(rn) = game.level.room_at_spot(vacated_spot) {
 		darken_room(rn, game);
 	}
 }
 
-pub(crate) fn show_vacated_spot(vacated_spot: DungeonSpot, game: &GameState) {
-	set_ch(get_dungeon_char_spot(vacated_spot, game), &vacated_spot);
-}
-
-pub(crate) fn darken_room(rn: usize, game: &GameState) {
-	fn spot_remains_lit_in_dark_room(spot: DungeonSpot, game: &GameState) -> bool {
-		(game.level.detect_monster && game.cell_at(spot).has_monster())
-			|| game.cell_at(spot).is_stairs()
-			|| game.cell_at(spot).has_object()
-			|| game.has_imitating_monster_at_spot(spot)
-			|| game.cell_at(spot).is_visible_trap()
-	}
-	let floor_bounds = game.level.rooms[rn].to_floor_bounds();
-	for row in floor_bounds.rows() {
-		for col in floor_bounds.cols() {
-			if game.player.blind.is_active()
-				|| !spot_remains_lit_in_dark_room(DungeonSpot { row, col }, game) {
-				set_ch(chtype::from(' '), &DungeonSpot { row, col });
-			}
-		}
-	}
+pub(crate) fn darken_room(rn: usize, game: &mut GameState) {
+	game.render(&[RenderAction::Room(rn)]);
 }

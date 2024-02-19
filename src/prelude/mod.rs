@@ -88,6 +88,8 @@ pub mod ending;
 pub mod object_what {
 	use serde::{Deserialize, Serialize};
 
+	use crate::render_system::{AMULET_CHAR, ARMOR_CHAR, FOOD_CHAR, GOLD_CHAR, NOT_CHAR, POTION_CHAR, RING_CHAR, SCROLL_CHAR, WAND_CHAR, WEAPON_CHAR};
+
 	#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 	pub enum ObjectWhat {
 		Armor,
@@ -108,16 +110,16 @@ pub mod object_what {
 		}
 		pub fn to_char(&self) -> char {
 			match self {
-				ObjectWhat::Scroll => '?',
-				ObjectWhat::Potion => '!',
-				ObjectWhat::Gold => '*',
-				ObjectWhat::Food => ':',
-				ObjectWhat::Wand => '/',
-				ObjectWhat::Armor => ']',
-				ObjectWhat::Weapon => ')',
-				ObjectWhat::Ring => '=',
-				ObjectWhat::Amulet => ',',
-				ObjectWhat::None => '~'
+				ObjectWhat::Scroll => SCROLL_CHAR,
+				ObjectWhat::Potion => POTION_CHAR,
+				ObjectWhat::Gold => GOLD_CHAR,
+				ObjectWhat::Food => FOOD_CHAR,
+				ObjectWhat::Wand => WAND_CHAR,
+				ObjectWhat::Armor => ARMOR_CHAR,
+				ObjectWhat::Weapon => WEAPON_CHAR,
+				ObjectWhat::Ring => RING_CHAR,
+				ObjectWhat::Amulet => AMULET_CHAR,
+				ObjectWhat::None => NOT_CHAR,
 			}
 		}
 	}

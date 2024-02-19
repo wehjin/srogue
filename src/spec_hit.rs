@@ -16,7 +16,8 @@ use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
 use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD, STAT_HP, STAT_STRENGTH};
 use crate::r#use::{confuse, vanish};
 use crate::random::{coin_toss, get_rand, rand_percent};
-use crate::room::{get_dungeon_char, get_dungeon_char_spot, get_room_number};
+use crate::render_system;
+use crate::room::get_room_number;
 use crate::score::killed_by;
 
 pub const FLAME_NAME: &'static str = "flame";
@@ -154,11 +155,7 @@ fn disappear(mon_id: u64, game: &mut GameState) {
 		game.level.dungeon[monster.spot.row as usize][monster.spot.col as usize].set_monster(false);
 		monster.spot
 	};
-	let DungeonSpot { row, col } = monster_spot;
-	if game.player.can_see(row, col, &game.level) {
-		let dungeon_char = get_dungeon_char(row, col, game);
-		mvaddch(row as i32, col as i32, dungeon_char);
-	}
+	game.render_spot(monster_spot);
 	game.mash.remove_monster(mon_id);
 	game.mash.mon_disappeared = true;
 }
@@ -212,10 +209,7 @@ fn try_to_cough(row: i64, col: i64, obj: &Object, game: &mut GameState) -> bool 
 	if !(dungeon_cell.has_object() || dungeon_cell.is_stairs() || dungeon_cell.is_any_trap())
 		&& (dungeon_cell.is_any_tunnel() || dungeon_cell.is_any_floor() || dungeon_cell.is_any_door()) {
 		place_at(obj.clone(), row, col, &mut game.level, &mut game.ground);
-		if (row != game.player.rogue.row || col != game.player.rogue.col)
-			&& !dungeon_cell.has_monster() {
-			mvaddch(row as i32, col as i32, get_dungeon_char(row, col, game));
-		}
+		game.render_spot(DungeonSpot { row, col });
 		return true;
 	}
 	return false;
@@ -238,8 +232,8 @@ pub fn seek_gold(mon_id: u64, game: &mut GameState) -> bool {
 				let can_go_if_while_can_flit = mon_can_go(game.mash.monster(mon_id), i, j, &game.player, &game.level, &game.ground);
 				game.mash.monster_flags_mut(mon_id).can_flit = false;
 				if can_go_if_while_can_flit {
+					move_mon_to(mon_id, i, j, game);
 					let monster = game.mash.monster_mut(mon_id);
-					move_mon_to(monster, i, j, &game.player, &mut game.level);
 					monster.m_flags.asleep = true;
 					monster.m_flags.wakens = false;
 					monster.m_flags.seeks_gold = false;
@@ -269,19 +263,17 @@ fn gold_at(row: i64, col: i64, level: &Level, ground: &ObjectPack) -> bool {
 }
 
 pub fn check_imitator(mon_id: u64, game: &mut GameState) -> bool {
-	if game.mash.monster_flags(mon_id).imitates {
+	if game.mash.monster(mon_id).imitates() {
 		game.mash.monster_mut(mon_id).wake_up();
+
 		if game.player.blind.is_inactive() {
 			let monster = game.mash.monster(mon_id);
-			let dungeon_char = get_dungeon_char_spot(monster.spot, game);
-			{
-				let monster = game.mash.monster(mon_id);
-				mvaddch(monster.spot.row as i32, monster.spot.col as i32, dungeon_char);
-				game.dialog.clear_message();
-				let msg = format!("wait, that's a {}!", mon_name(monster, &game.player, &game.level));
-				game.player.interrupt_and_slurp();
-				game.dialog.message(&msg, 1);
-			}
+			let mon_name = mon_name(monster, &game.player, &game.level);
+			let mon_spot = monster.spot;
+			game.render_spot(mon_spot);
+			game.dialog.clear_message();
+			game.player.interrupt_and_slurp();
+			game.dialog.message(&format!("wait, that's a {mon_name}!"), 1);
 		}
 		return true;
 	}
@@ -429,8 +421,8 @@ pub fn flame_broil(mon_id: u64, game: &mut GameState) -> bool {
 		col = monster.spot.col;
 		get_closer(&mut row, &mut col, game.player.rogue.row, game.player.rogue.col);
 		loop {
-			mvaddch(row as i32, col as i32, get_dungeon_char(row, col, game));
-			refresh();
+			game.render_spot(DungeonSpot { row, col });
+			render_system::refresh(game);
 			get_closer(&mut row, &mut col, game.player.rogue.row, game.player.rogue.col);
 			let stay_looping = row != game.player.rogue.row || col != game.player.rogue.col;
 			if !stay_looping {

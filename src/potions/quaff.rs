@@ -1,14 +1,11 @@
-use ncurses::{chtype, mvaddch};
-
 use crate::init::GameState;
 use crate::level::{add_exp, LEVEL_POINTS};
 use crate::monster::show_monsters;
 use crate::objects::show_objects;
-use crate::player::RoomMark;
 use crate::potions::kind::PotionKind;
 use crate::r#use::STRANGE_FEELING;
 use crate::random::get_rand;
-use crate::render_system;
+use crate::render_system::RenderAction::MonstersFloorAndPlayer;
 
 pub fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
 	match potion_kind {
@@ -149,19 +146,5 @@ fn potion_heal(extra: bool, game: &mut GameState) {
 }
 
 fn show_blind(game: &mut GameState) {
-	if game.level.detect_monster {
-		for monster in &game.mash.monsters {
-			mvaddch(monster.spot.row as i32, monster.spot.col as i32, monster.trail_char);
-		}
-	}
-	if let RoomMark::Cavern(cur_room) = game.player.cur_room {
-		const BLACK_FLOOR: char = ' ';
-		let floor_bounds = game.level.rooms[cur_room].to_floor_bounds();
-		for i in floor_bounds.rows() {
-			for j in floor_bounds.cols() {
-				mvaddch(i as i32, j as i32, chtype::from(BLACK_FLOOR));
-			}
-		}
-	}
-	render_system::show_player(game);
+	game.render(&[MonstersFloorAndPlayer]);
 }

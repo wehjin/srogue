@@ -20,7 +20,7 @@ use crate::prelude::*;
 use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
-use crate::room::{DoorDirection, gr_spot, is_all_connected, light_up_room, Room, RoomBounds, RoomType};
+use crate::room::{DoorDirection, gr_spot, is_all_connected, Room, RoomBounds, RoomType, visit_room, visit_spot_area};
 use crate::room::RoomType::Nothing;
 use crate::score::win;
 use crate::trap::Trap;
@@ -625,20 +625,19 @@ pub fn put_player(avoid_room: RoomMark, game: &mut GameState) {
 		}
 		game.player.rogue.row = spot.row;
 		game.player.rogue.col = spot.col;
-		game.player.cur_room =
-			if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_any_tunnel() {
-				RoomMark::Passage
-			} else {
-				to_room
-			};
+		game.player.cur_room = if game.cell_at(spot).is_any_tunnel() {
+			RoomMark::Passage
+		} else {
+			to_room
+		};
 	}
 	match game.player.cur_room {
 		RoomMark::None => {}
 		RoomMark::Passage => {
-			render_system::show_spot_surroundings(game.player.rogue.row, game.player.rogue.col, game);
+			visit_spot_area(game.player.rogue.row, game.player.rogue.col, game);
 		}
 		RoomMark::Cavern(cur_room) => {
-			light_up_room(cur_room, game);
+			visit_room(cur_room, game);
 			wake_room(cur_room, true, game.player.rogue.row, game.player.rogue.col, game);
 		}
 	}
@@ -646,7 +645,7 @@ pub fn put_player(avoid_room: RoomMark, game: &mut GameState) {
 		game.dialog.message(msg, 0);
 	}
 	game.level.new_level_message = None;
-	render_system::show_player(game);
+	game.render_spot(game.player.to_spot());
 }
 
 pub fn drop_check(game: &mut GameState) -> bool {

@@ -1,18 +1,18 @@
 use std::ops::RangeInclusive;
 
-use ncurses::{addch, chtype, mvaddch, mvinch};
 use serde::{Deserialize, Serialize};
 
 use crate::init::GameState;
 use crate::level::{DungeonCell, Level, same_col, same_row};
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM};
 use crate::level::materials::{CellMaterial, Fixture, Visibility};
-use crate::monster::{gmc_row_col, Monster, MonsterMash};
+use crate::monster::Monster;
+use crate::motion::can_move;
 use crate::objects::{gr_object, place_at};
 use crate::player::{Player, RoomMark};
 use crate::prelude::*;
 use crate::random::get_rand;
-use crate::render_system;
+use crate::render_system::RenderAction::RoomAndPlayer;
 use crate::room::DoorDirection::{Down, Left, Right, Up};
 use crate::room::room_visitor::RoomVisitor;
 
@@ -193,47 +193,35 @@ impl Room {
 	}
 }
 
-pub fn light_up_room(rn: usize, game: &mut GameState) {
+pub fn visit_spot_area(row: i64, col: i64, game: &mut GameState) {
+	if game.player.blind.is_active() {
+		return;
+	}
+	for i in (row - 1)..=(row + 1) {
+		for j in (col - 1)..=(col + 1) {
+			let spot = DungeonSpot { row: i, col: j };
+			if spot.is_out_of_bounds() {
+				continue;
+			}
+			if can_move(row, col, spot.row, spot.col, &game.level) {
+				game.cell_at_mut(spot).visit();
+				game.render_spot(spot);
+			}
+		}
+	}
+}
+
+pub fn visit_room(rn: usize, game: &mut GameState) {
 	if game.player.blind.is_active() {
 		return;
 	}
 	let wall_bounds = game.level.rooms[rn].to_wall_bounds();
-	for i in wall_bounds.rows() {
-		for j in wall_bounds.cols() {
-			if game.level.cell(DungeonSpot { row: i, col: j }).has_monster() {
-				if let Some(mon_id) = game.mash.monster_id_at_spot(i, j) {
-					let monster_spot = {
-						let monster = game.mash.monster_mut(mon_id);
-						monster.cell_mut(&mut game.level).set_monster(false);
-						monster.spot
-					};
-					let dungeon_char = get_dungeon_char_spot(monster_spot, game);
-					{
-						let monster = game.mash.monster_mut(mon_id);
-						monster.trail_char = dungeon_char;
-						monster.cell_mut(&mut game.level).set_monster(true);
-					}
-				}
-			}
-			mvaddch(i as i32, j as i32, get_dungeon_char(i, j, game));
+	for row in wall_bounds.rows() {
+		for col in wall_bounds.cols() {
+			game.cell_at_mut(DungeonSpot { row, col }).visit();
 		}
 	}
-	render_system::show_player(game);
-}
-
-
-pub fn get_dungeon_char_spot(spot: DungeonSpot, game: &GameState) -> chtype {
-	get_dungeon_char(spot.row, spot.col, game)
-}
-
-pub fn get_dungeon_char(row: i64, col: i64, game: &GameState) -> chtype {
-	let cell = game.level.dungeon[row as usize][col as usize];
-	if cell.has_monster() {
-		gmc_row_col(row, col, game)
-	} else {
-		let ch = cell.to_char_ignoring_any_monster();
-		chtype::from(ch)
-	}
+	game.render(&[RoomAndPlayer(rn)]);
 }
 
 pub fn gr_spot(is_good_cell: impl Fn(&DungeonCell) -> bool, player: &Player, level: &Level) -> DungeonSpot {
@@ -375,38 +363,23 @@ mod magic_map {
 	}
 }
 
-pub fn draw_magic_map(mash: &mut MonsterMash, level: &mut Level) {
-	for i in 0..DROWS {
-		for j in 0..DCOLS {
-			let cell = level.dungeon[i][j];
+pub fn draw_magic_map(game: &mut GameState) {
+	for row in 0..(DROWS as i64) {
+		for col in 0..(DCOLS as i64) {
+			let spot = DungeonSpot { row, col };
+			let cell = game.cell_at_mut(spot);
 			if magic_map::reveals_cell(&cell) {
-				let old_ch = mvinch(i as i32, j as i32) as u8 as char;
-				if old_ch == ' ' || old_ch.is_ascii_uppercase() || cell.is_any_trap() || cell.is_any_hidden() {
-					level.dungeon[i][j].set_visible();
-					let ch;
-					if cell.is_horizontal_wall() {
-						ch = '-';
-					} else if cell.is_vertical_wall() {
-						ch = '|';
-					} else if cell.is_any_door() {
-						ch = '+';
-					} else if cell.is_any_trap() {
-						ch = '^';
-					} else if cell.is_stairs() {
-						ch = '%';
-					} else if cell.is_any_tunnel() {
-						ch = '#';
-					} else {
-						continue;
-					}
-					if !cell.has_monster() || old_ch == ' ' {
-						addch(chtype::from(ch));
-					}
-					if cell.has_monster() {
-						if let Some(monster) = mash.monster_at_spot_mut(i as i64, j as i64) {
-							monster.trail_char = chtype::from(ch);
-						}
-					}
+				let mut changed = false;
+				if cell.is_any_hidden() {
+					cell.set_visible();
+					changed = true;
+				}
+				if !cell.is_visited() {
+					cell.visit();
+					changed = true;
+				}
+				if changed {
+					game.render_spot(spot)
 				}
 			}
 		}

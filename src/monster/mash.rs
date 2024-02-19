@@ -7,6 +7,7 @@ use crate::level::{DungeonCell, Level};
 use crate::monster::{MonsterFlags, MonsterKind};
 use crate::player::RoomMark;
 use crate::prelude::DungeonSpot;
+use crate::render_system::PLAYER_CHAR;
 
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct MonsterMash {
@@ -132,8 +133,7 @@ pub struct Monster {
 	pub kind: MonsterKind,
 	pub m_flags: MonsterFlags,
 	pub spot: DungeonSpot,
-	pub trail_char: chtype,
-	pub disguise_char: chtype,
+	pub disguise_char: char,
 	pub slowed_toggle: bool,
 	pub target_spot: Option<DungeonSpot>,
 	pub nap_length: isize,
@@ -146,6 +146,7 @@ pub struct Monster {
 }
 
 impl Monster {
+	pub fn imitates(&self) -> bool { self.m_flags.imitates }
 	pub fn flies(&self) -> bool { self.m_flags.flies }
 	pub fn is_napping(&self) -> bool { self.m_flags.napping }
 	pub fn is_asleep(&self) -> bool { self.m_flags.asleep }
@@ -162,8 +163,7 @@ impl Monster {
 			kind: kind.clone(),
 			m_flags: kind.flags(),
 			spot: DungeonSpot::default(),
-			trail_char: 0,
-			disguise_char: 0,
+			disguise_char: PLAYER_CHAR,
 			slowed_toggle: false,
 			target_spot: None,
 			nap_length: 0,
@@ -213,7 +213,7 @@ impl Monster {
 	pub fn sees(&self, row: i64, col: i64, level: &Level) -> bool {
 		let spot_room = level.room(row, col);
 		if spot_room == self.cur_room(level)
-			&& spot_room.is_area()
+			&& spot_room.is_cavern()
 			&& !spot_room.is_maze(level) {
 			return true;
 		}
@@ -248,6 +248,9 @@ impl Monster {
 	}
 	pub fn m_char(&self) -> chtype {
 		self.kind.m_char()
+	}
+	pub fn as_char(&self) -> char {
+		self.kind.screen_char()
 	}
 	pub fn flip_slowed_toggle(&mut self) {
 		if self.slowed_toggle {

@@ -1,4 +1,3 @@
-use ncurses::chtype;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 
@@ -42,6 +41,9 @@ impl GameState {
 	}
 	pub fn cell_at(&self, spot: DungeonSpot) -> &DungeonCell {
 		self.level.cell(spot)
+	}
+	pub fn cell_at_mut(&mut self, spot: DungeonSpot) -> &mut DungeonCell {
+		self.level.cell_mut(spot)
 	}
 	pub fn player_can_see(&self, spot: DungeonSpot) -> bool {
 		self.player.can_see_spot(&spot, &self.level)
@@ -244,21 +246,7 @@ fn flop_object_from_spot(obj_id: ObjectId, spot: DungeonSpot, game: &mut GameSta
 			new_obj.ichar = 'L';
 		}
 		place_at(new_obj, spot.row, spot.col, &mut game.level, &mut game.ground);
-		if game.player_can_see(spot) && !game.player_is_at(spot) {
-			let flop_char = game.level.dungeon[row as usize][col as usize].to_char_ignoring_any_monster();
-			if game.level.dungeon[row as usize][col as usize].has_monster() {
-				{
-					let monster = game.mash.monster_at_spot_mut(row, col).expect("monster with spot {spot}");
-					monster.trail_char = chtype::from(flop_char);
-				}
-				let rendered_char = render_system::get_char(&spot);
-				if (rendered_char < 'A') || (rendered_char > 'Z') {
-					render_system::set_char(flop_char, &spot);
-				}
-			} else {
-				render_system::set_char(flop_char, &spot);
-			}
-		}
+		game.render_spot(spot);
 	} else {
 		let obj_name = game.player.to_object_name_with_quantity(obj_id, 1);
 		let msg = format!("the {}vanishes as it hits the ground", obj_name);

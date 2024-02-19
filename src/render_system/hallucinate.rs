@@ -22,17 +22,17 @@ pub fn show_hallucination(game: &mut GameState) {
 	}
 	for obj in game.ground.objects() {
 		let spot = obj.to_spot();
-		let ch = get_ch(&spot);
+		let ch = get_ch(spot);
 		if !game.player_is_at(spot) && !is_monster_ch(ch) && is_object_ch(ch) {
 			let random_ch = gr_obj_ch();
-			set_ch(random_ch, &spot);
+			set_ch(random_ch, spot);
 		}
 	}
 	for monster in &game.mash.monsters {
-		let ch = get_ch(&monster.spot);
+		let ch = get_ch(monster.spot);
 		if is_monster_ch(ch) {
 			let random_ch = get_rand(chtype::from('A'), chtype::from('Z'));
-			set_ch(random_ch, &monster.spot);
+			set_ch(random_ch, monster.spot);
 		}
 	}
 }

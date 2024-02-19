@@ -19,7 +19,7 @@ use crate::r#use::{tele, unblind, unconfuse, unhallucinate};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
 use crate::render_system::darken_room;
-use crate::room::light_up_room;
+use crate::room::{visit_room, visit_spot_area};
 use crate::score::killed_by;
 use crate::throw::Motion;
 use crate::trap::{is_off_screen, search, trap_player};
@@ -77,33 +77,35 @@ pub fn one_move_rogue(dirch: char, pickup: bool, game: &mut GameState) -> MoveRe
 				// tunnel to door
 				game.player.cur_room = game.level.room(row, col);
 				let cur_rn = game.player.cur_room.rn().expect("current room should be the room at rol,col");
-				light_up_room(cur_rn, game);
+				visit_room(cur_rn, game);
 				wake_room(cur_rn, true, row, col, game);
 			}
 			RoomMark::Cavern(_) => {
 				// room to door
-				render_system::show_spot_surroundings(row, col, game);
+				visit_spot_area(row, col, game);
 			}
 		}
 	} else if game.player.cur_cell(&game.level).is_any_door() && to_cell.is_any_tunnel() {
 		// door to tunnel
-		render_system::show_spot_surroundings(row, col, game);
+		visit_spot_area(row, col, game);
 		let rn = game.player.cur_room.rn().expect("player room not an area moving from door to passage");
 		wake_room(rn, false, game.player.rogue.row, game.player.rogue.col, game);
 		darken_room(rn, game);
 		game.player.cur_room = RoomMark::Passage;
 	} else if to_cell.is_any_tunnel() {
 		// tunnel to tunnel.
-		render_system::show_spot_surroundings(row, col, game);
+		visit_spot_area(row, col, game);
 	} else {
 		// room to room, door to room
 	}
-	render_system::show_vacated_spot(game.player.to_spot(), game);
+	let vacated_spot = game.player.to_spot();
+	game.render_spot(vacated_spot);
 	game.player.rogue.row = row;
 	game.player.rogue.col = col;
-	render_system::show_player(game);
+	let occupied_post = game.player.to_spot();
+	game.render_spot(occupied_post);
 	if !game.player.settings.jump {
-		render_system::refresh();
+		render_system::refresh(game);
 	}
 	let player_cell = game.level.dungeon[row as usize][col as usize];
 	if player_cell.has_object() {

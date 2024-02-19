@@ -42,7 +42,7 @@ impl From<Option<usize>> for RoomMark {
 
 impl RoomMark {
 	pub fn is_none(&self) -> bool { self == &Self::None }
-	pub fn is_area(&self) -> bool {
+	pub fn is_cavern(&self) -> bool {
 		if let RoomMark::Cavern(_) = self { true } else { false }
 	}
 	pub fn rn(&self) -> Option<usize> {
@@ -66,6 +66,9 @@ impl RoomMark {
 impl Player {
 	pub fn in_room(&self, row: i64, col: i64, level: &Level) -> bool {
 		self.cur_room == level.room(row, col)
+	}
+	pub fn is_near_spot(&self, spot: DungeonSpot) -> bool {
+		self.is_near(spot.row, spot.col)
 	}
 	pub fn is_near(&self, row: i64, col: i64) -> bool {
 		let row_diff = row - self.rogue.row;
@@ -119,6 +122,7 @@ pub struct Player {
 }
 
 impl Player {
+	pub fn is_blind(&self) -> bool { self.blind.is_active() }
 	pub fn cur_strength(&self) -> isize { self.rogue.str_current }
 	pub fn buffed_strength(&self) -> isize {
 		self.ring_effects.apply_add_strength(self.cur_strength())

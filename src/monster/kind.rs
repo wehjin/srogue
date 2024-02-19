@@ -61,7 +61,7 @@ impl MonsterKind {
 		let random_kind = MonsterKind::LIST[get_rand(0, MonsterKind::LIST.len() - 1)];
 		random_kind.name()
 	}
-	pub fn m_char(&self) -> chtype { chtype::from(self.screen_char()) }
+	pub(crate) fn m_char(&self) -> chtype { chtype::from(self.screen_char()) }
 	pub fn index(&self) -> usize {
 		match self {
 			MonsterKind::Aquator => 0,

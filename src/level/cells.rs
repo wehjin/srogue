@@ -8,6 +8,7 @@ pub struct DungeonCell {
 	material: CellMaterial,
 	object: ObjectWhat,
 	monster: bool,
+	visited: bool,
 }
 
 impl DungeonCell {
@@ -21,6 +22,8 @@ impl DungeonCell {
 }
 
 impl DungeonCell {
+	pub fn is_visited(&self) -> bool { self.visited }
+	pub fn visit(&mut self) { self.visited = true; }
 	pub fn is_any_wall(&self) -> bool { self.material.is_any_wall() }
 	pub fn is_horizontal_wall(&self) -> bool { self.material.is_horizontal_wall() }
 	pub fn is_vertical_wall(&self) -> bool { self.material.is_vertical_wall() }
@@ -59,6 +62,7 @@ impl DungeonCell {
 		material: CellMaterial::None,
 		object: ObjectWhat::None,
 		monster: false,
+		visited: false,
 	};
 	pub fn is_nothing(&self) -> bool { self == &Self::NOTHING }
 	pub fn reset_to_nothing(&mut self) {

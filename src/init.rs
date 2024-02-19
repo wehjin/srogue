@@ -1,5 +1,3 @@
-
-
 use std::io;
 use std::io::Write;
 
@@ -9,17 +7,21 @@ use crate::armors::constants::RINGMAIL;
 use crate::console;
 use crate::console::{Console, ConsoleError};
 use crate::init::InitError::NoConsole;
+use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
 use crate::machdep::md_heed_signals;
 use crate::monster::MonsterMash;
 use crate::objects::{alloc_object, get_food, ObjectPack};
 use crate::pack::{do_wear, do_wield};
 use crate::player::Player;
+use crate::prelude::DungeonSpot;
 use crate::prelude::object_what::ObjectWhat::{Armor, Weapon};
 use crate::random::get_rand;
+use crate::render_system::RenderAction;
 use crate::resources::dialog::PlayerDialog;
 use crate::resources::healer::Healer;
 use crate::ring::ring_stats;
+use crate::room::RoomBounds;
 use crate::save::restore;
 use crate::score::put_scores;
 use crate::settings::Settings;
@@ -61,6 +63,7 @@ pub fn init(settings: Settings) -> Result<InitResult, InitError> {
 		mash: MonsterMash::new(),
 		ground: ObjectPack::new(),
 		next_system: GameSystem::PlayerActions,
+		render_queue: Vec::new(),
 	};
 	if settings.score_only {
 		put_scores(None, &mut game);
@@ -93,6 +96,21 @@ pub struct GameState {
 	pub mash: MonsterMash,
 	pub ground: ObjectPack,
 	pub next_system: GameSystem,
+	pub render_queue: Vec<RenderAction>,
+}
+
+impl GameState {
+	pub fn dungeon_bounds(&self) -> RoomBounds {
+		RoomBounds { top: 1, right: DCOLS as i64 - 1, bottom: DROWS as i64 - 2, left: 0 }
+	}
+	pub fn render<T: AsRef<[RenderAction]>>(&mut self, actions: T) {
+		for action in actions.as_ref() {
+			self.render_queue.push(*action)
+		}
+	}
+	pub fn render_spot(&mut self, spot: DungeonSpot) {
+		self.render(&[RenderAction::Spot(spot)])
+	}
 }
 
 impl GameState {

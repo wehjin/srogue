@@ -1,6 +1,7 @@
 use ncurses::chtype;
 use serde::{Deserialize, Serialize};
 
+use crate::render_system::{FLOOR_CHAR, FLOOR_WITH_HIDDEN_TRAP_CHAR, STAIRS_CHAR, TRAP_CHAR};
 use crate::room::DoorDirection;
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -140,12 +141,12 @@ impl CellMaterial {
 			}
 			CellMaterial::Floor(fix) => {
 				match fix {
-					Fixture::None => '.',
+					Fixture::None => FLOOR_CHAR,
 					Fixture::Trap(viz) => match viz {
-						Visibility::Visible => '^',
-						Visibility::Hidden => '.',
+						Visibility::Visible => TRAP_CHAR,
+						Visibility::Hidden => FLOOR_WITH_HIDDEN_TRAP_CHAR,
 					}
-					Fixture::Stairs => '%',
+					Fixture::Stairs => STAIRS_CHAR,
 				}
 			}
 			CellMaterial::Tunnel(viz, fix) => {
@@ -172,6 +173,14 @@ pub enum Fixture {
 }
 
 impl Fixture {
+	pub fn as_char(&self, ground_char: char) -> char {
+		match self {
+			Fixture::None => ground_char,
+			Fixture::Stairs => '%',
+			Fixture::Trap(Visibility::Visible) => '^',
+			Fixture::Trap(Visibility::Hidden) => ',',
+		}
+	}
 	pub fn is_any_trap(&self) -> bool {
 		match self {
 			Fixture::None => false,

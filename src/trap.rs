@@ -15,7 +15,7 @@ use crate::prelude::ending::Ending;
 use crate::prelude::stat_const::{STAT_HP, STAT_STRENGTH};
 use crate::r#use::{take_a_nap, tele};
 use crate::random::{get_rand, rand_percent};
-use crate::room::{get_dungeon_char, gr_spot};
+use crate::room::gr_spot;
 use crate::score::killed_by;
 use crate::spec_hit::rust;
 use crate::trap::trap_kind::TrapKind;
@@ -269,21 +269,21 @@ pub fn search(n: usize, is_auto: bool, game: &mut GameState) {
 	for _s in 0..n {
 		for i in -1..=1 {
 			for j in -1..=1 {
-				let row = game.player.rogue.row + i;
-				let col = game.player.rogue.col + j;
-				if is_off_screen(row, col) {
+				let spot = DungeonSpot {
+					col: game.player.rogue.row + i,
+					row: game.player.rogue.col + j,
+				};
+				if spot.is_out_of_bounds() {
 					continue;
 				}
-				if game.level.dungeon[row as usize][col as usize].is_any_hidden() {
+				if game.cell_at(spot).is_any_hidden() {
 					if rand_percent(17 + game.player.buffed_exp() as usize) {
-						game.level.dungeon[row as usize][col as usize].set_visible();
-						if game.player.blind.is_inactive() && !game.player.is_at(row, col) {
-							mvaddch(row as i32, col as i32, get_dungeon_char(row, col, game));
-						}
+						game.cell_at_mut(spot).set_visible();
+						game.render_spot(spot);
 						shown += 1;
-						if game.level.dungeon[row as usize][col as usize].is_any_trap() {
+						if game.cell_at(spot).is_any_trap() {
 							game.player.interrupt_and_slurp();
-							game.dialog.message(trap_at(row as usize, col as usize, &game.level).name(), 1);
+							game.dialog.message(trap_at(spot.row as usize, spot.col as usize, &game.level).name(), 1);
 						}
 					}
 				}
@@ -302,5 +302,5 @@ pub fn search(n: usize, is_auto: bool, game: &mut GameState) {
 }
 
 pub fn is_off_screen(row: i64, col: i64) -> bool {
-	row < MIN_ROW || row >= (DROWS - 1) as i64 || col < 0 || col >= DCOLS as i64
+	row < MIN_ROW || row >= ((DROWS as i64) - 1) || col < 0 || col >= (DCOLS as i64)
 }

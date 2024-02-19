@@ -13,7 +13,6 @@ use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::stat_const::STAT_HP;
 use crate::random::rand_percent;
-use crate::render_system;
 use crate::score::killed_by;
 use crate::spec_hit::{check_imitator, cough_up, special_hit};
 use crate::throw::Motion;
@@ -194,7 +193,7 @@ pub fn mon_damage(mon_id: u64, damage: isize, game: &mut GameState) -> MonDamage
 		{
 			let spot = game.mash.monster(mon_id).spot;
 			game.level.cell_mut(spot).set_monster(false);
-			render_system::show_monster_gone(spot, game);
+			game.render_spot(spot);
 		}
 		game.player.fight_monster = None;
 		cough_up(mon_id, game);

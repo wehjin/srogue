@@ -18,7 +18,7 @@ use crate::prelude::stat_const::{STAT_ARMOR, STAT_HP, STAT_HUNGER, STAT_STRENGTH
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
 use crate::ring::un_put_hand;
-use crate::room::{draw_magic_map, light_up_room};
+use crate::room::{draw_magic_map, visit_room, visit_spot_area};
 use crate::scrolls::ScrollKind;
 use crate::trap::is_off_screen;
 
@@ -150,7 +150,7 @@ pub fn read_scroll(game: &mut GameState) {
 						}
 						ScrollKind::MagicMapping => {
 							game.dialog.message("this scroll seems to have a map on it", 0);
-							draw_magic_map(&mut game.mash, &mut game.level);
+							draw_magic_map(game);
 						}
 					}
 					game.player.notes.identify_if_un_called(Scroll, scroll_kind.to_index());
@@ -313,13 +313,13 @@ pub fn relight(game: &mut GameState) {
 	match game.player.cur_room {
 		RoomMark::None => {}
 		RoomMark::Passage => {
-			render_system::show_spot_surroundings(game.player.rogue.row, game.player.rogue.col, game);
+			visit_spot_area(game.player.rogue.row, game.player.rogue.col, game);
 		}
-		RoomMark::Cavern(cur_room) => {
-			light_up_room(cur_room, game);
+		RoomMark::Cavern(rn) => {
+			visit_room(rn, game);
 		}
 	}
-	render_system::show_player(game);
+	game.render_spot(game.player.to_spot());
 }
 
 pub fn take_a_nap(game: &mut GameState) {
