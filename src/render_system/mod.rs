@@ -1,22 +1,19 @@
-use libc::c_int;
-use ncurses::{chtype, clrtoeol, mvaddch, mvaddstr};
-use ncurses::CURSOR_VISIBILITY::{CURSOR_INVISIBLE, CURSOR_VISIBLE};
-
 pub use constants::*;
-pub use hallucinate::*;
 
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::player::RoomMark;
 use crate::prelude::DungeonSpot;
 use crate::render_system::appearance::appearance_for_spot;
+use crate::render_system::backend::get_char;
 use crate::render_system::stats::format_stats;
 use crate::room::RoomBounds;
 
-pub(crate) mod appearance;
 pub(crate) mod animation;
+pub(crate) mod appearance;
+pub(crate) mod backend;
 pub(crate) mod constants;
-mod hallucinate;
+pub(crate) mod hallucinate;
 pub(crate) mod stats;
 
 
@@ -29,62 +26,26 @@ pub enum RenderAction {
 	Init,
 }
 
-
-pub fn erase_screen() {
-	ncurses::clear();
-}
-
 pub fn detect_all_rows() -> Vec<String> {
 	let mut rows = Vec::new();
-	for row in 0..DROWS {
+	for row in 0..DROWS as i64 {
 		// Read the rows in out of the window.
 		let mut chars = Vec::new();
-		for col in 0..DCOLS {
-			let ch = ncurses::mvinch(row as c_int, col as c_int);
-			chars.push(ch as u8);
+		for col in 0..DCOLS as i64 {
+			let spot = DungeonSpot { row, col };
+			let char = get_char(spot);
+			chars.push(char);
 		}
-		rows.push(String::from_utf8(chars).expect("valid utf8"));
+		rows.push(chars.iter().collect());
 	}
 	rows
 }
 
 pub fn render_all_rows<'a>(f: impl Fn(usize) -> &'a str) {
 	for row in 0..DROWS {
-		mvaddstr(row as i32, 0, f(row));
-		clrtoeol();
+		backend::set_row(row, f(row));
 	}
-	ncurses::refresh();
-}
-
-fn set_char(value: char, spot: DungeonSpot) {
-	set_ch(ncurses::chtype::from(value), spot);
-}
-
-fn set_ch(ch: chtype, spot: DungeonSpot) {
-	mvaddch(spot.row as i32, spot.col as i32, ch);
-}
-
-fn get_char(spot: DungeonSpot) -> char {
-	get_ch(spot) as u8 as char
-}
-
-fn get_ch(spot: DungeonSpot) -> chtype {
-	let ch_at_spot = ncurses::mvinch(spot.row as c_int, spot.col as c_int);
-	ch_at_spot
-}
-
-fn swap_char(value: char, spot: DungeonSpot) -> char {
-	swap_ch(ncurses::chtype::from(value), spot) as u8 as char
-}
-
-fn swap_ch(ch: chtype, spot: DungeonSpot) -> chtype {
-	let old_ch = get_ch(spot);
-	set_ch(ch, spot);
-	old_ch
-}
-
-pub fn move_curs(spot: &DungeonSpot) {
-	ncurses::mv(spot.row as i32, spot.col as i32);
+	backend::push_screen();
 }
 
 struct ExpanderBounds {
@@ -131,12 +92,22 @@ impl ExpanderBounds {
 	}
 }
 
+pub(crate) fn show_darkened_room_after_player_exit(vacated_spot: DungeonSpot, game: &mut GameState) {
+	game.render_spot(vacated_spot);
+	if let RoomMark::Cavern(rn) = game.level.room_at_spot(vacated_spot) {
+		darken_room(rn, game);
+	}
+}
+
+pub(crate) fn darken_room(rn: usize, game: &mut GameState) {
+	game.render(&[RenderAction::Room(rn)]);
+}
+
 
 pub fn refresh(game: &mut GameState) {
 	if game.stats_changed {
 		const STATS_ROW: i32 = DROWS as i32 - 1;
-		mvaddstr(STATS_ROW, 0, &format_stats(&game.player));
-		clrtoeol();
+		backend::set_row(STATS_ROW as usize, &format_stats(&game.player));
 		game.stats_changed = false;
 	}
 	if game.render_queue.len() > 0 {
@@ -163,57 +134,22 @@ pub fn refresh(game: &mut GameState) {
 		};
 		match bounds {
 			Some(bounds) if bounds.area() >= 1 => {
-				ncurses::curs_set(CURSOR_INVISIBLE);
+				backend::show_cursor(false);
 				for row in bounds.rows() {
 					for col in bounds.cols() {
 						let spot = DungeonSpot { row, col };
 						let appearance = appearance_for_spot(spot, game);
 						let char = appearance.to_char();
-						set_char(char, spot);
+						backend::set_char(char, spot);
 					}
 				}
-				set_char(PLAYER_CHAR, game.player.to_spot());
-				ncurses::curs_set(CURSOR_VISIBLE);
+				backend::set_char(PLAYER_CHAR, game.player.to_spot());
+				backend::show_cursor(true);
 			}
 			Some(_) | None => {}
 		}
 		game.render_queue.clear();
 	}
-	{
-		let spot = game.player.to_spot();
-		ncurses::mv(spot.row as i32, spot.col as i32);
-	}
-	ncurses::refresh();
-}
-
-pub fn standout(enable: bool) {
-	if enable {
-		ncurses::standout();
-	} else {
-		ncurses::standend();
-	}
-}
-
-pub fn show_cursor(enable: bool) {
-	if enable {
-		ncurses::curs_set(CURSOR_VISIBLE);
-	} else {
-		ncurses::curs_set(CURSOR_INVISIBLE);
-	}
-}
-
-pub fn await_frame() {
-	ncurses::refresh();
-	ncurses::napms(17);
-}
-
-pub(crate) fn show_darkened_room_after_player_exit(vacated_spot: DungeonSpot, game: &mut GameState) {
-	game.render_spot(vacated_spot);
-	if let RoomMark::Cavern(rn) = game.level.room_at_spot(vacated_spot) {
-		darken_room(rn, game);
-	}
-}
-
-pub(crate) fn darken_room(rn: usize, game: &mut GameState) {
-	game.render(&[RenderAction::Room(rn)]);
+	backend::move_cursor(game.player.to_spot());
+	backend::push_screen();
 }

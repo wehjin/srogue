@@ -1,6 +1,7 @@
 use crate::init::GameState;
 use crate::random::get_rand;
-use crate::render_system::{DISGUISE_CHARS, get_char, set_char};
+use crate::render_system::DISGUISE_CHARS;
+use crate::render_system::backend::{get_char, set_char};
 
 pub fn show_hallucination(game: &mut GameState) {
 	if game.player.blind.is_active() {

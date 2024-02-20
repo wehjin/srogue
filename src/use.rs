@@ -16,6 +16,8 @@ use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll,
 use crate::prelude::object_what::PackFilter::{AllObjects, Foods, Potions, Scrolls};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
+use crate::render_system::backend;
+use crate::render_system::hallucinate::show_hallucination;
 use crate::ring::un_put_hand;
 use crate::room::{draw_magic_map, visit_room, visit_spot_area};
 use crate::scrolls::ScrollKind;
@@ -301,7 +303,7 @@ pub fn unblind(game: &mut GameState) {
 	game.dialog.message("the veil of darkness lifts", 1);
 	relight(game);
 	if game.player.halluc.is_active() {
-		render_system::show_hallucination(game);
+		show_hallucination(game);
 	}
 	if game.level.detect_monster {
 		show_monsters(game);
@@ -323,11 +325,11 @@ pub fn relight(game: &mut GameState) {
 
 pub fn take_a_nap(game: &mut GameState) {
 	let mut i = get_rand(2, 5);
-	render_system::await_frame();
+	backend::await_frame();
 	while i > 0 {
 		i -= 1;
 		mv_mons(game);
-		render_system::await_frame()
+		backend::await_frame()
 	}
 	game.dialog.message(YOU_CAN_MOVE_AGAIN, 0);
 }

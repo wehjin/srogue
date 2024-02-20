@@ -1,15 +1,13 @@
-use libc::c_int;
 use ncurses::{addch, chtype, curscr, mvaddstr, wrefresh};
 
 use crate::init::GameState;
 use crate::prelude::*;
+use crate::render_system::backend;
 
+const CTRL_R_CHAR: char = '\u{12}';
 pub const CANCEL: char = '\u{1b}';
 pub const LIST: char = '*';
-
-const X_CHAR: c_int = 'X' as c_int;
-
-const CTRL_R_CHAR: c_int = 0o022 as c_int;
+const X_CHAR: char = 'X';
 
 pub fn get_input_line<T: AsRef<str>>(
 	prompt: &str,
@@ -74,7 +72,7 @@ pub fn get_input_line<T: AsRef<str>>(
 
 pub fn rgetchar() -> char {
 	loop {
-		let ch = ncurses::getch();
+		let ch = backend::read_input_char();
 		match ch {
 			CTRL_R_CHAR => {
 				wrefresh(curscr());

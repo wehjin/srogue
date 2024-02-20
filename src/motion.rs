@@ -18,6 +18,7 @@ use crate::r#use::{tele, unblind, unconfuse, unhallucinate};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
 use crate::render_system::darken_room;
+use crate::render_system::hallucinate::show_hallucination;
 use crate::room::{visit_room, visit_spot_area};
 use crate::score::killed_by;
 use crate::throw::Motion;
@@ -424,7 +425,7 @@ pub fn reg_move(game: &mut GameState) -> bool {
 	if game.player.halluc.is_active() {
 		game.player.halluc.decr();
 		if game.player.halluc.is_active() {
-			render_system::show_hallucination(game);
+			show_hallucination(game);
 		} else {
 			unhallucinate(game);
 		}
