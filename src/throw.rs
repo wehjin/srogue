@@ -16,7 +16,7 @@ use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Weapons;
 use crate::r#use::vanish;
 use crate::random::{get_rand, rand_percent};
-use crate::render_system;
+use crate::render_system::animation;
 use crate::ring::un_put_hand;
 use crate::throw::Motion::{Down, DownLeft, DownRight, Left, Right, Same, Up, UpLeft, UpRight};
 use crate::weapons::constants::ARROW;
@@ -83,7 +83,7 @@ pub fn throw(game: &mut GameState) {
 				un_put_hand(hand, game);
 			}
 			let throw_ending = simulate_throw(Motion::from(dir), game);
-			render_system::animate_throw(obj_id, &throw_ending, game);
+			animation::animate_throw(obj_id, &throw_ending, game);
 			match throw_ending {
 				ThrowEnding::StrikesWall { bounce_spot, .. } => {
 					flop_object_from_spot(obj_id, bounce_spot, game);

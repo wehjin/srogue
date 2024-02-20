@@ -1,5 +1,3 @@
-use ncurses::{chtype, mvaddch, refresh, standend, standout};
-
 use crate::armors::ArmorKind;
 use crate::hit::mon_hit;
 use crate::init::GameState;
@@ -14,7 +12,7 @@ use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
 use crate::r#use::{confuse, vanish};
 use crate::random::{coin_toss, get_rand, rand_percent};
-use crate::render_system;
+use crate::render_system::animation::animate_flame_broil;
 use crate::room::get_room_number;
 use crate::score::killed_by;
 
@@ -383,65 +381,15 @@ pub fn flame_broil(mon_id: u64, game: &mut GameState) -> bool {
 	if !game.mash.monster(mon_id).sees(game.player.rogue.row, game.player.rogue.col, &game.level) || coin_toss() {
 		return false;
 	}
-	{
-		let monster = game.mash.monster(mon_id);
-		let mut delta_row = game.player.rogue.row - monster.spot.row;
-		let mut delta_col = game.player.rogue.col - monster.spot.col;
-		if delta_row < 0 {
-			delta_row = -delta_row;
-		}
-		if delta_col < 0 {
-			delta_col = -delta_col;
-		}
-		if delta_row != 0 && delta_col != 0 && delta_row != delta_col || (delta_row > 7 || delta_col > 7) {
-			return false;
-		}
+	let mon_spot = game.mash.monster_to_spot(mon_id);
+	let player_spot = game.player.to_spot();
+	if !mon_spot.has_attack_vector_to(player_spot) || player_spot.distance_from(mon_spot) > 7 {
+		return false;
 	}
-	let monster = game.mash.monster(mon_id);
-	let row = monster.spot.row;
-	let col = monster.spot.col;
-	if game.player.blind.is_inactive() && !game.player.is_near(row, col) {
-		let mut row = monster.spot.row;
-		let mut col = monster.spot.col;
-		get_closer(&mut row, &mut col, game.player.rogue.row, game.player.rogue.col);
-		standout();
-		loop {
-			// TODO This must be done as an animation like the throw animation.
-			mvaddch(row as i32, col as i32, chtype::from('~'));
-			refresh();
-			get_closer(&mut row, &mut col, game.player.rogue.row, game.player.rogue.col);
-			let stay_looping = row != game.player.rogue.row || col != game.player.rogue.col;
-			if !stay_looping {
-				break;
-			}
-		}
-		standend();
-		row = monster.spot.row;
-		col = monster.spot.col;
-		get_closer(&mut row, &mut col, game.player.rogue.row, game.player.rogue.col);
-		loop {
-			game.render_spot(DungeonSpot { row, col });
-			render_system::refresh(game);
-			get_closer(&mut row, &mut col, game.player.rogue.row, game.player.rogue.col);
-			let stay_looping = row != game.player.rogue.row || col != game.player.rogue.col;
-			if !stay_looping {
-				break;
-			}
-		}
+	if !game.player.is_blind() && !player_spot.is_near(mon_spot) {
+		let path = mon_spot.path_to(player_spot);
+		animate_flame_broil(&path);
 	}
 	mon_hit(mon_id, Some(FLAME_NAME), true, game);
 	return true;
-}
-
-fn get_closer(row: &mut i64, col: &mut i64, trow: i64, tcol: i64) {
-	if *row < trow {
-		*row += 1;
-	} else if *row > trow {
-		*row -= 1;
-	}
-	if *col < tcol {
-		*col += 1;
-	} else if *col > tcol {
-		*col -= 1;
-	}
 }

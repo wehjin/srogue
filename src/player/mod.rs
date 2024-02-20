@@ -67,13 +67,11 @@ impl Player {
 	pub fn in_room(&self, row: i64, col: i64, level: &Level) -> bool {
 		self.cur_room == level.room(row, col)
 	}
-	pub fn is_near_spot(&self, spot: DungeonSpot) -> bool {
-		self.is_near(spot.row, spot.col)
+	pub(crate) fn is_near_spot(&self, spot: DungeonSpot) -> bool {
+		self.to_spot().is_near(spot)
 	}
-	pub fn is_near(&self, row: i64, col: i64) -> bool {
-		let row_diff = row - self.rogue.row;
-		let col_diff = col - self.rogue.col;
-		(row_diff >= -1) && (row_diff <= 1) && (col_diff >= -1) && (col_diff <= 1)
+	pub(crate) fn is_near(&self, row: i64, col: i64) -> bool {
+		self.is_near_spot(DungeonSpot { row, col })
 	}
 	pub fn can_see_spot(&self, spot: &DungeonSpot, level: &Level) -> bool {
 		self.can_see(spot.row, spot.col, level)

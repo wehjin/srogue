@@ -7,17 +7,16 @@ pub use hallucinate::*;
 
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
-use crate::objects::ObjectId;
 use crate::player::RoomMark;
 use crate::prelude::DungeonSpot;
 use crate::render_system::appearance::appearance_for_spot;
 use crate::render_system::stats::format_stats;
 use crate::room::RoomBounds;
-use crate::throw::ThrowEnding;
 
-mod hallucinate;
 pub(crate) mod appearance;
+pub(crate) mod animation;
 pub(crate) mod constants;
+mod hallucinate;
 pub(crate) mod stats;
 
 
@@ -33,19 +32,6 @@ pub enum RenderAction {
 
 pub fn erase_screen() {
 	ncurses::clear();
-}
-
-pub fn animate_throw(obj_id: ObjectId, throw_ending: &ThrowEnding, game: &GameState) {
-	let what = game.player.object_what(obj_id);
-	let ch = ncurses::chtype::from(what.to_char());
-	for spot in throw_ending.flight_path() {
-		if game.player_can_see(*spot) {
-			let restore_ch = swap_ch(ch, *spot);
-			move_curs(spot);
-			await_frame();
-			set_ch(restore_ch, *spot);
-		}
-	}
 }
 
 pub fn detect_all_rows() -> Vec<String> {
@@ -74,16 +60,24 @@ fn set_char(value: char, spot: DungeonSpot) {
 	set_ch(ncurses::chtype::from(value), spot);
 }
 
+fn set_ch(ch: chtype, spot: DungeonSpot) {
+	mvaddch(spot.row as i32, spot.col as i32, ch);
+}
+
+fn get_char(spot: DungeonSpot) -> char {
+	get_ch(spot) as u8 as char
+}
+
 fn get_ch(spot: DungeonSpot) -> chtype {
 	let ch_at_spot = ncurses::mvinch(spot.row as c_int, spot.col as c_int);
 	ch_at_spot
 }
 
-fn set_ch(ch: chtype, spot: DungeonSpot) {
-	mvaddch(spot.row as i32, spot.col as i32, ch);
+fn swap_char(value: char, spot: DungeonSpot) -> char {
+	swap_ch(ncurses::chtype::from(value), spot) as u8 as char
 }
 
-pub fn swap_ch(ch: chtype, spot: DungeonSpot) -> chtype {
+fn swap_ch(ch: chtype, spot: DungeonSpot) -> chtype {
 	let old_ch = get_ch(spot);
 	set_ch(ch, spot);
 	old_ch
@@ -190,6 +184,22 @@ pub fn refresh(game: &mut GameState) {
 		ncurses::mv(spot.row as i32, spot.col as i32);
 	}
 	ncurses::refresh();
+}
+
+pub fn standout(enable: bool) {
+	if enable {
+		ncurses::standout();
+	} else {
+		ncurses::standend();
+	}
+}
+
+pub fn show_cursor(enable: bool) {
+	if enable {
+		ncurses::curs_set(CURSOR_VISIBLE);
+	} else {
+		ncurses::curs_set(CURSOR_INVISIBLE);
+	}
 }
 
 pub fn await_frame() {

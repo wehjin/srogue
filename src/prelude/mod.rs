@@ -22,13 +22,45 @@ pub const MAX_ARMOR: isize = 99;
 pub const MAX_HP: isize = 800;
 pub const MAX_STRENGTH: isize = 99;
 
-#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Default, Hash)]
 pub struct DungeonSpot {
 	pub col: i64,
 	pub row: i64,
 }
 
 impl DungeonSpot {
+	pub fn approach(&mut self, other: DungeonSpot) {
+		if self.row < other.row {
+			self.row += 1;
+		} else if self.row > other.row {
+			self.row -= 1;
+		}
+		if self.col < other.col {
+			self.col += 1;
+		} else if self.col > other.col {
+			self.col -= 1;
+		}
+	}
+	pub fn path_to(&self, other: DungeonSpot) -> Vec<DungeonSpot> {
+		let mut path = Vec::new();
+		let mut spot = self.clone();
+		loop {
+			spot.approach(other);
+			path.push(spot);
+			if spot == other {
+				break;
+			}
+		}
+		path
+	}
+	pub fn has_attack_vector_to(&self, other: DungeonSpot) -> bool {
+		let delta_row = self.row - other.row;
+		let delta_col = self.col - other.col;
+		delta_row == 0 || delta_col == 0 || delta_row.abs() == delta_col.abs()
+	}
+	pub fn is_near(&self, other: DungeonSpot) -> bool {
+		self.distance_from(other) < 2
+	}
 	pub fn distance_from(&self, other: DungeonSpot) -> i64 {
 		let row_delta = other.row - self.row;
 		let col_delta = other.col - self.col;

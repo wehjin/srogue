@@ -76,10 +76,12 @@ impl MonsterMash {
 		let monster = self.monster(id);
 		f(monster)
 	}
+	pub fn monster_to_spot(&self, id: MonsterIndex) -> DungeonSpot {
+		self.monster(id).spot
+	}
 	pub fn monster(&self, id: MonsterIndex) -> &Monster {
 		&self.monsters[&id]
 	}
-
 	pub fn monster_mut(&mut self, id: MonsterIndex) -> &mut Monster {
 		self.monsters.get_mut(&id).expect("id is in monsters")
 	}
