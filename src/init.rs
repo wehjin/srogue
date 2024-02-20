@@ -62,7 +62,7 @@ pub fn init(settings: Settings) -> Result<InitResult, InitError> {
 		level: Level::new(),
 		mash: MonsterMash::default(),
 		ground: ObjectPack::new(),
-		next_system: GameSystem::PlayerActions,
+		turn: GameTurn::Player,
 		render_queue: Vec::new(),
 		stats_changed: true,
 	};
@@ -84,9 +84,9 @@ pub fn init(settings: Settings) -> Result<InitResult, InitError> {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum GameSystem {
-	PlayerActions,
-	MonsterActions,
+pub enum GameTurn {
+	Player,
+	Monsters,
 }
 
 pub struct GameState {
@@ -96,7 +96,7 @@ pub struct GameState {
 	pub level: Level,
 	pub mash: MonsterMash,
 	pub ground: ObjectPack,
-	pub next_system: GameSystem,
+	pub turn: GameTurn,
 	pub render_queue: Vec<RenderAction>,
 	pub stats_changed: bool,
 }
@@ -117,10 +117,10 @@ impl GameState {
 
 impl GameState {
 	pub fn start_player_actions(&mut self) {
-		self.next_system = GameSystem::PlayerActions;
+		self.turn = GameTurn::Player;
 	}
 	pub fn commit_player_turn(&mut self) {
-		self.next_system = GameSystem::MonsterActions;
+		self.turn = GameTurn::Monsters;
 	}
 }
 

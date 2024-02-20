@@ -1,5 +1,5 @@
 use crate::actions::PlayerAction;
-use crate::init::{GameState, GameSystem};
+use crate::init::{GameState, GameTurn};
 use crate::message::CANCEL;
 use crate::pack::{CURSE_MESSAGE, do_wield, pack_letter};
 use crate::prelude::object_what::ObjectWhat::{Armor, Ring};
@@ -37,7 +37,7 @@ impl PlayerAction for Wield {
 					game.player.unwield_weapon();
 					game.dialog.message(&format!("wielding {}", obj_desc), 0);
 					do_wield(obj_id, &mut game.player);
-					game.next_system = GameSystem::MonsterActions;
+					game.turn = GameTurn::Monsters;
 				}
 			}
 		}

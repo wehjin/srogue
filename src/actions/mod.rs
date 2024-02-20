@@ -1,5 +1,12 @@
-use std::collections::HashMap;
+use lazy_static::lazy_static;
 
+use crate::actions::action_set::PlayerActionSet;
+use crate::actions::instruct::Instruct;
+use crate::actions::put_on_ring::PutOnRing;
+use crate::actions::remove_ring::RemoveRing;
+use crate::actions::take_off::TakeOff;
+use crate::actions::wear::Wear;
+use crate::actions::wield::Wield;
 use crate::init::GameState;
 
 pub mod put_on_ring;
@@ -8,34 +15,19 @@ pub mod take_off;
 pub mod wear;
 pub mod wield;
 pub mod instruct;
+pub mod action_set;
 
 pub trait PlayerAction {
 	fn commit(&self, game: &mut GameState);
 }
 
-#[derive(Default)]
-pub struct PlayerActionSet {
-	actions: HashMap<char, Box<dyn PlayerAction>>,
+lazy_static! {
+	pub static ref PLAYER_ACTIONS: PlayerActionSet = PlayerActionSet::new(vec![
+		('P', Box::new(PutOnRing)),
+		('R', Box::new(RemoveRing)),
+		('T', Box::new(TakeOff)),
+		('W', Box::new(Wear)),
+		('w', Box::new(Wield)),
+		('?', Box::new(Instruct)),
+	]);
 }
-
-impl PlayerActionSet {
-	pub fn add(&mut self, key: char, action: Box::<dyn PlayerAction>) {
-		assert!(!self.actions.contains_key(&key));
-		self.actions.insert(key, action);
-	}
-	pub fn get(&self, key: char) -> Option<&Box<dyn PlayerAction>> {
-		self.actions.get(&key)
-	}
-}
-
-impl PlayerActionSet {
-	pub fn new(actions: Vec<(char, Box<dyn PlayerAction>)>) -> Self {
-		let mut set = Self::default();
-		for (key, action) in actions {
-			set.add(key, action);
-		}
-		set
-	}
-}
-
-
