@@ -4,7 +4,7 @@ use rand::thread_rng;
 use crate::hit::{get_hit_chance, get_weapon_damage, mon_damage};
 use crate::init::GameState;
 use crate::level::DungeonCell;
-use crate::message::{CANCEL, print_stats};
+use crate::message::CANCEL;
 use crate::monster::{MonsterIndex, mv_aquatars};
 use crate::motion::{get_dir_or_cancel, is_passable};
 use crate::objects::{Object, ObjectId, place_at};
@@ -14,7 +14,6 @@ use crate::prelude::*;
 use crate::prelude::item_usage::NOT_USED;
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Weapons;
-use crate::prelude::stat_const::STAT_ARMOR;
 use crate::r#use::vanish;
 use crate::random::{get_rand, rand_percent};
 use crate::render_system;
@@ -79,7 +78,7 @@ pub fn throw(game: &mut GameState) {
 			} else if game.player.check_object(obj_id, |it| it.is_being_worn()) {
 				mv_aquatars(game);
 				unwear(&mut game.player);
-				print_stats(STAT_ARMOR, &mut game.player);
+				game.stats_changed = true;
 			} else if let Some(hand) = game.player.ring_hand(obj_id) {
 				un_put_hand(hand, game);
 			}

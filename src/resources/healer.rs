@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::message::print_stats;
-use crate::player::Player;
-use crate::prelude::stat_const::STAT_HP;
+use crate::init::GameState;
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
 pub struct Healer {
@@ -23,15 +21,16 @@ impl Default for Healer {
 	}
 }
 
-impl Healer {
-	pub fn heal(&mut self, player: &mut Player) {
+impl GameState {
+	pub fn heal_player(&mut self) {
+		let player = &mut self.player;
 		if player.rogue.hp_current == player.rogue.hp_max {
-			self.regen_clock = 0;
+			self.healer.regen_clock = 0;
 			return;
 		}
-		if player.rogue.exp != self.heal_level {
-			self.heal_level = player.rogue.exp;
-			self.time_between_heals = match self.heal_level {
+		if player.rogue.exp != self.healer.heal_level {
+			self.healer.heal_level = player.rogue.exp;
+			self.healer.time_between_heals = match self.healer.heal_level {
 				1 => 20,
 				2 => 18,
 				3 => 17,
@@ -46,20 +45,20 @@ impl Healer {
 				_ => 2,
 			}
 		}
-		self.regen_clock += 1;
-		if self.regen_clock >= self.time_between_heals {
-			self.regen_clock = 0;
-			self.double_healing_toggle = !self.double_healing_toggle;
+		self.healer.regen_clock += 1;
+		if self.healer.regen_clock >= self.healer.time_between_heals {
+			self.healer.regen_clock = 0;
+			self.healer.double_healing_toggle = !self.healer.double_healing_toggle;
 
 			player.rogue.hp_current += 1;
-			if self.double_healing_toggle {
+			if self.healer.double_healing_toggle {
 				player.rogue.hp_current += 1;
 			}
 			player.rogue.hp_current += player.ring_effects.regeneration();
 			if player.rogue.hp_current > player.rogue.hp_max {
 				player.rogue.hp_current = player.rogue.hp_max;
 			}
-			print_stats(STAT_HP, player);
+			self.stats_changed = true;
 		}
 	}
 }

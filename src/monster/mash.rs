@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use ncurses::chtype;
 use rand::{RngCore, thread_rng};
 use serde::{Deserialize, Serialize};
 
@@ -226,9 +225,6 @@ impl Monster {
 	}
 	pub fn at_target_spot(&self) -> bool {
 		self.target_spot == Some(self.spot)
-	}
-	pub fn m_char(&self) -> chtype {
-		self.kind.m_char()
 	}
 	pub fn as_char(&self) -> char {
 		self.kind.screen_char()

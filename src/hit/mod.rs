@@ -3,7 +3,7 @@ pub use damage_stat::*;
 use crate::init::GameState;
 use crate::level::add_exp;
 use crate::level::constants::{DCOLS, DROWS};
-use crate::message::{CANCEL, print_stats, rgetchar, sound_bell};
+use crate::message::{CANCEL, rgetchar, sound_bell};
 use crate::monster::{mon_name, Monster};
 use crate::motion::{can_move, is_direction, one_move_rogue};
 use crate::objects::{get_armor_class, Object};
@@ -11,7 +11,6 @@ use crate::player::Player;
 use crate::prelude::{AMULET_LEVEL, MIN_ROW};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
-use crate::prelude::stat_const::STAT_HP;
 use crate::random::rand_percent;
 use crate::score::killed_by;
 use crate::spec_hit::{check_imitator, cough_up, special_hit};
@@ -132,11 +131,11 @@ pub fn rogue_hit(mon_id: u64, force_hit: bool, game: &mut GameState) {
 pub fn rogue_damage(d: isize, mon_id: u64, game: &mut GameState) {
 	if d >= game.player.rogue.hp_current {
 		game.player.rogue.hp_current = 0;
-		print_stats(STAT_HP, &mut game.player);
+		game.stats_changed = true;
 		killed_by(Ending::Monster(game.mash.monster(mon_id).name().to_string()), game);
 	}
 	game.player.rogue.hp_current -= d;
-	print_stats(STAT_HP, &mut game.player);
+	game.stats_changed = true;
 }
 
 

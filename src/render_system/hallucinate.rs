@@ -2,7 +2,7 @@ use ncurses::chtype;
 
 use crate::init::GameState;
 use crate::random::get_rand;
-use crate::render_system::{get_ch, gr_obj_ch, set_ch};
+use crate::render_system::{DISGUISE_CHARS, get_ch, set_ch};
 
 pub fn show_hallucination(game: &mut GameState) {
 	if game.player.blind.is_active() {
@@ -38,3 +38,10 @@ pub fn show_hallucination(game: &mut GameState) {
 }
 
 
+pub(crate) fn gr_obj_char() -> char {
+	let index = get_rand(0, DISGUISE_CHARS.len() - 1);
+	let char = DISGUISE_CHARS[index];
+	char
+}
+
+pub(crate) fn gr_obj_ch() -> chtype { chtype::from(gr_obj_char()) }

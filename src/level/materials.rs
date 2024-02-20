@@ -1,4 +1,3 @@
-use ncurses::chtype;
 use serde::{Deserialize, Serialize};
 
 use crate::render_system::{FLOOR_CHAR, FLOOR_WITH_HIDDEN_TRAP_CHAR, STAIRS_CHAR, TRAP_CHAR};
@@ -122,9 +121,6 @@ impl Default for CellMaterial {
 }
 
 impl CellMaterial {
-	pub fn to_chtype(&self) -> chtype {
-		chtype::from(self.to_char())
-	}
 	pub fn to_char(&self) -> char {
 		match self {
 			CellMaterial::None => ' ',

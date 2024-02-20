@@ -1,9 +1,8 @@
-
-
 use crate::init::GameState;
 use crate::inventory::{get_obj_desc, inventory};
-use crate::message::{CANCEL, get_input_line, LIST, print_stats, rgetchar, sound_bell};
+use crate::message::{CANCEL, get_input_line, LIST, rgetchar, sound_bell};
 use crate::monster::mv_aquatars;
+use crate::motion::reg_move;
 use crate::objects::{Object, ObjectId, ObjectPack, place_at, Title};
 use crate::objects::NoteStatus::{Called, Identified, Unidentified};
 use crate::player::Player;
@@ -12,8 +11,6 @@ use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::object_what::ObjectWhat::{Food, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
-use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD};
-use crate::motion::reg_move;
 use crate::ring::un_put_hand;
 use crate::scrolls::ScrollKind::ScareMonster;
 use crate::weapons::kind::WeaponKind;
@@ -46,7 +43,7 @@ pub fn pick_up(row: i64, col: i64, game: &mut GameState) -> PickUpResult {
 		game.player.rogue.gold += quantity;
 		game.level.dungeon[row as usize][col as usize].clear_object();
 		let removed = game.ground.remove(obj_id).expect("remove level object");
-		print_stats(STAT_GOLD, &mut game.player);
+		game.stats_changed = true;
 		PickUpResult::AddedToGold(removed)
 	} else if game.player.pack_weight_with_new_object(game.ground.object(obj_id))
 		>= MAX_PACK_COUNT {
@@ -107,7 +104,7 @@ pub fn drop_0(game: &mut GameState) {
 				}
 				mv_aquatars(game);
 				unwear(&mut game.player);
-				print_stats(STAT_ARMOR, &mut game.player);
+				game.stats_changed = true;
 			} else if let Some(hand) = game.player.ring_hand(obj_id) {
 				if game.player.check_ring(hand, Object::is_cursed) {
 					game.dialog.message(CURSE_MESSAGE, 0);

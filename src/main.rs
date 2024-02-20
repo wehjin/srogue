@@ -3,11 +3,9 @@
 use crate::console::ConsoleError;
 use crate::init::{init, InitError, InitResult};
 use crate::level::{clear_level, make_level, put_player};
-use crate::message::print_stats;
 use crate::monster::put_mons;
 use crate::objects::{put_objects, put_stairs};
 use crate::play::{play_level, PlayResult};
-use crate::prelude::stat_const::STAT_ALL;
 use crate::settings::SettingsError;
 use crate::trap::add_traps;
 
@@ -34,6 +32,7 @@ mod room;
 mod save;
 mod score;
 mod spec_hit;
+mod systems;
 mod throw;
 mod trap;
 mod r#use;
@@ -99,7 +98,7 @@ pub fn main() {
 			add_traps(&game.player, &mut game.level);
 			put_mons(&mut game);
 			put_player(game.level.party_room.into(), &mut game);
-			print_stats(STAT_ALL, &mut game.player);
+			game.stats_changed = true;
 		}
 		restored = false;
 		match play_level(&mut game) {

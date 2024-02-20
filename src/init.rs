@@ -64,6 +64,7 @@ pub fn init(settings: Settings) -> Result<InitResult, InitError> {
 		ground: ObjectPack::new(),
 		next_system: GameSystem::PlayerActions,
 		render_queue: Vec::new(),
+		stats_changed: true,
 	};
 	if settings.score_only {
 		put_scores(None, &mut game);
@@ -97,6 +98,7 @@ pub struct GameState {
 	pub ground: ObjectPack,
 	pub next_system: GameSystem,
 	pub render_queue: Vec<RenderAction>,
+	pub stats_changed: bool,
 }
 
 impl GameState {

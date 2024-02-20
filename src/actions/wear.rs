@@ -1,10 +1,9 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
-use crate::message::{CANCEL, print_stats};
+use crate::message::CANCEL;
 use crate::pack::{do_wear, pack_letter};
 use crate::prelude::object_what::ObjectWhat::Armor;
 use crate::prelude::object_what::PackFilter::Armors;
-use crate::prelude::stat_const::STAT_ARMOR;
 
 pub struct Wear;
 
@@ -33,7 +32,7 @@ impl PlayerAction for Wear {
 				let obj_desc = game.player.get_obj_desc(obj_id);
 				game.dialog.message(&format!("wearing {}", obj_desc), 0);
 				do_wear(obj_id, &mut game.player);
-				print_stats(STAT_ARMOR, &mut game.player);
+				game.stats_changed = true;
 				game.commit_player_turn();
 			}
 		};

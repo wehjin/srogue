@@ -164,15 +164,3 @@ pub mod food_kind {
 	pub const RATION: u16 = 0;
 	pub const FRUIT: u16 = 1;
 }
-
-pub mod stat_const {
-	pub const STAT_LEVEL: usize = 0o1;
-	pub const STAT_GOLD: usize = 0o2;
-	pub const STAT_HP: usize = 0o4;
-	pub const STAT_STRENGTH: usize = 0o10;
-	pub const STAT_ARMOR: usize = 0o20;
-	pub const STAT_EXP: usize = 0o40;
-	pub const STAT_HUNGER: usize = 0o100;
-	pub const STAT_LABEL: usize = 0o200;
-	pub const STAT_ALL: usize = 0o377;
-}

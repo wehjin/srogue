@@ -6,7 +6,7 @@ use crate::init::GameState;
 use crate::inventory::get_obj_desc;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
-use crate::message::{CANCEL, print_stats, rgetchar, sound_bell};
+use crate::message::{CANCEL, rgetchar, sound_bell};
 use crate::monster::{mv_mons, put_wanderer, wake_room};
 use crate::motion::MoveResult::{Moved, StoppedOnSomething};
 use crate::odds::R_TELE_PERCENT;
@@ -14,7 +14,6 @@ use crate::pack::{pick_up, PickUpResult};
 use crate::player::{Player, RoomMark};
 use crate::prelude::{DungeonSpot, MIN_ROW};
 use crate::prelude::ending::Ending;
-use crate::prelude::stat_const::STAT_HUNGER;
 use crate::r#use::{tele, unblind, unconfuse, unhallucinate};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
@@ -373,7 +372,7 @@ pub fn check_hunger(game: &mut GameState) -> HungerCheckResult {
 	if let Some(next_hunger) = get_hunger_transition_with_burn_count(game.player.rogue.moves_left, moves_to_burn) {
 		game.player.hunger = next_hunger;
 		game.dialog.message(&game.player.hunger.as_str(), 0);
-		print_stats(STAT_HUNGER, &mut game.player);
+		game.stats_changed = true;
 	}
 
 	if game.player.hunger == HungerLevel::Starved {
@@ -461,7 +460,7 @@ pub fn reg_move(game: &mut GameState) -> bool {
 			game.dialog.message("you feel yourself slowing down", 0);
 		}
 	}
-	game.healer.heal(&mut game.player);
+	game.heal_player();
 	{
 		let auto_search = game.player.ring_effects.auto_search();
 		if auto_search > 0 {

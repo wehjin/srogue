@@ -11,10 +11,7 @@ pub fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
 	match potion_kind {
 		PotionKind::IncreaseStrength => {
 			game.dialog.message("you feel stronger now, what bulging muscles!", 0);
-			game.player.rogue.str_current += 1;
-			if game.player.rogue.str_current > game.player.rogue.str_max {
-				game.player.rogue.str_max = game.player.rogue.str_current;
-			}
+			game.player.raise_strength();
 		}
 		PotionKind::RestoreStrength => {
 			game.player.rogue.str_current = game.player.rogue.str_max;
@@ -104,16 +101,15 @@ pub fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
 
 fn potion_heal(extra: bool, game: &mut GameState) {
 	game.player.rogue.hp_current += game.player.rogue.exp;
-
 	let mut ratio = game.player.rogue.hp_current as f32 / game.player.rogue.hp_max as f32;
 	if ratio >= 1.00 {
 		let raise_max = if extra { 2 } else { 1 };
-		game.player.rogue.hp_max += raise_max;
+		game.player.raise_hp_max(raise_max);
 		game.player.extra_hp += raise_max;
 		game.player.rogue.hp_current = game.player.rogue.hp_max;
 	} else if ratio >= 0.90 {
 		let raise_max = if extra { 1 } else { 0 };
-		game.player.rogue.hp_max += raise_max;
+		game.player.raise_hp_max(raise_max);
 		game.player.extra_hp += raise_max;
 		game.player.rogue.hp_current = game.player.rogue.hp_max;
 	} else {

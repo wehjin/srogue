@@ -6,12 +6,11 @@ use crate::hit::{DamageEffect, DamageStat, get_damage, get_dir_rc};
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
 use crate::level::Level;
-use crate::message::{CANCEL, print_stats, rgetchar, sound_bell};
+use crate::message::{CANCEL, rgetchar, sound_bell};
 use crate::motion::{is_direction, reg_move};
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
-use crate::prelude::stat_const::{STAT_HP, STAT_STRENGTH};
 use crate::r#use::{take_a_nap, tele};
 use crate::random::{get_rand, rand_percent};
 use crate::room::gr_spot;
@@ -140,7 +139,7 @@ pub fn trap_player(row: usize, col: usize, game: &mut GameState) {
 			if !game.player.ring_effects.has_sustain_strength() && rand_percent(40) && game.player.rogue.str_current >= 3 {
 				game.player.rogue.str_current -= 1;
 			}
-			print_stats(STAT_HP | STAT_STRENGTH, &mut game.player);
+			game.stats_changed = true;
 			if game.player.rogue.hp_current <= 0 {
 				killed_by(Ending::PoisonDart, game);
 			}

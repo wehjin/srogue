@@ -1,10 +1,8 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
-use crate::message::print_stats;
 use crate::monster::mv_aquatars;
 use crate::objects::Object;
 use crate::pack::{CURSE_MESSAGE, unwear};
-use crate::prelude::stat_const::STAT_ARMOR;
 
 pub struct TakeOff;
 
@@ -21,7 +19,7 @@ impl PlayerAction for TakeOff {
 					let msg = format!("was wearing {}", obj_desc);
 					game.dialog.message(&msg, 0);
 				}
-				print_stats(STAT_ARMOR, &mut game.player);
+				game.stats_changed = true;
 				game.commit_player_turn();
 			}
 		} else {

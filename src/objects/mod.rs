@@ -24,7 +24,7 @@ use crate::player::Player;
 use crate::potions::colors::PotionColor;
 use crate::potions::kind::{PotionKind, POTIONS};
 use crate::potions::kind::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
-use crate::prelude::DungeonSpot;
+use crate::prelude::{DungeonSpot, MAX_ARMOR};
 use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::item_usage::{BEING_USED, BEING_WIELDED, BEING_WORN, NOT_USED, ON_EITHER_HAND, ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat;
@@ -179,6 +179,9 @@ impl Object {
 		} else {
 			None
 		}
+	}
+	pub fn raise_armor_enchant(&mut self, raise: isize) {
+		self.d_enchant = (self.d_enchant + raise).min(MAX_ARMOR);
 	}
 	pub fn base_damage(&self) -> DamageStat {
 		if let Some(kind) = self.weapon_kind() {
@@ -482,23 +485,23 @@ pub fn gr_weapon(obj: &mut Object, assign_wk: bool) {
 }
 
 pub fn gr_armor(obj: &mut Object) {
-	(*obj).what_is = Armor;
-	(*obj).which_kind = get_rand(0, (ARMORS - 1) as u16);
-	(*obj).class = ((*obj).which_kind + 2) as isize;
-	if ((*obj).which_kind == PLATE) || ((*obj).which_kind == SPLINT) {
-		(*obj).class -= 1;
+	obj.what_is = Armor;
+	obj.which_kind = get_rand(0, (ARMORS - 1) as u16);
+	obj.class = (obj.which_kind + 2) as isize;
+	if obj.which_kind == PLATE || obj.which_kind == SPLINT {
+		obj.class -= 1;
 	}
-	(*obj).is_protected = 0;
-	(*obj).d_enchant = 0;
+	obj.is_protected = 0;
+	obj.d_enchant = 0;
 
 	let percent = get_rand(1, 100);
 	let blessing = get_rand(1, 3);
 
 	if percent <= 16 {
-		(*obj).is_cursed = 1;
-		(*obj).d_enchant -= blessing;
+		obj.is_cursed = 1;
+		obj.d_enchant -= blessing;
 	} else if percent <= 33 {
-		(*obj).d_enchant += blessing;
+		obj.raise_armor_enchant(blessing);
 	}
 }
 

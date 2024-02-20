@@ -2,12 +2,11 @@ use constants::RINGS;
 use ring_kind::RingKind;
 
 use crate::init::GameState;
-use crate::message::{CANCEL, print_stats, rgetchar};
+use crate::message::{CANCEL, rgetchar};
 use crate::objects::{Object, ObjectId};
 use crate::player::rings::HandUsage;
 use crate::prelude::item_usage::{ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat::Ring;
-use crate::prelude::stat_const::STAT_STRENGTH;
 use crate::r#use::relight;
 use crate::random::{coin_toss, get_rand};
 
@@ -177,7 +176,7 @@ pub fn ring_stats(print: bool, game: &mut GameState) {
 		}
 	}
 	if print {
-		print_stats(STAT_STRENGTH, &mut game.player);
+		game.stats_changed = true;
 		relight(game);
 	}
 }

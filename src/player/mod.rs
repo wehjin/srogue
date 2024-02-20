@@ -9,7 +9,7 @@ use crate::objects::{Object, ObjectId, ObjectPack};
 use crate::objects::note_tables::NoteTables;
 use crate::pack::{check_duplicate, next_avail_ichar};
 use crate::player::effects::TimeEffect;
-use crate::prelude::{DungeonSpot, MAX_ARMOR, MAX_GOLD};
+use crate::prelude::{DungeonSpot, MAX_GOLD, MAX_HP, MAX_STRENGTH};
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::object_what::ObjectWhat;
 use crate::ring::effects::RingEffects;
@@ -123,10 +123,21 @@ pub struct Player {
 
 impl Player {
 	pub fn is_blind(&self) -> bool { self.blind.is_active() }
-	pub fn cur_strength(&self) -> isize { self.rogue.str_current }
 	pub fn buffed_strength(&self) -> isize {
 		self.ring_effects.apply_add_strength(self.cur_strength())
 	}
+	pub fn raise_hp_max(&mut self, raise: isize) {
+		self.rogue.hp_max = (self.rogue.hp_max + raise).min(MAX_HP);
+	}
+	pub fn cur_strength(&self) -> isize { self.rogue.str_current }
+	pub fn max_strength(&self) -> isize { self.rogue.str_max }
+	pub fn raise_strength(&mut self) {
+		self.rogue.str_current = (self.rogue.str_current + 1).min(MAX_STRENGTH);
+		if self.rogue.str_current > self.rogue.str_max {
+			self.rogue.str_max = self.rogue.str_current;
+		}
+	}
+
 	pub fn exp(&self) -> isize { self.rogue.exp }
 	pub fn buffed_exp(&self) -> isize {
 		self.ring_effects.apply_dexterity(self.exp())
@@ -213,13 +224,6 @@ impl Player {
 		}
 	}
 
-	pub fn maintain_armor_max_enchant(&mut self) {
-		if let Some(armor) = self.armor_mut() {
-			if armor.d_enchant > MAX_ARMOR {
-				armor.d_enchant = MAX_ARMOR
-			}
-		}
-	}
 	pub fn unwield_weapon(&mut self) {
 		if let Some(obj) = self.weapon_mut() {
 			obj.in_use_flags &= !BEING_WIELDED;

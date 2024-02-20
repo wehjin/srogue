@@ -1,5 +1,4 @@
 use libc::c_int;
-use ncurses::{mv, refresh};
 
 use crate::actions::instruct::Instruct;
 use crate::actions::PlayerActionSet;
@@ -73,8 +72,7 @@ pub fn play_level(game: &mut GameState) -> PlayResult {
 						game.level.trap_door = false;
 						return PlayResult::TrapDoorDown;
 					}
-					mv(game.player.rogue.row as i32, game.player.rogue.col as i32);
-					refresh();
+					render_system::refresh(game);
 					let ch = rgetchar();
 					game.dialog.clear_message();
 					count = 0;
@@ -140,8 +138,7 @@ pub fn play_level(game: &mut GameState) -> PlayResult {
 					}
 				}
 				'0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
-					mv(game.player.rogue.row as i32, game.player.rogue.col as i32);
-					refresh();
+					render_system::refresh(game);
 					let mut count_ch = ch;
 					loop {
 						if count < 100 {

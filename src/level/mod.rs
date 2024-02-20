@@ -10,14 +10,12 @@ use UpResult::{KeepLevel, WonGame};
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM, MAX_TRAP};
 use crate::level::UpResult::UpLevel;
-use crate::message::print_stats;
 use crate::monster::wake_room;
 use crate::objects::put_amulet;
 use crate::pack::has_amulet;
 use crate::player::{Player, RoomMark};
 use crate::player::constants::INIT_HP;
 use crate::prelude::*;
-use crate::prelude::stat_const::{STAT_EXP, STAT_HP};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
 use crate::room::{DoorDirection, gr_spot, is_all_connected, Room, RoomBounds, RoomType, visit_room, visit_spot_area};
@@ -691,27 +689,25 @@ pub fn check_up(game: &mut GameState) -> UpResult {
 }
 
 pub fn add_exp(e: isize, promotion: bool, game: &mut GameState) {
-	let player = &mut game.player;
-	player.rogue.exp_points += e;
-
-	if player.rogue.exp_points >= LEVEL_POINTS[(player.rogue.exp - 1) as usize] {
-		let new_exp = get_exp_level(player.rogue.exp_points);
-		if player.rogue.exp_points > MAX_EXP {
-			player.rogue.exp_points = MAX_EXP + 1;
+	game.player.rogue.exp_points += e;
+	if game.player.rogue.exp_points >= LEVEL_POINTS[(game.player.rogue.exp - 1) as usize] {
+		let new_exp = get_exp_level(game.player.rogue.exp_points);
+		if game.player.rogue.exp_points > MAX_EXP {
+			game.player.rogue.exp_points = MAX_EXP + 1;
 		}
-		for i in (player.rogue.exp + 1)..=new_exp {
+		for i in (game.player.rogue.exp + 1)..=new_exp {
 			let msg = format!("welcome to level {}", i);
 			game.dialog.message(&msg, 0);
 			if promotion {
-				let hp = hp_raise(player);
-				player.rogue.hp_current += hp;
-				player.rogue.hp_max += hp;
+				let hp = hp_raise(&mut game.player);
+				game.player.rogue.hp_current += hp;
+				game.player.rogue.hp_max += hp;
 			}
-			player.rogue.exp = i;
-			print_stats(STAT_HP | STAT_EXP, player);
+			game.player.rogue.exp = i;
+			game.stats_changed = true;
 		}
 	} else {
-		print_stats(STAT_EXP, player);
+		game.stats_changed = true;
 	}
 }
 

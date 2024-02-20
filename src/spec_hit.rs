@@ -6,14 +6,12 @@ use crate::init::GameState;
 use crate::inventory::get_obj_desc;
 use crate::level::{add_exp, hp_raise, Level, LEVEL_POINTS};
 use crate::level::constants::{DCOLS, DROWS};
-use crate::message::print_stats;
 use crate::monster::{mon_can_go, mon_name, MonsterMash, move_mon_to, mv_mons, mv_monster};
 use crate::motion::YOU_CAN_MOVE_AGAIN;
 use crate::objects::{alloc_object, get_armor_class, gr_object, Object, ObjectPack, place_at};
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
-use crate::prelude::stat_const::{STAT_ARMOR, STAT_GOLD, STAT_HP, STAT_STRENGTH};
 use crate::r#use::{confuse, vanish};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
@@ -71,7 +69,7 @@ pub fn rust(mon_id: Option<u64>, game: &mut GameState) {
 	} else {
 		armor.d_enchant -= 1;
 		game.dialog.message("your armor weakens", 0);
-		print_stats(STAT_ARMOR, &mut game.player);
+		game.stats_changed = true;
 	}
 }
 
@@ -114,7 +112,7 @@ fn steal_gold(mon_id: u64, game: &mut GameState) {
 	let amount = get_rand(cur_depth * 10, cur_depth * 30).min(game.player.rogue.gold);
 	game.player.rogue.gold -= amount;
 	game.dialog.message("your purse feels lighter", 0);
-	print_stats(STAT_GOLD, &mut game.player);
+	game.stats_changed = true;
 	disappear(mon_id, game);
 }
 
@@ -307,7 +305,7 @@ fn sting(mon_id: u64, game: &mut GameState) {
 		let name = mon_name(game.mash.monster(mon_id), &game.player, &game.level);
 		game.dialog.message(&format!("the {}'s bite has weakened you", name), 0);
 		game.player.rogue.str_current -= 1;
-		print_stats(STAT_STRENGTH, &mut game.player);
+		game.stats_changed = true;
 	}
 }
 
@@ -354,7 +352,7 @@ fn drain_life(game: &mut GameState) {
 			}
 		}
 	}
-	print_stats(STAT_STRENGTH | STAT_HP, &mut game.player);
+	game.stats_changed = true;
 }
 
 pub fn m_confuse(mon_id: u64, game: &mut GameState) -> bool {

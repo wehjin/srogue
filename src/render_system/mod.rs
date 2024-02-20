@@ -1,5 +1,5 @@
 use libc::c_int;
-use ncurses::{chtype, mvaddch};
+use ncurses::{chtype, clrtoeol, mvaddch, mvaddstr};
 use ncurses::CURSOR_VISIBILITY::{CURSOR_INVISIBLE, CURSOR_VISIBLE};
 
 pub use constants::*;
@@ -10,14 +10,16 @@ use crate::level::constants::{DCOLS, DROWS};
 use crate::objects::ObjectId;
 use crate::player::RoomMark;
 use crate::prelude::DungeonSpot;
-use crate::random::get_rand;
 use crate::render_system::appearance::appearance_for_spot;
+use crate::render_system::stats::format_stats;
 use crate::room::RoomBounds;
 use crate::throw::ThrowEnding;
 
 mod hallucinate;
-pub(crate) mod constants;
 pub(crate) mod appearance;
+pub(crate) mod constants;
+pub(crate) mod stats;
+
 
 #[derive(Copy, Clone)]
 pub enum RenderAction {
@@ -28,13 +30,6 @@ pub enum RenderAction {
 	Init,
 }
 
-pub fn gr_obj_char() -> char {
-	let index = get_rand(0, DISGUISE_CHARS.len() - 1);
-	let char = DISGUISE_CHARS[index];
-	char
-}
-
-pub fn gr_obj_ch() -> chtype { chtype::from(gr_obj_char()) }
 
 pub fn erase_screen() {
 	ncurses::clear();
@@ -69,8 +64,8 @@ pub fn detect_all_rows() -> Vec<String> {
 
 pub fn render_all_rows<'a>(f: impl Fn(usize) -> &'a str) {
 	for row in 0..DROWS {
-		ncurses::mvaddstr(row as i32, 0, f(row));
-		ncurses::clrtoeol();
+		mvaddstr(row as i32, 0, f(row));
+		clrtoeol();
 	}
 	ncurses::refresh();
 }
@@ -144,44 +139,56 @@ impl ExpanderBounds {
 
 
 pub fn refresh(game: &mut GameState) {
-	let mut expander_bounds = ExpanderBounds::default();
-	let mut use_dungeon_bounds = false;
-	for action in &game.render_queue {
-		match action {
-			RenderAction::Spot(spot) => {
-				expander_bounds.expand_spot(*spot);
-			}
-			RenderAction::MonstersFloorAndPlayer
-			| RenderAction::RoomAndPlayer(_)
-			| RenderAction::Room(_)
-			| RenderAction::Init => {
-				use_dungeon_bounds = true;
-				break;
-			}
-		}
+	if game.stats_changed {
+		const STATS_ROW: i32 = DROWS as i32 - 1;
+		mvaddstr(STATS_ROW, 0, &format_stats(&game.player));
+		clrtoeol();
+		game.stats_changed = false;
 	}
-	let bounds = if use_dungeon_bounds {
-		Some(game.dungeon_bounds())
-	} else {
-		expander_bounds.into_dungeon_bounds()
-	};
-	match bounds {
-		Some(bounds) if bounds.area() >= 1 => {
-			ncurses::curs_set(CURSOR_INVISIBLE);
-			for row in bounds.rows() {
-				for col in bounds.cols() {
-					let spot = DungeonSpot { row, col };
-					let appearance = appearance_for_spot(spot, game);
-					let char = appearance.to_char();
-					set_char(char, spot);
+	if game.render_queue.len() > 0 {
+		let mut expander_bounds = ExpanderBounds::default();
+		let mut use_dungeon_bounds = false;
+		for action in &game.render_queue {
+			match action {
+				RenderAction::Spot(spot) => {
+					expander_bounds.expand_spot(*spot);
+				}
+				RenderAction::MonstersFloorAndPlayer
+				| RenderAction::RoomAndPlayer(_)
+				| RenderAction::Room(_)
+				| RenderAction::Init => {
+					use_dungeon_bounds = true;
+					break;
 				}
 			}
-			set_char(PLAYER_CHAR, game.player.to_spot());
-			ncurses::curs_set(CURSOR_VISIBLE);
 		}
-		Some(_) | None => {}
+		let bounds = if use_dungeon_bounds {
+			Some(game.dungeon_bounds())
+		} else {
+			expander_bounds.into_dungeon_bounds()
+		};
+		match bounds {
+			Some(bounds) if bounds.area() >= 1 => {
+				ncurses::curs_set(CURSOR_INVISIBLE);
+				for row in bounds.rows() {
+					for col in bounds.cols() {
+						let spot = DungeonSpot { row, col };
+						let appearance = appearance_for_spot(spot, game);
+						let char = appearance.to_char();
+						set_char(char, spot);
+					}
+				}
+				set_char(PLAYER_CHAR, game.player.to_spot());
+				ncurses::curs_set(CURSOR_VISIBLE);
+			}
+			Some(_) | None => {}
+		}
+		game.render_queue.clear();
 	}
-	game.render_queue.clear();
+	{
+		let spot = game.player.to_spot();
+		ncurses::mv(spot.row as i32, spot.col as i32);
+	}
 	ncurses::refresh();
 }
 

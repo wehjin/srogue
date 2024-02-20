@@ -1,16 +1,15 @@
 use libc::c_int;
-use ncurses::{addch, chtype, clrtoeol, curscr, mvaddstr, wrefresh};
+use ncurses::{addch, chtype, curscr, mvaddstr, wrefresh};
 
-use crate::components::hunger::HungerLevel;
 use crate::init::GameState;
-use crate::level::constants::DROWS;
-use crate::objects::get_armor_class;
-use crate::player::Player;
 use crate::prelude::*;
-use crate::prelude::stat_const::{STAT_ARMOR, STAT_EXP, STAT_GOLD, STAT_HP, STAT_HUNGER, STAT_LABEL, STAT_LEVEL, STAT_STRENGTH};
 
 pub const CANCEL: char = '\u{1b}';
 pub const LIST: char = '*';
+
+const X_CHAR: c_int = 'X' as c_int;
+
+const CTRL_R_CHAR: c_int = 0o022 as c_int;
 
 pub fn get_input_line<T: AsRef<str>>(
 	prompt: &str,
@@ -73,9 +72,6 @@ pub fn get_input_line<T: AsRef<str>>(
 	}
 }
 
-const X_CHAR: c_int = 'X' as c_int;
-const CTRL_R_CHAR: c_int = 0o022 as c_int;
-
 pub fn rgetchar() -> char {
 	loop {
 		let ch = ncurses::getch();
@@ -90,84 +86,6 @@ pub fn rgetchar() -> char {
 				return ch as u8 as char;
 			}
 		}
-	}
-}
-
-pub fn print_stats(stat_mask: usize, player: &mut Player) {
-	const STATS_ROW: i32 = DROWS as i32 - 1;
-	let label = if stat_mask & STAT_LABEL != 0 { true } else { false };
-
-	if stat_mask & STAT_LEVEL != 0 {
-		if label {
-			mvaddstr(STATS_ROW, 0, "Level: ");
-		}
-		let s = format!("{}", player.cur_depth);
-		mvaddstr(STATS_ROW, 7, &s);
-		pad(&s, 2);
-	}
-	if stat_mask & STAT_GOLD != 0 {
-		if label {
-			player.maintain_max_gold();
-			mvaddstr(STATS_ROW, 10, "Gold: ");
-		}
-		let s = format!("{}", player.gold());
-		mvaddstr(STATS_ROW, 16, &s);
-		pad(&s, 6);
-	}
-	if stat_mask & STAT_HP != 0 {
-		if label {
-			mvaddstr(STATS_ROW, 23, "Hp: ");
-			if player.rogue.hp_max > MAX_HP {
-				player.rogue.hp_current -= player.rogue.hp_max - MAX_HP;
-				player.rogue.hp_max = MAX_HP;
-			}
-		}
-		let s = format!("{}({})", player.rogue.hp_current, player.rogue.hp_max);
-		mvaddstr(STATS_ROW, 27, &s);
-		pad(&s, 8);
-	}
-	if stat_mask & STAT_STRENGTH != 0 {
-		if label {
-			mvaddstr(STATS_ROW, 36, "Str: ");
-		}
-		if player.rogue.str_max > MAX_STRENGTH {
-			player.rogue.str_current -= player.rogue.str_max - MAX_STRENGTH;
-			player.rogue.str_max = MAX_STRENGTH;
-		}
-		let strength = player.buffed_strength();
-		let s = format!("{}({})", strength, player.rogue.str_max);
-		mvaddstr(STATS_ROW, 41, &s);
-		pad(&s, 6);
-	}
-	if stat_mask & STAT_ARMOR != 0 {
-		if label {
-			mvaddstr(STATS_ROW, 48, "Arm: ");
-		}
-		player.maintain_armor_max_enchant();
-		let s = format!("{}", get_armor_class(player.armor()));
-		mvaddstr(STATS_ROW, 53, &s);
-		pad(&s, 2);
-	}
-	if stat_mask & STAT_EXP != 0 {
-		if label {
-			mvaddstr(STATS_ROW, 56, "Exp: ");
-		}
-		/*  Max exp taken care of in add_exp() */
-		let s = format!("{}/{}", player.rogue.exp, player.rogue.exp_points);
-		mvaddstr(STATS_ROW, 61, &s);
-		pad(&s, 11);
-	}
-	if stat_mask & STAT_HUNGER != 0 {
-		let hunger_str = if player.hunger == HungerLevel::Normal { "" } else { player.hunger.as_str() };
-		mvaddstr(STATS_ROW, 73, &hunger_str);
-		clrtoeol();
-	}
-	ncurses::refresh();
-}
-
-fn pad(s: &str, n: usize) {
-	for _ in s.len()..n {
-		addch(' ' as chtype);
 	}
 }
 

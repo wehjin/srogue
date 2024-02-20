@@ -1,7 +1,7 @@
 use crate::components::hunger::HungerLevel;
 use crate::init::GameState;
 use crate::level::{add_exp, put_player};
-use crate::message::{CANCEL, print_stats};
+use crate::message::CANCEL;
 use crate::monster::{aggravate, create_monster, mv_mons, show_monsters};
 use crate::motion::{reg_move, YOU_CAN_MOVE_AGAIN};
 use crate::objects::NoteStatus::Identified;
@@ -14,7 +14,6 @@ use crate::potions::quaff::quaff_potion;
 use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::object_what::ObjectWhat::{Armor, Food, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::{AllObjects, Foods, Potions, Scrolls};
-use crate::prelude::stat_const::{STAT_ARMOR, STAT_HP, STAT_HUNGER, STAT_STRENGTH};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
 use crate::ring::un_put_hand;
@@ -42,7 +41,7 @@ pub fn quaff(game: &mut GameState) {
 				}
 				Some(potion_kind) => {
 					quaff_potion(potion_kind, game);
-					print_stats(STAT_STRENGTH | STAT_HP, &mut game.player);
+					game.stats_changed = true;
 					game.player.notes.identify_if_un_called(Potion, potion_kind.to_index());
 					vanish(obj_id, true, game);
 				}
@@ -103,9 +102,9 @@ pub fn read_scroll(game: &mut GameState) {
 							if let Some(armor) = game.player.armor_mut() {
 								let msg = format!("your armor glows {} for a moment", glow_color.trim());
 								game.dialog.message(&msg, 0);
-								armor.d_enchant += 1;
+								armor.raise_armor_enchant(1);
 								armor.is_cursed = 0;
-								print_stats(STAT_ARMOR, &mut game.player);
+								game.stats_changed = true;
 							} else {
 								game.dialog.message("your skin crawls", 0);
 							}
@@ -247,7 +246,7 @@ pub fn eat(game: &mut GameState) {
 			game.player.rogue.moves_left /= 3;
 			game.player.rogue.moves_left += moves;
 			game.player.hunger = HungerLevel::Normal;
-			print_stats(STAT_HUNGER, &mut game.player);
+			game.stats_changed = true;
 			vanish(obj_id, true, game);
 		}
 	}
