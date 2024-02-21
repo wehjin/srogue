@@ -343,7 +343,7 @@ pub fn draw_simple_passage(spot1: DungeonSpot, spot2: DungeonSpot, dir: DoorDire
 				for i in (spot1.row + 1)..middle_row {
 					level.dungeon[i as usize][spot1.col as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, TunnelFixture::None));
 				}
-				let middle_cols = if spot1.col <= spot2.col { spot1.col..=spot2.col } else { spot2.col..=spot2.col };
+				let middle_cols = if spot1.col <= spot2.col { spot1.col..=spot2.col } else { spot2.col..=spot1.col };
 				for i in middle_cols {
 					level.dungeon[middle_row as usize][i as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, TunnelFixture::None));
 				}
