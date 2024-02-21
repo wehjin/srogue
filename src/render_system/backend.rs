@@ -33,6 +33,10 @@ pub(crate) fn swap_char(value: char, spot: DungeonSpot) -> char {
 	old_char
 }
 
+pub(crate) fn clear_to_eol() {
+	clrtoeol();
+}
+
 pub(crate) fn move_cursor(spot: DungeonSpot) {
 	mv(spot.row as i32, spot.col as i32);
 }

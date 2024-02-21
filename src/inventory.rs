@@ -1,8 +1,5 @@
-use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
-
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
-use crate::resources::keyboard::CANCEL_CHAR;
 use crate::objects::{get_armor_class, name_of, NoteStatus, Object, ObjectId};
 use crate::objects::note_tables::NoteTables;
 use crate::pack::{pack_letter, wait_for_ack};
@@ -13,6 +10,8 @@ use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN, ON_LEFT_HAND, ON_RIG
 use crate::prelude::object_what::ObjectWhat::{Amulet, Armor, Food, Gold, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::PackFilter::AllObjects;
+use crate::render_system::backend;
+use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::ring_kind::RingKind;
 use crate::score::is_vowel;
 use crate::scrolls::ScrollKind;
@@ -50,21 +49,21 @@ pub fn inventory(filter: PackFilter, game: &mut GameState) {
 		if row > 0 {
 			let mut old_line: Vec<u8> = Vec::new();
 			for col in start_col..DCOLS {
-				let ch = mvinch(row as i32, col as i32);
+				let ch = backend::get_char((row, col).into());
 				old_line.push(ch as u8)
 			}
 			old_lines.push(String::from_utf8(old_line).expect("utf8"));
 		}
-		mvaddstr(row as i32, start_col as i32, &item_lines[row]);
-		clrtoeol();
+		backend::set_str(&item_lines[row], (row, start_col).into());
+		backend::clear_to_eol();
 	}
-	refresh();
+	backend::push_screen();
 	wait_for_ack();
 
-	mv(0, 0);
-	clrtoeol();
+	backend::move_cursor((0, 0).into());
+	backend::clear_to_eol();
 	for row in 1..max_row {
-		mvaddstr(row as i32, start_col as i32, &old_lines[row - 1]);
+		backend::set_str(&old_lines[row - 1], (row, start_col).into());
 	}
 }
 
