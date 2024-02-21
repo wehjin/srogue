@@ -53,6 +53,12 @@ impl RoomType {
 	pub fn is_cross(&self) -> bool {
 		*self == RoomType::Cross
 	}
+	pub fn is_room(&self) -> bool {
+		*self == RoomType::Room
+	}
+	pub fn is_maze(&self) -> bool {
+		*self == RoomType::Maze
+	}
 	pub fn is_type<T: AsRef<[RoomType]>>(&self, room_types: T) -> bool {
 		room_types.as_ref().iter().position(|rt| self == rt).is_some()
 	}
