@@ -19,6 +19,7 @@ use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
 use crate::render_system::darken_room;
 use crate::render_system::hallucinate::show_hallucination;
+use crate::resources::keyboard;
 use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
 use crate::room::{visit_room, visit_spot_area};
 use crate::score::killed_by;
@@ -33,7 +34,6 @@ pub enum MoveResult {
 	MoveFailed,
 	StoppedOnSomething,
 }
-
 
 pub fn one_move_rogue(dirch: char, pickup: bool, game: &mut GameState) -> MoveResult {
 	let dirch = if game.player.confused.is_active() {
@@ -172,29 +172,25 @@ fn moved_unless_hungry_or_confused(game: &mut GameState) -> MoveResult {
 	}
 }
 
-const BS: char = '\x08';
-const LF: char = '\x0a';
-const VT: char = '\x0b';
-const FF: char = '\x0c';
-const EM: char = '\x19';
-const NAK: char = '\x15';
-const SO: char = '\x0e';
-const STX: char = '\x02';
 
 pub fn multiple_move_rogue(dirch: i64, game: &mut GameState) {
 	let dirch = dirch as u8 as char;
 	match dirch {
-		BS | LF | VT | FF | EM | NAK | SO | STX => loop {
-			let row = game.player.rogue.row;
-			let col = game.player.rogue.col;
-			let m = one_move_rogue((dirch as u8 + 96) as char, true, game);
-			if m == MoveFailed || m == StoppedOnSomething || game.player.interrupted {
-				break;
+		keyboard::CTRL_H | keyboard::CTRL_J | keyboard::CTRL_K | keyboard::CTRL_L
+		| keyboard::CTRL_Y | keyboard::CTRL_U | keyboard::CTRL_N | keyboard::CTRL_B => {
+			loop {
+				let row = game.player.rogue.row;
+				let col = game.player.rogue.col;
+				let result = one_move_rogue((dirch as u8 + 96) as char, true, game);
+				if result == MoveFailed || result == StoppedOnSomething || game.player.interrupted {
+					break;
+				}
+				if next_to_something(row, col, &game.player, &game.level) {
+					break;
+				}
+				render_system::refresh(game);
 			}
-			if next_to_something(row, col, &game.player, &game.level) {
-				break;
-			}
-		},
+		}
 		'H' | 'J' | 'K' | 'L' | 'B' | 'Y' | 'U' | 'N' => {
 			loop {
 				if game.player.interrupted {
@@ -204,6 +200,7 @@ pub fn multiple_move_rogue(dirch: i64, game: &mut GameState) {
 				if one_move_result != Moved {
 					break;
 				}
+				render_system::refresh(game);
 			}
 		}
 		_ => {}

@@ -55,7 +55,9 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 			'h' | 'j' | 'k' | 'l' | 'y' | 'u' | 'n' | 'b' => {
 				one_move_rogue(key_code, true, game);
 			}
-			'H' | 'J' | 'K' | 'L' | 'B' | 'Y' | 'U' | 'N' | '\x08' | '\x0a' | '\x0b' | '\x0c' | '\x19' | '\x15' | '\x0e' | '\x02' =>
+			'H' | 'J' | 'K' | 'L' | 'B' | 'Y' | 'U' | 'N'
+			| keyboard::CTRL_H | keyboard::CTRL_J | keyboard::CTRL_K | keyboard::CTRL_L
+			| keyboard::CTRL_Y | keyboard::CTRL_U | keyboard::CTRL_N | keyboard::CTRL_B =>
 				multiple_move_rogue(key_code as i64, game),
 			'e' => eat(game),
 			'q' => quaff(game),
