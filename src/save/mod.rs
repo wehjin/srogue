@@ -4,14 +4,15 @@ use std::io::Write;
 
 use crate::init::{clean_up, GameState};
 use crate::machdep::{delete_file, get_file_modification_time, md_get_file_id, md_ignore_signals, md_link_count, RogueTime};
-use crate::message::{get_input_line, sound_bell};
+use crate::message::sound_bell;
+use crate::resources::input_line::get_input_line;
 use crate::ring::ring_stats;
 use crate::save::data::SaveData;
 
 pub fn save_game(game: &mut GameState) -> bool {
 	let save_file = game.player.settings.save_file.clone();
 	let cancellation_prompt = Some("game not saved");
-	let file_name = get_input_line("file name?", save_file, cancellation_prompt, false, true, game);
+	let file_name = get_input_line("file name?", save_file, cancellation_prompt, false, true, &mut game.dialog);
 	if file_name.is_empty() {
 		return false;
 	}

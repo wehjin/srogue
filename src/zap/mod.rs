@@ -3,7 +3,7 @@ use wand_kind::WandKind;
 use crate::hit::{get_dir_rc, rogue_hit};
 use crate::init::GameState;
 use crate::level::Level;
-use crate::message::get_input_line;
+use crate::resources::input_line::get_input_line;
 use crate::monster::{gr_monster, MonsterIndex, MonsterKind, MonsterMash};
 use crate::motion::{get_dir_or_cancel, reg_move};
 use crate::pack::pack_letter;
@@ -186,7 +186,7 @@ pub fn wizardize(game: &mut GameState) {
 		game.player.wizard = false;
 		game.dialog.message("not wizard anymore", 0);
 	} else {
-		let line = get_input_line::<String>("wizard's password:", None, None, false, false, game);
+		let line = get_input_line::<String>("wizard's password:", None, None, false, false, &mut game.dialog);
 		if !line.is_empty() {
 			//const PW: &str = "\u{A7}DV\u{BA}M\u{A3}\u{17}";
 			const PW: &str = "neko?";

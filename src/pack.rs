@@ -1,6 +1,6 @@
 use crate::init::GameState;
 use crate::inventory::{get_obj_desc, inventory};
-use crate::message::{get_input_line, sound_bell};
+use crate::message::sound_bell;
 use crate::monster::mv_aquatars;
 use crate::motion::reg_move;
 use crate::objects::{Object, ObjectId, ObjectPack, place_at, Title};
@@ -11,7 +11,8 @@ use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::object_what::ObjectWhat::{Food, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
-use crate::resources::keyboard::{CANCEL_CHAR, STAR_CHAR, rgetchar};
+use crate::resources::input_line::get_input_line;
+use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
 use crate::ring::un_put_hand;
 use crate::scrolls::ScrollKind::ScareMonster;
 use crate::weapons::kind::WeaponKind;
@@ -243,7 +244,7 @@ pub fn call_it(game: &mut GameState) {
 			match what {
 				Scroll | Potion | Wand | Ring => {
 					let kind = game.player.object_kind(obj_id);
-					let new_name = get_input_line::<String>("call it:", None, Some(game.player.notes.title(what, kind as usize).as_str()), true, true, game);
+					let new_name = get_input_line::<String>("call it:", None, Some(game.player.notes.title(what, kind as usize).as_str()), true, true, &mut game.dialog);
 					if !new_name.is_empty() {
 						let id = game.player.notes.note_mut(what, kind as usize);
 						id.status = Called;
@@ -321,8 +322,8 @@ pub enum PackOp {
 
 pub fn get_pack_op(c: char, default_filter: PackFilter) -> Option<PackOp> {
 	match c {
-		STAR_CHAR => Some(PackOp::List(default_filter)),
 		CANCEL_CHAR => Some(PackOp::Cancel),
+		'*' => Some(PackOp::List(default_filter)),
 		'?' => Some(PackOp::List(Scrolls)),
 		'!' => Some(PackOp::List(Potions)),
 		':' => Some(PackOp::List(Foods)),

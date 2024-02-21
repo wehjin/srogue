@@ -1,9 +1,8 @@
-use ncurses::chtype;
 use serde::{Deserialize, Serialize};
 
 use crate::init::onintr;
 use crate::pack::wait_for_ack;
-use crate::prelude::MIN_ROW;
+use crate::render_system::backend;
 
 pub(crate) const DIALOG_ROW: usize = 0;
 
@@ -41,9 +40,8 @@ impl PlayerDialog {
 		if self.msg_cleared {
 			return;
 		}
-		ncurses::mv((MIN_ROW - 1) as i32, 0);
-		ncurses::clrtoeol();
-		ncurses::refresh();
+		backend::set_full_row("", DIALOG_ROW);
+		backend::push_screen();
 		self.msg_cleared = true;
 	}
 	pub fn message(&mut self, msg: &str, _intrpt: i64) {
@@ -52,14 +50,14 @@ impl PlayerDialog {
 		// }
 		self.cant_int = true;
 		if !self.msg_cleared {
-			ncurses::mvaddstr((MIN_ROW - 1) as i32, self.msg_written.len() as i32, MORE);
-			ncurses::refresh();
+			backend::set_str(MORE, (DIALOG_ROW, self.msg_written.len()).into());
+			backend::push_screen();
 			wait_for_ack();
 			self.clear_message();
 		}
-		ncurses::mvaddstr((MIN_ROW - 1) as i32, 0, msg);
-		ncurses::addch(chtype::from(' '));
-		ncurses::refresh();
+		backend::set_str(msg, (DIALOG_ROW, 0).into());
+		backend::set_char_at_cursor(' ');
+		backend::push_screen();
 		self.msg_written = msg.to_string();
 		self.msg_cleared = false;
 		self.cant_int = false;
@@ -68,7 +66,7 @@ impl PlayerDialog {
 			onintr();
 		}
 	}
-	pub fn remessage(&mut self) {
+	pub fn re_message(&mut self) {
 		if !self.msg_written.is_empty() {
 			let string = self.msg_written.to_string();
 			self.message(string.as_str(), 0);

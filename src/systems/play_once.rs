@@ -1,9 +1,10 @@
+use keyboard::CTRL_W_CHAR;
+
 use crate::actions::PLAYER_ACTIONS;
 use crate::hit::fight;
 use crate::init::{GameState, GameTurn};
 use crate::inventory::{inv_armor_weapon, inventory, single_inv};
 use crate::level::{check_up, drop_check, show_average_hp, UpResult};
-use crate::resources::keyboard::rgetchar;
 use crate::monster::show_monsters;
 use crate::motion::{move_onto, multiple_move_rogue, one_move_rogue, reg_move, rest};
 use crate::objects::{new_object_for_wizard, show_objects};
@@ -11,6 +12,8 @@ use crate::pack::{call_it, drop_0, kick_into_pack};
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::r#use::{eat, quaff, read_scroll};
 use crate::render_system;
+use crate::resources::keyboard;
+use crate::resources::keyboard::rgetchar;
 use crate::ring::inv_rings;
 use crate::room::draw_magic_map;
 use crate::save::save_game;
@@ -59,8 +62,8 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 			'r' => read_scroll(game),
 			'm' => move_onto(game),
 			'd' => drop_0(game),
-			'\x10' => game.dialog.remessage(),
-			'\x17' => wizardize(game),
+			'\x10' => game.dialog.re_message(),
+			CTRL_W_CHAR => wizardize(game),
 			'>' => if drop_check(game) {
 				return Leaving(StairsDown);
 			},

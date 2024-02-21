@@ -1,4 +1,4 @@
-use ncurses::{addch, chtype, clear, clrtoeol, curs_set, curscr, mv, mvaddch, mvaddstr, mvinch, napms, refresh, standend, standout, wrefresh};
+use ncurses::{addch, chtype, clear, clrtoeol, curs_set, curscr, getch, mv, mvaddch, mvaddstr, mvinch, napms, refresh, standend, standout, wrefresh};
 use ncurses::CURSOR_VISIBILITY::{CURSOR_INVISIBLE, CURSOR_VISIBLE};
 
 use crate::prelude::DungeonSpot;
@@ -18,7 +18,7 @@ pub(crate) fn set_char_at_cursor(value: char) {
 	addch(ch);
 }
 
-pub(crate) fn set_row_eol<T: AsRef<str>>(as_str: T, row: usize) {
+pub(crate) fn set_full_row<T: AsRef<str>>(as_str: T, row: usize) {
 	set_str(as_str, (row, 0).into());
 	clrtoeol();
 }
@@ -71,5 +71,5 @@ pub(crate) fn await_frame() {
 }
 
 pub(crate) fn read_input_char() -> char {
-	ncurses::getch() as u8 as char
+	getch() as u8 as char
 }

@@ -43,7 +43,7 @@ pub fn detect_all_rows() -> Vec<String> {
 
 pub fn render_all_rows<'a>(f: impl Fn(usize) -> &'a str) {
 	for row in 0..DROWS {
-		backend::set_row_eol(f(row), row);
+		backend::set_full_row(f(row), row);
 	}
 	backend::push_screen();
 }
@@ -107,7 +107,7 @@ pub(crate) fn darken_room(rn: usize, game: &mut GameState) {
 pub fn refresh(game: &mut GameState) {
 	if game.stats_changed {
 		const STATS_ROW: i32 = DROWS as i32 - 1;
-		backend::set_row_eol(&format_stats(&game.player), STATS_ROW as usize);
+		backend::set_full_row(&format_stats(&game.player), STATS_ROW as usize);
 		game.stats_changed = false;
 	}
 	if game.render_queue.len() > 0 {

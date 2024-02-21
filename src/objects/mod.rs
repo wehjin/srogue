@@ -15,7 +15,7 @@ use crate::inventory::get_obj_desc;
 use crate::level::constants::MAX_ROOM;
 use crate::level::Level;
 use crate::level::materials::{CellMaterial, Fixture, Visibility};
-use crate::message::{get_input_line, sound_bell};
+use crate::message::sound_bell;
 use crate::monster::party_monsters;
 use crate::objects::note_tables::NoteTables;
 use crate::odds::GOLD_PERCENT;
@@ -30,6 +30,7 @@ use crate::prelude::item_usage::{BEING_USED, BEING_WIELDED, BEING_WORN, NOT_USED
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
 use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::resources::input_line::get_input_line;
 use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
 use crate::ring::constants::RINGS;
 use crate::ring::gr_ring;
@@ -670,7 +671,7 @@ fn get_kind(max_kind: usize, game: &mut GameState) -> Option<usize> {
 	let good_kind = {
 		let good_kind;
 		loop {
-			let line = get_input_line::<String>("which kind?", None, None, false, true, game);
+			let line = get_input_line::<String>("which kind?", None, None, false, true, &mut game.dialog);
 			let trimmed_line = line.trim();
 			if trimmed_line.is_empty() {
 				good_kind = None;
