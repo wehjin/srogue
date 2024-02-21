@@ -48,7 +48,10 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 	} else {
 		match key_code {
 			'.' => rest(1, game),
-			's' => search(1, false, game),
+			's' => {
+				// TODO Feels like this doesn't work right.
+				search(1, false, game)
+			}
 			'i' => inventory(AllObjects, game),
 			'f' => fight(false, game),
 			'F' => fight(true, game),

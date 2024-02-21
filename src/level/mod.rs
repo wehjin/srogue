@@ -136,6 +136,8 @@ impl Level {
 }
 
 pub fn make_level(game: &mut GameState) {
+	// TODO Sometimes this puts individual tunnel spots near the origin in the wall.  Also there
+	// are paths between rooms that are missing a spot.
 	let (must_exist1, must_exist2, must_exist3) = match get_rand(0, 5) {
 		0 => (0, 1, 2),
 		1 => (3, 4, 5),
