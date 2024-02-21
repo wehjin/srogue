@@ -2,7 +2,7 @@ use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
 
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
-use crate::message::CANCEL;
+use crate::resources::keyboard::CANCEL;
 use crate::objects::{get_armor_class, name_of, NoteStatus, Object, ObjectId};
 use crate::objects::note_tables::NoteTables;
 use crate::pack::{pack_letter, wait_for_ack};

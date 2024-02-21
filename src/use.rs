@@ -1,7 +1,7 @@
 use crate::components::hunger::HungerLevel;
 use crate::init::GameState;
 use crate::level::{add_exp, put_player};
-use crate::message::CANCEL;
+use crate::resources::keyboard::CANCEL;
 use crate::monster::{aggravate, create_monster, mv_mons, show_monsters};
 use crate::motion::{reg_move, YOU_CAN_MOVE_AGAIN};
 use crate::objects::NoteStatus::Identified;

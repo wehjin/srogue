@@ -1,4 +1,4 @@
-use ncurses::{chtype, clear, clrtoeol, curs_set, mv, mvaddch, mvaddstr, mvinch, napms, refresh, standend, standout};
+use ncurses::{chtype, clear, clrtoeol, curs_set, curscr, mv, mvaddch, mvaddstr, mvinch, napms, refresh, standend, standout, wrefresh};
 use ncurses::CURSOR_VISIBILITY::{CURSOR_INVISIBLE, CURSOR_VISIBLE};
 
 use crate::prelude::DungeonSpot;
@@ -50,6 +50,10 @@ pub(crate) fn push_screen() {
 
 pub(crate) fn erase_screen() {
 	clear();
+}
+
+pub(crate) fn reload_screen() {
+	wrefresh(curscr());
 }
 
 pub(crate) fn await_frame() {

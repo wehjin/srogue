@@ -7,7 +7,7 @@ use ncurses::{mv, mvaddch, mvaddstr, mvinch, refresh, standend, standout};
 use crate::init::{BYEBYE_STRING, clean_up, GameState};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::machdep::{md_heed_signals, md_ignore_signals};
-use crate::message::rgetchar;
+use crate::resources::keyboard::rgetchar;
 use crate::pack::{has_amulet, unwear, unwield};
 use crate::player::Player;
 use crate::prelude::*;

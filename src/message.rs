@@ -1,13 +1,9 @@
-use ncurses::{addch, chtype, curscr, mvaddstr, wrefresh};
+use ncurses::{addch, chtype, mvaddstr};
 
 use crate::init::GameState;
 use crate::prelude::*;
-use crate::render_system::backend;
-
-const CTRL_R_CHAR: char = '\u{12}';
-pub const CANCEL: char = '\u{1b}';
-pub const LIST: char = '*';
-const X_CHAR: char = 'X';
+use crate::resources::keyboard;
+use crate::resources::keyboard::CANCEL;
 
 pub fn get_input_line<T: AsRef<str>>(
 	prompt: &str,
@@ -30,7 +26,7 @@ pub fn get_input_line<T: AsRef<str>>(
 	}
 	let mut ch: char;
 	loop {
-		ch = rgetchar() as u8 as char;
+		ch = keyboard::rgetchar() as u8 as char;
 		if ch == '\r' || ch == '\n' || ch == CANCEL {
 			break;
 		}
@@ -67,23 +63,6 @@ pub fn get_input_line<T: AsRef<str>>(
 		"".to_string()
 	} else {
 		line.iter().collect()
-	}
-}
-
-pub fn rgetchar() -> char {
-	loop {
-		let ch = backend::read_input_char();
-		match ch {
-			CTRL_R_CHAR => {
-				wrefresh(curscr());
-			}
-			X_CHAR => {
-				save_screen();
-			}
-			_ => {
-				return ch as u8 as char;
-			}
-		}
 	}
 }
 

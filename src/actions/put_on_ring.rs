@@ -1,6 +1,6 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
-use crate::message::CANCEL;
+use crate::resources::keyboard::CANCEL;
 use crate::objects::Object;
 use crate::pack::pack_letter;
 use crate::player::rings::HandUsage;

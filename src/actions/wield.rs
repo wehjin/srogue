@@ -1,6 +1,6 @@
 use crate::actions::PlayerAction;
 use crate::init::{GameState, GameTurn};
-use crate::message::CANCEL;
+use crate::resources::keyboard::CANCEL;
 use crate::pack::{CURSE_MESSAGE, do_wield, pack_letter};
 use crate::prelude::object_what::ObjectWhat::{Armor, Ring};
 use crate::prelude::object_what::PackFilter::Weapons;

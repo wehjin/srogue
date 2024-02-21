@@ -15,7 +15,7 @@ use crate::inventory::get_obj_desc;
 use crate::level::constants::MAX_ROOM;
 use crate::level::Level;
 use crate::level::materials::{CellMaterial, Fixture, Visibility};
-use crate::message::{CANCEL, get_input_line, rgetchar, sound_bell};
+use crate::message::{get_input_line, sound_bell};
 use crate::monster::party_monsters;
 use crate::objects::note_tables::NoteTables;
 use crate::odds::GOLD_PERCENT;
@@ -30,6 +30,7 @@ use crate::prelude::item_usage::{BEING_USED, BEING_WIELDED, BEING_WORN, NOT_USED
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
 use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::resources::keyboard::{CANCEL, rgetchar};
 use crate::ring::constants::RINGS;
 use crate::ring::gr_ring;
 use crate::ring::ring_gem::RingGem;

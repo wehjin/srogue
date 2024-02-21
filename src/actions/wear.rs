@@ -1,6 +1,6 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
-use crate::message::CANCEL;
+use crate::resources::keyboard::CANCEL;
 use crate::pack::{do_wear, pack_letter};
 use crate::prelude::object_what::ObjectWhat::Armor;
 use crate::prelude::object_what::PackFilter::Armors;

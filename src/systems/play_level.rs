@@ -1,7 +1,7 @@
 use crate::init::GameState;
-use crate::message::{CANCEL, rgetchar};
 use crate::render_system;
 use crate::render_system::RenderAction;
+use crate::resources::keyboard::{CANCEL, rgetchar};
 use crate::state::input::{KEY_REST, KEY_SEARCH};
 use crate::state::player::PlayState;
 use crate::systems::play_level::PlayResult::CleanedUp;

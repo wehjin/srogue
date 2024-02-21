@@ -4,7 +4,7 @@ use rand::thread_rng;
 use crate::hit::{get_hit_chance, get_weapon_damage, mon_damage};
 use crate::init::GameState;
 use crate::level::DungeonCell;
-use crate::message::CANCEL;
+use crate::resources::keyboard::CANCEL;
 use crate::monster::{MonsterIndex, mv_aquatars};
 use crate::motion::{get_dir_or_cancel, is_passable};
 use crate::objects::{Object, ObjectId, place_at};

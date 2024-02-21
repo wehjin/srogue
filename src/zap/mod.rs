@@ -3,7 +3,7 @@ use wand_kind::WandKind;
 use crate::hit::{get_dir_rc, rogue_hit};
 use crate::init::GameState;
 use crate::level::Level;
-use crate::message::{CANCEL, get_input_line};
+use crate::message::get_input_line;
 use crate::monster::{gr_monster, MonsterIndex, MonsterKind, MonsterMash};
 use crate::motion::{get_dir_or_cancel, reg_move};
 use crate::pack::pack_letter;
@@ -11,6 +11,7 @@ use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Wands;
 use crate::r#use::relight;
 use crate::random::get_rand;
+use crate::resources::keyboard::CANCEL;
 use crate::room::gr_spot;
 use crate::spec_hit::imitating;
 

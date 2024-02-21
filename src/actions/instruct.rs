@@ -1,6 +1,6 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
-use crate::message::rgetchar;
+use crate::resources::keyboard::rgetchar;
 use crate::render_system::{detect_all_rows, render_all_rows};
 
 pub struct Instruct;

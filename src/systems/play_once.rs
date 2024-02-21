@@ -3,7 +3,7 @@ use crate::hit::fight;
 use crate::init::{GameState, GameTurn};
 use crate::inventory::{inv_armor_weapon, inventory, single_inv};
 use crate::level::{check_up, drop_check, show_average_hp, UpResult};
-use crate::message::rgetchar;
+use crate::resources::keyboard::rgetchar;
 use crate::monster::show_monsters;
 use crate::motion::{move_onto, multiple_move_rogue, one_move_rogue, reg_move, rest};
 use crate::objects::{new_object_for_wizard, show_objects};
