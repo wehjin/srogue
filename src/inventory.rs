@@ -2,7 +2,7 @@ use ncurses::{clrtoeol, mv, mvaddstr, mvinch, refresh};
 
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
-use crate::resources::keyboard::CANCEL;
+use crate::resources::keyboard::CANCEL_CHAR;
 use crate::objects::{get_armor_class, name_of, NoteStatus, Object, ObjectId};
 use crate::objects::note_tables::NoteTables;
 use crate::pack::{pack_letter, wait_for_ack};
@@ -263,7 +263,7 @@ pub fn single_inv(ichar: Option<char>, game: &mut GameState) {
 	} else {
 		pack_letter("inventory what?", AllObjects, game)
 	};
-	if ch == CANCEL {
+	if ch == CANCEL_CHAR {
 		return;
 	}
 	if let Some(obj) = game.player.object_with_letter(ch) {

@@ -1,7 +1,7 @@
 use crate::components::hunger::HungerLevel;
 use crate::init::GameState;
 use crate::level::{add_exp, put_player};
-use crate::resources::keyboard::CANCEL;
+use crate::resources::keyboard::CANCEL_CHAR;
 use crate::monster::{aggravate, create_monster, mv_mons, show_monsters};
 use crate::motion::{reg_move, YOU_CAN_MOVE_AGAIN};
 use crate::objects::NoteStatus::Identified;
@@ -27,7 +27,7 @@ pub const STRANGE_FEELING: &'static str = "you have a strange feeling for a mome
 
 pub fn quaff(game: &mut GameState) {
 	let ch = pack_letter("quaff what?", Potions, game);
-	if ch == CANCEL {
+	if ch == CANCEL_CHAR {
 		return;
 	}
 	match game.player.object_id_with_letter(ch) {
@@ -59,7 +59,7 @@ pub fn read_scroll(game: &mut GameState) {
 	}
 
 	let ch = pack_letter("read what?", Scrolls, game);
-	if ch == CANCEL {
+	if ch == CANCEL_CHAR {
 		return;
 	}
 	match game.player.object_id_with_letter(ch) {
@@ -187,7 +187,7 @@ pub fn vanish(obj_id: ObjectId, do_regular_move: bool, game: &mut GameState) {
 fn idntfy(game: &mut GameState) {
 	loop {
 		let ch = pack_letter("what would you like to identify?", AllObjects, game);
-		if ch == CANCEL {
+		if ch == CANCEL_CHAR {
 			return;
 		}
 		match game.player.object_id_with_letter(ch) {
@@ -218,7 +218,7 @@ fn idntfy(game: &mut GameState) {
 
 pub fn eat(game: &mut GameState) {
 	let ch = pack_letter("eat what?", Foods, game);
-	if ch == CANCEL {
+	if ch == CANCEL_CHAR {
 		return;
 	}
 	match game.player.object_id_with_letter(ch) {

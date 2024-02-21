@@ -12,7 +12,7 @@ use crate::prelude::{AMULET_LEVEL, MIN_ROW};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::random::rand_percent;
-use crate::resources::keyboard::{CANCEL, rgetchar};
+use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
 use crate::score::killed_by;
 use crate::spec_hit::{check_imitator, cough_up, special_hit};
 use crate::throw::Motion;
@@ -231,7 +231,7 @@ pub fn fight(to_the_death: bool, game: &mut GameState) {
 			}
 		}
 		game.dialog.clear_message();
-		if ch == CANCEL {
+		if ch == CANCEL_CHAR {
 			return;
 		}
 		Motion::from(ch)

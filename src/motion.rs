@@ -19,7 +19,7 @@ use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
 use crate::render_system::darken_room;
 use crate::render_system::hallucinate::show_hallucination;
-use crate::resources::keyboard::{CANCEL, rgetchar};
+use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
 use crate::room::{visit_room, visit_spot_area};
 use crate::score::killed_by;
 use crate::throw::Motion;
@@ -304,7 +304,7 @@ pub fn can_move(row1: i64, col1: i64, row2: i64, col2: i64, level: &Level) -> bo
 pub fn move_onto(game: &mut GameState) {
 	let ch = get_dir_or_cancel(game);
 	game.dialog.clear_message();
-	if ch != CANCEL {
+	if ch != CANCEL_CHAR {
 		one_move_rogue(ch, false, game);
 	}
 }
@@ -329,7 +329,7 @@ pub fn get_dir_or_cancel(game: &mut GameState) -> char {
 pub fn is_direction(c: char) -> bool {
 	c == 'h' || c == 'j' || c == 'k' || c == 'l'
 		|| c == 'b' || c == 'y' || c == 'u' || c == 'n'
-		|| c == CANCEL
+		|| c == CANCEL_CHAR
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]

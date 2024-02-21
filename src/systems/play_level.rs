@@ -1,7 +1,7 @@
 use crate::init::GameState;
 use crate::render_system;
 use crate::render_system::RenderAction;
-use crate::resources::keyboard::{CANCEL, rgetchar};
+use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
 use crate::state::input::{KEY_REST, KEY_SEARCH};
 use crate::state::player::PlayState;
 use crate::systems::play_level::PlayResult::CleanedUp;
@@ -49,7 +49,7 @@ fn when_idle(game: &mut GameState) -> PlayState {
 fn when_counting(digits: String) -> PlayState {
 	let next_key = rgetchar();
 	match next_key {
-		CANCEL => PlayState::Idle,
+		CANCEL_CHAR => PlayState::Idle,
 		'0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
 			let mut new_digits = digits.clone();
 			new_digits.push(next_key);

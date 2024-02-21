@@ -11,7 +11,7 @@ use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Wands;
 use crate::r#use::relight;
 use crate::random::get_rand;
-use crate::resources::keyboard::CANCEL;
+use crate::resources::keyboard::CANCEL_CHAR;
 use crate::room::gr_spot;
 use crate::spec_hit::imitating;
 
@@ -22,11 +22,11 @@ pub(crate) mod wand_materials;
 pub fn zapp(game: &mut GameState) {
 	let dir = get_dir_or_cancel(game);
 	game.dialog.clear_message();
-	if dir == CANCEL {
+	if dir == CANCEL_CHAR {
 		return;
 	}
 	let ch = pack_letter("zap with what?", Wands, game);
-	if ch == CANCEL {
+	if ch == CANCEL_CHAR {
 		return;
 	}
 

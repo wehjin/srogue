@@ -1,6 +1,6 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
-use crate::resources::keyboard::CANCEL;
+use crate::resources::keyboard::CANCEL_CHAR;
 use crate::pack::{do_wear, pack_letter};
 use crate::prelude::object_what::ObjectWhat::Armor;
 use crate::prelude::object_what::PackFilter::Armors;
@@ -14,7 +14,7 @@ impl PlayerAction for Wear {
 			return;
 		}
 		let ch = pack_letter("wear what?", Armors, game);
-		if ch == CANCEL {
+		if ch == CANCEL_CHAR {
 			return;
 		}
 		match game.player.object_with_letter_mut(ch) {

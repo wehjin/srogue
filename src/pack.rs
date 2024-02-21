@@ -11,7 +11,7 @@ use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::object_what::ObjectWhat::{Food, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::PackFilter::{AllObjects, Amulets, AnyFrom, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
-use crate::resources::keyboard::{CANCEL, LIST, rgetchar};
+use crate::resources::keyboard::{CANCEL_CHAR, STAR_CHAR, rgetchar};
 use crate::ring::un_put_hand;
 use crate::scrolls::ScrollKind::ScareMonster;
 use crate::weapons::kind::WeaponKind;
@@ -84,7 +84,7 @@ pub fn drop_0(game: &mut GameState) {
 		return;
 	}
 	let ch = pack_letter("drop what?", AllObjects, game);
-	if ch == CANCEL {
+	if ch == CANCEL_CHAR {
 		return;
 	}
 	match game.player.object_id_with_letter(ch) {
@@ -172,7 +172,7 @@ pub fn wait_for_ack() {
 pub fn pack_letter(prompt: &str, filter: PackFilter, game: &mut GameState) -> char {
 	if !mask_pack(&game.player.rogue.pack, filter.clone()) {
 		game.dialog.message("nothing appropriate", 0);
-		return CANCEL;
+		return CANCEL_CHAR;
 	}
 
 	loop {
@@ -196,7 +196,7 @@ pub fn pack_letter(prompt: &str, filter: PackFilter, game: &mut GameState) -> ch
 				inventory(filter, game);
 			}
 			PackOp::Cancel => {
-				return CANCEL;
+				return CANCEL_CHAR;
 			}
 			PackOp::Select(letter) => {
 				return letter;
@@ -230,7 +230,7 @@ pub fn unwield(player: &mut Player) {
 
 pub fn call_it(game: &mut GameState) {
 	let ch = pack_letter("call what?", AnyFrom(vec![Scroll, Potion, Wand, Ring]), game);
-	if ch == CANCEL {
+	if ch == CANCEL_CHAR {
 		return;
 	}
 	match game.player.object_id_with_letter(ch) {
@@ -321,8 +321,8 @@ pub enum PackOp {
 
 pub fn get_pack_op(c: char, default_filter: PackFilter) -> Option<PackOp> {
 	match c {
-		LIST => Some(PackOp::List(default_filter)),
-		CANCEL => Some(PackOp::Cancel),
+		STAR_CHAR => Some(PackOp::List(default_filter)),
+		CANCEL_CHAR => Some(PackOp::Cancel),
 		'?' => Some(PackOp::List(Scrolls)),
 		'!' => Some(PackOp::List(Potions)),
 		':' => Some(PackOp::List(Foods)),

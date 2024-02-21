@@ -1,9 +1,9 @@
-use ncurses::{addch, chtype, mvaddstr};
-
 use crate::init::GameState;
 use crate::prelude::*;
+use crate::render_system::backend;
+use crate::resources::dialog::DIALOG_ROW;
 use crate::resources::keyboard;
-use crate::resources::keyboard::CANCEL;
+use crate::resources::keyboard::{BACKSPACE_CHAR, CANCEL_CHAR};
 
 pub fn get_input_line<T: AsRef<str>>(
 	prompt: &str,
@@ -19,34 +19,33 @@ pub fn get_input_line<T: AsRef<str>>(
 	let n = prompt.len();
 	if let Some(insert) = insert {
 		let insert = insert.as_ref();
-		mvaddstr(0, (n + 1) as i32, insert);
+		backend::set_str(insert, (0, n + 1).into());
 		line.extend(insert.chars());
-		ncurses::mv(0, (n + line.len() + 1) as i32);
-		ncurses::refresh();
+		backend::move_cursor((0, n + line.len() + 1).into());
+		backend::push_screen();
 	}
 	let mut ch: char;
 	loop {
 		ch = keyboard::rgetchar() as u8 as char;
-		if ch == '\r' || ch == '\n' || ch == CANCEL {
+		if ch == '\r' || ch == '\n' || ch == CANCEL_CHAR {
 			break;
 		}
 		if ch >= ' ' && ch <= '~' && line.len() < MAX_TITLE_LENGTH {
 			if ch != ' ' || line.len() > 0 {
 				line.push(ch);
 				if do_echo {
-					addch(ch as chtype);
+					backend::set_char_at_cursor(ch);
 				}
 			}
 		}
-		const BACKSPACE: char = '\u{8}';
-		if ch == BACKSPACE && line.len() > 0 {
+		if ch == BACKSPACE_CHAR && line.len() > 0 {
 			if do_echo {
-				ncurses::mvaddch(0, (line.len() + n) as i32, ' ' as chtype);
-				ncurses::mv((MIN_ROW - 1) as i32, (line.len() + n) as i32);
+				backend::set_char(' ', (DIALOG_ROW, line.len() + n).into());
+				backend::move_cursor((DIALOG_ROW, line.len() + n).into());
 			}
 			line.pop();
 		}
-		ncurses::refresh();
+		backend::push_screen();
 	}
 	game.dialog.clear_message();
 	if add_blank {
@@ -56,7 +55,7 @@ pub fn get_input_line<T: AsRef<str>>(
 			line.pop();
 		}
 	}
-	if ch == CANCEL || line.is_empty() || (line.len() == 1 && add_blank) {
+	if ch == CANCEL_CHAR || line.is_empty() || (line.len() == 1 && add_blank) {
 		if let Some(msg) = if_cancelled {
 			game.dialog.message(msg, 0);
 		}

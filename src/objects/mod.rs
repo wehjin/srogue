@@ -30,7 +30,7 @@ use crate::prelude::item_usage::{BEING_USED, BEING_WIELDED, BEING_WORN, NOT_USED
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
 use crate::random::{coin_toss, get_rand, rand_percent};
-use crate::resources::keyboard::{CANCEL, rgetchar};
+use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
 use crate::ring::constants::RINGS;
 use crate::ring::gr_ring;
 use crate::ring::ring_gem::RingGem;
@@ -612,7 +612,7 @@ pub fn new_object_for_wizard(game: &mut GameState) {
 		ch
 	};
 	game.dialog.clear_message();
-	if ch == CANCEL {
+	if ch == CANCEL_CHAR {
 		return;
 	}
 	let mut obj = alloc_object();

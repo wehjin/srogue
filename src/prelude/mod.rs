@@ -28,6 +28,18 @@ pub struct DungeonSpot {
 	pub row: i64,
 }
 
+impl From<(usize, usize)> for DungeonSpot {
+	fn from((row, col): (usize, usize)) -> Self {
+		DungeonSpot::new(row, col)
+	}
+}
+
+impl DungeonSpot {
+	pub fn new(row: usize, col: usize) -> Self {
+		Self { col: col as i64, row: row as i64 }
+	}
+}
+
 impl DungeonSpot {
 	pub fn approach(&mut self, other: DungeonSpot) {
 		if self.row < other.row {

@@ -13,7 +13,7 @@ use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::r#use::{take_a_nap, tele};
 use crate::random::{get_rand, rand_percent};
-use crate::resources::keyboard::{CANCEL, rgetchar};
+use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
 use crate::room::gr_spot;
 use crate::score::killed_by;
 use crate::spec_hit::rust;
@@ -224,7 +224,7 @@ pub fn id_trap(game: &mut GameState) {
 		sound_bell();
 	}
 	game.dialog.clear_message();
-	if dir == CANCEL {
+	if dir == CANCEL_CHAR {
 		return;
 	}
 

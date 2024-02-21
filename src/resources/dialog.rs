@@ -5,6 +5,8 @@ use crate::init::onintr;
 use crate::pack::wait_for_ack;
 use crate::prelude::MIN_ROW;
 
+pub(crate) const DIALOG_ROW: usize = 0;
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PlayerDialog {
 	msg_written: String,

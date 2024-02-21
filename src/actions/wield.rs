@@ -1,6 +1,6 @@
 use crate::actions::PlayerAction;
 use crate::init::{GameState, GameTurn};
-use crate::resources::keyboard::CANCEL;
+use crate::resources::keyboard::CANCEL_CHAR;
 use crate::pack::{CURSE_MESSAGE, do_wield, pack_letter};
 use crate::prelude::object_what::ObjectWhat::{Armor, Ring};
 use crate::prelude::object_what::PackFilter::Weapons;
@@ -14,7 +14,7 @@ impl PlayerAction for Wield {
 			return;
 		}
 		let ch = pack_letter("wield what?", Weapons, game);
-		if ch == CANCEL {
+		if ch == CANCEL_CHAR {
 			return;
 		}
 		match game.player.object_with_letter_mut(ch) {

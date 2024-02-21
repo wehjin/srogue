@@ -1,6 +1,6 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
-use crate::resources::keyboard::CANCEL;
+use crate::resources::keyboard::CANCEL_CHAR;
 use crate::objects::Object;
 use crate::pack::pack_letter;
 use crate::player::rings::HandUsage;
@@ -17,7 +17,7 @@ impl PlayerAction for PutOnRing {
 			return;
 		}
 		let ch = pack_letter("put on what?", Rings, game);
-		if ch == CANCEL {
+		if ch == CANCEL_CHAR {
 			return;
 		}
 		match game.player.object_id_with_letter(ch) {

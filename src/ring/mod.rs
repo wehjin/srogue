@@ -8,7 +8,7 @@ use crate::prelude::item_usage::{ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat::Ring;
 use crate::r#use::relight;
 use crate::random::{coin_toss, get_rand};
-use crate::resources::keyboard::{CANCEL, rgetchar};
+use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
 
 pub(crate) mod constants;
 pub(crate) mod ring_kind;
@@ -28,7 +28,7 @@ fn ask_left_or_right(game: &mut GameState) -> char {
 	let mut ch;
 	loop {
 		ch = rgetchar();
-		let good_ch = ch == CANCEL || ch == 'l' || ch == 'r' || ch == '\n' || ch == '\r';
+		let good_ch = ch == CANCEL_CHAR || ch == 'l' || ch == 'r' || ch == '\n' || ch == '\r';
 		if good_ch {
 			break;
 		}
