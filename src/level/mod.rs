@@ -147,36 +147,37 @@ pub fn make_level(game: &mut GameState) {
 		5 => (2, 5, 8),
 		_ => unreachable!("0 <= rand <= 5")
 	};
-	let big_room = game.player.cur_depth == game.player.party_counter && rand_percent(1);
+	let level_depth = game.player.cur_depth;
+	let big_room = level_depth == game.player.party_counter && rand_percent(1);
 	if big_room {
-		make_room(10, 0, 0, 0, &mut game.level);
+		make_room(BIG_ROOM, 0, 0, 0, &mut game.level);
 	} else {
-		for i in 0..MAX_ROOM {
-			make_room(i as i64, must_exist1 as i64, must_exist2 as i64, must_exist3 as i64, &mut game.level);
+		for rn in 0..MAX_ROOM {
+			make_room(rn, must_exist1, must_exist2, must_exist3, &mut game.level);
 		}
 	}
 	if !big_room {
-		add_mazes(game.player.cur_depth, &mut game.level);
+		add_mazes(level_depth, &mut game.level);
 
 		let shuffled_rns = shuffled_rns();
 		for j in 0..MAX_ROOM {
 			let i = shuffled_rns[j];
 			if i < (MAX_ROOM - 1) {
-				connect_rooms(i, i + 1, game.player.cur_depth, &mut game.level);
+				connect_rooms(i, i + 1, level_depth, &mut game.level);
 			}
 			if i < (MAX_ROOM - 3) {
-				connect_rooms(i, i + 3, game.player.cur_depth, &mut game.level);
+				connect_rooms(i, i + 3, level_depth, &mut game.level);
 			}
 			if i < (MAX_ROOM - 2) {
 				if game.level.rooms[i + 1].room_type.is_nothing() {
-					if connect_rooms(i, i + 2, game.player.cur_depth, &mut game.level) {
+					if connect_rooms(i, i + 2, level_depth, &mut game.level) {
 						game.level.rooms[i + 1].room_type = RoomType::Cross;
 					}
 				}
 			}
 			if i < (MAX_ROOM - 6) {
 				if game.level.rooms[i + 3].room_type.is_nothing() {
-					if connect_rooms(i, i + 6, game.player.cur_depth, &mut game.level) {
+					if connect_rooms(i, i + 6, level_depth, &mut game.level) {
 						game.level.rooms[i + 3].room_type = RoomType::Cross;
 					}
 				}
@@ -184,16 +185,15 @@ pub fn make_level(game: &mut GameState) {
 			if is_all_connected(&game.level.rooms) {
 				break;
 			}
-			fill_out_level(&mut game.level, game.player.cur_depth);
+			fill_out_level(&mut game.level, level_depth);
 		}
-		if !has_amulet(&game.player) && game.player.cur_depth >= AMULET_LEVEL {
-			put_amulet(game);
-		}
+	}
+	if !has_amulet(&game.player) && level_depth >= AMULET_LEVEL {
+		put_amulet(game);
 	}
 }
 
-pub fn make_room(rn: i64, r1: i64, r2: i64, r3: i64, level: &mut Level) {
-	let rn: usize = rn as usize;
+pub fn make_room(rn: usize, r1: usize, r2: usize, r3: usize, level: &mut Level) {
 	let (left, right, top, bottom, do_shrink, room_index) =
 		match rn {
 			0 => (0, COL1 - 1, MIN_ROW, ROW1 - 1, true, rn),
