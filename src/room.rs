@@ -102,6 +102,14 @@ impl DoorDirection {
 			Left => Right,
 		}
 	}
+	pub fn as_delta_row_col(&self) -> (i64, i64) {
+		match self {
+			Up => (-1, 0),
+			Down => (1, 0),
+			Left => (0, -1),
+			Right => (0, 1)
+		}
+	}
 }
 
 #[derive(Copy, Clone, Default)]
@@ -113,6 +121,11 @@ pub struct RoomBounds {
 }
 
 impl RoomBounds {
+	pub fn to_random_spot(&self) -> DungeonSpot {
+		let row = get_rand(self.top, self.bottom);
+		let col = get_rand(self.left, self.right);
+		(row, col).into()
+	}
 	pub fn area(&self) -> i64 {
 		(self.bottom - self.top + 1) * (self.right - self.left + 1)
 	}

@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::hit::get_dir_rc;
 use crate::level::constants::{DCOLS, DROWS};
+use crate::room::RoomBounds;
 use crate::throw::Motion;
 
 pub const NO_ROOM: i64 = -1;
@@ -122,6 +123,10 @@ impl DungeonSpot {
 	}
 	pub fn is_out_of_bounds(&self) -> bool {
 		self.row < MIN_ROW || self.row > (DROWS - 2) as i64 || self.col < 0 || self.col > (DCOLS - 1) as i64
+	}
+	pub fn is_within_bounds(&self, bounds: &RoomBounds) -> bool {
+		self.row >= bounds.top && self.row <= bounds.bottom
+			&& self.col >= bounds.left && self.col <= bounds.right
 	}
 	pub fn set(&mut self, row: i64, col: i64) {
 		self.row = row;

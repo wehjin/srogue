@@ -368,7 +368,8 @@ pub fn draw_simple_passage(spot1: &DungeonSpot, spot2: &DungeonSpot, dir: DoorDi
 			}
 		};
 	if rand_percent(HIDE_PERCENT) {
-		hide_boxed_passage(row1, col1, row2, col2, 1, level_depth, level);
+		let bounds = RoomBounds { top: row1, bottom: row2, left: col1, right: col2 };
+		hide_boxed_passage(bounds, 1, level_depth, level);
 	}
 }
 
@@ -382,30 +383,17 @@ pub fn same_col(room1: usize, room2: usize) -> bool {
 
 pub fn add_mazes(level_depth: isize, level: &mut Level) {
 	if level_depth > 1 {
-		let start = get_rand(0, MAX_ROOM - 1);
-		let maze_percent = {
-			let nominal_percent = (level_depth * 5) / 4;
-			if level_depth > 15 {
-				nominal_percent + level_depth
-			} else {
-				nominal_percent
-			}
-		} as usize;
-
+		let random_start = get_rand(0, MAX_ROOM - 1);
+		let maze_percent = (level_depth * 5) / 4 + if level_depth > 15 { level_depth } else { 0 };
 		for i in 0..MAX_ROOM {
-			let j = (start + i) % MAX_ROOM;
-			if level.rooms[j].room_type.is_nothing() {
-				let do_maze = rand_percent(maze_percent);
-				if do_maze {
-					level.rooms[j].room_type = RoomType::Maze;
-					make_maze(
-						get_rand(level.rooms[j].top_row + 1, level.rooms[j].bottom_row - 1) as usize,
-						get_rand(level.rooms[j].left_col + 1, level.rooms[j].right_col - 1) as usize,
-						level.rooms[j].top_row as usize, level.rooms[j].bottom_row as usize,
-						level.rooms[j].left_col as usize, level.rooms[j].right_col as usize,
-						level,
-					);
-					hide_boxed_passage(level.rooms[j].top_row, level.rooms[j].left_col, level.rooms[j].bottom_row, level.rooms[j].right_col, get_rand(0, 2), level_depth, level);
+			let rn = (random_start + i) % MAX_ROOM;
+			if level.rooms[rn].room_type.is_nothing() {
+				if rand_percent(maze_percent as usize) {
+					level.rooms[rn].room_type = RoomType::Maze;
+					let spot_in_room = level.rooms[rn].to_floor_bounds().to_random_spot();
+					let room_bounds = level.rooms[rn].to_wall_bounds();
+					make_maze(spot_in_room, &room_bounds, level);
+					hide_boxed_passage(room_bounds, get_rand(0, 2), level_depth, level);
 				}
 			}
 		}
@@ -523,85 +511,64 @@ fn find_tunnel_in_room(rn: usize, row: &mut i64, col: &mut i64, level: &Level) -
 	return false;
 }
 
-fn make_maze(r: usize, c: usize, tr: usize, br: usize, lc: usize, rc: usize, level: &mut Level) {
+fn make_maze(spot: DungeonSpot, bounds: &RoomBounds, level: &mut Level) {
 	let mut dirs: [DoorDirection; 4] = [DoorDirection::Up, DoorDirection::Down, DoorDirection::Left, DoorDirection::Right];
-	level.dungeon[r][c].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
-
 	if rand_percent(33) {
-		for _i in 0..10 {
-			let t1 = get_rand(0, 3) as usize;
-			let t2 = get_rand(0, 3) as usize;
-			let swap = dirs[t1];
-			dirs[t1] = dirs[t2];
-			dirs[t2] = swap;
-		}
+		dirs.shuffle(&mut thread_rng());
 	}
-	for i in 0..4 {
-		match dirs[i] {
-			DoorDirection::Up => {
-				if ((r - 1) >= tr) &&
-					(level.dungeon[r - 1][c].is_not_tunnel()) &&
-					(level.dungeon[r - 1][c - 1].is_not_tunnel()) &&
-					(level.dungeon[r - 1][c + 1].is_not_tunnel()) &&
-					(r >= 2 && level.dungeon[r - 2][c].is_not_tunnel()) {
-					make_maze(r - 1, c, tr, br, lc, rc, level);
-				}
-			}
-			DoorDirection::Down => {
-				if ((r + 1) <= br) &&
-					(level.dungeon[r + 1][c].is_not_tunnel()) &&
-					(level.dungeon[r + 1][c - 1].is_not_tunnel()) &&
-					(level.dungeon[r + 1][c + 1].is_not_tunnel()) &&
-					((r + 2 < DROWS) && level.dungeon[r + 2][c].is_not_tunnel()) {
-					make_maze(r + 1, c, tr, br, lc, rc, level);
-				}
-			}
-			DoorDirection::Left => {
-				if ((c - 1) >= lc) &&
-					(level.dungeon[r][c - 1].is_not_tunnel()) &&
-					(level.dungeon[r - 1][c - 1].is_not_tunnel()) &&
-					(level.dungeon[r + 1][c - 1].is_not_tunnel()) &&
-					(c >= 2 && level.dungeon[r][c - 2].is_not_tunnel()) {
-					make_maze(r, c - 1, tr, br, lc, rc, level);
-				}
-			}
-			DoorDirection::Right => {
-				if ((c + 1) <= rc) &&
-					(level.dungeon[r][c + 1].is_not_tunnel()) &&
-					(level.dungeon[r - 1][c + 1].is_not_tunnel()) &&
-					(level.dungeon[r + 1][c + 1].is_not_tunnel()) &&
-					((c + 2) < DCOLS && level.dungeon[r][c + 2].is_not_tunnel()) {
-					make_maze(r, c + 1, tr, br, lc, rc, level);
-				}
-			}
+	level.cell_mut(spot).set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
+	for dir in dirs {
+		let (delta_row, delta_col) = dir.as_delta_row_col();
+		if let Some(new_spot) = check_spot_for_maze(delta_row, delta_col, spot, &bounds, level) {
+			make_maze(new_spot, bounds, level);
 		}
 	}
 }
 
-fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: i64, level_depth: isize, level: &mut Level) {
-	if level_depth > 2 {
-		let (row1, row2) = if row1 > row2 { (row2, row1) } else { (row1, row2) };
-		let (col1, col2) = if col1 > col2 { (col2, col1) } else { (col1, col2) };
-		let h = row2 - row1;
-		let w = col2 - col1;
+fn check_spot_for_maze(delta_row: i64, delta_col: i64, spot: DungeonSpot, bounds: &RoomBounds, level: &Level) -> Option<DungeonSpot> {
+	let new: DungeonSpot = (spot.row + delta_row, spot.col + delta_col).into();
+	let new_new: DungeonSpot = (spot.row + delta_row * 2, spot.col + delta_col * 2).into();
+	let (new_a, new_b) =
+		if delta_row != 0 {
+			let a: DungeonSpot = (new.row, new.col - 1).into();
+			let b: DungeonSpot = (new.row, new.col + 1).into();
+			(a, b)
+		} else {
+			let a: DungeonSpot = (new.row - 1, new.col).into();
+			let b: DungeonSpot = (new.row + 1, new.col).into();
+			(a, b)
+		};
+	if !new_new.is_out_of_bounds() &&
+		new.is_within_bounds(bounds) &&
+		level.cell(new).is_not_tunnel() &&
+		level.cell(new_a).is_not_tunnel() &&
+		level.cell(new_b).is_not_tunnel() &&
+		level.cell(new_new).is_not_tunnel() {
+		Some(new)
+	} else {
+		None
+	}
+}
 
-		if (w >= 5) || (h >= 5) {
-			let row_cut = match h >= 2 {
-				true => 1,
-				false => 0,
-			};
-			let col_cut = match w >= 2 {
-				true => 1,
-				false => 0,
-			};
-			for _i in 0..n {
-				for _j in 0..10 {
-					let row = get_rand(row1 + row_cut, row2 - row_cut) as usize;
-					let col = get_rand(col1 + col_cut, col2 - col_cut) as usize;
-					if level.dungeon[row][col].is_any_tunnel() {
-						level.dungeon[row][col].set_hidden();
-						break;
-					}
+fn hide_boxed_passage(bounds: RoomBounds, n: i64, level_depth: isize, level: &mut Level) {
+	if level_depth <= 2 {
+		return;
+	}
+	let RoomBounds { top: row1, left: col1, bottom: row2, right: col2 } = bounds;
+	let (row1, row2) = if row1 > row2 { (row2, row1) } else { (row1, row2) };
+	let (col1, col2) = if col1 > col2 { (col2, col1) } else { (col1, col2) };
+	let h = row2 - row1;
+	let w = col2 - col1;
+	if (w >= 5) || (h >= 5) {
+		let row_cut = if h >= 2 { 1 } else { 0 };
+		let col_cut = if w >= 2 { 1 } else { 0 };
+		for _ in 0..n {
+			for _ in 0..10 {
+				let row = get_rand(row1 + row_cut, row2 - row_cut) as usize;
+				let col = get_rand(col1 + col_cut, col2 - col_cut) as usize;
+				if level.dungeon[row][col].is_any_tunnel() {
+					level.dungeon[row][col].set_hidden();
+					break;
 				}
 			}
 		}
