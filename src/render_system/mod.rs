@@ -153,3 +153,4 @@ pub fn refresh(game: &mut GameState) {
 	backend::move_cursor(game.player.to_spot());
 	backend::push_screen();
 }
+

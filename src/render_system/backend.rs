@@ -1,7 +1,22 @@
-use ncurses::{addch, chtype, clear, clrtoeol, curs_set, curscr, getch, mv, mvaddch, mvaddstr, mvinch, napms, refresh, standend, standout, wrefresh};
+use ncurses::{addch, cbreak, chtype, clear, clrtoeol, COLS, curs_set, curscr, endwin, getch, initscr, LINES, mv, mvaddch, mvaddstr, mvinch, napms, noecho, nonl, refresh, standend, standout, wrefresh};
 use ncurses::CURSOR_VISIBILITY::{CURSOR_INVISIBLE, CURSOR_VISIBLE};
 
 use crate::prelude::DungeonSpot;
+
+pub(crate) fn tear_down() {
+	endwin();
+}
+
+pub(crate) fn set_up() {
+	initscr();
+	cbreak();
+	noecho();
+	nonl();
+}
+
+pub(crate) fn rows_cols() -> (usize, usize) {
+	(LINES() as usize, COLS() as usize)
+}
 
 pub(crate) fn get_char(spot: DungeonSpot) -> char {
 	let ch = mvinch(spot.row as i32, spot.col as i32);
