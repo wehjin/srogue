@@ -183,8 +183,8 @@ pub fn make_level(game: &mut GameState) {
 			if is_all_connected(&game.level.rooms) {
 				break;
 			}
-			fill_out_level(&mut game.level, level_depth);
 		}
+		fill_out_level(&mut game.level, level_depth);
 	}
 	if !has_amulet(&game.player) && level_depth >= AMULET_LEVEL {
 		put_amulet(game);
