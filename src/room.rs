@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::init::GameState;
 use crate::level::{DungeonCell, Level, same_col, same_row};
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM};
-use crate::level::materials::{CellMaterial, Fixture, Visibility};
+use crate::level::materials::{CellMaterial, FloorFixture, TunnelFixture, Visibility};
 use crate::monster::Monster;
 use crate::motion::can_move;
 use crate::objects::{gr_object, place_at};
@@ -135,7 +135,7 @@ impl RoomBounds {
 		} else if spot.col == self.left || spot.col == self.right {
 			CellMaterial::VerticalWall
 		} else {
-			CellMaterial::Floor(Fixture::None)
+			CellMaterial::Floor(FloorFixture::None)
 		}
 	}
 	pub fn rows(&self) -> RangeInclusive<i64> {
@@ -279,8 +279,8 @@ pub fn party_objects(rn: usize, game: &mut GameState) -> usize {
 		for _j in 0..250 {
 			let row = get_rand(game.level.rooms[rn].top_row + 1, game.level.rooms[rn].bottom_row - 1);
 			let col = get_rand(game.level.rooms[rn].left_col + 1, game.level.rooms[rn].right_col - 1);
-			if game.level.dungeon[row as usize][col as usize].is_material_no_others(CellMaterial::Floor(Fixture::None))
-				|| game.level.dungeon[row as usize][col as usize].is_material_no_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None)) {
+			if game.level.dungeon[row as usize][col as usize].is_material_no_others(CellMaterial::Floor(FloorFixture::None))
+				|| game.level.dungeon[row as usize][col as usize].is_material_no_others(CellMaterial::Tunnel(Visibility::Visible, TunnelFixture::None)) {
 				found = Some(DungeonSpot { row, col });
 				break;
 			}

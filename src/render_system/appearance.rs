@@ -1,5 +1,5 @@
 use crate::init::GameState;
-use crate::level::materials::{CellMaterial, Fixture, Visibility};
+use crate::level::materials::{CellMaterial, FloorFixture, TunnelFixture, Visibility};
 use crate::prelude::DungeonSpot;
 use crate::prelude::object_what::ObjectWhat;
 use crate::render_system::{EMPTY_CHAR, STAIRS_CHAR, TRAP_CHAR, TUNNEL_CHAR};
@@ -102,11 +102,11 @@ fn when_out_of_sight_visited_no_obj_mon(spot: DungeonSpot, game: &GameState) -> 
 		| CellMaterial::VerticalWall
 		| CellMaterial::Door(_, _) => SpotAppearance::Material(material.to_char()),
 		CellMaterial::None => SpotAppearance::None,
-		CellMaterial::Floor(Fixture::Stairs) => SpotAppearance::Material(STAIRS_CHAR),
-		CellMaterial::Floor(Fixture::Trap(Visibility::Visible)) => SpotAppearance::Material(TRAP_CHAR),
+		CellMaterial::Floor(FloorFixture::Stairs) => SpotAppearance::Material(STAIRS_CHAR),
+		CellMaterial::Floor(FloorFixture::Trap(Visibility::Visible)) => SpotAppearance::Material(TRAP_CHAR),
 		CellMaterial::Floor(_) => SpotAppearance::FogBlack,
 		CellMaterial::Tunnel(Visibility::Hidden, _) => SpotAppearance::FogBlack,
-		CellMaterial::Tunnel(Visibility::Visible, Fixture::Stairs) => SpotAppearance::Material(STAIRS_CHAR),
+		CellMaterial::Tunnel(Visibility::Visible, TunnelFixture::Stairs) => SpotAppearance::Material(STAIRS_CHAR),
 		CellMaterial::Tunnel(_, _) => SpotAppearance::Material(TUNNEL_CHAR),
 	}
 }

@@ -14,7 +14,7 @@ use crate::init::GameState;
 use crate::inventory::get_obj_desc;
 use crate::level::constants::MAX_ROOM;
 use crate::level::Level;
-use crate::level::materials::{CellMaterial, Fixture, Visibility};
+use crate::level::materials::{CellMaterial, FloorFixture, TunnelFixture, Visibility};
 use crate::message::sound_bell;
 use crate::monster::party_monsters;
 use crate::objects::note_tables::NoteTables;
@@ -233,8 +233,8 @@ pub fn put_gold(level_depth: isize, level: &mut Level, ground: &mut ObjectPack) 
 			for _j in 0..50 {
 				let row = get_rand(level.rooms[i].top_row + 1, level.rooms[i].bottom_row - 1);
 				let col = get_rand(level.rooms[i].left_col + 1, level.rooms[i].right_col - 1);
-				if level.dungeon[row as usize][col as usize].is_material_no_others(CellMaterial::Floor(Fixture::None))
-					|| level.dungeon[row as usize][col as usize].is_material_no_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None)) {
+				if level.dungeon[row as usize][col as usize].is_material_no_others(CellMaterial::Floor(FloorFixture::None))
+					|| level.dungeon[row as usize][col as usize].is_material_no_others(CellMaterial::Tunnel(Visibility::Visible, TunnelFixture::None)) {
 					plant_gold(row, col, is_maze, level_depth, level, ground);
 					break;
 				}

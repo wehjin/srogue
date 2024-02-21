@@ -4,11 +4,12 @@ use serde::{Deserialize, Serialize};
 
 pub use cells::*;
 pub use dungeon::*;
-use materials::{CellMaterial, Fixture, Visibility};
+use materials::{CellMaterial, Visibility};
 use UpResult::{KeepLevel, WonGame};
 
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM, MAX_TRAP};
+use crate::level::materials::TunnelFixture;
 use crate::level::UpResult::UpLevel;
 use crate::monster::wake_room;
 use crate::objects::put_amulet;
@@ -332,16 +333,16 @@ pub fn draw_simple_passage(spot1: &DungeonSpot, spot2: &DungeonSpot, dir: DoorDi
 				};
 				let middle = get_rand(col1 + 1, col2 - 1);
 				for i in (col1 + 1)..middle {
-					level.dungeon[row1 as usize][i as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
+					level.dungeon[row1 as usize][i as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, TunnelFixture::None));
 				}
 				let mut i = row1;
 				let step = if row1 > row2 { -1 } else { 1 };
 				while i != row2 {
-					level.dungeon[i as usize][middle as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
+					level.dungeon[i as usize][middle as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, TunnelFixture::None));
 					i = (i) + step;
 				}
 				for i in middle..col2 {
-					level.dungeon[row2 as usize][i as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
+					level.dungeon[row2 as usize][i as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, TunnelFixture::None));
 				}
 				(col1, row1, col2, row2)
 			}
@@ -353,16 +354,16 @@ pub fn draw_simple_passage(spot1: &DungeonSpot, spot2: &DungeonSpot, dir: DoorDi
 				};
 				let middle = get_rand(row1 + 1, row2 - 1);
 				for i in (row1 + 1)..middle {
-					level.dungeon[i as usize][col1 as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
+					level.dungeon[i as usize][col1 as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, TunnelFixture::None));
 				}
 				let mut i = col1;
 				let step = if col1 > col2 { -1 } else { 1 };
 				while i != col2 {
-					level.dungeon[middle as usize][i as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
+					level.dungeon[middle as usize][i as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, TunnelFixture::None));
 					i = (i) + step;
 				}
 				for i in middle..row2 {
-					level.dungeon[i as usize][col2 as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
+					level.dungeon[i as usize][col2 as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, TunnelFixture::None));
 				}
 				(col1, row1, col2, row2)
 			}
@@ -451,7 +452,7 @@ fn fill_it(rn: usize, do_rec_de: bool, level_depth: isize, level: &mut Level) {
 		rooms_found += 1;
 		draw_simple_passage(&start_spot, &end_spot, tunnel_dir, level_depth, level);
 		level.rooms[rn].room_type = RoomType::DeadEnd;
-		level.dungeon[srow as usize][scol as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
+		level.dungeon[srow as usize][scol as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, TunnelFixture::None));
 		if (i < 3) && !did_this {
 			did_this = true;
 			if coin_toss() {
@@ -467,7 +468,7 @@ fn fill_it(rn: usize, do_rec_de: bool, level_depth: isize, level: &mut Level) {
 
 fn recursive_deadend(rn: usize, s_spot: &DungeonSpot, level_depth: isize, level: &mut Level) {
 	level.rooms[rn].room_type = RoomType::DeadEnd;
-	level.dungeon[s_spot.row as usize][s_spot.col as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
+	level.dungeon[s_spot.row as usize][s_spot.col as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, TunnelFixture::None));
 
 	for i in 0..4 {
 		let de: isize = rn as isize + level.target_room_offsets[i];
@@ -516,7 +517,7 @@ fn make_maze(spot: DungeonSpot, bounds: &RoomBounds, level: &mut Level) {
 	if rand_percent(33) {
 		dirs.shuffle(&mut thread_rng());
 	}
-	level.cell_mut(spot).set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, Fixture::None));
+	level.cell_mut(spot).set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, TunnelFixture::None));
 	for dir in dirs {
 		let (delta_row, delta_col) = dir.as_delta_row_col();
 		if let Some(new_spot) = check_spot_for_maze(delta_row, delta_col, spot, &bounds, level) {
