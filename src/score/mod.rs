@@ -2,17 +2,16 @@ use std::cmp::Ordering;
 use std::fs::File;
 use std::io::{Read, Seek, Write};
 
-use ncurses::{mv, mvaddch, mvaddstr, mvinch, refresh, standend, standout};
-
 use crate::init::{BYEBYE_STRING, clean_up, GameState};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::machdep::{md_heed_signals, md_ignore_signals};
-use crate::resources::keyboard::rgetchar;
 use crate::pack::{has_amulet, unwear, unwield};
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat;
+use crate::render_system::backend;
+use crate::resources::keyboard::rgetchar;
 use crate::ring::{PlayerHand, un_put_hand};
 
 mod values;
@@ -30,23 +29,23 @@ pub fn killed_by(ending: Ending, game: &mut GameState) {
 	how_ended += &format!(" with {} gold", game.player.rogue.gold);
 
 	if ending.is_monster() && game.player.settings.show_skull {
-		ncurses::clear();
-		mvaddstr(4, 32, "__---------__");
-		mvaddstr(5, 30, "_~             ~_");
-		mvaddstr(6, 29, "/                 \\");
-		mvaddstr(7, 28, "~                   ~");
-		mvaddstr(8, 27, "/                     \\");
-		mvaddstr(9, 27, "|    XXXX     XXXX    |");
-		mvaddstr(10, 27, "|    XXXX     XXXX    |");
-		mvaddstr(11, 27, "|    XXX       XXX    |");
-		mvaddstr(12, 28, "\\         @         /");
-		mvaddstr(13, 29, "--\\     @@@     /--");
-		mvaddstr(14, 30, "| |    @@@    | |");
-		mvaddstr(15, 30, "| |           | |");
-		mvaddstr(16, 30, "| vvVvvvvvvvVvv |");
-		mvaddstr(17, 30, "|  ^^^^^^^^^^^  |");
-		mvaddstr(18, 31, "\\_           _/");
-		mvaddstr(19, 33, "~---------~");
+		backend::erase_screen();
+		backend::set_str("__---------__", (4, 32).into());
+		backend::set_str("_~             ~_", (5, 30).into());
+		backend::set_str("/                 \\", (6, 29).into());
+		backend::set_str("~                   ~", (7, 28).into());
+		backend::set_str("/                     \\", (8, 27).into());
+		backend::set_str("|    XXXX     XXXX    |", (9, 27).into());
+		backend::set_str("|    XXXX     XXXX    |", (10, 27).into());
+		backend::set_str("|    XXX       XXX    |", (11, 27).into());
+		backend::set_str("\\         @         /", (12, 28).into());
+		backend::set_str("--\\     @@@     /--", (13, 29).into());
+		backend::set_str("| |    @@@    | |", (14, 30).into());
+		backend::set_str("| |           | |", (15, 30).into());
+		backend::set_str("| vvVvvvvvvvVvv |", (16, 30).into());
+		backend::set_str("|  ^^^^^^^^^^^  |", (17, 30).into());
+		backend::set_str("\\_           _/", (18, 31).into());
+		backend::set_str("~---------~", (19, 33).into());
 		center(21, game.player.settings.player_name().as_str());
 		center(22, &how_ended);
 	} else {
@@ -76,15 +75,15 @@ pub fn win(game: &mut GameState) {
 	for hand in PlayerHand::ALL_HANDS {
 		un_put_hand(hand, game);
 	}
-	ncurses::clear();
-	mvaddstr(10, 11, "@   @  @@@   @   @      @  @  @   @@@   @   @   @");
-	mvaddstr(11, 11, " @ @  @   @  @   @      @  @  @  @   @  @@  @   @");
-	mvaddstr(12, 11, "  @   @   @  @   @      @  @  @  @   @  @ @ @   @");
-	mvaddstr(13, 11, "  @   @   @  @   @      @  @  @  @   @  @  @@");
-	mvaddstr(14, 11, "  @    @@@    @@@        @@ @@    @@@   @   @   @");
-	mvaddstr(17, 11, "Congratulations,  you have  been admitted  to  the");
-	mvaddstr(18, 11, "Fighters' Guild.   You return home,  sell all your");
-	mvaddstr(19, 11, "treasures at great profit and retire into comfort.");
+	backend::erase_screen();
+	backend::set_str("@   @  @@@   @   @      @  @  @   @@@   @   @   @", (10, 11).into());
+	backend::set_str(" @ @  @   @  @   @      @  @  @  @   @  @@  @   @", (11, 11).into());
+	backend::set_str("  @   @   @  @   @      @  @  @  @   @  @ @ @   @", (12, 11).into());
+	backend::set_str("  @   @   @  @   @      @  @  @  @   @  @  @@", (13, 11).into());
+	backend::set_str("  @    @@@    @@@        @@ @@    @@@   @   @   @", (14, 11).into());
+	backend::set_str("Congratulations,  you have  been admitted  to  the", (17, 11).into());
+	backend::set_str("Fighters' Guild.   You return home,  sell all your", (18, 11).into());
+	backend::set_str("treasures at great profit and retire into comfort.", (19, 11).into());
 	game.dialog.message("", 0);
 	game.dialog.message("", 0);
 	game.player.notes.identify_all();
@@ -97,13 +96,13 @@ pub fn ask_quit(from_intrpt: bool, game: &mut GameState) -> bool {
 	let mut orow = 0;
 	let mut ocol = 0;
 	let mut mc = false;
-	let mut buf = [0; 128];
+	let mut buf = ['\x00'; 128];
 	if from_intrpt {
 		orow = game.player.rogue.row;
 		ocol = game.player.rogue.col;
 		mc = game.dialog.message_cleared();
 		for i in 0..DCOLS {
-			buf[i] = mvinch(0, i as i32);
+			buf[i] = backend::get_char((0, i).into());
 		}
 	}
 	game.dialog.clear_message();
@@ -114,11 +113,11 @@ pub fn ask_quit(from_intrpt: bool, game: &mut GameState) -> bool {
 		game.dialog.clear_message();
 		if from_intrpt {
 			for i in 0..DCOLS {
-				mvaddch(0, i as i32, buf[i]);
+				backend::set_char(buf[i], (0, i).into());
 			}
 			game.dialog.set_message_cleared(mc);
-			mv(orow as i32, ocol as i32);
-			refresh();
+			backend::move_cursor((orow, ocol).into());
+			backend::push_screen();
 		}
 		return false;
 	}
@@ -216,9 +215,9 @@ pub fn put_scores(ending: Option<Ending>, game: &mut GameState) {
 		file.rewind().expect("rewind file");
 	}
 
-	ncurses::clear();
-	mvaddstr(3, 30, "Top  Ten  Rogueists");
-	mvaddstr(8, 0, "Rank   Score   Name");
+	backend::erase_screen();
+	backend::set_str("Top  Ten  Rogueists", (3, 30).into());
+	backend::set_str("Rank   Score   Name", (8, 0).into());
 
 	md_ignore_signals();
 
@@ -229,18 +228,18 @@ pub fn put_scores(ending: Option<Ending>, game: &mut GameState) {
 		let revised_rank = format!("{:2}", i + 1) + &score[2..];
 		let revised_name = replace_name_in_score(&revised_rank, name);
 		if i == rank {
-			standout();
+			backend::stand_out(true);
 		}
-		mvaddstr((i + 10) as i32, 0, &revised_name);
+		backend::set_str(&revised_name, (i + 10, 0).into());
 		if i == rank {
-			standend();
+			backend::stand_out(false);
 		}
 		if rank < 10 {
 			let score_and_name = format!("{}\n{}\n", revised_name, name);
 			file.write(score_and_name.as_bytes()).expect("write score and name");
 		}
 	}
-	refresh();
+	backend::push_screen();
 	drop(file);
 	game.dialog.message("", 0);
 	clean_up("", &mut game.player);
@@ -292,8 +291,8 @@ pub fn is_vowel(ch: char) -> bool {
 
 pub fn sell_pack(game: &mut GameState)
 {
-	ncurses::clear();
-	mvaddstr(1, 0, "Value      Item");
+	backend::erase_screen();
+	backend::set_str("Value      Item", (1, 0).into());
 	let mut row: usize = 2;
 	for pack_id in game.player.object_ids() {
 		if game.player.object_what(pack_id) != ObjectWhat::Food {
@@ -304,12 +303,12 @@ pub fn sell_pack(game: &mut GameState)
 			game.player.rogue.gold += obj_value;
 			if row < DROWS {
 				let msg = format!("{:5}      {}", obj_value, obj_desc);
-				mvaddstr(row as i32, 0, &msg);
+				backend::set_str(&msg, (row, 0).into());
 				row += 1;
 			}
 		}
 	}
-	refresh();
+	backend::push_screen();
 	if game.player.rogue.gold > MAX_GOLD {
 		game.player.rogue.gold = MAX_GOLD;
 	}
@@ -349,8 +348,8 @@ fn replace_name_in_score(score: &str, new_name: &str) -> String {
 
 
 pub fn center(row: i64, msg: &str) {
-	let margin = (DCOLS - msg.len()) / 2;
-	mvaddstr(row as i32, margin as i32, msg);
+	let margin = (DCOLS - msg.len().max(DCOLS)) / 2;
+	backend::set_str(msg, (row, margin as i64).into());
 }
 
 pub fn score_file_error(game: &mut GameState) {

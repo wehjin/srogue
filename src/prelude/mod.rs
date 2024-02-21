@@ -34,6 +34,18 @@ impl From<(usize, usize)> for DungeonSpot {
 	}
 }
 
+impl From<(i64, i64)> for DungeonSpot {
+	fn from((row, col): (i64, i64)) -> Self {
+		Self { row, col }
+	}
+}
+
+impl From<(i32, i32)> for DungeonSpot {
+	fn from((row, col): (i32, i32)) -> Self {
+		Self { row: row as i64, col: col as i64 }
+	}
+}
+
 impl DungeonSpot {
 	pub fn new(row: usize, col: usize) -> Self {
 		Self { col: col as i64, row: row as i64 }
