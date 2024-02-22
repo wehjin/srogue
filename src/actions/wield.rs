@@ -8,7 +8,7 @@ use crate::resources::keyboard::CANCEL_CHAR;
 pub struct Wield;
 
 impl PlayerAction for Wield {
-	fn update(game: &mut GameState) {
+	fn update(_input_key: char, game: &mut GameState) {
 		if game.player.wields_cursed_weapon() {
 			game.dialog.message(CURSE_MESSAGE, 0);
 			return;

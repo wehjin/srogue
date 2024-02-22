@@ -4,7 +4,7 @@ use crate::init::GameState;
 pub struct Rest;
 
 impl PlayerAction for Rest {
-	fn update(game: &mut GameState) {
+	fn update(_input_key: char, game: &mut GameState) {
 		rest(game);
 	}
 }

@@ -5,7 +5,7 @@ use crate::init::GameState;
 pub struct FightLight;
 
 impl PlayerAction for FightLight {
-	fn update(game: &mut GameState) {
+	fn update(_input_key: char, game: &mut GameState) {
 		fight(false, game);
 	}
 }
@@ -13,7 +13,7 @@ impl PlayerAction for FightLight {
 pub struct FightHeavy;
 
 impl PlayerAction for FightHeavy {
-	fn update(game: &mut GameState) {
+	fn update(_input_key: char, game: &mut GameState) {
 		fight(true, game);
 	}
 }

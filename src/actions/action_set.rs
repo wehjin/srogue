@@ -20,7 +20,7 @@ use crate::actions::wear::Wear;
 use crate::actions::wield::Wield;
 use crate::init::GameState;
 
-const ROGUE_ACTIONS: [(char, fn(&mut GameState)); 16] = [
+const ROGUE_ACTIONS: [(char, fn(char, &mut GameState)); 16] = [
 	('?', Instruct::update),
 	('.', Rest::update),
 	('F', FightHeavy::update),
@@ -40,7 +40,7 @@ const ROGUE_ACTIONS: [(char, fn(&mut GameState)); 16] = [
 ];
 
 lazy_static! {
-	pub static ref ACTION_UPDATES: HashMap<char, fn(&mut GameState)> = {
+	pub static ref ACTION_UPDATES: HashMap<char, fn(char,&mut GameState)> = {
 		let mut actions = HashMap::new();
 		for (key_code, handler) in &ROGUE_ACTIONS {
 			actions.insert(*key_code, *handler);

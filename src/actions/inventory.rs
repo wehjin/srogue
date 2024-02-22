@@ -6,7 +6,7 @@ use crate::prelude::object_what::PackFilter::AllObjects;
 pub struct Inventory;
 
 impl PlayerAction for Inventory {
-	fn update(game: &mut GameState) {
+	fn update(_input_key: char, game: &mut GameState) {
 		inventory(AllObjects, game);
 	}
 }

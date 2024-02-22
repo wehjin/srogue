@@ -8,7 +8,7 @@ use crate::resources::keyboard::CANCEL_CHAR;
 pub struct Wear;
 
 impl PlayerAction for Wear {
-	fn update(game: &mut GameState) {
+	fn update(_input_key: char, game: &mut GameState) {
 		if game.player.armor_id().is_some() {
 			game.dialog.message("your already wearing some", 0);
 			return;

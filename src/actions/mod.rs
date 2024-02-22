@@ -1,7 +1,7 @@
 use crate::init::GameState;
 
 pub trait PlayerAction {
-	fn update(game: &mut GameState);
+	fn update(input_key: char, game: &mut GameState);
 }
 
 pub mod action_set;

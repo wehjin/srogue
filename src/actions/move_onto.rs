@@ -6,7 +6,7 @@ use crate::resources::keyboard::CANCEL_CHAR;
 pub struct MoveOnto;
 
 impl PlayerAction for MoveOnto {
-	fn update(game: &mut GameState) {
+	fn update(_input_key: char, game: &mut GameState) {
 		move_onto(game);
 	}
 }

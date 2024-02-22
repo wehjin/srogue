@@ -14,7 +14,7 @@ use crate::ring::un_put_hand;
 pub struct DropItem;
 
 impl PlayerAction for DropItem {
-	fn update(game: &mut GameState) {
+	fn update(_input_key: char, game: &mut GameState) {
 		drop_item(game);
 	}
 }

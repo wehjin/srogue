@@ -6,7 +6,7 @@ use crate::resources::keyboard::rgetchar;
 pub struct Instruct;
 
 impl PlayerAction for Instruct {
-	fn update(_game: &mut GameState) {
+	fn update(_input_key: char, _game: &mut GameState) {
 		let repair_rows = detect_all_rows();
 		render_all_rows(instruct_line_for_row);
 		rgetchar();

@@ -39,7 +39,7 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 	game.dialog.clear_message();
 	game.turn = GameTurn::Player;
 	if let Some(action_update) = ACTION_UPDATES.get(&key_code) {
-		action_update(game);
+		action_update(key_code, game);
 		if game.turn == GameTurn::Monsters {
 			reg_move(game);
 		}

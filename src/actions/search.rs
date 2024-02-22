@@ -6,7 +6,7 @@ use crate::trap;
 pub struct Search;
 
 impl PlayerAction for Search {
-	fn update(game: &mut GameState) {
+	fn update(_input_key: char, game: &mut GameState) {
 		search(SearchKind::Manual, game);
 	}
 }
