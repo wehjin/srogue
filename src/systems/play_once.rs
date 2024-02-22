@@ -4,7 +4,6 @@ use crate::motion::reg_move;
 use crate::pack::kick_into_pack;
 use crate::render_system;
 use crate::resources::keyboard::rgetchar;
-use crate::save::save_game;
 use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
 use crate::systems::play_once::PlayOnceResult::{Counting, Leaving};
 
@@ -36,9 +35,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			'S' => if save_game(game) {
-				return Leaving(PlayResult::ExitSaved);
-			},
 			',' => {
 				kick_into_pack(game);
 			}

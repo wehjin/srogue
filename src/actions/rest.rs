@@ -8,8 +8,21 @@ use crate::prelude::object_what::ObjectWhat::{Potion, Ring, Scroll, Wand};
 use crate::prelude::object_what::PackFilter::AnyFrom;
 use crate::resources::input_line::get_input_line;
 use crate::resources::keyboard::CANCEL_CHAR;
+use crate::save::save_game;
 use crate::score::ask_quit;
 use crate::systems::play_level::PlayResult;
+
+pub struct SaveGame;
+
+impl PlayerAction for SaveGame {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		if save_game(game) {
+			Some(PlayResult::ExitSaved)
+		} else {
+			None
+		}
+	}
+}
 
 pub struct ShowAverageHp;
 
