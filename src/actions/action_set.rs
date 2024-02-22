@@ -22,16 +22,17 @@ use crate::actions::search::{IdentifyTrap, Search};
 use crate::actions::take_off::TakeOff;
 use crate::actions::wear::Wear;
 use crate::actions::wield::Wield;
-use crate::actions::wizard::Wizardize;
+use crate::actions::wizard::{DrawMagicMap, Wizardize};
 use crate::init::GameState;
 use crate::resources::keyboard;
-use crate::resources::keyboard::{CTRL_I, CTRL_W};
+use crate::resources::keyboard::{CTRL_I, CTRL_S, CTRL_W};
 use crate::systems::play_level::PlayResult;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 35] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 36] = [
 	(&['<'], Ascend::update),
 	(&['c'], CallIt::update),
 	(&['>'], Descend::update),
+	(&[CTRL_S], DrawMagicMap::update),
 	(&['d'], DropItem::update),
 	(&['e'], Eat::update),
 	(&['F'], FightHeavy::update),

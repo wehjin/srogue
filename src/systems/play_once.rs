@@ -7,7 +7,6 @@ use crate::objects::{new_object_for_wizard, show_objects};
 use crate::pack::kick_into_pack;
 use crate::render_system;
 use crate::resources::keyboard::rgetchar;
-use crate::room::draw_magic_map;
 use crate::save::save_game;
 use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
 use crate::systems::play_once::PlayOnceResult::{Counting, Leaving};
@@ -41,11 +40,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			'\x13' => if game.player.wizard {
-				draw_magic_map(game);
-			} else {
-				game.dialog.message(UNKNOWN_COMMAND, 0);
-			},
 			'\x14' => if game.player.wizard {
 				show_traps(game);
 			} else {

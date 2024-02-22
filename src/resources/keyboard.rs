@@ -12,6 +12,7 @@ pub(crate) const CTRL_L: char = '\x0c';
 pub(crate) const CTRL_N: char = '\x0e';
 pub(crate) const CTRL_P: char = '\x10';
 pub(crate) const CTRL_R_CHAR: char = '\u{12}';
+pub(crate) const CTRL_S: char = '\x13';
 pub(crate) const CTRL_U: char = '\x15';
 pub(crate) const CTRL_W: char = '\u{17}';
 pub(crate) const CTRL_Y: char = '\x19';

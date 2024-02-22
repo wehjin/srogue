@@ -1,7 +1,21 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
 use crate::resources::input_line::get_input_line;
-use crate::systems::play_level::PlayResult;
+use crate::room::draw_magic_map;
+use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
+
+pub struct DrawMagicMap;
+
+impl PlayerAction for DrawMagicMap {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		if game.player.wizard {
+			draw_magic_map(game);
+		} else {
+			game.dialog.message(UNKNOWN_COMMAND, 0);
+		}
+		None
+	}
+}
 
 pub struct Wizardize;
 
