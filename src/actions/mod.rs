@@ -1,6 +1,8 @@
 use lazy_static::lazy_static;
 
 use crate::actions::action_set::PlayerActionSet;
+use crate::actions::eat::Eat;
+use crate::actions::fight::{FightHeavy, FightLight};
 use crate::actions::instruct::Instruct;
 use crate::actions::inventory::Inventory;
 use crate::actions::put_on_ring::PutOnRing;
@@ -13,6 +15,8 @@ use crate::actions::wield::Wield;
 use crate::init::GameState;
 
 pub mod action_set;
+pub mod eat;
+pub mod fight;
 pub mod instruct;
 pub mod inventory;
 pub mod put_on_ring;
@@ -31,10 +35,13 @@ lazy_static! {
 	pub static ref PLAYER_ACTIONS: PlayerActionSet = PlayerActionSet::new(vec![
 		('?', Box::new(Instruct)),
 		('.', Box::new(Rest)),
+		('F', Box::new(FightHeavy)),
 		('P', Box::new(PutOnRing)),
 		('R', Box::new(RemoveRing)),
 		('T', Box::new(TakeOff)),
 		('W', Box::new(Wear)),
+		('e' ,Box::new(Eat)),
+		('f', Box::new(FightLight)),
 		('i', Box::new(Inventory)),
 		('s', Box::new(Search)),
 		('w', Box::new(Wield)),
