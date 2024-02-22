@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use lazy_static::lazy_static;
 
+use keyboard::CTRL_P;
+
 use crate::actions::drop_item::DropItem;
 use crate::actions::eat::Eat;
 use crate::actions::fight::{FightHeavy, FightLight};
@@ -15,6 +17,7 @@ use crate::actions::quaff::Quaff;
 use crate::actions::read_scroll::ReadScroll;
 use crate::actions::remove_ring::RemoveRing;
 use crate::actions::rest::Rest;
+use crate::actions::screen::ReMessage;
 use crate::actions::search::Search;
 use crate::actions::take_off::TakeOff;
 use crate::actions::wear::Wear;
@@ -22,7 +25,7 @@ use crate::actions::wield::Wield;
 use crate::init::GameState;
 use crate::resources::keyboard;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState)); 19] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState)); 20] = [
 	(&['d'], DropItem::update),
 	(&['e'], Eat::update),
 	(&['F'], FightHeavy::update),
@@ -36,6 +39,7 @@ const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState)); 19] = [
 	(&['P'], PutOnRing::update),
 	(&['q'], Quaff::update),
 	(&['r'], ReadScroll::update),
+	(&[CTRL_P], ReMessage::update),
 	(&['R'], RemoveRing::update),
 	(&['.'], Rest::update),
 	(&['s'], Search::update),

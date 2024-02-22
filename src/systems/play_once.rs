@@ -45,7 +45,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			'\x10' => game.dialog.re_message(),
 			CTRL_W_CHAR => wizardize(game),
 			'>' => if drop_check(game) {
 				return Leaving(StairsDown);
