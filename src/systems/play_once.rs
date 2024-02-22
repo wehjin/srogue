@@ -1,11 +1,10 @@
 use keyboard::CTRL_W_CHAR;
-
 use crate::actions::PLAYER_ACTIONS;
 use crate::init::{GameState, GameTurn};
 use crate::inventory::{inv_armor_weapon, inventory, single_inv};
 use crate::level::{check_up, drop_check, show_average_hp, UpResult};
 use crate::monster::show_monsters;
-use crate::motion::{move_onto, multiple_move_rogue, one_move_rogue, reg_move};
+use crate::motion::{multiple_move_rogue, one_move_rogue, reg_move};
 use crate::objects::{new_object_for_wizard, show_objects};
 use crate::pack::{call_it, drop_0, kick_into_pack};
 use crate::prelude::object_what::PackFilter::AllObjects;
@@ -53,7 +52,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 			| keyboard::CTRL_H | keyboard::CTRL_J | keyboard::CTRL_K | keyboard::CTRL_L
 			| keyboard::CTRL_Y | keyboard::CTRL_U | keyboard::CTRL_N | keyboard::CTRL_B =>
 				multiple_move_rogue(key_code as i64, game),
-			'm' => move_onto(game),
 			'd' => drop_0(game),
 			'\x10' => game.dialog.re_message(),
 			CTRL_W_CHAR => wizardize(game),

@@ -299,14 +299,6 @@ pub fn can_move(row1: i64, col1: i64, row2: i64, col2: i64, level: &Level) -> bo
 	}
 }
 
-pub fn move_onto(game: &mut GameState) {
-	let ch = get_dir_or_cancel(game);
-	game.dialog.clear_message();
-	if ch != CANCEL_CHAR {
-		one_move_rogue(ch, false, game);
-	}
-}
-
 pub fn get_dir_or_cancel(game: &mut GameState) -> char {
 	let mut dir: char;
 	let mut first_miss: bool = true;

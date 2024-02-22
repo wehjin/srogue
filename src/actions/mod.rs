@@ -5,6 +5,7 @@ use crate::actions::eat::Eat;
 use crate::actions::fight::{FightHeavy, FightLight};
 use crate::actions::instruct::Instruct;
 use crate::actions::inventory::Inventory;
+use crate::actions::move_onto::MoveOnto;
 use crate::actions::put_on_ring::PutOnRing;
 use crate::actions::quaff::Quaff;
 use crate::actions::read_scroll::ReadScroll;
@@ -21,6 +22,7 @@ pub mod eat;
 pub mod fight;
 pub mod instruct;
 pub mod inventory;
+pub mod move_onto;
 pub mod put_on_ring;
 pub mod quaff;
 pub mod read_scroll;
@@ -47,6 +49,7 @@ lazy_static! {
 		('e' ,Box::new(Eat)),
 		('f', Box::new(FightLight)),
 		('i', Box::new(Inventory)),
+		('m', Box::new(MoveOnto)),
 		('q' ,Box::new(Quaff)),
 		('r' ,Box::new(ReadScroll)),
 		('s', Box::new(Search)),
