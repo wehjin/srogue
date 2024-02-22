@@ -14,7 +14,6 @@ use crate::save::save_game;
 use crate::score::ask_quit;
 use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
 use crate::systems::play_once::PlayOnceResult::{Counting, Leaving};
-use crate::throw::throw;
 use crate::trap::show_traps;
 
 pub enum PlayOnceResult {
@@ -41,7 +40,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			't' => throw(game),
 			'v' => game.dialog.message("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims", 0),
 			'Q' => if ask_quit(false, game) {
 				return Leaving(PlayResult::ExitQuit);
