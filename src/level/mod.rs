@@ -137,7 +137,6 @@ impl Level {
 }
 
 pub fn make_level(game: &mut GameState) {
-	// TODO There are paths between rooms that are missing a spot.
 	let (must_exist1, must_exist2, must_exist3) = match get_rand(0, 5) {
 		0 => (0, 1, 2),
 		1 => (3, 4, 5),
@@ -269,12 +268,8 @@ impl GameState {
 		self.player.cleaned_up = None;
 		self.mash.clear();
 		self.ground.clear();
+		backend::erase_screen();
 	}
-}
-
-pub fn clear_level(game: &mut GameState) {
-	game.clear_level();
-	backend::erase_screen();
 }
 
 pub fn put_door(rn: usize, door_dir: DoorDirection, level_depth: isize, level: &mut Level) -> DungeonSpot {

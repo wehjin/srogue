@@ -2,7 +2,7 @@
 
 use crate::console::ConsoleError;
 use crate::init::{init, InitError, InitResult};
-use crate::level::{clear_level, make_level, put_player};
+use crate::level::{make_level, put_player};
 use crate::monster::put_mons;
 use crate::objects::{put_objects, put_stairs};
 use crate::settings::SettingsError;
@@ -51,14 +51,12 @@ pub mod actions;
 pub fn main() {
 	let settings = match settings::load() {
 		Ok(settings) => settings,
-		Err(e) => {
-			match e {
-				SettingsError::LoginName => {
-					println!("Hey!  Who are you?");
-				}
+		Err(e) => match e {
+			SettingsError::LoginName => {
+				println!("Hey!  Who are you?");
+				return;
 			}
-			return;
-		}
+		},
 	};
 	let result = match init(settings) {
 		Ok(result) => result,
@@ -90,7 +88,7 @@ pub fn main() {
 	let mut exit_line = None;
 	loop {
 		if !restored {
-			clear_level(&mut game);
+			game.clear_level();
 			game.player.descend();
 			make_level(&mut game);
 			put_objects(&mut game);

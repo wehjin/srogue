@@ -19,8 +19,8 @@ pub enum CellMaterial {
 	HorizontalWall,
 	VerticalWall,
 	Door(DoorDirection, Visibility),
-	Floor(Fixture),
-	Tunnel(Visibility, Fixture),
+	Floor(FloorFixture),
+	Tunnel(Visibility, TunnelFixture),
 }
 
 impl CellMaterial {
@@ -55,33 +55,32 @@ impl CellMaterial {
 			_ => false,
 		}
 	}
-	pub fn fixture(&self) -> Option<&Fixture> {
+	pub fn is_any_trap(&self) -> bool {
 		match self {
-			CellMaterial::Floor(fix) => Some(&fix),
-			CellMaterial::Tunnel(_, fix) => Some(&fix),
-			_ => None,
+			CellMaterial::Floor(fix) => fix.is_any_trap(),
+			_ => false
 		}
 	}
-	pub fn is_any_trap(&self) -> bool {
-		self.fixture().map(Fixture::is_any_trap).unwrap_or(false)
-	}
 	pub fn is_visible_trap(&self) -> bool {
-		CellMaterial::Floor(Fixture::Trap(Visibility::Visible)) == *self
+		CellMaterial::Floor(FloorFixture::Trap(Visibility::Visible)) == *self
 	}
 	pub fn with_hidden_trap(&self) -> Self {
 		match self {
-			CellMaterial::Floor(_) => CellMaterial::Floor(Fixture::Trap(Visibility::Hidden)),
-			CellMaterial::Tunnel(viz, _) => CellMaterial::Tunnel(*viz, Fixture::Trap(Visibility::Hidden)),
+			CellMaterial::Floor(_) => CellMaterial::Floor(FloorFixture::Trap(Visibility::Hidden)),
 			_ => self.clone(),
 		}
 	}
 	pub fn is_stairs(&self) -> bool {
-		self.fixture().map(Fixture::is_stairs).unwrap_or(false)
+		match self {
+			CellMaterial::Floor(fix) => fix.is_stairs(),
+			CellMaterial::Tunnel(_, fix) => fix.is_stairs(),
+			_ => false,
+		}
 	}
 	pub fn with_stairs(&self) -> Self {
 		match self {
-			CellMaterial::Floor(_) => CellMaterial::Floor(Fixture::Stairs),
-			CellMaterial::Tunnel(viz, _) => CellMaterial::Tunnel(*viz, Fixture::Stairs),
+			CellMaterial::Floor(_) => CellMaterial::Floor(FloorFixture::Stairs),
+			CellMaterial::Tunnel(viz, _) => CellMaterial::Tunnel(*viz, TunnelFixture::Stairs),
 			_ => self.clone(),
 		}
 	}
@@ -101,7 +100,7 @@ impl CellMaterial {
 			CellMaterial::VerticalWall => CellMaterial::VerticalWall,
 			CellMaterial::Door(dir, _) => CellMaterial::Door(*dir, Visibility::Visible),
 			CellMaterial::Floor(fix) => CellMaterial::Floor(fix.to_visible()),
-			CellMaterial::Tunnel(_, fix) => CellMaterial::Tunnel(Visibility::Visible, fix.to_visible()),
+			CellMaterial::Tunnel(_, fix) => CellMaterial::Tunnel(Visibility::Visible, *fix),
 		}
 	}
 	pub fn to_hidden(&self) -> Self {
@@ -111,7 +110,7 @@ impl CellMaterial {
 			CellMaterial::VerticalWall => CellMaterial::VerticalWall,
 			CellMaterial::Door(dir, _) => CellMaterial::Door(*dir, Visibility::Hidden),
 			CellMaterial::Floor(fix) => CellMaterial::Floor(fix.to_hidden()),
-			CellMaterial::Tunnel(_, fix) => CellMaterial::Tunnel(Visibility::Hidden, fix.to_hidden()),
+			CellMaterial::Tunnel(_, fix) => CellMaterial::Tunnel(Visibility::Hidden, *fix),
 		}
 	}
 }
@@ -137,22 +136,20 @@ impl CellMaterial {
 			}
 			CellMaterial::Floor(fix) => {
 				match fix {
-					Fixture::None => FLOOR_CHAR,
-					Fixture::Trap(viz) => match viz {
+					FloorFixture::None => FLOOR_CHAR,
+					FloorFixture::Trap(viz) => match viz {
 						Visibility::Visible => TRAP_CHAR,
 						Visibility::Hidden => FLOOR_WITH_HIDDEN_TRAP_CHAR,
 					}
-					Fixture::Stairs => STAIRS_CHAR,
+					FloorFixture::Stairs => STAIRS_CHAR,
 				}
 			}
 			CellMaterial::Tunnel(viz, fix) => {
 				match viz {
-					Visibility::Visible => {
-						match fix {
-							Fixture::Stairs => '%',
-							Fixture::None | Fixture::Trap(_) => '#'
-						}
-					}
+					Visibility::Visible => match fix {
+						TunnelFixture::Stairs => '%',
+						TunnelFixture::None => '#',
+					},
 					Visibility::Hidden => ' ',
 				}
 			}
@@ -161,55 +158,69 @@ impl CellMaterial {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
-pub enum Fixture {
+pub enum TunnelFixture {
+	#[default]
+	None,
+	Stairs,
+}
+
+impl TunnelFixture {
+	pub fn is_stairs(&self) -> bool {
+		*self == TunnelFixture::Stairs
+	}
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
+pub enum FloorFixture {
 	#[default]
 	None,
 	Stairs,
 	Trap(Visibility),
 }
 
-impl Fixture {
+
+impl FloorFixture {
 	pub fn as_char(&self, ground_char: char) -> char {
 		match self {
-			Fixture::None => ground_char,
-			Fixture::Stairs => '%',
-			Fixture::Trap(Visibility::Visible) => '^',
-			Fixture::Trap(Visibility::Hidden) => ',',
+			FloorFixture::None => ground_char,
+			FloorFixture::Stairs => '%',
+			FloorFixture::Trap(Visibility::Visible) => '^',
+			FloorFixture::Trap(Visibility::Hidden) => ',',
 		}
 	}
 	pub fn is_any_trap(&self) -> bool {
 		match self {
-			Fixture::None => false,
-			Fixture::Stairs => false,
-			Fixture::Trap(_) => true,
+			FloorFixture::None => false,
+			FloorFixture::Stairs => false,
+			FloorFixture::Trap(_) => true,
 		}
 	}
 	pub fn is_stairs(&self) -> bool {
 		match self {
-			Fixture::None => false,
-			Fixture::Stairs => true,
-			Fixture::Trap(_) => false,
+			FloorFixture::None => false,
+			FloorFixture::Stairs => true,
+			FloorFixture::Trap(_) => false,
 		}
 	}
 	pub fn is_hidden(&self) -> bool {
 		match self {
-			Fixture::None => false,
-			Fixture::Stairs => false,
-			Fixture::Trap(viz) => viz.is_hidden(),
+			FloorFixture::None => false,
+			FloorFixture::Stairs => false,
+			FloorFixture::Trap(viz) => viz.is_hidden(),
 		}
 	}
 	pub fn to_visible(&self) -> Self {
 		match self {
-			Fixture::None => Fixture::None,
-			Fixture::Stairs => Fixture::Stairs,
-			Fixture::Trap(_) => Fixture::Trap(Visibility::Visible),
+			FloorFixture::None => FloorFixture::None,
+			FloorFixture::Stairs => FloorFixture::Stairs,
+			FloorFixture::Trap(_) => FloorFixture::Trap(Visibility::Visible),
 		}
 	}
 	pub fn to_hidden(&self) -> Self {
 		match self {
-			Fixture::None => Fixture::None,
-			Fixture::Stairs => Fixture::Stairs,
-			Fixture::Trap(_) => Fixture::Trap(Visibility::Hidden),
+			FloorFixture::None => FloorFixture::None,
+			FloorFixture::Stairs => FloorFixture::Stairs,
+			FloorFixture::Trap(_) => FloorFixture::Trap(Visibility::Hidden),
 		}
 	}
 }
