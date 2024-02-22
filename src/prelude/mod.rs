@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use serde::{Deserialize, Serialize};
 
 use crate::hit::get_dir_rc;
@@ -44,6 +46,13 @@ impl From<(i64, i64)> for DungeonSpot {
 impl From<(i32, i32)> for DungeonSpot {
 	fn from((row, col): (i32, i32)) -> Self {
 		Self { row: row as i64, col: col as i64 }
+	}
+}
+
+impl Add<(i64, i64)> for DungeonSpot {
+	type Output = Self;
+	fn add(self, (rows, cols): (i64, i64)) -> Self::Output {
+		Self { row: self.row + rows, col: self.col + cols }
 	}
 }
 

@@ -10,7 +10,7 @@ impl PlayerAction for Rest {
 }
 
 fn rest(game: &mut GameState) {
-	game.commit_player_turn();
+	game.yield_turn_to_monsters();
 }
 
 

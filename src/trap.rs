@@ -7,7 +7,7 @@ use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
 use crate::level::Level;
 use crate::message::sound_bell;
-use crate::motion::{is_direction, reg_move};
+use crate::motion::is_direction;
 use crate::player::Player;
 use crate::prelude::*;
 use crate::prelude::ending::Ending;
@@ -238,7 +238,6 @@ pub fn id_trap(game: &mut GameState) {
 	}
 }
 
-
 pub fn show_traps(game: &mut GameState) {
 	let bounds = game.dungeon_bounds();
 	for row in bounds.rows() {
@@ -252,57 +251,6 @@ pub fn show_traps(game: &mut GameState) {
 	}
 }
 
-pub fn search(n: usize, is_auto: bool, game: &mut GameState) {
-	let mut found = 0;
-	for i in -1..=1 {
-		for j in -1..=1 {
-			let row = game.player.rogue.row + i;
-			let col = game.player.rogue.col + j;
-			if is_off_screen(row, col) {
-				continue;
-			}
-			if game.level.dungeon[row as usize][col as usize].is_any_hidden() {
-				found += 1;
-			}
-		}
-	}
-
-	let mut shown = 0;
-	for _s in 0..n {
-		for i in -1..=1 {
-			for j in -1..=1 {
-				let spot = DungeonSpot {
-					col: game.player.rogue.row + i,
-					row: game.player.rogue.col + j,
-				};
-				if spot.is_out_of_bounds() {
-					continue;
-				}
-				if game.cell_at(spot).is_any_hidden() {
-					if rand_percent(17 + game.player.buffed_exp() as usize) {
-						game.cell_at_mut(spot).set_visible();
-						game.render_spot(spot);
-						shown += 1;
-						if game.cell_at(spot).is_any_trap() {
-							game.player.interrupt_and_slurp();
-							game.dialog.message(trap_at(spot.row as usize, spot.col as usize, &game.level).name(), 1);
-						}
-					}
-				}
-				if (shown == found && found > 0) || game.player.interrupted {
-					return;
-				}
-			}
-		}
-		if !is_auto {
-			game.player.reg_search_count += 1;
-			if 1 == game.player.reg_search_count % 1 {
-				reg_move(game);
-			}
-		}
-	}
-}
-
-pub fn is_off_screen(row: i64, col: i64) -> bool {
+pub(crate) fn is_off_screen(row: i64, col: i64) -> bool {
 	row < MIN_ROW || row >= ((DROWS as i64) - 1) || col < 0 || col >= (DCOLS as i64)
 }

@@ -10,7 +10,7 @@ pub enum Visibility {
 }
 
 impl Visibility {
-	pub fn is_hidden(&self) -> bool { self == &Self::Hidden }
+	pub fn is_hidden(&self) -> bool { *self == Self::Hidden }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]

@@ -1,4 +1,5 @@
 use MoveResult::MoveFailed;
+use crate::actions::search::{search, SearchKind};
 
 use crate::components::hunger::{FAINT_MOVES_LEFT, HungerLevel, HUNGRY_MOVES_LEFT, STARVE_MOVES_LEFT, WEAK_MOVES_LEFT};
 use crate::hit::{get_dir_rc, rogue_hit};
@@ -24,7 +25,7 @@ use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
 use crate::room::{visit_room, visit_spot_area};
 use crate::score::killed_by;
 use crate::throw::Motion;
-use crate::trap::{is_off_screen, search, trap_player};
+use crate::trap::{is_off_screen, trap_player};
 
 pub const YOU_CAN_MOVE_AGAIN: &'static str = "you can move again";
 
@@ -463,7 +464,7 @@ pub fn reg_move(game: &mut GameState) -> bool {
 	{
 		let auto_search = game.player.ring_effects.auto_search();
 		if auto_search > 0 {
-			search(auto_search as usize, auto_search > 0, game);
+			search(SearchKind::Auto { n: auto_search as usize }, game);
 		}
 	}
 	return hunger_check == HungerCheckResult::DidFaint;

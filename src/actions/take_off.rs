@@ -20,7 +20,7 @@ impl PlayerAction for TakeOff {
 					game.dialog.message(&msg, 0);
 				}
 				game.stats_changed = true;
-				game.commit_player_turn();
+				game.yield_turn_to_monsters();
 			}
 		} else {
 			game.dialog.message("not wearing any", 0);

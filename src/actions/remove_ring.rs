@@ -41,7 +41,7 @@ impl PlayerAction for RemoveRing {
 			let msg = format!("removed {}", removed_desc);
 			game.dialog.message(&msg, 0);
 		}
-		game.commit_player_turn();
+		game.yield_turn_to_monsters();
 	}
 }
 

@@ -59,7 +59,7 @@ impl PlayerAction for PutOnRing {
 					let msg = game.player.get_obj_desc(ring_id);
 					game.dialog.message(&msg, 0);
 				}
-				game.commit_player_turn()
+				game.yield_turn_to_monsters()
 			}
 		}
 	}

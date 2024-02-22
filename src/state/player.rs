@@ -4,6 +4,6 @@ use crate::systems::play_level::PlayResult;
 pub enum PlayState {
 	Idle,
 	Counting(String),
-	Busy(char, usize),
+	Busy { key_code: char, completed: usize, remaining: usize },
 	Leaving(PlayResult),
 }

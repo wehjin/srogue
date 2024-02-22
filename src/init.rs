@@ -119,7 +119,7 @@ impl GameState {
 	pub fn start_player_actions(&mut self) {
 		self.turn = GameTurn::Player;
 	}
-	pub fn commit_player_turn(&mut self) {
+	pub fn yield_turn_to_monsters(&mut self) {
 		self.turn = GameTurn::Monsters;
 	}
 }

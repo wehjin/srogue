@@ -33,7 +33,7 @@ impl PlayerAction for Wear {
 				game.dialog.message(&format!("wearing {}", obj_desc), 0);
 				do_wear(obj_id, &mut game.player);
 				game.stats_changed = true;
-				game.commit_player_turn();
+				game.yield_turn_to_monsters();
 			}
 		};
 	}

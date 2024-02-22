@@ -31,7 +31,9 @@ pub fn play_level(game: &mut GameState) -> PlayResult {
 		let next_state = match player_state {
 			PlayState::Idle => when_idle(game),
 			PlayState::Counting(digits) => when_counting(digits),
-			PlayState::Busy(key_code, count) => when_busy(key_code, count, game),
+			PlayState::Busy { key_code, completed, remaining } => {
+				when_busy(key_code, completed, remaining, game)
+			}
 			PlayState::Leaving(ending) => return ending.clone(),
 		};
 		player_state = next_state;
@@ -57,27 +59,30 @@ fn when_counting(digits: String) -> PlayState {
 		}
 		_ => {
 			let count = digits.parse().expect(&format!("digits should parse {digits}"));
-			PlayState::Busy(next_key, count)
+			PlayState::Busy {
+				key_code: next_key,
+				completed: 0,
+				remaining: count,
+			}
 		}
 	}
 }
 
-fn when_busy(key_code: char, count: usize, game: &mut GameState) -> PlayState {
-	if count == 0 {
+fn when_busy(key_code: char, completed: usize, remaining: usize, game: &mut GameState) -> PlayState {
+	if remaining == 0 {
 		PlayState::Idle
 	} else if job_is_repeatable(key_code) {
 		match play_once(Some(key_code), game) {
 			PlayOnceResult::Counting(_) => panic!("can't count while busy"),
 			PlayOnceResult::Leaving(ending) => PlayState::Leaving(ending),
 			PlayOnceResult::Idle => {
-				if game.player.interrupted {
+				if game.player.interrupted || remaining == 1 {
 					PlayState::Idle
 				} else {
-					let lower_count = count - 1;
-					if lower_count == 0 {
-						PlayState::Idle
-					} else {
-						PlayState::Busy(key_code, lower_count)
+					PlayState::Busy {
+						key_code,
+						completed: completed + 1,
+						remaining: remaining - 1,
 					}
 				}
 			}
