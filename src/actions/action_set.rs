@@ -7,7 +7,7 @@ use crate::actions::eat::Eat;
 use crate::actions::fight::{FightHeavy, FightLight};
 use crate::actions::instruct::Instruct;
 use crate::actions::inventory::Inventory;
-use crate::actions::move_once::MoveOnce;
+use crate::actions::motion::{MoveMultiple, MoveOnce};
 use crate::actions::move_onto::MoveOnto;
 use crate::actions::PlayerAction;
 use crate::actions::put_on_ring::PutOnRing;
@@ -20,14 +20,17 @@ use crate::actions::take_off::TakeOff;
 use crate::actions::wear::Wear;
 use crate::actions::wield::Wield;
 use crate::init::GameState;
+use crate::resources::keyboard;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState)); 17] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState)); 19] = [
 	(&['d'], DropItem::update),
 	(&['e'], Eat::update),
 	(&['F'], FightHeavy::update),
 	(&['f'], FightLight::update),
 	(&['?'], Instruct::update),
 	(&['i'], Inventory::update),
+	(&SHIFT_MOTION_KEYS, MoveMultiple::update),
+	(&CTRL_MOTION_KEYS, MoveMultiple::update),
 	(&MOTION_KEYS, MoveOnce::update),
 	(&['m'], MoveOnto::update),
 	(&['P'], PutOnRing::update),
@@ -42,7 +45,11 @@ const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState)); 17] = [
 ];
 
 const MOTION_KEYS: [char; 8] = ['h', 'j', 'k', 'l', 'y', 'u', 'n', 'b'];
-
+const SHIFT_MOTION_KEYS: [char; 8] = ['H', 'J', 'K', 'L', 'B', 'Y', 'U', 'N'];
+const CTRL_MOTION_KEYS: [char; 8] = [
+	keyboard::CTRL_H, keyboard::CTRL_J, keyboard::CTRL_K, keyboard::CTRL_L,
+	keyboard::CTRL_Y, keyboard::CTRL_U, keyboard::CTRL_N, keyboard::CTRL_B
+];
 
 lazy_static! {
 	pub static ref ACTION_UPDATES: HashMap<char, fn(char,&mut GameState)> = {

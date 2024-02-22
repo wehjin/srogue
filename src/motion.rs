@@ -1,6 +1,6 @@
 use MoveResult::MoveFailed;
-use crate::actions::search::{search, SearchKind};
 
+use crate::actions::search::{search, SearchKind};
 use crate::components::hunger::{FAINT_MOVES_LEFT, HungerLevel, HUNGRY_MOVES_LEFT, STARVE_MOVES_LEFT, WEAK_MOVES_LEFT};
 use crate::hit::{get_dir_rc, rogue_hit};
 use crate::init::GameState;
@@ -174,8 +174,7 @@ fn moved_unless_hungry_or_confused(game: &mut GameState) -> MoveResult {
 }
 
 
-pub fn multiple_move_rogue(dirch: i64, game: &mut GameState) {
-	let dirch = dirch as u8 as char;
+pub fn multiple_move_rogue(dirch: char, game: &mut GameState) {
 	match dirch {
 		keyboard::CTRL_H | keyboard::CTRL_J | keyboard::CTRL_K | keyboard::CTRL_L
 		| keyboard::CTRL_Y | keyboard::CTRL_U | keyboard::CTRL_N | keyboard::CTRL_B => {
