@@ -12,7 +12,7 @@ use crate::resources::keyboard::CANCEL_CHAR;
 pub struct Eat;
 
 impl PlayerAction for Eat {
-	fn commit(&self, game: &mut GameState) {
+	fn update(game: &mut GameState) {
 		eat(game)
 	}
 }

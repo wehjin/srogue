@@ -9,7 +9,7 @@ use crate::ring::{inv_rings, PlayerHand, un_put_hand};
 pub struct RemoveRing;
 
 impl PlayerAction for RemoveRing {
-	fn commit(&self, game: &mut GameState) {
+	fn update(game: &mut GameState) {
 		let hand = match game.player.hand_usage() {
 			HandUsage::None => {
 				inv_rings(game);

@@ -1,14 +1,14 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
-use crate::resources::keyboard::CANCEL_CHAR;
 use crate::pack::{do_wear, pack_letter};
 use crate::prelude::object_what::ObjectWhat::Armor;
 use crate::prelude::object_what::PackFilter::Armors;
+use crate::resources::keyboard::CANCEL_CHAR;
 
 pub struct Wear;
 
 impl PlayerAction for Wear {
-	fn commit(&self, game: &mut GameState) {
+	fn update(game: &mut GameState) {
 		if game.player.armor_id().is_some() {
 			game.dialog.message("your already wearing some", 0);
 			return;

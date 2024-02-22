@@ -15,7 +15,7 @@ use crate::trap::is_off_screen;
 pub struct ReadScroll;
 
 impl PlayerAction for ReadScroll {
-	fn commit(&self, game: &mut GameState) {
+	fn update(game: &mut GameState) {
 		read_scroll(game);
 	}
 }

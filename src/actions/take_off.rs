@@ -7,7 +7,7 @@ use crate::pack::{CURSE_MESSAGE, unwear};
 pub struct TakeOff;
 
 impl PlayerAction for TakeOff {
-	fn commit(&self, game: &mut GameState) {
+	fn update(game: &mut GameState) {
 		if let Some(armor_id) = game.player.armor_id() {
 			if game.player.pack().check_object(armor_id, Object::is_cursed) {
 				game.dialog.message(CURSE_MESSAGE, 0);

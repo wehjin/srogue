@@ -9,7 +9,7 @@ use crate::resources::keyboard::CANCEL_CHAR;
 pub struct Quaff;
 
 impl PlayerAction for Quaff {
-	fn commit(&self, game: &mut GameState) {
+	fn update(game: &mut GameState) {
 		quaff(game)
 	}
 }

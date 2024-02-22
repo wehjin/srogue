@@ -1,17 +1,17 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
-use crate::resources::keyboard::CANCEL_CHAR;
 use crate::objects::Object;
 use crate::pack::pack_letter;
 use crate::player::rings::HandUsage;
 use crate::prelude::object_what::ObjectWhat::Ring;
 use crate::prelude::object_what::PackFilter::Rings;
+use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::{ask_ring_hand, PlayerHand, ring_stats};
 
 pub struct PutOnRing;
 
 impl PlayerAction for PutOnRing {
-	fn commit(&self, game: &mut GameState) {
+	fn update(game: &mut GameState) {
 		if game.player.hand_usage() == HandUsage::Both {
 			game.dialog.message("wearing two rings already", 0);
 			return;

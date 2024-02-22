@@ -1,14 +1,14 @@
 use crate::actions::PlayerAction;
 use crate::init::{GameState, GameTurn};
-use crate::resources::keyboard::CANCEL_CHAR;
 use crate::pack::{CURSE_MESSAGE, do_wield, pack_letter};
 use crate::prelude::object_what::ObjectWhat::{Armor, Ring};
 use crate::prelude::object_what::PackFilter::Weapons;
+use crate::resources::keyboard::CANCEL_CHAR;
 
 pub struct Wield;
 
 impl PlayerAction for Wield {
-	fn commit(&self, game: &mut GameState) {
+	fn update(game: &mut GameState) {
 		if game.player.wields_cursed_weapon() {
 			game.dialog.message(CURSE_MESSAGE, 0);
 			return;

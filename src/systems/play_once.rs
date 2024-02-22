@@ -1,5 +1,6 @@
 use keyboard::CTRL_W_CHAR;
-use crate::actions::PLAYER_ACTIONS;
+
+use crate::actions::action_set::ACTION_UPDATES;
 use crate::init::{GameState, GameTurn};
 use crate::inventory::{inv_armor_weapon, inventory, single_inv};
 use crate::level::{check_up, drop_check, show_average_hp, UpResult};
@@ -37,9 +38,8 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 	// does not draw correctly.
 	game.dialog.clear_message();
 	game.turn = GameTurn::Player;
-	let action = PLAYER_ACTIONS.get(key_code);
-	if let Some(player_action) = action {
-		player_action.commit(game);
+	if let Some(action_update) = ACTION_UPDATES.get(&key_code) {
+		action_update(game);
 		if game.turn == GameTurn::Monsters {
 			reg_move(game);
 		}

@@ -6,7 +6,7 @@ use crate::trap;
 pub struct Search;
 
 impl PlayerAction for Search {
-	fn commit(&self, game: &mut GameState) {
+	fn update(game: &mut GameState) {
 		search(SearchKind::Manual, game);
 	}
 }
