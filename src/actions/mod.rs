@@ -1,6 +1,7 @@
 use lazy_static::lazy_static;
 
 use crate::actions::action_set::PlayerActionSet;
+use crate::actions::drop_item::DropItem;
 use crate::actions::eat::Eat;
 use crate::actions::fight::{FightHeavy, FightLight};
 use crate::actions::instruct::Instruct;
@@ -18,6 +19,7 @@ use crate::actions::wield::Wield;
 use crate::init::GameState;
 
 pub mod action_set;
+pub mod drop_item;
 pub mod eat;
 pub mod fight;
 pub mod instruct;
@@ -46,6 +48,7 @@ lazy_static! {
 		('R', Box::new(RemoveRing)),
 		('T', Box::new(TakeOff)),
 		('W', Box::new(Wear)),
+		('d', Box::new(DropItem)),
 		('e' ,Box::new(Eat)),
 		('f', Box::new(FightLight)),
 		('i', Box::new(Inventory)),
