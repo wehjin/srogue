@@ -3,7 +3,6 @@ use ring_kind::RingKind;
 
 use crate::init::GameState;
 use crate::objects::{Object, ObjectId};
-use crate::player::rings::HandUsage;
 use crate::prelude::item_usage::{ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat::Ring;
 use crate::r#use::relight;
@@ -65,32 +64,6 @@ pub fn gr_ring(ring: &mut Object, assign_wk: bool) {
 			ring.is_cursed = if coin_toss() { 1 } else { 0 };
 		}
 		_ => ()
-	}
-}
-
-pub fn inv_rings(game: &mut GameState) {
-	let hand_usage = game.player.hand_usage();
-	if hand_usage == HandUsage::None {
-		game.dialog.message("not wearing any rings", 0);
-	} else {
-		for ring_hand in PlayerHand::ALL_HANDS {
-			if let Some(ring_id) = game.player.ring_id(ring_hand) {
-				let msg = game.player.get_obj_desc(ring_id);
-				game.dialog.message(&msg, 0);
-			}
-		}
-	}
-	if game.player.wizard {
-		game.dialog.message(
-			&format!("ste {}, r_r {}, e_r {}, r_t {}, s_s {}, a_s {}, reg {}, r_e {}, s_i {}, m_a {}, aus {}",
-			         game.player.ring_effects.stealthy(), hand_usage.count_hands(),
-			         game.player.ring_effects.calorie_burn(), game.player.ring_effects.has_teleport(),
-			         game.player.ring_effects.has_sustain_strength(), game.player.ring_effects.add_strength(),
-			         game.player.ring_effects.regeneration(), game.player.ring_effects.dexterity(),
-			         game.player.ring_effects.has_see_invisible(), game.player.ring_effects.has_maintain_armor(),
-			         game.player.ring_effects.auto_search()),
-			0,
-		);
 	}
 }
 

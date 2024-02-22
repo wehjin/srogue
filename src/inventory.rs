@@ -274,19 +274,3 @@ pub fn single_inv(ichar: Option<char>, game: &mut GameState) {
 		game.dialog.message("no such item.", 0);
 	}
 }
-
-pub fn inv_armor_weapon(is_weapon: bool, game: &mut GameState) {
-	if is_weapon {
-		if let Some(weapon) = game.player.weapon() {
-			single_inv(Some(weapon.ichar), game);
-		} else {
-			game.dialog.message("not wielding anything", 0);
-		}
-	} else {
-		if let Some(armor) = game.player.armor() {
-			single_inv(Some(armor.ichar), game);
-		} else {
-			game.dialog.message("not wearing anything", 0);
-		}
-	}
-}

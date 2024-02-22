@@ -1,10 +1,11 @@
+use crate::actions::inventory::inv_rings;
 use crate::actions::PlayerAction;
 use crate::init::GameState;
 use crate::inventory::get_obj_desc;
 use crate::objects::Object;
 use crate::pack::CURSE_MESSAGE;
 use crate::player::rings::HandUsage;
-use crate::ring::{inv_rings, PlayerHand, un_put_hand};
+use crate::ring::{PlayerHand, un_put_hand};
 use crate::systems::play_level::PlayResult;
 
 pub struct RemoveRing;

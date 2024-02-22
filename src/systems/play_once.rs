@@ -1,6 +1,6 @@
 use crate::actions::action_set::ACTION_UPDATES;
 use crate::init::{GameState, GameTurn};
-use crate::inventory::{inv_armor_weapon, inventory, single_inv};
+use crate::inventory::{inventory, single_inv};
 use crate::level::show_average_hp;
 use crate::monster::show_monsters;
 use crate::motion::reg_move;
@@ -9,7 +9,6 @@ use crate::pack::{call_it, kick_into_pack};
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::render_system;
 use crate::resources::keyboard::rgetchar;
-use crate::ring::inv_rings;
 use crate::room::draw_magic_map;
 use crate::save::save_game;
 use crate::score::ask_quit;
@@ -43,8 +42,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			')' | ']' => inv_armor_weapon(key_code == ')', game),
-			'=' => inv_rings(game),
 			'^' => id_trap(game),
 			'I' => single_inv(None, game),
 			'c' => call_it(game),
