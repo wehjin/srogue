@@ -1,6 +1,6 @@
 use crate::actions::action_set::ACTION_UPDATES;
 use crate::init::{GameState, GameTurn};
-use crate::inventory::{inventory, single_inv};
+use crate::inventory::inventory;
 use crate::level::show_average_hp;
 use crate::monster::show_monsters;
 use crate::motion::reg_move;
@@ -42,7 +42,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			'I' => single_inv(None, game),
 			'c' => call_it(game),
 			'z' => zapp(game),
 			't' => throw(game),
