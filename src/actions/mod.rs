@@ -10,6 +10,7 @@ pub mod eat;
 pub mod fight;
 pub mod instruct;
 pub mod inventory;
+pub mod move_once;
 pub mod move_onto;
 pub mod put_on_ring;
 pub mod quaff;
