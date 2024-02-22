@@ -18,7 +18,7 @@ use crate::actions::read_scroll::ReadScroll;
 use crate::actions::remove_ring::RemoveRing;
 use crate::actions::rest::Rest;
 use crate::actions::screen::ReMessage;
-use crate::actions::search::Search;
+use crate::actions::search::{IdentifyTrap, Search};
 use crate::actions::take_off::TakeOff;
 use crate::actions::wear::Wear;
 use crate::actions::wield::Wield;
@@ -28,13 +28,14 @@ use crate::resources::keyboard;
 use crate::resources::keyboard::CTRL_W;
 use crate::systems::play_level::PlayResult;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 26] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 27] = [
 	(&['<'], Ascend::update),
 	(&['>'], Descend::update),
 	(&['d'], DropItem::update),
 	(&['e'], Eat::update),
 	(&['F'], FightHeavy::update),
 	(&['f'], FightLight::update),
+	(&['^'], IdentifyTrap::update),
 	(&['?'], Instruct::update),
 	(&['i'], Inventory::update),
 	(&[']'], InventoryArmor::update),

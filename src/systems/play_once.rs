@@ -15,7 +15,7 @@ use crate::score::ask_quit;
 use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
 use crate::systems::play_once::PlayOnceResult::{Counting, Leaving};
 use crate::throw::throw;
-use crate::trap::{id_trap, show_traps};
+use crate::trap::show_traps;
 use crate::zap::zapp;
 
 pub enum PlayOnceResult {
@@ -42,7 +42,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			'^' => id_trap(game),
 			'I' => single_inv(None, game),
 			'c' => call_it(game),
 			'z' => zapp(game),

@@ -3,6 +3,16 @@ use crate::init::GameState;
 use crate::random::rand_percent;
 use crate::systems::play_level::PlayResult;
 use crate::trap;
+use crate::trap::id_trap;
+
+pub struct IdentifyTrap;
+
+impl PlayerAction for IdentifyTrap {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		id_trap(game);
+		None
+	}
+}
 
 pub struct Search;
 
