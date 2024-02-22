@@ -1,9 +1,23 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
+use crate::objects::show_objects;
 use crate::resources::input_line::get_input_line;
 use crate::room::draw_magic_map;
 use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
 use crate::trap::show_traps;
+
+pub struct ShowObjects;
+
+impl PlayerAction for ShowObjects {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		if game.player.wizard {
+			show_objects(game);
+		} else {
+			game.dialog.message(UNKNOWN_COMMAND, 0);
+		}
+		None
+	}
+}
 
 pub struct ShowTraps;
 

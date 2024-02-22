@@ -22,13 +22,13 @@ use crate::actions::search::{IdentifyTrap, Search};
 use crate::actions::take_off::TakeOff;
 use crate::actions::wear::Wear;
 use crate::actions::wield::Wield;
-use crate::actions::wizard::{DrawMagicMap, ShowTraps, Wizardize};
+use crate::actions::wizard::{DrawMagicMap, ShowObjects, ShowTraps, Wizardize};
 use crate::init::GameState;
 use crate::resources::keyboard;
-use crate::resources::keyboard::{CTRL_I, CTRL_S, CTRL_T, CTRL_W};
+use crate::resources::keyboard::{CTRL_I, CTRL_O, CTRL_S, CTRL_T, CTRL_W};
 use crate::systems::play_level::PlayResult;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 37] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 38] = [
 	(&['<'], Ascend::update),
 	(&['c'], CallIt::update),
 	(&['>'], Descend::update),
@@ -58,6 +58,7 @@ const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>);
 	(&['R'], RemoveRing::update),
 	(&['.'], Rest::update),
 	(&['s'], Search::update),
+	(&[CTRL_O], ShowObjects::update),
 	(&[CTRL_T], ShowTraps::update),
 	(&['T'], TakeOff::update),
 	(&['t'], Throw::update),

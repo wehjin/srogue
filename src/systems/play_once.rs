@@ -3,7 +3,7 @@ use crate::init::{GameState, GameTurn};
 use crate::level::show_average_hp;
 use crate::monster::show_monsters;
 use crate::motion::reg_move;
-use crate::objects::{new_object_for_wizard, show_objects};
+use crate::objects::new_object_for_wizard;
 use crate::pack::kick_into_pack;
 use crate::render_system;
 use crate::resources::keyboard::rgetchar;
@@ -39,11 +39,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			'\x0f' => if game.player.wizard {
-				show_objects(game);
-			} else {
-				game.dialog.message(UNKNOWN_COMMAND, 0);
-			},
 			'\x01' => {
 				show_average_hp(game);
 			}
