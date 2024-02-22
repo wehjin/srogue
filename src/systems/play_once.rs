@@ -40,14 +40,14 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 	// does not draw correctly.
 	game.dialog.clear_message();
 	game.turn = GameTurn::Player;
-	if let Some(player_action) = PLAYER_ACTIONS.get(key_code) {
+	let action = PLAYER_ACTIONS.get(key_code);
+	if let Some(player_action) = action {
 		player_action.commit(game);
 		if game.turn == GameTurn::Monsters {
 			reg_move(game);
 		}
 	} else {
 		match key_code {
-			'i' => inventory(AllObjects, game),
 			'f' => fight(false, game),
 			'F' => fight(true, game),
 			'h' | 'j' | 'k' | 'l' | 'y' | 'u' | 'n' | 'b' => {
