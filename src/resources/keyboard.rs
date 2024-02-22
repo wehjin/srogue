@@ -3,6 +3,7 @@ use crate::render_system::backend;
 
 pub(crate) const BACKSPACE_CHAR: char = '\u{8}';
 pub(crate) const CANCEL_CHAR: char = '\u{1b}';
+pub(crate) const CTRL_A: char = '\x01';
 pub(crate) const CTRL_B: char = '\x02';
 pub(crate) const CTRL_H: char = '\x08';
 pub(crate) const CTRL_I: char = '\x09';

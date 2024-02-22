@@ -1,6 +1,5 @@
 use crate::actions::action_set::ACTION_UPDATES;
 use crate::init::{GameState, GameTurn};
-use crate::level::show_average_hp;
 use crate::monster::show_monsters;
 use crate::motion::reg_move;
 use crate::objects::new_object_for_wizard;
@@ -39,9 +38,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			'\x01' => {
-				show_average_hp(game);
-			}
 			'\x03' => if game.player.wizard {
 				new_object_for_wizard(game);
 			} else {

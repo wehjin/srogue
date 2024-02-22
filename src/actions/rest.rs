@@ -1,5 +1,6 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
+use crate::level::show_average_hp;
 use crate::objects::NoteStatus::Called;
 use crate::objects::Title;
 use crate::pack;
@@ -9,6 +10,15 @@ use crate::resources::input_line::get_input_line;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::score::ask_quit;
 use crate::systems::play_level::PlayResult;
+
+pub struct ShowAverageHp;
+
+impl PlayerAction for ShowAverageHp {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		show_average_hp(game);
+		None
+	}
+}
 
 pub struct Ignore;
 

@@ -16,7 +16,7 @@ use crate::actions::put_on_ring::PutOnRing;
 use crate::actions::quaff::Quaff;
 use crate::actions::read_scroll::ReadScroll;
 use crate::actions::remove_ring::RemoveRing;
-use crate::actions::rest::{CallIt, Ignore, Quit, Rest, Version};
+use crate::actions::rest::{CallIt, Ignore, Quit, Rest, ShowAverageHp, Version};
 use crate::actions::screen::ReMessage;
 use crate::actions::search::{IdentifyTrap, Search};
 use crate::actions::take_off::TakeOff;
@@ -25,10 +25,10 @@ use crate::actions::wield::Wield;
 use crate::actions::wizard::{DrawMagicMap, ShowObjects, ShowTraps, Wizardize};
 use crate::init::GameState;
 use crate::resources::keyboard;
-use crate::resources::keyboard::{CTRL_I, CTRL_O, CTRL_S, CTRL_T, CTRL_W};
+use crate::resources::keyboard::{CTRL_A, CTRL_I, CTRL_O, CTRL_S, CTRL_T, CTRL_W};
 use crate::systems::play_level::PlayResult;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 38] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 39] = [
 	(&['<'], Ascend::update),
 	(&['c'], CallIt::update),
 	(&['>'], Descend::update),
@@ -58,6 +58,7 @@ const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>);
 	(&['R'], RemoveRing::update),
 	(&['.'], Rest::update),
 	(&['s'], Search::update),
+	(&[CTRL_A], ShowAverageHp::update),
 	(&[CTRL_O], ShowObjects::update),
 	(&[CTRL_T], ShowTraps::update),
 	(&['T'], TakeOff::update),
