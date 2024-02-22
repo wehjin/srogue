@@ -1,6 +1,5 @@
 use crate::init::GameState;
 use crate::level::put_player;
-use crate::resources::keyboard::CANCEL_CHAR;
 use crate::monster::{aggravate, create_monster, mv_mons, show_monsters};
 use crate::motion::{reg_move, YOU_CAN_MOVE_AGAIN};
 use crate::objects::NoteStatus::Identified;
@@ -9,46 +8,17 @@ use crate::pack::{pack_letter, take_from_pack, unwear, unwield};
 use crate::player::{Player, RoomMark};
 use crate::potions::colors::ALL_POTION_COLORS;
 use crate::potions::kind::POTIONS;
-use crate::potions::quaff::quaff_potion;
 use crate::prelude::object_what::ObjectWhat::{Armor, Potion, Ring, Scroll, Wand, Weapon};
-use crate::prelude::object_what::PackFilter::{AllObjects, Potions, Scrolls};
+use crate::prelude::object_what::PackFilter::{AllObjects, Scrolls};
 use crate::random::{coin_toss, get_rand};
 use crate::render_system;
 use crate::render_system::backend;
 use crate::render_system::hallucinate::show_hallucination;
+use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::un_put_hand;
 use crate::room::{draw_magic_map, visit_room, visit_spot_area};
 use crate::scrolls::ScrollKind;
 use crate::trap::is_off_screen;
-
-pub const STRANGE_FEELING: &'static str = "you have a strange feeling for a moment, then it passes";
-
-pub fn quaff(game: &mut GameState) {
-	let ch = pack_letter("quaff what?", Potions, game);
-	if ch == CANCEL_CHAR {
-		return;
-	}
-	match game.player.object_id_with_letter(ch) {
-		None => {
-			game.dialog.message("no such item.", 0);
-			return;
-		}
-		Some(obj_id) => {
-			match game.player.expect_object(obj_id).potion_kind() {
-				None => {
-					game.dialog.message("you can't drink that", 0);
-					return;
-				}
-				Some(potion_kind) => {
-					quaff_potion(potion_kind, game);
-					game.stats_changed = true;
-					game.player.notes.identify_if_un_called(Potion, potion_kind.to_index());
-					vanish(obj_id, true, game);
-				}
-			}
-		}
-	}
-}
 
 pub fn read_scroll(game: &mut GameState) {
 	if game.player.blind.is_active() {

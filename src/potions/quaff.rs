@@ -3,7 +3,7 @@ use crate::level::{add_exp, LEVEL_POINTS};
 use crate::monster::show_monsters;
 use crate::objects::show_objects;
 use crate::potions::kind::PotionKind;
-use crate::r#use::STRANGE_FEELING;
+use crate::actions::quaff::STRANGE_FEELING;
 use crate::random::get_rand;
 use crate::render_system::RenderAction::MonstersFloorAndPlayer;
 

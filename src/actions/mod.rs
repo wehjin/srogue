@@ -6,6 +6,7 @@ use crate::actions::fight::{FightHeavy, FightLight};
 use crate::actions::instruct::Instruct;
 use crate::actions::inventory::Inventory;
 use crate::actions::put_on_ring::PutOnRing;
+use crate::actions::quaff::Quaff;
 use crate::actions::remove_ring::RemoveRing;
 use crate::actions::rest::Rest;
 use crate::actions::search::Search;
@@ -20,6 +21,7 @@ pub mod fight;
 pub mod instruct;
 pub mod inventory;
 pub mod put_on_ring;
+pub mod quaff;
 pub mod remove_ring;
 pub mod rest;
 pub mod search;
@@ -43,6 +45,7 @@ lazy_static! {
 		('e' ,Box::new(Eat)),
 		('f', Box::new(FightLight)),
 		('i', Box::new(Inventory)),
+		('q' ,Box::new(Quaff)),
 		('s', Box::new(Search)),
 		('w', Box::new(Wield)),
 	]);

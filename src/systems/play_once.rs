@@ -9,7 +9,7 @@ use crate::motion::{move_onto, multiple_move_rogue, one_move_rogue, reg_move};
 use crate::objects::{new_object_for_wizard, show_objects};
 use crate::pack::{call_it, drop_0, kick_into_pack};
 use crate::prelude::object_what::PackFilter::AllObjects;
-use crate::r#use::{quaff, read_scroll};
+use crate::r#use::read_scroll;
 use crate::render_system;
 use crate::resources::keyboard;
 use crate::resources::keyboard::rgetchar;
@@ -54,7 +54,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 			| keyboard::CTRL_H | keyboard::CTRL_J | keyboard::CTRL_K | keyboard::CTRL_L
 			| keyboard::CTRL_Y | keyboard::CTRL_U | keyboard::CTRL_N | keyboard::CTRL_B =>
 				multiple_move_rogue(key_code as i64, game),
-			'q' => quaff(game),
 			'r' => read_scroll(game),
 			'm' => move_onto(game),
 			'd' => drop_0(game),
