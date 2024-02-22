@@ -3,6 +3,20 @@ use crate::init::GameState;
 use crate::resources::input_line::get_input_line;
 use crate::room::draw_magic_map;
 use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
+use crate::trap::show_traps;
+
+pub struct ShowTraps;
+
+impl PlayerAction for ShowTraps {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		if game.player.wizard {
+			show_traps(game);
+		} else {
+			game.dialog.message(UNKNOWN_COMMAND, 0);
+		}
+		None
+	}
+}
 
 pub struct DrawMagicMap;
 

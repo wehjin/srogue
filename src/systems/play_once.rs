@@ -10,7 +10,6 @@ use crate::resources::keyboard::rgetchar;
 use crate::save::save_game;
 use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
 use crate::systems::play_once::PlayOnceResult::{Counting, Leaving};
-use crate::trap::show_traps;
 
 pub enum PlayOnceResult {
 	Counting(String),
@@ -40,11 +39,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			'\x14' => if game.player.wizard {
-				show_traps(game);
-			} else {
-				game.dialog.message(UNKNOWN_COMMAND, 0);
-			},
 			'\x0f' => if game.player.wizard {
 				show_objects(game);
 			} else {
