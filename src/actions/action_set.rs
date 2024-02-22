@@ -4,13 +4,13 @@ use lazy_static::lazy_static;
 
 use keyboard::CTRL_P;
 
-use crate::actions::drop_item::DropItem;
+use crate::actions::ground::{DropItem, KickIntoPack};
 use crate::actions::eat::Eat;
 use crate::actions::fight::{FightHeavy, FightLight, Throw, Zap};
 use crate::actions::instruct::Instruct;
 use crate::actions::inventory::{Inventory, InventoryArmor, InventoryGround, InventoryOne, InventoryRings, InventoryWeapons};
 use crate::actions::motion::{Ascend, Descend, MoveMultiple, MoveOnce};
-use crate::actions::move_onto::MoveOnto;
+use crate::actions::ground::MoveOnto;
 use crate::actions::PlayerAction;
 use crate::actions::put_on_ring::PutOnRing;
 use crate::actions::quaff::Quaff;
@@ -28,7 +28,7 @@ use crate::resources::keyboard;
 use crate::resources::keyboard::{CTRL_A, CTRL_C, CTRL_I, CTRL_M, CTRL_O, CTRL_S, CTRL_T, CTRL_W};
 use crate::systems::play_level::PlayResult;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 42] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 43] = [
 	(&['<'], Ascend::update),
 	(&['c'], CallIt::update),
 	(&['>'], Descend::update),
@@ -46,6 +46,7 @@ const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>);
 	(&['I'], InventoryOne::update),
 	(&['='], InventoryRings::update),
 	(&[')'], InventoryWeapons::update),
+	(&[','], KickIntoPack::update),
 	(&SHIFT_MOTION_KEYS, MoveMultiple::update),
 	(&CTRL_MOTION_KEYS, MoveMultiple::update),
 	(&MOTION_KEYS, MoveOnce::update),

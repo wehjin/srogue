@@ -6,13 +6,12 @@ pub trait PlayerAction {
 }
 
 pub mod action_set;
-pub mod drop_item;
+pub mod ground;
 pub mod eat;
 pub mod fight;
 pub mod instruct;
 pub mod inventory;
 pub mod motion;
-pub mod move_onto;
 pub mod put_on_ring;
 pub mod quaff;
 pub mod read_scroll;

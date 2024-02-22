@@ -4,13 +4,22 @@ use crate::inventory::get_obj_desc;
 use crate::monster::mv_aquatars;
 use crate::motion::reg_move;
 use crate::objects::{Object, place_at};
-use crate::pack;
-use crate::pack::CURSE_MESSAGE;
+use crate::{motion, pack};
+use crate::pack::{CURSE_MESSAGE, kick_into_pack};
 use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::un_put_hand;
 use crate::systems::play_level::PlayResult;
+
+pub struct KickIntoPack;
+
+impl PlayerAction for KickIntoPack {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		kick_into_pack(game);
+		None
+	}
+}
 
 pub struct DropItem;
 
@@ -76,5 +85,22 @@ fn drop_item(game: &mut GameState) {
 			game.dialog.message(&format!("dropped {}", obj_desc), 0);
 			reg_move(game);
 		}
+	}
+}
+
+pub struct MoveOnto;
+
+impl PlayerAction for MoveOnto {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		move_onto(game);
+		None
+	}
+}
+
+pub fn move_onto(game: &mut GameState) {
+	let ch = motion::get_dir_or_cancel(game);
+	game.dialog.clear_message();
+	if ch != CANCEL_CHAR {
+		motion::one_move_rogue(ch, false, game);
 	}
 }

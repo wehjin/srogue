@@ -1,7 +1,6 @@
 use crate::actions::action_set::ACTION_UPDATES;
 use crate::init::{GameState, GameTurn};
 use crate::motion::reg_move;
-use crate::pack::kick_into_pack;
 use crate::render_system;
 use crate::resources::keyboard::rgetchar;
 use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
@@ -35,9 +34,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			',' => {
-				kick_into_pack(game);
-			}
 			_ => {
 				game.dialog.message(UNKNOWN_COMMAND, 0);
 			}
