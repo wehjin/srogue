@@ -11,6 +11,7 @@ pub(crate) const CTRL_I: char = '\x09';
 pub(crate) const CTRL_J: char = '\x0a';
 pub(crate) const CTRL_K: char = '\x0b';
 pub(crate) const CTRL_L: char = '\x0c';
+pub(crate) const CTRL_M: char = '\x0d';
 pub(crate) const CTRL_N: char = '\x0e';
 pub(crate) const CTRL_O: char = '\x0f';
 pub(crate) const CTRL_P: char = '\x10';
