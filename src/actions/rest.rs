@@ -9,6 +9,15 @@ use crate::resources::input_line::get_input_line;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::systems::play_level::PlayResult;
 
+pub struct Version;
+
+impl PlayerAction for Version {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		game.dialog.message("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims", 0);
+		None
+	}
+}
+
 pub struct CallIt;
 
 impl PlayerAction for CallIt {

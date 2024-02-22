@@ -40,7 +40,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			'v' => game.dialog.message("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims", 0),
 			'Q' => if ask_quit(false, game) {
 				return Leaving(PlayResult::ExitQuit);
 			},
