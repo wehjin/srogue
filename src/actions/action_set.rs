@@ -6,7 +6,7 @@ use keyboard::CTRL_P;
 
 use crate::actions::drop_item::DropItem;
 use crate::actions::eat::Eat;
-use crate::actions::fight::{FightHeavy, FightLight};
+use crate::actions::fight::{FightHeavy, FightLight, Zap};
 use crate::actions::instruct::Instruct;
 use crate::actions::inventory::{Inventory, InventoryArmor, InventoryOne, InventoryRings, InventoryWeapons};
 use crate::actions::motion::{Ascend, Descend, MoveMultiple, MoveOnce};
@@ -28,7 +28,7 @@ use crate::resources::keyboard;
 use crate::resources::keyboard::CTRL_W;
 use crate::systems::play_level::PlayResult;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 29] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 30] = [
 	(&['<'], Ascend::update),
 	(&['c'], CallIt::update),
 	(&['>'], Descend::update),
@@ -58,6 +58,7 @@ const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>);
 	(&['W'], Wear::update),
 	(&['w'], Wield::update),
 	(&[CTRL_W], Wizardize::update),
+	(&['z'], Zap::update),
 ];
 
 const MOTION_KEYS: [char; 8] = ['h', 'j', 'k', 'l', 'y', 'u', 'n', 'b'];
