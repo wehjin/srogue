@@ -1,3 +1,5 @@
+use PlayOnceResult::Idle;
+
 use crate::actions::action_set::ACTION_UPDATES;
 use crate::init::{GameState, GameTurn};
 use crate::motion::reg_move;
@@ -33,14 +35,10 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 			reg_move(game);
 		}
 	} else {
-		match key_code {
-			_ => {
-				game.dialog.message(UNKNOWN_COMMAND, 0);
-			}
-		}
+		game.dialog.message(UNKNOWN_COMMAND, 0);
 	}
 	render_system::refresh(game);
-	return PlayOnceResult::Idle;
+	return Idle;
 }
 
 fn check_reset_loop_flags(game: &mut GameState) -> Option<PlayResult> {
