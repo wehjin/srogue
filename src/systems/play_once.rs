@@ -30,8 +30,12 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 	// does not draw correctly.
 	game.dialog.clear_message();
 	game.turn = GameTurn::Player;
-	if let Some(action_update) = ACTION_UPDATES.get(&key_code) {
-		if let Some(play_result) = action_update(key_code, game) {
+	if key_code.is_digit(10) {
+		render_system::refresh(game);
+		return Counting(key_code.to_string());
+	} else if let Some(action_update) = ACTION_UPDATES.get(&key_code) {
+		let action_result = action_update(key_code, game);
+		if let Some(play_result) = action_result {
 			return Leaving(play_result);
 		}
 		if game.turn == GameTurn::Monsters {
@@ -39,10 +43,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			'0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
-				render_system::refresh(game);
-				return Counting(key_code.to_string());
-			}
 			' ' => {}
 			'\x09' => if game.player.wizard {
 				inventory(AllObjects, game);
