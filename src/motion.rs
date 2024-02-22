@@ -469,14 +469,4 @@ pub fn reg_move(game: &mut GameState) -> bool {
 	return hunger_check == HungerCheckResult::DidFaint;
 }
 
-pub fn rest(count: libc::c_int, game: &mut GameState) {
-	game.player.interrupted = false;
-	for _i in 0..count {
-		if game.player.interrupted {
-			break;
-		}
-		reg_move(game);
-	}
-}
-
 
