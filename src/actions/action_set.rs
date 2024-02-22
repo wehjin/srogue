@@ -22,10 +22,12 @@ use crate::actions::search::Search;
 use crate::actions::take_off::TakeOff;
 use crate::actions::wear::Wear;
 use crate::actions::wield::Wield;
+use crate::actions::wizard::Wizardize;
 use crate::init::GameState;
 use crate::resources::keyboard;
+use crate::resources::keyboard::CTRL_W;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState)); 20] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState)); 21] = [
 	(&['d'], DropItem::update),
 	(&['e'], Eat::update),
 	(&['F'], FightHeavy::update),
@@ -46,6 +48,7 @@ const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState)); 20] = [
 	(&['T'], TakeOff::update),
 	(&['W'], Wear::update),
 	(&['w'], Wield::update),
+	(&[CTRL_W], Wizardize::update),
 ];
 
 const MOTION_KEYS: [char; 8] = ['h', 'j', 'k', 'l', 'y', 'u', 'n', 'b'];

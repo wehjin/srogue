@@ -21,5 +21,5 @@ pub mod screen;
 pub mod search;
 pub mod take_off;
 pub mod wear;
-
 pub mod wield;
+pub mod wizard;

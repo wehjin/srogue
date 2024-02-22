@@ -3,7 +3,6 @@ use wand_kind::WandKind;
 use crate::hit::{get_dir_rc, rogue_hit};
 use crate::init::GameState;
 use crate::level::Level;
-use crate::resources::input_line::get_input_line;
 use crate::monster::{gr_monster, MonsterIndex, MonsterKind, MonsterMash};
 use crate::motion::{get_dir_or_cancel, reg_move};
 use crate::pack::pack_letter;
@@ -179,24 +178,4 @@ fn tele_away(mon_id: MonsterIndex, game: &mut GameState) {
 	game.level.cell_mut(tele_to).set_monster(true);
 	game.render_spot(tele_from);
 	game.render_spot(tele_to);
-}
-
-pub fn wizardize(game: &mut GameState) {
-	if game.player.wizard {
-		game.player.wizard = false;
-		game.dialog.message("not wizard anymore", 0);
-	} else {
-		let line = get_input_line::<String>("wizard's password:", None, None, false, false, &mut game.dialog);
-		if !line.is_empty() {
-			//const PW: &str = "\u{A7}DV\u{BA}M\u{A3}\u{17}";
-			const PW: &str = "neko?";
-			if line == PW {
-				game.player.wizard = true;
-				game.player.settings.score_only = true;
-				game.dialog.message("Welcome, mighty wizard!", 0);
-			} else {
-				game.dialog.message("sorry", 0);
-			}
-		}
-	}
 }
