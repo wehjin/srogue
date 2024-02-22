@@ -1,7 +1,7 @@
 use crate::actions::action_set::ACTION_UPDATES;
 use crate::init::{GameState, GameTurn};
 use crate::inventory::{inv_armor_weapon, inventory, single_inv};
-use crate::level::{check_up, show_average_hp, UpResult};
+use crate::level::show_average_hp;
 use crate::monster::show_monsters;
 use crate::motion::reg_move;
 use crate::objects::{new_object_for_wizard, show_objects};
@@ -14,7 +14,6 @@ use crate::room::draw_magic_map;
 use crate::save::save_game;
 use crate::score::ask_quit;
 use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
-use crate::systems::play_level::PlayResult::{ExitWon, StairsUp};
 use crate::systems::play_once::PlayOnceResult::{Counting, Leaving};
 use crate::throw::throw;
 use crate::trap::{id_trap, show_traps};
@@ -44,17 +43,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			'<' => match check_up(game) {
-				UpResult::KeepLevel => {
-					// Ignore and stay in loop
-				}
-				UpResult::UpLevel => {
-					return Leaving(StairsUp);
-				}
-				UpResult::WonGame => {
-					return Leaving(ExitWon);
-				}
-			},
 			')' | ']' => inv_armor_weapon(key_code == ')', game),
 			'=' => inv_rings(game),
 			'^' => id_trap(game),

@@ -1,9 +1,11 @@
+use crate::actions::motion::UpResult::{KeepLevel, UpLevel, WonGame};
 use crate::actions::PlayerAction;
 use crate::init::GameState;
-use crate::level::drop_check;
 use crate::motion::{multiple_move_rogue, one_move_rogue};
+use crate::pack::has_amulet;
+use crate::score::win;
 use crate::systems::play_level::PlayResult;
-use crate::systems::play_level::PlayResult::StairsDown;
+use crate::systems::play_level::PlayResult::{ExitWon, StairsDown, StairsUp};
 
 pub struct MoveOnce;
 
@@ -28,8 +30,63 @@ pub struct Descend;
 impl PlayerAction for Descend {
 	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
 		if drop_check(game) {
-			return Some(StairsDown);
+			Some(StairsDown)
+		} else {
+			None
 		}
-		return None;
+	}
+}
+
+pub struct Ascend;
+
+impl PlayerAction for Ascend {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		match check_up(game) {
+			UpResult::KeepLevel => None,
+			UpResult::UpLevel => Some(StairsUp),
+			UpResult::WonGame => Some(ExitWon),
+		}
+	}
+}
+
+fn drop_check(game: &mut GameState) -> bool {
+	if game.player.wizard {
+		return true;
+	}
+	if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_stairs() {
+		if game.player.levitate.is_active() {
+			game.dialog.message("you're floating in the air!", 0);
+			return false;
+		}
+		return true;
+	}
+	game.dialog.message("I see no way down", 0);
+	return false;
+}
+
+pub enum UpResult {
+	KeepLevel,
+	UpLevel,
+	WonGame,
+}
+
+fn check_up(game: &mut GameState) -> UpResult {
+	if !game.player.wizard {
+		if !game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_stairs() {
+			game.dialog.message("I see no way up", 0);
+			return KeepLevel;
+		}
+		if !has_amulet(&game.player) {
+			game.dialog.message("Your way is magically blocked", 0);
+			return KeepLevel;
+		}
+	}
+	game.level.new_level_message = Some("you feel a wrenching sensation in your gut".to_string());
+	if game.player.cur_depth == 1 {
+		win(game);
+		WonGame
+	} else {
+		game.player.ascend();
+		UpLevel
 	}
 }

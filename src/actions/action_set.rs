@@ -9,7 +9,7 @@ use crate::actions::eat::Eat;
 use crate::actions::fight::{FightHeavy, FightLight};
 use crate::actions::instruct::Instruct;
 use crate::actions::inventory::Inventory;
-use crate::actions::motion::{Descend, MoveMultiple, MoveOnce};
+use crate::actions::motion::{Ascend, Descend, MoveMultiple, MoveOnce};
 use crate::actions::move_onto::MoveOnto;
 use crate::actions::PlayerAction;
 use crate::actions::put_on_ring::PutOnRing;
@@ -28,7 +28,8 @@ use crate::resources::keyboard;
 use crate::resources::keyboard::CTRL_W;
 use crate::systems::play_level::PlayResult;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 22] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 23] = [
+	(&['<'], Ascend::update),
 	(&['>'], Descend::update),
 	(&['d'], DropItem::update),
 	(&['e'], Eat::update),

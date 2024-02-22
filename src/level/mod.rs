@@ -5,12 +5,9 @@ use serde::{Deserialize, Serialize};
 pub use cells::*;
 pub use dungeon::*;
 use materials::{CellMaterial, Visibility};
-use UpResult::{KeepLevel, WonGame};
-
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM, MAX_TRAP};
 use crate::level::materials::TunnelFixture;
-use crate::level::UpResult::UpLevel;
 use crate::monster::wake_room;
 use crate::objects::put_amulet;
 use crate::pack::has_amulet;
@@ -21,7 +18,6 @@ use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system::backend;
 use crate::room::{DoorDirection, gr_spot, is_all_connected, Room, RoomBounds, RoomType, visit_room, visit_spot_area};
 use crate::room::RoomType::Nothing;
-use crate::score::win;
 use crate::trap::Trap;
 
 pub mod constants;
@@ -588,48 +584,6 @@ pub fn put_player(avoid_room: RoomMark, game: &mut GameState) {
 	}
 	game.level.new_level_message = None;
 	game.render_spot(game.player.to_spot());
-}
-
-pub fn drop_check(game: &mut GameState) -> bool {
-	if game.player.wizard {
-		return true;
-	}
-	if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_stairs() {
-		if game.player.levitate.is_active() {
-			game.dialog.message("you're floating in the air!", 0);
-			return false;
-		}
-		return true;
-	}
-	game.dialog.message("I see no way down", 0);
-	return false;
-}
-
-pub enum UpResult {
-	KeepLevel,
-	UpLevel,
-	WonGame,
-}
-
-pub fn check_up(game: &mut GameState) -> UpResult {
-	if !game.player.wizard {
-		if !game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_stairs() {
-			game.dialog.message("I see no way up", 0);
-			return KeepLevel;
-		}
-		if !has_amulet(&game.player) {
-			game.dialog.message("Your way is magically blocked", 0);
-			return KeepLevel;
-		}
-	}
-	game.level.new_level_message = Some("you feel a wrenching sensation in your gut".to_string());
-	if game.player.cur_depth == 1 {
-		win(game);
-		WonGame
-	} else {
-		game.player.ascend();
-		UpLevel
-	}
 }
 
 pub fn add_exp(e: isize, promotion: bool, game: &mut GameState) {
