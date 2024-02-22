@@ -16,7 +16,7 @@ use crate::actions::put_on_ring::PutOnRing;
 use crate::actions::quaff::Quaff;
 use crate::actions::read_scroll::ReadScroll;
 use crate::actions::remove_ring::RemoveRing;
-use crate::actions::rest::{CallIt, Rest, Version};
+use crate::actions::rest::{CallIt, Quit, Rest, Version};
 use crate::actions::screen::ReMessage;
 use crate::actions::search::{IdentifyTrap, Search};
 use crate::actions::take_off::TakeOff;
@@ -28,7 +28,7 @@ use crate::resources::keyboard;
 use crate::resources::keyboard::CTRL_W;
 use crate::systems::play_level::PlayResult;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 32] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 33] = [
 	(&['<'], Ascend::update),
 	(&['c'], CallIt::update),
 	(&['>'], Descend::update),
@@ -49,6 +49,7 @@ const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>);
 	(&['m'], MoveOnto::update),
 	(&['P'], PutOnRing::update),
 	(&['q'], Quaff::update),
+	(&['Q'], Quit::update),
 	(&['r'], ReadScroll::update),
 	(&[CTRL_P], ReMessage::update),
 	(&['R'], RemoveRing::update),

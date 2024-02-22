@@ -11,7 +11,6 @@ use crate::render_system;
 use crate::resources::keyboard::rgetchar;
 use crate::room::draw_magic_map;
 use crate::save::save_game;
-use crate::score::ask_quit;
 use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
 use crate::systems::play_once::PlayOnceResult::{Counting, Leaving};
 use crate::trap::show_traps;
@@ -40,9 +39,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			'Q' => if ask_quit(false, game) {
-				return Leaving(PlayResult::ExitQuit);
-			},
 			'0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
 				render_system::refresh(game);
 				return Counting(key_code.to_string());

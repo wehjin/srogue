@@ -7,7 +7,21 @@ use crate::prelude::object_what::ObjectWhat::{Potion, Ring, Scroll, Wand};
 use crate::prelude::object_what::PackFilter::AnyFrom;
 use crate::resources::input_line::get_input_line;
 use crate::resources::keyboard::CANCEL_CHAR;
+use crate::score::ask_quit;
 use crate::systems::play_level::PlayResult;
+
+pub struct Quit;
+
+impl PlayerAction for Quit {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		if ask_quit(false, game) {
+			Some(PlayResult::ExitQuit)
+		} else {
+			None
+		}
+	}
+}
+
 
 pub struct Version;
 
