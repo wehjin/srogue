@@ -1,11 +1,24 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
 use crate::inventory;
-use crate::inventory::{inventory, single_inv};
+use crate::inventory::{inventory, ObjectSource, single_inv};
 use crate::player::rings::HandUsage;
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::ring::PlayerHand;
-use crate::systems::play_level::PlayResult;
+use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
+
+pub struct InventoryGround;
+
+impl PlayerAction for InventoryGround {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		if game.player.wizard {
+			inventory(AllObjects, ObjectSource::Ground, game);
+		} else {
+			game.dialog.message(UNKNOWN_COMMAND, 0);
+		}
+		None
+	}
+}
 
 pub struct InventoryOne;
 
@@ -20,7 +33,7 @@ pub struct Inventory;
 
 impl PlayerAction for Inventory {
 	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
-		inventory(AllObjects, game);
+		inventory(AllObjects, ObjectSource::Player, game);
 		None
 	}
 }

@@ -1,12 +1,10 @@
 use crate::actions::action_set::ACTION_UPDATES;
 use crate::init::{GameState, GameTurn};
-use crate::inventory::inventory;
 use crate::level::show_average_hp;
 use crate::monster::show_monsters;
 use crate::motion::reg_move;
 use crate::objects::{new_object_for_wizard, show_objects};
 use crate::pack::kick_into_pack;
-use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::render_system;
 use crate::resources::keyboard::rgetchar;
 use crate::room::draw_magic_map;
@@ -43,11 +41,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			'\x09' => if game.player.wizard {
-				inventory(AllObjects, game);
-			} else {
-				game.dialog.message(UNKNOWN_COMMAND, 0);
-			},
 			'\x13' => if game.player.wizard {
 				draw_magic_map(game);
 			} else {

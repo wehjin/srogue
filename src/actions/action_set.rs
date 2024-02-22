@@ -8,7 +8,7 @@ use crate::actions::drop_item::DropItem;
 use crate::actions::eat::Eat;
 use crate::actions::fight::{FightHeavy, FightLight, Throw, Zap};
 use crate::actions::instruct::Instruct;
-use crate::actions::inventory::{Inventory, InventoryArmor, InventoryOne, InventoryRings, InventoryWeapons};
+use crate::actions::inventory::{Inventory, InventoryArmor, InventoryGround, InventoryOne, InventoryRings, InventoryWeapons};
 use crate::actions::motion::{Ascend, Descend, MoveMultiple, MoveOnce};
 use crate::actions::move_onto::MoveOnto;
 use crate::actions::PlayerAction;
@@ -25,10 +25,10 @@ use crate::actions::wield::Wield;
 use crate::actions::wizard::Wizardize;
 use crate::init::GameState;
 use crate::resources::keyboard;
-use crate::resources::keyboard::CTRL_W;
+use crate::resources::keyboard::{CTRL_I, CTRL_W};
 use crate::systems::play_level::PlayResult;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 34] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 35] = [
 	(&['<'], Ascend::update),
 	(&['c'], CallIt::update),
 	(&['>'], Descend::update),
@@ -41,6 +41,7 @@ const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>);
 	(&['?'], Instruct::update),
 	(&['i'], Inventory::update),
 	(&[']'], InventoryArmor::update),
+	(&[CTRL_I], InventoryGround::update),
 	(&['I'], InventoryOne::update),
 	(&['='], InventoryRings::update),
 	(&[')'], InventoryWeapons::update),

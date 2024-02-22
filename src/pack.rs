@@ -1,5 +1,5 @@
 use crate::init::GameState;
-use crate::inventory::{get_obj_desc, inventory};
+use crate::inventory::{get_obj_desc, inventory, ObjectSource};
 use crate::message::sound_bell;
 use crate::motion::reg_move;
 use crate::objects::{Object, ObjectId, ObjectPack};
@@ -133,7 +133,7 @@ pub fn pack_letter(prompt: &str, filter: PackFilter, game: &mut GameState) -> ch
 		game.dialog.clear_message();
 		match pack_op {
 			PackOp::List(filter) => {
-				inventory(filter, game);
+				inventory(filter, ObjectSource::Player, game);
 			}
 			PackOp::Cancel => {
 				return CANCEL_CHAR;

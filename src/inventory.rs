@@ -17,14 +17,23 @@ use crate::score::is_vowel;
 use crate::scrolls::ScrollKind;
 use crate::zap::wand_kind::WandKind;
 
-pub fn inventory(filter: PackFilter, game: &mut GameState) {
-	if game.player.pack().is_empty() {
+pub enum ObjectSource {
+	Player,
+	Ground,
+}
+
+pub fn inventory(filter: PackFilter, source: ObjectSource, game: &mut GameState) {
+	let pack = match source {
+		ObjectSource::Player => game.player.pack(),
+		ObjectSource::Ground => &game.ground,
+	};
+	if pack.is_empty() {
 		game.dialog.message("your pack is empty", 0);
 		return;
 	}
 	let item_lines = {
 		let mut item_lines = Vec::new();
-		for obj in game.player.pack().objects() {
+		for obj in pack.objects() {
 			let what = obj.what_is;
 			if filter.includes(what) {
 				let close_char = if what == Armor && obj.is_protected != 0 { '}' } else { ')' };
