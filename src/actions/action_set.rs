@@ -22,13 +22,13 @@ use crate::actions::search::{IdentifyTrap, Search};
 use crate::actions::take_off::TakeOff;
 use crate::actions::wear::Wear;
 use crate::actions::wield::Wield;
-use crate::actions::wizard::{DrawMagicMap, ShowObjects, ShowTraps, Wizardize};
+use crate::actions::wizard::{DrawMagicMap, NewObjectForWizard, ShowObjects, ShowTraps, Wizardize};
 use crate::init::GameState;
 use crate::resources::keyboard;
-use crate::resources::keyboard::{CTRL_A, CTRL_I, CTRL_O, CTRL_S, CTRL_T, CTRL_W};
+use crate::resources::keyboard::{CTRL_A, CTRL_C, CTRL_I, CTRL_O, CTRL_S, CTRL_T, CTRL_W};
 use crate::systems::play_level::PlayResult;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 39] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 40] = [
 	(&['<'], Ascend::update),
 	(&['c'], CallIt::update),
 	(&['>'], Descend::update),
@@ -50,6 +50,7 @@ const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>);
 	(&CTRL_MOTION_KEYS, MoveMultiple::update),
 	(&MOTION_KEYS, MoveOnce::update),
 	(&['m'], MoveOnto::update),
+	(&[CTRL_C], NewObjectForWizard::update),
 	(&['P'], PutOnRing::update),
 	(&['q'], Quaff::update),
 	(&['Q'], Quit::update),

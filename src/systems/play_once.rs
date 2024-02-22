@@ -2,7 +2,6 @@ use crate::actions::action_set::ACTION_UPDATES;
 use crate::init::{GameState, GameTurn};
 use crate::monster::show_monsters;
 use crate::motion::reg_move;
-use crate::objects::new_object_for_wizard;
 use crate::pack::kick_into_pack;
 use crate::render_system;
 use crate::resources::keyboard::rgetchar;
@@ -38,11 +37,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			'\x03' => if game.player.wizard {
-				new_object_for_wizard(game);
-			} else {
-				game.dialog.message(UNKNOWN_COMMAND, 0);
-			},
 			'\x0d' => if game.player.wizard {
 				show_monsters(game);
 			} else {
