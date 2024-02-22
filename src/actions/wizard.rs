@@ -51,6 +51,7 @@ pub struct ShowTraps;
 impl PlayerAction for ShowTraps {
 	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
 		if game.player.wizard {
+			// TODO Fix this to show where the trap is without making it visible so that the Search and IdTrap actions can still work.
 			show_traps(game);
 		} else {
 			game.dialog.message(UNKNOWN_COMMAND, 0);

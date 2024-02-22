@@ -15,7 +15,7 @@ pub enum PlayOnceResult {
 }
 
 pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult {
-	if let Some(ending) = check_reset_loop_flags(game) {
+	if let Some(ending) = test_and_clear_loop_context(game) {
 		return Leaving(ending);
 	};
 	let key_code = key_code.unwrap_or_else(rgetchar);
@@ -41,7 +41,7 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 	return Idle;
 }
 
-fn check_reset_loop_flags(game: &mut GameState) -> Option<PlayResult> {
+fn test_and_clear_loop_context(game: &mut GameState) -> Option<PlayResult> {
 	game.player.interrupted = false;
 	if !game.player.hit_message.is_empty() {
 		game.player.interrupt_and_slurp();
