@@ -1,11 +1,20 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
 use crate::inventory;
-use crate::inventory::inventory;
+use crate::inventory::{inventory, single_inv};
 use crate::player::rings::HandUsage;
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::ring::PlayerHand;
 use crate::systems::play_level::PlayResult;
+
+pub struct InventoryOne;
+
+impl PlayerAction for InventoryOne {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		single_inv(None, game);
+		None
+	}
+}
 
 pub struct Inventory;
 
@@ -43,7 +52,7 @@ impl PlayerAction for InventoryRings {
 	}
 }
 
- fn inv_armor_weapon(is_weapon: bool, game: &mut GameState) {
+fn inv_armor_weapon(is_weapon: bool, game: &mut GameState) {
 	if is_weapon {
 		if let Some(weapon) = game.player.weapon() {
 			inventory::single_inv(Some(weapon.ichar), game);
