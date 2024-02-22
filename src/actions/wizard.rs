@@ -1,12 +1,14 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
 use crate::resources::input_line::get_input_line;
+use crate::systems::play_level::PlayResult;
 
 pub struct Wizardize;
 
 impl PlayerAction for Wizardize {
-	fn update(_input_key: char, game: &mut GameState) {
-		wizardize(game)
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		wizardize(game);
+		None
 	}
 }
 

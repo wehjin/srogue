@@ -1,7 +1,7 @@
 use crate::actions::action_set::ACTION_UPDATES;
 use crate::init::{GameState, GameTurn};
 use crate::inventory::{inv_armor_weapon, inventory, single_inv};
-use crate::level::{check_up, drop_check, show_average_hp, UpResult};
+use crate::level::{check_up, show_average_hp, UpResult};
 use crate::monster::show_monsters;
 use crate::motion::reg_move;
 use crate::objects::{new_object_for_wizard, show_objects};
@@ -14,7 +14,7 @@ use crate::room::draw_magic_map;
 use crate::save::save_game;
 use crate::score::ask_quit;
 use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
-use crate::systems::play_level::PlayResult::{ExitWon, StairsDown, StairsUp};
+use crate::systems::play_level::PlayResult::{ExitWon, StairsUp};
 use crate::systems::play_once::PlayOnceResult::{Counting, Leaving};
 use crate::throw::throw;
 use crate::trap::{id_trap, show_traps};
@@ -36,15 +36,14 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 	game.dialog.clear_message();
 	game.turn = GameTurn::Player;
 	if let Some(action_update) = ACTION_UPDATES.get(&key_code) {
-		action_update(key_code, game);
+		if let Some(play_result) = action_update(key_code, game) {
+			return Leaving(play_result);
+		}
 		if game.turn == GameTurn::Monsters {
 			reg_move(game);
 		}
 	} else {
 		match key_code {
-			'>' => if drop_check(game) {
-				return Leaving(StairsDown);
-			},
 			'<' => match check_up(game) {
 				UpResult::KeepLevel => {
 					// Ignore and stay in loop

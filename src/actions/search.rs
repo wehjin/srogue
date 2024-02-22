@@ -1,13 +1,15 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
 use crate::random::rand_percent;
+use crate::systems::play_level::PlayResult;
 use crate::trap;
 
 pub struct Search;
 
 impl PlayerAction for Search {
-	fn update(_input_key: char, game: &mut GameState) {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
 		search(SearchKind::Manual, game);
+		None
 	}
 }
 

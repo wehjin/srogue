@@ -8,12 +8,14 @@ use crate::prelude::object_what::ObjectWhat::Food;
 use crate::prelude::object_what::PackFilter::Foods;
 use crate::random::{get_rand, rand_percent};
 use crate::resources::keyboard::CANCEL_CHAR;
+use crate::systems::play_level::PlayResult;
 
 pub struct Eat;
 
 impl PlayerAction for Eat {
-	fn update(_input_key: char, game: &mut GameState) {
-		eat(game)
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		eat(game);
+		None
 	}
 }
 

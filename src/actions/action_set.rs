@@ -9,7 +9,7 @@ use crate::actions::eat::Eat;
 use crate::actions::fight::{FightHeavy, FightLight};
 use crate::actions::instruct::Instruct;
 use crate::actions::inventory::Inventory;
-use crate::actions::motion::{MoveMultiple, MoveOnce};
+use crate::actions::motion::{Descend, MoveMultiple, MoveOnce};
 use crate::actions::move_onto::MoveOnto;
 use crate::actions::PlayerAction;
 use crate::actions::put_on_ring::PutOnRing;
@@ -26,8 +26,10 @@ use crate::actions::wizard::Wizardize;
 use crate::init::GameState;
 use crate::resources::keyboard;
 use crate::resources::keyboard::CTRL_W;
+use crate::systems::play_level::PlayResult;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState)); 21] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 22] = [
+	(&['>'], Descend::update),
 	(&['d'], DropItem::update),
 	(&['e'], Eat::update),
 	(&['F'], FightHeavy::update),
@@ -59,7 +61,7 @@ const CTRL_MOTION_KEYS: [char; 8] = [
 ];
 
 lazy_static! {
-	pub static ref ACTION_UPDATES: HashMap<char, fn(char,&mut GameState)> = {
+	pub static ref ACTION_UPDATES: HashMap<char, fn(char,&mut GameState) -> Option<PlayResult>> = {
 		let mut actions = HashMap::new();
 		for (key_set, handler) in &ROGUE_ACTIONS {
 			for key in *key_set {

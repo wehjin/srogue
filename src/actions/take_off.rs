@@ -3,11 +3,12 @@ use crate::init::GameState;
 use crate::monster::mv_aquatars;
 use crate::objects::Object;
 use crate::pack::{CURSE_MESSAGE, unwear};
+use crate::systems::play_level::PlayResult;
 
 pub struct TakeOff;
 
 impl PlayerAction for TakeOff {
-	fn update(_input_key: char, game: &mut GameState) {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
 		if let Some(armor_id) = game.player.armor_id() {
 			if game.player.pack().check_object(armor_id, Object::is_cursed) {
 				game.dialog.message(CURSE_MESSAGE, 0);
@@ -25,6 +26,7 @@ impl PlayerAction for TakeOff {
 		} else {
 			game.dialog.message("not wearing any", 0);
 		}
+		None
 	}
 }
 

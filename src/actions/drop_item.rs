@@ -10,12 +10,14 @@ use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::un_put_hand;
+use crate::systems::play_level::PlayResult;
 
 pub struct DropItem;
 
 impl PlayerAction for DropItem {
-	fn update(_input_key: char, game: &mut GameState) {
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
 		drop_item(game);
+		None
 	}
 }
 

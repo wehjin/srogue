@@ -5,12 +5,14 @@ use crate::potions::quaff::quaff_potion;
 use crate::prelude::object_what::ObjectWhat::Potion;
 use crate::prelude::object_what::PackFilter::Potions;
 use crate::resources::keyboard::CANCEL_CHAR;
+use crate::systems::play_level::PlayResult;
 
 pub struct Quaff;
 
 impl PlayerAction for Quaff {
-	fn update(_input_key: char, game: &mut GameState) {
-		quaff(game)
+	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+		quaff(game);
+		None
 	}
 }
 
