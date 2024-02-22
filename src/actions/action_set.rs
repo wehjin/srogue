@@ -16,7 +16,7 @@ use crate::actions::put_on_ring::PutOnRing;
 use crate::actions::quaff::Quaff;
 use crate::actions::read_scroll::ReadScroll;
 use crate::actions::remove_ring::RemoveRing;
-use crate::actions::rest::{CallIt, Quit, Rest, Version};
+use crate::actions::rest::{CallIt, Ignore, Quit, Rest, Version};
 use crate::actions::screen::ReMessage;
 use crate::actions::search::{IdentifyTrap, Search};
 use crate::actions::take_off::TakeOff;
@@ -28,7 +28,7 @@ use crate::resources::keyboard;
 use crate::resources::keyboard::CTRL_W;
 use crate::systems::play_level::PlayResult;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 33] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 34] = [
 	(&['<'], Ascend::update),
 	(&['c'], CallIt::update),
 	(&['>'], Descend::update),
@@ -37,6 +37,7 @@ const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>);
 	(&['F'], FightHeavy::update),
 	(&['f'], FightLight::update),
 	(&['^'], IdentifyTrap::update),
+	(&[' '], Ignore::update),
 	(&['?'], Instruct::update),
 	(&['i'], Inventory::update),
 	(&[']'], InventoryArmor::update),

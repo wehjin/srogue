@@ -10,6 +10,14 @@ use crate::resources::keyboard::CANCEL_CHAR;
 use crate::score::ask_quit;
 use crate::systems::play_level::PlayResult;
 
+pub struct Ignore;
+
+impl PlayerAction for Ignore {
+	fn update(_input_key: char, _game: &mut GameState) -> Option<PlayResult> {
+		None
+	}
+}
+
 pub struct Quit;
 
 impl PlayerAction for Quit {

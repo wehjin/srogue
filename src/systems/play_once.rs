@@ -43,7 +43,6 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 		}
 	} else {
 		match key_code {
-			' ' => {}
 			'\x09' => if game.player.wizard {
 				inventory(AllObjects, game);
 			} else {
