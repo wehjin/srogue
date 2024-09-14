@@ -2,7 +2,7 @@ use OnceResult::Idle;
 
 use crate::actions::action_set::PlayerEvent;
 use crate::init::{GameState, GameTurn};
-use crate::motion::{one_move_rogue, reg_move};
+use crate::motion::{multiple_move_rogue, one_move_rogue, reg_move};
 use crate::render_system;
 use crate::resources::keyboard::rgetchar;
 use crate::systems::play_level::{LevelResult, UNKNOWN_COMMAND};
@@ -46,8 +46,11 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> OnceResult {
 
 fn dispatch_player_event(game: &mut GameState, key_code: char, player_event: PlayerEvent) -> Option<LevelResult> {
 	match player_event {
-		PlayerEvent::MoveRogue(direction) => {
-			one_move_rogue(direction, true, game);
+		PlayerEvent::MoveRogue(direction, until) => {
+			match until {
+				Some(until) => { multiple_move_rogue(direction, until, game); }
+				None => { one_move_rogue(direction, true, game); }
+			}
 			None
 		}
 		PlayerEvent::Update(update_game) => update_game(key_code, game),

@@ -9,7 +9,7 @@ use crate::actions::ground::MoveOnto;
 use crate::actions::ground::{DropItem, KickIntoPack};
 use crate::actions::instruct::Instruct;
 use crate::actions::inventory::{Inventory, InventoryArmor, InventoryGround, InventoryOne, InventoryRings, InventoryWeapons};
-use crate::actions::motion::{Ascend, Descend, MoveMultiple};
+use crate::actions::motion::{Ascend, Descend};
 use crate::actions::put_on_ring::PutOnRing;
 use crate::actions::quaff::Quaff;
 use crate::actions::read_scroll::ReadScroll;
@@ -23,13 +23,13 @@ use crate::actions::wield::Wield;
 use crate::actions::wizard::{DrawMagicMap, NewObjectForWizard, ShowMonsters, ShowObjects, ShowTraps, Wizardize};
 use crate::actions::GameUpdater;
 use crate::init::GameState;
-use crate::motion::MoveDirection;
+use crate::motion::{MoveDirection, MoveUntil};
 use crate::resources::keyboard;
 use crate::resources::keyboard::{CTRL_A, CTRL_C, CTRL_I, CTRL_M, CTRL_O, CTRL_S, CTRL_T, CTRL_W};
 use crate::systems::play_level::LevelResult;
-use keyboard::CTRL_P;
+use keyboard::{CTRL_B, CTRL_H, CTRL_J, CTRL_K, CTRL_L, CTRL_N, CTRL_P, CTRL_U, CTRL_Y};
 
-const ROGUE_ACTIONS: [(&[char], UpdateGameFn); 42] = [
+const ROGUE_ACTIONS: [(&[char], UpdateGameFn); 40] = [
 	(&['<'], Ascend::update),
 	(&['c'], CallIt::update),
 	(&['>'], Descend::update),
@@ -48,8 +48,6 @@ const ROGUE_ACTIONS: [(&[char], UpdateGameFn); 42] = [
 	(&['='], InventoryRings::update),
 	(&[')'], InventoryWeapons::update),
 	(&[','], KickIntoPack::update),
-	(&SHIFT_MOTION_KEYS, MoveMultiple::update),
-	(&CTRL_MOTION_KEYS, MoveMultiple::update),
 	(&['m'], MoveOnto::update),
 	(&[CTRL_C], NewObjectForWizard::update),
 	(&['P'], PutOnRing::update),
@@ -74,14 +72,6 @@ const ROGUE_ACTIONS: [(&[char], UpdateGameFn); 42] = [
 	(&['z'], Zap::update),
 ];
 
-const MOTION_KEYS: [char; 8] = ['h', 'j', 'k', 'l', 'y', 'u', 'n', 'b'];
-const SHIFT_MOTION_KEYS: [char; 8] = ['H', 'J', 'K', 'L', 'B', 'Y', 'U', 'N'];
-const CTRL_MOTION_KEYS: [char; 8] = [
-	keyboard::CTRL_H, keyboard::CTRL_J, keyboard::CTRL_K, keyboard::CTRL_L,
-	keyboard::CTRL_Y, keyboard::CTRL_U, keyboard::CTRL_N, keyboard::CTRL_B
-];
-
-
 lazy_static! {
 	static ref ACTION_UPDATES: HashMap<char, UpdateGameFn> = {
 		let mut actions = HashMap::new();
@@ -95,7 +85,7 @@ lazy_static! {
 }
 
 pub enum PlayerEvent {
-	MoveRogue(MoveDirection),
+	MoveRogue(MoveDirection, Option<MoveUntil>),
 	Update(&'static UpdateGameFn),
 }
 
@@ -103,10 +93,17 @@ impl TryFrom<char> for PlayerEvent {
 	type Error = anyhow::Error;
 
 	fn try_from(value: char) -> Result<Self, Self::Error> {
-		if is_single_move_input(value) {
-			Ok(MoveRogue(MoveDirection::from(value)))
-		} else {
-			match ACTION_UPDATES.get(&value) {
+		match value {
+			'h' | 'j' | 'k' | 'l' | 'y' | 'u' | 'n' | 'b' => {
+				Ok(MoveRogue(MoveDirection::from(value), None))
+			}
+			'H' | 'J' | 'K' | 'L' | 'Y' | 'U' | 'N' | 'B' => {
+				Ok(MoveRogue(MoveDirection::from(value), Some(MoveUntil::Obstacle)))
+			}
+			CTRL_H | CTRL_J | CTRL_K | CTRL_L | CTRL_Y | CTRL_U | CTRL_N | CTRL_B => {
+				Ok(MoveRogue(MoveDirection::from(value), Some(MoveUntil::NearSomething)))
+			}
+			_ => match ACTION_UPDATES.get(&value) {
 				None => Err(anyhow::anyhow!("No game event for char: {}", value)),
 				Some(update_game) => Ok(Update(update_game)),
 			}
@@ -115,10 +112,3 @@ impl TryFrom<char> for PlayerEvent {
 }
 
 pub type UpdateGameFn = fn(char, &mut GameState) -> Option<LevelResult>;
-
-pub fn is_single_move_input(key_code: char) -> bool {
-	match key_code {
-		'h' | 'j' | 'k' | 'l' | 'y' | 'u' | 'n' | 'b' => true,
-		_ => false
-	}
-}

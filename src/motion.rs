@@ -20,7 +20,6 @@ use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
 use crate::render_system::darken_room;
 use crate::render_system::hallucinate::show_hallucination;
-use crate::resources::keyboard;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::room::{visit_room, visit_spot_area};
 use crate::score::killed_by;
@@ -172,15 +171,24 @@ fn moved_unless_hungry_or_confused(game: &mut GameState) -> MoveResult {
 }
 
 
-pub fn multiple_move_rogue(dirch: char, game: &mut GameState) {
-	match dirch {
-		keyboard::CTRL_H | keyboard::CTRL_J | keyboard::CTRL_K | keyboard::CTRL_L
-		| keyboard::CTRL_Y | keyboard::CTRL_U | keyboard::CTRL_N | keyboard::CTRL_B => {
+pub fn multiple_move_rogue(direction: MoveDirection, until: MoveUntil, game: &mut GameState) {
+	match until {
+		MoveUntil::Obstacle => {
+			loop {
+				if game.player.interrupted {
+					break;
+				}
+				if one_move_rogue(direction, true, game) != Moved {
+					break;
+				}
+				render_system::refresh(game);
+			}
+		}
+		MoveUntil::NearSomething => {
 			loop {
 				let row = game.player.rogue.row;
 				let col = game.player.rogue.col;
-				let move_direction = MoveDirection::from(dirch);
-				let result = one_move_rogue(move_direction, true, game);
+				let result = one_move_rogue(direction, true, game);
 				if result == MoveFailed || result == StoppedOnSomething || game.player.interrupted {
 					break;
 				}
@@ -190,19 +198,6 @@ pub fn multiple_move_rogue(dirch: char, game: &mut GameState) {
 				render_system::refresh(game);
 			}
 		}
-		'H' | 'J' | 'K' | 'L' | 'B' | 'Y' | 'U' | 'N' => {
-			loop {
-				if game.player.interrupted {
-					break;
-				}
-				let one_move_result = one_move_rogue(MoveDirection::from(dirch), true, game);
-				if one_move_result != Moved {
-					break;
-				}
-				render_system::refresh(game);
-			}
-		}
-		_ => {}
 	}
 }
 
@@ -458,6 +453,13 @@ pub fn reg_move(game: &mut GameState) -> bool {
 		}
 	}
 	return hunger_check == HungerCheckResult::DidFaint;
+}
+
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+pub enum MoveUntil {
+	Obstacle,
+	NearSomething,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]

@@ -1,20 +1,10 @@
 use crate::actions::motion::UpResult::{KeepLevel, UpLevel, WonGame};
 use crate::actions::GameUpdater;
 use crate::init::GameState;
-use crate::motion::multiple_move_rogue;
 use crate::pack::has_amulet;
 use crate::score::win;
 use crate::systems::play_level::LevelResult;
 use crate::systems::play_level::LevelResult::{ExitWon, StairsDown, StairsUp};
-
-pub struct MoveMultiple;
-
-impl GameUpdater for MoveMultiple {
-	fn update(input_key: char, game: &mut GameState) -> Option<LevelResult> {
-		multiple_move_rogue(input_key, game);
-		None
-	}
-}
 
 pub struct Descend;
 
