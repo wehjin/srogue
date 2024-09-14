@@ -36,13 +36,13 @@ pub enum MoveResult {
 	StoppedOnSomething,
 }
 
-pub fn one_move_rogue(dirch: char, pickup: bool, game: &mut GameState) -> MoveResult {
-	let dirch = if game.player.confused.is_active() {
-		Motion::random8().to_char()
+pub fn one_move_rogue(direction: MoveDirection, pickup: bool, game: &mut GameState) -> MoveResult {
+	let real_direction = if game.player.confused.is_active() {
+		MoveDirection::random()
 	} else {
-		dirch
+		direction
 	};
-	let (row, col) = MoveDirection::from(dirch).apply(game.player.rogue.row, game.player.rogue.col);
+	let (row, col) = real_direction.apply(game.player.rogue.row, game.player.rogue.col);
 	if !can_move(game.player.rogue.row, game.player.rogue.col, row, col, &game.level) {
 		return MoveFailed;
 	}
@@ -179,7 +179,8 @@ pub fn multiple_move_rogue(dirch: char, game: &mut GameState) {
 			loop {
 				let row = game.player.rogue.row;
 				let col = game.player.rogue.col;
-				let result = one_move_rogue((dirch as u8 + 96) as char, true, game);
+				let move_direction = MoveDirection::from(dirch);
+				let result = one_move_rogue(move_direction, true, game);
 				if result == MoveFailed || result == StoppedOnSomething || game.player.interrupted {
 					break;
 				}
@@ -194,7 +195,7 @@ pub fn multiple_move_rogue(dirch: char, game: &mut GameState) {
 				if game.player.interrupted {
 					break;
 				}
-				let one_move_result = one_move_rogue((dirch as u8 + 32) as char, true, game);
+				let one_move_result = one_move_rogue(MoveDirection::from(dirch), true, game);
 				if one_move_result != Moved {
 					break;
 				}
@@ -473,7 +474,10 @@ pub enum MoveDirection {
 
 impl From<char> for MoveDirection {
 	fn from(value: char) -> Self {
-		match value {
+		// Moves CTRL and SHIFT chars into the lower-case region of the ascii table.
+		let ascii = value as u8;
+		let lowercase = ((ascii % 32) + 96) as char;
+		match lowercase {
 			'h' => MoveDirection::Left,
 			'j' => MoveDirection::Down,
 			'k' => MoveDirection::Up,
@@ -488,6 +492,9 @@ impl From<char> for MoveDirection {
 }
 
 impl MoveDirection {
+	pub fn random() -> Self {
+		MoveDirection::from(Motion::random8().to_char())
+	}
 	pub fn apply_confined(&self, row: i64, col: i64) -> (usize, usize) {
 		let (free_row, free_col) = self.apply(row, col);
 		let confined_row = free_row.max(MIN_ROW).min(DROWS as i64 - 2) as usize;

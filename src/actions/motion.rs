@@ -1,7 +1,7 @@
 use crate::actions::motion::UpResult::{KeepLevel, UpLevel, WonGame};
 use crate::actions::GameUpdater;
 use crate::init::GameState;
-use crate::motion::{multiple_move_rogue, one_move_rogue};
+use crate::motion::{multiple_move_rogue, one_move_rogue, MoveDirection};
 use crate::pack::has_amulet;
 use crate::score::win;
 use crate::systems::play_level::LevelResult;
@@ -11,7 +11,8 @@ pub struct MoveOnce;
 
 impl GameUpdater for MoveOnce {
 	fn update(input_key: char, game: &mut GameState) -> Option<LevelResult> {
-		one_move_rogue(input_key, true, game);
+		let direction = MoveDirection::from(input_key);
+		one_move_rogue(direction, true, game);
 		None
 	}
 }

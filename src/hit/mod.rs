@@ -4,7 +4,7 @@ use crate::init::GameState;
 use crate::level::add_exp;
 use crate::message::sound_bell;
 use crate::monster::{mon_name, Monster};
-use crate::motion::{can_move, is_direction, one_move_rogue};
+use crate::motion::{can_move, is_direction, one_move_rogue, MoveDirection};
 use crate::objects::{get_armor_class, Object};
 use crate::player::Player;
 use crate::prelude::ending::Ending;
@@ -144,7 +144,7 @@ pub fn get_damage(damage_stats: &[DamageStat], effect: DamageEffect) -> isize {
 	for stat in damage_stats {
 		total += stat.roll_damage(effect);
 	}
-	return total as isize;
+	total as isize
 }
 
 pub fn get_w_damage(obj: Option<&Object>) -> isize {
@@ -178,7 +178,7 @@ pub fn damage_for_strength(strength: isize) -> isize {
 	if strength <= 30 {
 		return 7;
 	}
-	return 8;
+	8
 }
 
 pub enum MonDamageEffect {
@@ -211,7 +211,7 @@ pub fn mon_damage(mon_id: u64, damage: isize, game: &mut GameState) -> MonDamage
 		let removed = game.mash.remove_monster(game.mash.monster(mon_id).id());
 		return MonDamageEffect::MonsterDies(removed);
 	}
-	return MonDamageEffect::MonsterSurvives;
+	MonDamageEffect::MonsterSurvives
 }
 
 pub fn fight(to_the_death: bool, game: &mut GameState) {
@@ -262,7 +262,8 @@ pub fn fight(to_the_death: bool, game: &mut GameState) {
 		}
 	};
 	while game.player.fight_monster.is_some() {
-		one_move_rogue(motion.to_char(), false, game);
+		let direction = MoveDirection::from(motion.to_char());
+		one_move_rogue(direction, false, game);
 		if (!to_the_death && game.player.rogue.hp_current <= possible_damage)
 			|| game.player.interrupted
 			|| game.player.cleaned_up.is_some()

@@ -2,15 +2,15 @@ use crate::actions::GameUpdater;
 use crate::init::GameState;
 use crate::inventory::get_obj_desc;
 use crate::monster::mv_aquatars;
-use crate::motion::reg_move;
-use crate::objects::{Object, place_at};
-use crate::{motion, pack};
-use crate::pack::{CURSE_MESSAGE, kick_into_pack};
+use crate::motion::{reg_move, MoveDirection};
+use crate::objects::{place_at, Object};
+use crate::pack::{kick_into_pack, CURSE_MESSAGE};
 use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::un_put_hand;
 use crate::systems::play_level::LevelResult;
+use crate::{motion, pack};
 
 pub struct KickIntoPack;
 
@@ -101,6 +101,6 @@ pub fn move_onto(game: &mut GameState) {
 	let ch = motion::get_dir_or_cancel(game);
 	game.dialog.clear_message();
 	if ch != CANCEL_CHAR {
-		motion::one_move_rogue(ch, false, game);
+		motion::one_move_rogue(MoveDirection::from(ch), false, game);
 	}
 }
