@@ -10,7 +10,7 @@ use crate::systems::play_level::LevelResult;
 pub struct Quaff;
 
 impl GameUpdater for Quaff {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		quaff(game);
 		None
 	}

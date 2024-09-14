@@ -16,7 +16,7 @@ use crate::trap::is_off_screen;
 pub struct ReadScroll;
 
 impl GameUpdater for ReadScroll {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		read_scroll(game);
 		None
 	}

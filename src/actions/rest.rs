@@ -15,7 +15,7 @@ use crate::systems::play_level::LevelResult;
 pub struct SaveGame;
 
 impl GameUpdater for SaveGame {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		if save_game(game) {
 			Some(LevelResult::ExitSaved)
 		} else {
@@ -27,7 +27,7 @@ impl GameUpdater for SaveGame {
 pub struct ShowAverageHp;
 
 impl GameUpdater for ShowAverageHp {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		show_average_hp(game);
 		None
 	}
@@ -36,7 +36,7 @@ impl GameUpdater for ShowAverageHp {
 pub struct Ignore;
 
 impl GameUpdater for Ignore {
-	fn update(_input_key: char, _game: &mut GameState) -> Option<LevelResult> {
+	fn update(_game: &mut GameState) -> Option<LevelResult> {
 		None
 	}
 }
@@ -44,7 +44,7 @@ impl GameUpdater for Ignore {
 pub struct Quit;
 
 impl GameUpdater for Quit {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		if ask_quit(false, game) {
 			Some(LevelResult::ExitQuit)
 		} else {
@@ -57,7 +57,7 @@ impl GameUpdater for Quit {
 pub struct Version;
 
 impl GameUpdater for Version {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		game.dialog.message("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims", 0);
 		None
 	}
@@ -66,7 +66,7 @@ impl GameUpdater for Version {
 pub struct CallIt;
 
 impl GameUpdater for CallIt {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		call_it(game);
 		None
 	}
@@ -75,7 +75,7 @@ impl GameUpdater for CallIt {
 pub struct Rest;
 
 impl GameUpdater for Rest {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		rest(game);
 		None
 	}

@@ -7,7 +7,7 @@ use crate::systems::play_level::LevelResult;
 pub struct Instruct;
 
 impl GameUpdater for Instruct {
-	fn update(_input_key: char, _game: &mut GameState) -> Option<LevelResult> {
+	fn update(_game: &mut GameState) -> Option<LevelResult> {
 		let repair_rows = detect_all_rows();
 		render_all_rows(instruct_line_for_row);
 		rgetchar();

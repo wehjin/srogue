@@ -13,7 +13,7 @@ use crate::systems::play_level::LevelResult;
 pub struct Eat;
 
 impl GameUpdater for Eat {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		eat(game);
 		None
 	}

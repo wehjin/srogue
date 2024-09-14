@@ -111,4 +111,4 @@ impl TryFrom<char> for PlayerEvent {
 	}
 }
 
-pub type UpdateGameFn = fn(char, &mut GameState) -> Option<LevelResult>;
+pub type UpdateGameFn = fn(&mut GameState) -> Option<LevelResult>;

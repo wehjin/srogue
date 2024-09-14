@@ -29,7 +29,7 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> OnceResult {
 	}
 	match PlayerEvent::try_from(key_code) {
 		Ok(player_event) => {
-			if let Some(level_result) = dispatch_player_event(game, key_code, player_event) {
+			if let Some(level_result) = dispatch_player_event(game, player_event) {
 				return Leaving(level_result);
 			}
 			if game.turn == GameTurn::Monsters {
@@ -44,7 +44,7 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> OnceResult {
 	Idle
 }
 
-fn dispatch_player_event(game: &mut GameState, key_code: char, player_event: PlayerEvent) -> Option<LevelResult> {
+fn dispatch_player_event(game: &mut GameState, player_event: PlayerEvent) -> Option<LevelResult> {
 	match player_event {
 		PlayerEvent::MoveRogue(direction, until) => {
 			match until {
@@ -53,7 +53,7 @@ fn dispatch_player_event(game: &mut GameState, key_code: char, player_event: Pla
 			}
 			None
 		}
-		PlayerEvent::Update(update_game) => update_game(key_code, game),
+		PlayerEvent::Update(update_game) => update_game(game),
 	}
 }
 

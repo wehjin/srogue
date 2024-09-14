@@ -8,7 +8,7 @@ use crate::zap::zapp;
 pub struct Throw;
 
 impl GameUpdater for Throw {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		throw(game);
 		None
 	}
@@ -17,7 +17,7 @@ impl GameUpdater for Throw {
 pub struct Zap;
 
 impl GameUpdater for Zap {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		zapp(game);
 		None
 	}
@@ -26,7 +26,7 @@ impl GameUpdater for Zap {
 pub struct FightLight;
 
 impl GameUpdater for FightLight {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		fight(false, game);
 		None
 	}
@@ -35,7 +35,7 @@ impl GameUpdater for FightLight {
 pub struct FightHeavy;
 
 impl GameUpdater for FightHeavy {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		fight(true, game);
 		None
 	}

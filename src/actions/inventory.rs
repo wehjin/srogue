@@ -10,7 +10,7 @@ use crate::systems::play_level::{LevelResult, UNKNOWN_COMMAND};
 pub struct InventoryGround;
 
 impl GameUpdater for InventoryGround {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wizard {
 			inventory(AllObjects, ObjectSource::Ground, game);
 		} else {
@@ -23,7 +23,7 @@ impl GameUpdater for InventoryGround {
 pub struct InventoryOne;
 
 impl GameUpdater for InventoryOne {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		single_inv(None, game);
 		None
 	}
@@ -32,7 +32,7 @@ impl GameUpdater for InventoryOne {
 pub struct Inventory;
 
 impl GameUpdater for Inventory {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		inventory(AllObjects, ObjectSource::Player, game);
 		None
 	}
@@ -41,7 +41,7 @@ impl GameUpdater for Inventory {
 pub struct InventoryArmor;
 
 impl GameUpdater for InventoryArmor {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		inv_armor_weapon(false, game);
 		None
 	}
@@ -50,7 +50,7 @@ impl GameUpdater for InventoryArmor {
 pub struct InventoryWeapons;
 
 impl GameUpdater for InventoryWeapons {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		inv_armor_weapon(true, game);
 		None
 	}
@@ -59,7 +59,7 @@ impl GameUpdater for InventoryWeapons {
 pub struct InventoryRings;
 
 impl GameUpdater for InventoryRings {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		inv_rings(game);
 		None
 	}

@@ -11,7 +11,7 @@ use crate::systems::play_level::LevelResult;
 pub struct Wield;
 
 impl GameUpdater for Wield {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wields_cursed_weapon() {
 			game.dialog.message(CURSE_MESSAGE, 0);
 			return None;

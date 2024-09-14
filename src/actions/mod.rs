@@ -2,7 +2,7 @@ use crate::init::GameState;
 use crate::systems::play_level::LevelResult;
 
 pub trait GameUpdater {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult>;
+	fn update(game: &mut GameState) -> Option<LevelResult>;
 }
 
 pub mod action_set;

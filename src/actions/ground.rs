@@ -15,7 +15,7 @@ use crate::{motion, pack};
 pub struct KickIntoPack;
 
 impl GameUpdater for KickIntoPack {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		kick_into_pack(game);
 		None
 	}
@@ -24,7 +24,7 @@ impl GameUpdater for KickIntoPack {
 pub struct DropItem;
 
 impl GameUpdater for DropItem {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		drop_item(game);
 		None
 	}
@@ -91,7 +91,7 @@ fn drop_item(game: &mut GameState) {
 pub struct MoveOnto;
 
 impl GameUpdater for MoveOnto {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		move_onto(game);
 		None
 	}

@@ -9,7 +9,7 @@ use crate::systems::play_level::LevelResult::{ExitWon, StairsDown, StairsUp};
 pub struct Descend;
 
 impl GameUpdater for Descend {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		if drop_check(game) {
 			Some(StairsDown)
 		} else {
@@ -21,7 +21,7 @@ impl GameUpdater for Descend {
 pub struct Ascend;
 
 impl GameUpdater for Ascend {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		match check_up(game) {
 			UpResult::KeepLevel => None,
 			UpResult::UpLevel => Some(StairsUp),

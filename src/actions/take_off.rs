@@ -8,7 +8,7 @@ use crate::systems::play_level::LevelResult;
 pub struct TakeOff;
 
 impl GameUpdater for TakeOff {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		if let Some(armor_id) = game.player.armor_id() {
 			if game.player.pack().check_object(armor_id, Object::is_cursed) {
 				game.dialog.message(CURSE_MESSAGE, 0);

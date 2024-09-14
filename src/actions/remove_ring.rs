@@ -11,7 +11,7 @@ use crate::systems::play_level::LevelResult;
 pub struct RemoveRing;
 
 impl GameUpdater for RemoveRing {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		let hand = match game.player.hand_usage() {
 			HandUsage::None => {
 				inv_rings(game);

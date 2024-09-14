@@ -8,7 +8,7 @@ use crate::trap::id_trap;
 pub struct IdentifyTrap;
 
 impl GameUpdater for IdentifyTrap {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		id_trap(game);
 		None
 	}
@@ -17,7 +17,7 @@ impl GameUpdater for IdentifyTrap {
 pub struct Search;
 
 impl GameUpdater for Search {
-	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
+	fn update(game: &mut GameState) -> Option<LevelResult> {
 		search(SearchKind::Manual, game);
 		None
 	}
