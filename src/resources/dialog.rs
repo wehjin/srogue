@@ -1,12 +1,9 @@
-use serde::{Deserialize, Serialize};
-
 use crate::init::onintr;
 use crate::pack::wait_for_ack;
 use crate::render_system::backend;
 
 pub(crate) const DIALOG_ROW: usize = 0;
 
-#[derive(Clone, Serialize, Deserialize)]
 pub struct PlayerDialog {
 	msg_written: String,
 	msg_cleared: bool,
