@@ -1,5 +1,3 @@
-#![feature(extern_types)]
-
 use crate::console::ConsoleError;
 use crate::init::{init, InitError, InitResult};
 use crate::level::{make_level, put_player};
