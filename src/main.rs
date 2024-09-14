@@ -4,7 +4,7 @@ use crate::level::{make_level, put_player};
 use crate::monster::put_mons;
 use crate::objects::{put_objects, put_stairs};
 use crate::settings::SettingsError;
-use crate::systems::play_level::{play_level, PlayResult};
+use crate::systems::play_level::{play_level, LevelResult};
 use crate::trap::add_traps;
 
 pub mod components;
@@ -98,13 +98,13 @@ pub fn main() {
 		}
 		restored = false;
 		match play_level(&mut game) {
-			PlayResult::TrapDoorDown | PlayResult::StairsDown | PlayResult::StairsUp => {
+			LevelResult::TrapDoorDown | LevelResult::StairsDown | LevelResult::StairsUp => {
 				// Ignore and stay in loop
 			}
-			PlayResult::ExitWon | PlayResult::ExitQuit | PlayResult::ExitSaved => {
+			LevelResult::ExitWon | LevelResult::ExitQuit | LevelResult::ExitSaved => {
 				break;
 			}
-			PlayResult::CleanedUp(exit) => {
+			LevelResult::CleanedUp(exit) => {
 				exit_line = Some(exit);
 				break;
 			}

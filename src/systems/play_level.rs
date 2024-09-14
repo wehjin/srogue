@@ -4,13 +4,13 @@ use crate::render_system::RenderAction;
 use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
 use crate::state::input::{KEY_REST, KEY_SEARCH};
 use crate::state::player::PlayState;
-use crate::systems::play_level::PlayResult::CleanedUp;
-use crate::systems::play_once::{play_once, PlayOnceResult};
+use crate::systems::play_level::LevelResult::CleanedUp;
+use crate::systems::play_once::{play_once, OnceResult};
 
 pub const UNKNOWN_COMMAND: &'static str = "unknown command";
 
 #[derive(Clone, Debug)]
-pub enum PlayResult {
+pub enum LevelResult {
 	TrapDoorDown,
 	StairsDown,
 	StairsUp,
@@ -20,7 +20,7 @@ pub enum PlayResult {
 	CleanedUp(String),
 }
 
-pub fn play_level(game: &mut GameState) -> PlayResult {
+pub fn play_level(game: &mut GameState) -> LevelResult {
 	game.render(&[RenderAction::Init]);
 	render_system::refresh(game);
 	let mut player_state = PlayState::Idle;
@@ -42,9 +42,9 @@ pub fn play_level(game: &mut GameState) -> PlayResult {
 
 fn when_idle(game: &mut GameState) -> PlayState {
 	match play_once(None, game) {
-		PlayOnceResult::Leaving(ending) => PlayState::Leaving(ending),
-		PlayOnceResult::Counting(digits) => PlayState::Counting(digits),
-		PlayOnceResult::Idle => PlayState::Idle,
+		OnceResult::Leaving(ending) => PlayState::Leaving(ending),
+		OnceResult::Counting(digits) => PlayState::Counting(digits),
+		OnceResult::Idle => PlayState::Idle,
 	}
 }
 
@@ -73,9 +73,9 @@ fn when_busy(key_code: char, completed: usize, remaining: usize, game: &mut Game
 		PlayState::Idle
 	} else if job_is_repeatable(key_code) {
 		match play_once(Some(key_code), game) {
-			PlayOnceResult::Counting(_) => panic!("can't count while busy"),
-			PlayOnceResult::Leaving(ending) => PlayState::Leaving(ending),
-			PlayOnceResult::Idle => {
+			OnceResult::Counting(_) => panic!("can't count while busy"),
+			OnceResult::Leaving(ending) => PlayState::Leaving(ending),
+			OnceResult::Idle => {
 				if game.player.interrupted || remaining == 1 {
 					PlayState::Idle
 				} else {
@@ -89,9 +89,9 @@ fn when_busy(key_code: char, completed: usize, remaining: usize, game: &mut Game
 		}
 	} else {
 		match play_once(Some(key_code), game) {
-			PlayOnceResult::Counting(_) => panic!("can't count while busy"),
-			PlayOnceResult::Leaving(ending) => PlayState::Leaving(ending),
-			PlayOnceResult::Idle => PlayState::Idle,
+			OnceResult::Counting(_) => panic!("can't count while busy"),
+			OnceResult::Leaving(ending) => PlayState::Leaving(ending),
+			OnceResult::Idle => PlayState::Idle,
 		}
 	}
 }

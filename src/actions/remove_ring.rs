@@ -6,12 +6,12 @@ use crate::objects::Object;
 use crate::pack::CURSE_MESSAGE;
 use crate::player::rings::HandUsage;
 use crate::ring::{PlayerHand, un_put_hand};
-use crate::systems::play_level::PlayResult;
+use crate::systems::play_level::LevelResult;
 
 pub struct RemoveRing;
 
 impl PlayerAction for RemoveRing {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		let hand = match game.player.hand_usage() {
 			HandUsage::None => {
 				inv_rings(game);

@@ -10,12 +10,12 @@ use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::un_put_hand;
-use crate::systems::play_level::PlayResult;
+use crate::systems::play_level::LevelResult;
 
 pub struct KickIntoPack;
 
 impl PlayerAction for KickIntoPack {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		kick_into_pack(game);
 		None
 	}
@@ -24,7 +24,7 @@ impl PlayerAction for KickIntoPack {
 pub struct DropItem;
 
 impl PlayerAction for DropItem {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		drop_item(game);
 		None
 	}
@@ -91,7 +91,7 @@ fn drop_item(game: &mut GameState) {
 pub struct MoveOnto;
 
 impl PlayerAction for MoveOnto {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		move_onto(game);
 		None
 	}

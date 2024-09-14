@@ -7,12 +7,12 @@ use crate::prelude::object_what::ObjectWhat::Ring;
 use crate::prelude::object_what::PackFilter::Rings;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::{ask_ring_hand, PlayerHand, ring_stats};
-use crate::systems::play_level::PlayResult;
+use crate::systems::play_level::LevelResult;
 
 pub struct PutOnRing;
 
 impl PlayerAction for PutOnRing {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.hand_usage() == HandUsage::Both {
 			game.dialog.message("wearing two rings already", 0);
 			return None;

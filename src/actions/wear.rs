@@ -4,12 +4,12 @@ use crate::pack::{do_wear, pack_letter};
 use crate::prelude::object_what::ObjectWhat::Armor;
 use crate::prelude::object_what::PackFilter::Armors;
 use crate::resources::keyboard::CANCEL_CHAR;
-use crate::systems::play_level::PlayResult;
+use crate::systems::play_level::LevelResult;
 
 pub struct Wear;
 
 impl PlayerAction for Wear {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.armor_id().is_some() {
 			game.dialog.message("your already wearing some", 0);
 			return None;

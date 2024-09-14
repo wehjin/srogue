@@ -1,14 +1,14 @@
 use crate::actions::PlayerAction;
 use crate::init::GameState;
 use crate::random::rand_percent;
-use crate::systems::play_level::PlayResult;
+use crate::systems::play_level::LevelResult;
 use crate::trap;
 use crate::trap::id_trap;
 
 pub struct IdentifyTrap;
 
 impl PlayerAction for IdentifyTrap {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		id_trap(game);
 		None
 	}
@@ -17,7 +17,7 @@ impl PlayerAction for IdentifyTrap {
 pub struct Search;
 
 impl PlayerAction for Search {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		search(SearchKind::Manual, game);
 		None
 	}

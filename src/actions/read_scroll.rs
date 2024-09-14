@@ -10,13 +10,13 @@ use crate::random::coin_toss;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::room::draw_magic_map;
 use crate::scrolls::ScrollKind;
-use crate::systems::play_level::PlayResult;
+use crate::systems::play_level::LevelResult;
 use crate::trap::is_off_screen;
 
 pub struct ReadScroll;
 
 impl PlayerAction for ReadScroll {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		read_scroll(game);
 		None
 	}

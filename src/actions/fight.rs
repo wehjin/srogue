@@ -1,14 +1,14 @@
 use crate::actions::PlayerAction;
 use crate::hit::fight;
 use crate::init::GameState;
-use crate::systems::play_level::PlayResult;
+use crate::systems::play_level::LevelResult;
 use crate::throw::throw;
 use crate::zap::zapp;
 
 pub struct Throw;
 
 impl PlayerAction for Throw {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		throw(game);
 		None
 	}
@@ -17,7 +17,7 @@ impl PlayerAction for Throw {
 pub struct Zap;
 
 impl PlayerAction for Zap {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		zapp(game);
 		None
 	}
@@ -26,7 +26,7 @@ impl PlayerAction for Zap {
 pub struct FightLight;
 
 impl PlayerAction for FightLight {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		fight(false, game);
 		None
 	}
@@ -35,7 +35,7 @@ impl PlayerAction for FightLight {
 pub struct FightHeavy;
 
 impl PlayerAction for FightHeavy {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		fight(true, game);
 		None
 	}

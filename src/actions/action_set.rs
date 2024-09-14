@@ -26,9 +26,9 @@ use crate::actions::wizard::{DrawMagicMap, NewObjectForWizard, ShowMonsters, Sho
 use crate::init::GameState;
 use crate::resources::keyboard;
 use crate::resources::keyboard::{CTRL_A, CTRL_C, CTRL_I, CTRL_M, CTRL_O, CTRL_S, CTRL_T, CTRL_W};
-use crate::systems::play_level::PlayResult;
+use crate::systems::play_level::LevelResult;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<PlayResult>); 43] = [
+const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<LevelResult>); 43] = [
 	(&['<'], Ascend::update),
 	(&['c'], CallIt::update),
 	(&['>'], Descend::update),
@@ -82,7 +82,7 @@ const CTRL_MOTION_KEYS: [char; 8] = [
 ];
 
 lazy_static! {
-	pub static ref ACTION_UPDATES: HashMap<char, fn(char,&mut GameState) -> Option<PlayResult>> = {
+	pub static ref ACTION_UPDATES: HashMap<char, fn(char,&mut GameState) -> Option<LevelResult >> = {
 		let mut actions = HashMap::new();
 		for (key_set, handler) in &ROGUE_ACTIONS {
 			for key in *key_set {

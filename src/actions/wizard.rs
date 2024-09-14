@@ -4,13 +4,13 @@ use crate::monster::show_monsters;
 use crate::objects::{new_object_for_wizard, show_objects};
 use crate::resources::input_line::get_input_line;
 use crate::room::draw_magic_map;
-use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
+use crate::systems::play_level::{LevelResult, UNKNOWN_COMMAND};
 use crate::trap::show_traps;
 
 pub struct ShowMonsters;
 
 impl PlayerAction for ShowMonsters {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wizard {
 			show_monsters(game);
 		} else {
@@ -23,7 +23,7 @@ impl PlayerAction for ShowMonsters {
 pub struct NewObjectForWizard;
 
 impl PlayerAction for NewObjectForWizard {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wizard {
 			new_object_for_wizard(game);
 		} else {
@@ -36,7 +36,7 @@ impl PlayerAction for NewObjectForWizard {
 pub struct ShowObjects;
 
 impl PlayerAction for ShowObjects {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wizard {
 			show_objects(game);
 		} else {
@@ -49,7 +49,7 @@ impl PlayerAction for ShowObjects {
 pub struct ShowTraps;
 
 impl PlayerAction for ShowTraps {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wizard {
 			// TODO Fix this to show where the trap is without making it visible so that the Search and IdTrap actions can still work.
 			show_traps(game);
@@ -63,7 +63,7 @@ impl PlayerAction for ShowTraps {
 pub struct DrawMagicMap;
 
 impl PlayerAction for DrawMagicMap {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wizard {
 			draw_magic_map(game);
 		} else {
@@ -76,7 +76,7 @@ impl PlayerAction for DrawMagicMap {
 pub struct Wizardize;
 
 impl PlayerAction for Wizardize {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		wizardize(game);
 		None
 	}

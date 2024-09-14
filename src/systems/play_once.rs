@@ -1,20 +1,20 @@
-use PlayOnceResult::Idle;
+use OnceResult::Idle;
 
 use crate::actions::action_set::ACTION_UPDATES;
 use crate::init::{GameState, GameTurn};
 use crate::motion::reg_move;
 use crate::render_system;
 use crate::resources::keyboard::rgetchar;
-use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
-use crate::systems::play_once::PlayOnceResult::{Counting, Leaving};
+use crate::systems::play_level::{LevelResult, UNKNOWN_COMMAND};
+use crate::systems::play_once::OnceResult::{Counting, Leaving};
 
-pub enum PlayOnceResult {
+pub enum OnceResult {
 	Counting(String),
-	Leaving(PlayResult),
+	Leaving(LevelResult),
 	Idle,
 }
 
-pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult {
+pub fn play_once(key_code: Option<char>, game: &mut GameState) -> OnceResult {
 	if let Some(ending) = test_and_clear_loop_context(game) {
 		return Leaving(ending);
 	};
@@ -41,7 +41,7 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> PlayOnceResult
 	return Idle;
 }
 
-fn test_and_clear_loop_context(game: &mut GameState) -> Option<PlayResult> {
+fn test_and_clear_loop_context(game: &mut GameState) -> Option<LevelResult> {
 	game.player.interrupted = false;
 	if !game.player.hit_message.is_empty() {
 		game.player.interrupt_and_slurp();
@@ -50,7 +50,7 @@ fn test_and_clear_loop_context(game: &mut GameState) -> Option<PlayResult> {
 	}
 	if game.level.trap_door {
 		game.level.trap_door = false;
-		return Some(PlayResult::TrapDoorDown);
+		return Some(LevelResult::TrapDoorDown);
 	}
 	render_system::refresh(game);
 	return None;

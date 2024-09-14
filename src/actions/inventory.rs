@@ -5,12 +5,12 @@ use crate::inventory::{inventory, ObjectSource, single_inv};
 use crate::player::rings::HandUsage;
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::ring::PlayerHand;
-use crate::systems::play_level::{PlayResult, UNKNOWN_COMMAND};
+use crate::systems::play_level::{LevelResult, UNKNOWN_COMMAND};
 
 pub struct InventoryGround;
 
 impl PlayerAction for InventoryGround {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wizard {
 			inventory(AllObjects, ObjectSource::Ground, game);
 		} else {
@@ -23,7 +23,7 @@ impl PlayerAction for InventoryGround {
 pub struct InventoryOne;
 
 impl PlayerAction for InventoryOne {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		single_inv(None, game);
 		None
 	}
@@ -32,7 +32,7 @@ impl PlayerAction for InventoryOne {
 pub struct Inventory;
 
 impl PlayerAction for Inventory {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		inventory(AllObjects, ObjectSource::Player, game);
 		None
 	}
@@ -41,7 +41,7 @@ impl PlayerAction for Inventory {
 pub struct InventoryArmor;
 
 impl PlayerAction for InventoryArmor {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		inv_armor_weapon(false, game);
 		None
 	}
@@ -50,7 +50,7 @@ impl PlayerAction for InventoryArmor {
 pub struct InventoryWeapons;
 
 impl PlayerAction for InventoryWeapons {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		inv_armor_weapon(true, game);
 		None
 	}
@@ -59,7 +59,7 @@ impl PlayerAction for InventoryWeapons {
 pub struct InventoryRings;
 
 impl PlayerAction for InventoryRings {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		inv_rings(game);
 		None
 	}

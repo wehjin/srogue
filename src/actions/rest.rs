@@ -10,14 +10,14 @@ use crate::resources::input_line::get_input_line;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::save::save_game;
 use crate::score::ask_quit;
-use crate::systems::play_level::PlayResult;
+use crate::systems::play_level::LevelResult;
 
 pub struct SaveGame;
 
 impl PlayerAction for SaveGame {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if save_game(game) {
-			Some(PlayResult::ExitSaved)
+			Some(LevelResult::ExitSaved)
 		} else {
 			None
 		}
@@ -27,7 +27,7 @@ impl PlayerAction for SaveGame {
 pub struct ShowAverageHp;
 
 impl PlayerAction for ShowAverageHp {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		show_average_hp(game);
 		None
 	}
@@ -36,7 +36,7 @@ impl PlayerAction for ShowAverageHp {
 pub struct Ignore;
 
 impl PlayerAction for Ignore {
-	fn update(_input_key: char, _game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, _game: &mut GameState) -> Option<LevelResult> {
 		None
 	}
 }
@@ -44,9 +44,9 @@ impl PlayerAction for Ignore {
 pub struct Quit;
 
 impl PlayerAction for Quit {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if ask_quit(false, game) {
-			Some(PlayResult::ExitQuit)
+			Some(LevelResult::ExitQuit)
 		} else {
 			None
 		}
@@ -57,7 +57,7 @@ impl PlayerAction for Quit {
 pub struct Version;
 
 impl PlayerAction for Version {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		game.dialog.message("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims", 0);
 		None
 	}
@@ -66,7 +66,7 @@ impl PlayerAction for Version {
 pub struct CallIt;
 
 impl PlayerAction for CallIt {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		call_it(game);
 		None
 	}
@@ -75,7 +75,7 @@ impl PlayerAction for CallIt {
 pub struct Rest;
 
 impl PlayerAction for Rest {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		rest(game);
 		None
 	}

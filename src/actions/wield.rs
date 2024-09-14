@@ -4,14 +4,14 @@ use crate::pack::{CURSE_MESSAGE, do_wield, pack_letter};
 use crate::prelude::object_what::ObjectWhat::{Armor, Ring};
 use crate::prelude::object_what::PackFilter::Weapons;
 use crate::resources::keyboard::CANCEL_CHAR;
-use crate::systems::play_level::PlayResult;
+use crate::systems::play_level::LevelResult;
 
 
 
 pub struct Wield;
 
 impl PlayerAction for Wield {
-	fn update(_input_key: char, game: &mut GameState) -> Option<PlayResult> {
+	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wields_cursed_weapon() {
 			game.dialog.message(CURSE_MESSAGE, 0);
 			return None;
