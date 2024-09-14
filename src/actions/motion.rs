@@ -1,5 +1,5 @@
 use crate::actions::motion::UpResult::{KeepLevel, UpLevel, WonGame};
-use crate::actions::PlayerAction;
+use crate::actions::GameUpdater;
 use crate::init::GameState;
 use crate::motion::{multiple_move_rogue, one_move_rogue};
 use crate::pack::has_amulet;
@@ -9,7 +9,7 @@ use crate::systems::play_level::LevelResult::{ExitWon, StairsDown, StairsUp};
 
 pub struct MoveOnce;
 
-impl PlayerAction for MoveOnce {
+impl GameUpdater for MoveOnce {
 	fn update(input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		one_move_rogue(input_key, true, game);
 		None
@@ -18,7 +18,7 @@ impl PlayerAction for MoveOnce {
 
 pub struct MoveMultiple;
 
-impl PlayerAction for MoveMultiple {
+impl GameUpdater for MoveMultiple {
 	fn update(input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		multiple_move_rogue(input_key, game);
 		None
@@ -27,7 +27,7 @@ impl PlayerAction for MoveMultiple {
 
 pub struct Descend;
 
-impl PlayerAction for Descend {
+impl GameUpdater for Descend {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if drop_check(game) {
 			Some(StairsDown)
@@ -39,7 +39,7 @@ impl PlayerAction for Descend {
 
 pub struct Ascend;
 
-impl PlayerAction for Ascend {
+impl GameUpdater for Ascend {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		match check_up(game) {
 			UpResult::KeepLevel => None,

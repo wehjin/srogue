@@ -1,4 +1,4 @@
-use crate::actions::PlayerAction;
+use crate::actions::GameUpdater;
 use crate::components::hunger::HungerLevel;
 use crate::init::GameState;
 use crate::level::add_exp;
@@ -12,7 +12,7 @@ use crate::systems::play_level::LevelResult;
 
 pub struct Eat;
 
-impl PlayerAction for Eat {
+impl GameUpdater for Eat {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		eat(game);
 		None

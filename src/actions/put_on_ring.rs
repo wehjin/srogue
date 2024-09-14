@@ -1,4 +1,4 @@
-use crate::actions::PlayerAction;
+use crate::actions::GameUpdater;
 use crate::init::GameState;
 use crate::objects::Object;
 use crate::pack::pack_letter;
@@ -11,7 +11,7 @@ use crate::systems::play_level::LevelResult;
 
 pub struct PutOnRing;
 
-impl PlayerAction for PutOnRing {
+impl GameUpdater for PutOnRing {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.hand_usage() == HandUsage::Both {
 			game.dialog.message("wearing two rings already", 0);

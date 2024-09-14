@@ -1,4 +1,4 @@
-use crate::actions::PlayerAction;
+use crate::actions::GameUpdater;
 use crate::init::GameState;
 use crate::render_system::{detect_all_rows, render_all_rows};
 use crate::resources::keyboard::rgetchar;
@@ -6,7 +6,7 @@ use crate::systems::play_level::LevelResult;
 
 pub struct Instruct;
 
-impl PlayerAction for Instruct {
+impl GameUpdater for Instruct {
 	fn update(_input_key: char, _game: &mut GameState) -> Option<LevelResult> {
 		let repair_rows = detect_all_rows();
 		render_all_rows(instruct_line_for_row);

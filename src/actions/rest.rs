@@ -1,4 +1,4 @@
-use crate::actions::PlayerAction;
+use crate::actions::GameUpdater;
 use crate::init::GameState;
 use crate::level::show_average_hp;
 use crate::objects::NoteStatus::Called;
@@ -14,7 +14,7 @@ use crate::systems::play_level::LevelResult;
 
 pub struct SaveGame;
 
-impl PlayerAction for SaveGame {
+impl GameUpdater for SaveGame {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if save_game(game) {
 			Some(LevelResult::ExitSaved)
@@ -26,7 +26,7 @@ impl PlayerAction for SaveGame {
 
 pub struct ShowAverageHp;
 
-impl PlayerAction for ShowAverageHp {
+impl GameUpdater for ShowAverageHp {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		show_average_hp(game);
 		None
@@ -35,7 +35,7 @@ impl PlayerAction for ShowAverageHp {
 
 pub struct Ignore;
 
-impl PlayerAction for Ignore {
+impl GameUpdater for Ignore {
 	fn update(_input_key: char, _game: &mut GameState) -> Option<LevelResult> {
 		None
 	}
@@ -43,7 +43,7 @@ impl PlayerAction for Ignore {
 
 pub struct Quit;
 
-impl PlayerAction for Quit {
+impl GameUpdater for Quit {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if ask_quit(false, game) {
 			Some(LevelResult::ExitQuit)
@@ -56,7 +56,7 @@ impl PlayerAction for Quit {
 
 pub struct Version;
 
-impl PlayerAction for Version {
+impl GameUpdater for Version {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		game.dialog.message("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims", 0);
 		None
@@ -65,7 +65,7 @@ impl PlayerAction for Version {
 
 pub struct CallIt;
 
-impl PlayerAction for CallIt {
+impl GameUpdater for CallIt {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		call_it(game);
 		None
@@ -74,7 +74,7 @@ impl PlayerAction for CallIt {
 
 pub struct Rest;
 
-impl PlayerAction for Rest {
+impl GameUpdater for Rest {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		rest(game);
 		None

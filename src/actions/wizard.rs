@@ -1,4 +1,4 @@
-use crate::actions::PlayerAction;
+use crate::actions::GameUpdater;
 use crate::init::GameState;
 use crate::monster::show_monsters;
 use crate::objects::{new_object_for_wizard, show_objects};
@@ -9,7 +9,7 @@ use crate::trap::show_traps;
 
 pub struct ShowMonsters;
 
-impl PlayerAction for ShowMonsters {
+impl GameUpdater for ShowMonsters {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wizard {
 			show_monsters(game);
@@ -22,7 +22,7 @@ impl PlayerAction for ShowMonsters {
 
 pub struct NewObjectForWizard;
 
-impl PlayerAction for NewObjectForWizard {
+impl GameUpdater for NewObjectForWizard {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wizard {
 			new_object_for_wizard(game);
@@ -35,7 +35,7 @@ impl PlayerAction for NewObjectForWizard {
 
 pub struct ShowObjects;
 
-impl PlayerAction for ShowObjects {
+impl GameUpdater for ShowObjects {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wizard {
 			show_objects(game);
@@ -48,7 +48,7 @@ impl PlayerAction for ShowObjects {
 
 pub struct ShowTraps;
 
-impl PlayerAction for ShowTraps {
+impl GameUpdater for ShowTraps {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wizard {
 			// TODO Fix this to show where the trap is without making it visible so that the Search and IdTrap actions can still work.
@@ -62,7 +62,7 @@ impl PlayerAction for ShowTraps {
 
 pub struct DrawMagicMap;
 
-impl PlayerAction for DrawMagicMap {
+impl GameUpdater for DrawMagicMap {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wizard {
 			draw_magic_map(game);
@@ -75,7 +75,7 @@ impl PlayerAction for DrawMagicMap {
 
 pub struct Wizardize;
 
-impl PlayerAction for Wizardize {
+impl GameUpdater for Wizardize {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		wizardize(game);
 		None

@@ -4,14 +4,13 @@ use lazy_static::lazy_static;
 
 use keyboard::CTRL_P;
 
-use crate::actions::ground::{DropItem, KickIntoPack};
 use crate::actions::eat::Eat;
 use crate::actions::fight::{FightHeavy, FightLight, Throw, Zap};
+use crate::actions::ground::MoveOnto;
+use crate::actions::ground::{DropItem, KickIntoPack};
 use crate::actions::instruct::Instruct;
 use crate::actions::inventory::{Inventory, InventoryArmor, InventoryGround, InventoryOne, InventoryRings, InventoryWeapons};
 use crate::actions::motion::{Ascend, Descend, MoveMultiple, MoveOnce};
-use crate::actions::ground::MoveOnto;
-use crate::actions::PlayerAction;
 use crate::actions::put_on_ring::PutOnRing;
 use crate::actions::quaff::Quaff;
 use crate::actions::read_scroll::ReadScroll;
@@ -23,6 +22,7 @@ use crate::actions::take_off::TakeOff;
 use crate::actions::wear::Wear;
 use crate::actions::wield::Wield;
 use crate::actions::wizard::{DrawMagicMap, NewObjectForWizard, ShowMonsters, ShowObjects, ShowTraps, Wizardize};
+use crate::actions::GameUpdater;
 use crate::init::GameState;
 use crate::resources::keyboard;
 use crate::resources::keyboard::{CTRL_A, CTRL_C, CTRL_I, CTRL_M, CTRL_O, CTRL_S, CTRL_T, CTRL_W};
@@ -81,8 +81,9 @@ const CTRL_MOTION_KEYS: [char; 8] = [
 	keyboard::CTRL_Y, keyboard::CTRL_U, keyboard::CTRL_N, keyboard::CTRL_B
 ];
 
+
 lazy_static! {
-	pub static ref ACTION_UPDATES: HashMap<char, fn(char,&mut GameState) -> Option<LevelResult >> = {
+	static ref ACTION_UPDATES: HashMap<char, UpdateGame> = {
 		let mut actions = HashMap::new();
 		for (key_set, handler) in &ROGUE_ACTIONS {
 			for key in *key_set {
@@ -91,4 +92,10 @@ lazy_static! {
 		}
 		actions
 	};
+}
+
+pub type UpdateGame = fn(char, &mut GameState) -> Option<LevelResult>;
+
+pub fn to_update_game(key_code: char) -> Option<&'static UpdateGame> {
+	ACTION_UPDATES.get(&key_code)
 }

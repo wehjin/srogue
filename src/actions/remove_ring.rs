@@ -1,5 +1,5 @@
 use crate::actions::inventory::inv_rings;
-use crate::actions::PlayerAction;
+use crate::actions::GameUpdater;
 use crate::init::GameState;
 use crate::inventory::get_obj_desc;
 use crate::objects::Object;
@@ -10,7 +10,7 @@ use crate::systems::play_level::LevelResult;
 
 pub struct RemoveRing;
 
-impl PlayerAction for RemoveRing {
+impl GameUpdater for RemoveRing {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		let hand = match game.player.hand_usage() {
 			HandUsage::None => {

@@ -1,4 +1,4 @@
-use crate::actions::PlayerAction;
+use crate::actions::GameUpdater;
 use crate::init::GameState;
 use crate::pack::pack_letter;
 use crate::potions::quaff::quaff_potion;
@@ -9,7 +9,7 @@ use crate::systems::play_level::LevelResult;
 
 pub struct Quaff;
 
-impl PlayerAction for Quaff {
+impl GameUpdater for Quaff {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		quaff(game);
 		None

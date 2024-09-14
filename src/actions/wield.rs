@@ -1,4 +1,4 @@
-use crate::actions::PlayerAction;
+use crate::actions::GameUpdater;
 use crate::init::{GameState, GameTurn};
 use crate::pack::{CURSE_MESSAGE, do_wield, pack_letter};
 use crate::prelude::object_what::ObjectWhat::{Armor, Ring};
@@ -10,7 +10,7 @@ use crate::systems::play_level::LevelResult;
 
 pub struct Wield;
 
-impl PlayerAction for Wield {
+impl GameUpdater for Wield {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wields_cursed_weapon() {
 			game.dialog.message(CURSE_MESSAGE, 0);

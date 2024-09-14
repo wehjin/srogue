@@ -1,4 +1,4 @@
-use crate::actions::PlayerAction;
+use crate::actions::GameUpdater;
 use crate::init::GameState;
 use crate::monster::{aggravate, create_monster};
 use crate::objects::NoteStatus::Identified;
@@ -15,7 +15,7 @@ use crate::trap::is_off_screen;
 
 pub struct ReadScroll;
 
-impl PlayerAction for ReadScroll {
+impl GameUpdater for ReadScroll {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		read_scroll(game);
 		None

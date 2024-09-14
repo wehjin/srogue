@@ -1,4 +1,4 @@
-use crate::actions::PlayerAction;
+use crate::actions::GameUpdater;
 use crate::init::GameState;
 use crate::pack::{do_wear, pack_letter};
 use crate::prelude::object_what::ObjectWhat::Armor;
@@ -8,7 +8,7 @@ use crate::systems::play_level::LevelResult;
 
 pub struct Wear;
 
-impl PlayerAction for Wear {
+impl GameUpdater for Wear {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if game.player.armor_id().is_some() {
 			game.dialog.message("your already wearing some", 0);

@@ -1,4 +1,4 @@
-use crate::actions::PlayerAction;
+use crate::actions::GameUpdater;
 use crate::init::GameState;
 use crate::monster::mv_aquatars;
 use crate::objects::Object;
@@ -7,7 +7,7 @@ use crate::systems::play_level::LevelResult;
 
 pub struct TakeOff;
 
-impl PlayerAction for TakeOff {
+impl GameUpdater for TakeOff {
 	fn update(_input_key: char, game: &mut GameState) -> Option<LevelResult> {
 		if let Some(armor_id) = game.player.armor_id() {
 			if game.player.pack().check_object(armor_id, Object::is_cursed) {

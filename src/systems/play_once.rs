@@ -1,6 +1,6 @@
 use OnceResult::Idle;
 
-use crate::actions::action_set::ACTION_UPDATES;
+use crate::actions::action_set::to_update_game;
 use crate::init::{GameState, GameTurn};
 use crate::motion::reg_move;
 use crate::render_system;
@@ -26,9 +26,9 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> OnceResult {
 	if key_code.is_digit(10) {
 		render_system::refresh(game);
 		return Counting(key_code.to_string());
-	} else if let Some(action_update) = ACTION_UPDATES.get(&key_code) {
-		let action_result = action_update(key_code, game);
-		if let Some(play_result) = action_result {
+	}
+	if let Some(update_game) = to_update_game(key_code) {
+		if let Some(play_result) = update_game(key_code, game) {
 			return Leaving(play_result);
 		}
 		if game.turn == GameTurn::Monsters {
@@ -38,7 +38,7 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> OnceResult {
 		game.dialog.message(UNKNOWN_COMMAND, 0);
 	}
 	render_system::refresh(game);
-	return Idle;
+	Idle
 }
 
 fn test_and_clear_loop_context(game: &mut GameState) -> Option<LevelResult> {
