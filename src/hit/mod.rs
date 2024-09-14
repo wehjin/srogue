@@ -2,17 +2,16 @@ pub use damage_stat::*;
 
 use crate::init::GameState;
 use crate::level::add_exp;
-use crate::level::constants::{DCOLS, DROWS};
 use crate::message::sound_bell;
 use crate::monster::{mon_name, Monster};
 use crate::motion::{can_move, is_direction, one_move_rogue};
 use crate::objects::{get_armor_class, Object};
 use crate::player::Player;
-use crate::prelude::{AMULET_LEVEL, MIN_ROW};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
+use crate::prelude::AMULET_LEVEL;
 use crate::random::rand_percent;
-use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
+use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::score::killed_by;
 use crate::spec_hit::{check_imitator, cough_up, special_hit};
 use crate::throw::Motion;
@@ -275,56 +274,6 @@ pub fn fight(to_the_death: bool, game: &mut GameState) {
 				game.player.fight_monster = None;
 			}
 		}
-	}
-}
-
-pub fn get_dir_rc(dir: char, row: &mut i64, col: &mut i64, allow_off_screen: bool) {
-	match dir {
-		'h' => {
-			if allow_off_screen || (*col > 0) {
-				*col -= 1;
-			}
-		}
-		'j' => {
-			if allow_off_screen || (*row < (DROWS - 2) as i64) {
-				*row += 1
-			}
-		}
-		'k' => {
-			if allow_off_screen || (*row > MIN_ROW) {
-				*row -= 1;
-			}
-		}
-		'l' => {
-			if allow_off_screen || (*col < (DCOLS - 1) as i64) {
-				*col += 1;
-			}
-		}
-		'y' => {
-			if allow_off_screen || ((*row > MIN_ROW) && (*col > 0)) {
-				*row -= 1;
-				*col -= 1;
-			}
-		}
-		'u' => {
-			if allow_off_screen || ((*row > MIN_ROW) & &(*col < (DCOLS - 1) as i64)) {
-				*row -= 1;
-				*col += 1;
-			}
-		}
-		'n' => {
-			if allow_off_screen || ((*row < (DROWS - 2) as i64) && (*col < (DCOLS - 1) as i64)) {
-				*row += 1;
-				*col += 1;
-			}
-		}
-		'b' => {
-			if allow_off_screen || ((*row < (DROWS - 2) as i64) && (*col > 0)) {
-				*row += 1;
-				*col -= 1;
-			}
-		}
-		_ => unreachable!("invalid direction"),
 	}
 }
 

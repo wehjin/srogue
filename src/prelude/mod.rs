@@ -1,11 +1,10 @@
 use std::ops::Add;
 
-use serde::{Deserialize, Serialize};
-
-use crate::hit::get_dir_rc;
 use crate::level::constants::{DCOLS, DROWS};
+use crate::motion::MoveDirection;
 use crate::room::RoomBounds;
 use crate::throw::Motion;
+use serde::{Deserialize, Serialize};
 
 pub const NO_ROOM: i64 = -1;
 pub const PASSAGE: i64 = -3;
@@ -46,6 +45,14 @@ impl From<(i64, i64)> for DungeonSpot {
 impl From<(i32, i32)> for DungeonSpot {
 	fn from((row, col): (i32, i32)) -> Self {
 		Self { row: row as i64, col: col as i64 }
+	}
+}
+
+impl Add<MoveDirection> for &DungeonSpot {
+	type Output = DungeonSpot;
+	fn add(self, rhs: MoveDirection) -> Self::Output {
+		let (row, col) = rhs.apply(self.row, self.col);
+		DungeonSpot { col, row }
 	}
 }
 
@@ -102,9 +109,12 @@ impl DungeonSpot {
 		max_delta
 	}
 	pub fn after_motion(&self, motion: Motion) -> Option<Self> {
-		let mut after = self.clone();
-		get_dir_rc(motion.to_char(), &mut after.row, &mut after.col, true);
-		if after.is_out_of_bounds() { None } else { Some(after) }
+		let after = self + MoveDirection::from(motion.to_char());
+		if after.is_out_of_bounds() {
+			None
+		} else {
+			Some(after)
+		}
 	}
 	pub fn from_usize(row: usize, col: usize) -> Self {
 		DungeonSpot { row: row as i64, col: col as i64 }

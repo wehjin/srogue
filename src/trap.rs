@@ -2,18 +2,18 @@ use serde::{Deserialize, Serialize};
 
 use TrapKind::NoTrap;
 
-use crate::hit::{DamageEffect, DamageStat, get_damage, get_dir_rc};
+use crate::hit::{get_damage, DamageEffect, DamageStat};
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
 use crate::level::Level;
 use crate::message::sound_bell;
-use crate::motion::is_direction;
+use crate::motion::{is_direction, MoveDirection};
 use crate::player::Player;
-use crate::prelude::*;
 use crate::prelude::ending::Ending;
+use crate::prelude::*;
 use crate::r#use::{take_a_nap, tele};
 use crate::random::{get_rand, rand_percent};
-use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
+use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::room::gr_spot;
 use crate::score::killed_by;
 use crate::spec_hit::rust;
@@ -228,11 +228,9 @@ pub fn id_trap(game: &mut GameState) {
 		return;
 	}
 
-	let mut row = game.player.rogue.row;
-	let mut col = game.player.rogue.col;
-	get_dir_rc(dir, &mut row, &mut col, false);
-	if game.level.dungeon[row as usize][col as usize].is_any_trap() && !game.level.dungeon[row as usize][col as usize].is_any_hidden() {
-		game.dialog.message(trap_at(row as usize, col as usize, &game.level).name(), 0);
+	let (look_row, look_col) = MoveDirection::from(dir).apply_confined(game.player.rogue.row, game.player.rogue.col);
+	if game.level.dungeon[look_row][look_col].is_any_trap() && !game.level.dungeon[look_row][look_col].is_any_hidden() {
+		game.dialog.message(trap_at(look_row, look_col, &game.level).name(), 0);
 	} else {
 		game.dialog.message("no trap there", 0);
 	}

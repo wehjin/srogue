@@ -1,10 +1,10 @@
 use wand_kind::WandKind;
 
-use crate::hit::{get_dir_rc, rogue_hit};
+use crate::hit::rogue_hit;
 use crate::init::GameState;
 use crate::level::Level;
 use crate::monster::{gr_monster, MonsterIndex, MonsterKind, MonsterMash};
-use crate::motion::{get_dir_or_cancel, reg_move};
+use crate::motion::{get_dir_or_cancel, reg_move, MoveDirection};
 use crate::pack::pack_letter;
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Wands;
@@ -61,18 +61,20 @@ pub fn zapp(game: &mut GameState) {
 
 pub fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, mash: &mut MonsterMash, level: &Level) -> Option<u64> {
 	loop {
-		let orow = *row;
-		let ocol = *col;
-		get_dir_rc(dir, row, col, false);
-		if (*row == orow && *col == ocol)
-			|| level.dungeon[*row as usize][*col as usize].is_any_wall()
-			|| level.dungeon[*row as usize][*col as usize].is_nothing() {
+		let orow = *row as usize;
+		let ocol = *col as usize;
+		let (to_row, to_col) = MoveDirection::from(dir).apply_confined(*row, *col);
+		*row = to_row as i64;
+		*col = to_col as i64;
+
+		if (to_row == orow && to_col == ocol)
+			|| level.dungeon[to_row][to_col].is_any_wall()
+			|| level.dungeon[to_row][to_col].is_nothing() {
 			return None;
 		}
-		if level.dungeon[*row as usize][*col as usize].has_monster() {
-			if !imitating(*row, *col, mash, level) {
-				return mash.monster_at_spot(*row, *col).map(|m| m.id());
-			}
+
+		if level.dungeon[to_row][to_row].has_monster() && !imitating(to_row, to_col, mash, level) {
+			return mash.monster_at_spot(to_row as i64, to_col as i64).map(|m| m.id());
 		}
 	}
 }

@@ -1,8 +1,8 @@
 use MoveResult::MoveFailed;
 
 use crate::actions::search::{search, SearchKind};
-use crate::components::hunger::{FAINT_MOVES_LEFT, HungerLevel, HUNGRY_MOVES_LEFT, STARVE_MOVES_LEFT, WEAK_MOVES_LEFT};
-use crate::hit::{get_dir_rc, rogue_hit};
+use crate::components::hunger::{HungerLevel, FAINT_MOVES_LEFT, HUNGRY_MOVES_LEFT, STARVE_MOVES_LEFT, WEAK_MOVES_LEFT};
+use crate::hit::rogue_hit;
 use crate::init::GameState;
 use crate::inventory::get_obj_desc;
 use crate::level::constants::{DCOLS, DROWS};
@@ -13,15 +13,15 @@ use crate::motion::MoveResult::{Moved, StoppedOnSomething};
 use crate::odds::R_TELE_PERCENT;
 use crate::pack::{pick_up, PickUpResult};
 use crate::player::{Player, RoomMark};
-use crate::prelude::{DungeonSpot, MIN_ROW};
 use crate::prelude::ending::Ending;
+use crate::prelude::{DungeonSpot, MIN_ROW};
 use crate::r#use::{tele, unblind, unconfuse, unhallucinate};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
 use crate::render_system::darken_room;
 use crate::render_system::hallucinate::show_hallucination;
 use crate::resources::keyboard;
-use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
+use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::room::{visit_room, visit_spot_area};
 use crate::score::killed_by;
 use crate::throw::Motion;
@@ -42,9 +42,7 @@ pub fn one_move_rogue(dirch: char, pickup: bool, game: &mut GameState) -> MoveRe
 	} else {
 		dirch
 	};
-	let mut row = game.player.rogue.row;
-	let mut col = game.player.rogue.col;
-	get_dir_rc(dirch, &mut row, &mut col, true);
+	let (row, col) = MoveDirection::from(dirch).apply(game.player.rogue.row, game.player.rogue.col);
 	if !can_move(game.player.rogue.row, game.player.rogue.col, row, col, &game.level) {
 		return MoveFailed;
 	}
@@ -461,4 +459,55 @@ pub fn reg_move(game: &mut GameState) -> bool {
 	return hunger_check == HungerCheckResult::DidFaint;
 }
 
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+pub enum MoveDirection {
+	Left,
+	Right,
+	Up,
+	Down,
+	DownLeft,
+	DownRight,
+	UpLeft,
+	UpRight,
+}
 
+impl From<char> for MoveDirection {
+	fn from(value: char) -> Self {
+		match value {
+			'h' => MoveDirection::Left,
+			'j' => MoveDirection::Down,
+			'k' => MoveDirection::Up,
+			'l' => MoveDirection::Right,
+			'y' => MoveDirection::UpLeft,
+			'u' => MoveDirection::UpRight,
+			'n' => MoveDirection::DownRight,
+			'b' => MoveDirection::DownLeft,
+			_ => unreachable!("invalid direction")
+		}
+	}
+}
+
+impl MoveDirection {
+	pub fn apply_confined(&self, row: i64, col: i64) -> (usize, usize) {
+		let (free_row, free_col) = self.apply(row, col);
+		let confined_row = free_row.max(MIN_ROW).min(DROWS as i64 - 2) as usize;
+		let confined_col = free_col.max(0).min(DCOLS as i64 - 1) as usize;
+		(confined_row, confined_col)
+	}
+	pub fn apply(&self, row: i64, col: i64) -> (i64, i64) {
+		let (drow, dcol) = self.to_offsets();
+		(row + drow, col + dcol)
+	}
+	pub fn to_offsets(&self) -> (i64, i64) {
+		match self {
+			MoveDirection::Left => (0, -1),
+			MoveDirection::Right => (0, 1),
+			MoveDirection::Up => (-1, 0),
+			MoveDirection::Down => (1, 0),
+			MoveDirection::DownLeft => (1, -1),
+			MoveDirection::DownRight => (1, 1),
+			MoveDirection::UpLeft => (-1, -1),
+			MoveDirection::UpRight => (-1, 1),
+		}
+	}
+}

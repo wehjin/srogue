@@ -2,14 +2,14 @@ use crate::armors::ArmorKind;
 use crate::hit::mon_hit;
 use crate::init::GameState;
 use crate::inventory::get_obj_desc;
-use crate::level::{add_exp, hp_raise, Level, LEVEL_POINTS};
 use crate::level::constants::{DCOLS, DROWS};
-use crate::monster::{mon_can_go, mon_name, MonsterMash, move_mon_to, mv_mons, mv_monster};
+use crate::level::{add_exp, hp_raise, Level, LEVEL_POINTS};
+use crate::monster::{mon_can_go, mon_name, move_mon_to, mv_mons, mv_monster, MonsterMash};
 use crate::motion::YOU_CAN_MOVE_AGAIN;
-use crate::objects::{alloc_object, get_armor_class, gr_object, Object, ObjectPack, place_at};
-use crate::prelude::*;
+use crate::objects::{alloc_object, get_armor_class, gr_object, place_at, Object, ObjectPack};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
+use crate::prelude::*;
 use crate::r#use::{confuse, vanish};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system::animation::animate_flame_broil;
@@ -276,9 +276,9 @@ pub fn check_imitator(mon_id: u64, game: &mut GameState) -> bool {
 	return false;
 }
 
-pub fn imitating(row: i64, col: i64, mash: &MonsterMash, level: &Level) -> bool {
-	if level.dungeon[row as usize][col as usize].has_monster() {
-		if let Some(monster) = mash.monster_at_spot(row, col) {
+pub fn imitating(row: usize, col: usize, mash: &MonsterMash, level: &Level) -> bool {
+	if level.dungeon[row][col].has_monster() {
+		if let Some(monster) = mash.monster_at_spot(row as i64, col as i64) {
 			if monster.m_flags.imitates {
 				return true;
 			}
