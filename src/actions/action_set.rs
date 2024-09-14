@@ -2,15 +2,14 @@ use std::collections::HashMap;
 
 use lazy_static::lazy_static;
 
-use keyboard::CTRL_P;
-
+use crate::actions::action_set::PlayerEvent::{MoveRogue, Update};
 use crate::actions::eat::Eat;
 use crate::actions::fight::{FightHeavy, FightLight, Throw, Zap};
 use crate::actions::ground::MoveOnto;
 use crate::actions::ground::{DropItem, KickIntoPack};
 use crate::actions::instruct::Instruct;
 use crate::actions::inventory::{Inventory, InventoryArmor, InventoryGround, InventoryOne, InventoryRings, InventoryWeapons};
-use crate::actions::motion::{Ascend, Descend, MoveMultiple, MoveOnce};
+use crate::actions::motion::{Ascend, Descend, MoveMultiple};
 use crate::actions::put_on_ring::PutOnRing;
 use crate::actions::quaff::Quaff;
 use crate::actions::read_scroll::ReadScroll;
@@ -24,11 +23,13 @@ use crate::actions::wield::Wield;
 use crate::actions::wizard::{DrawMagicMap, NewObjectForWizard, ShowMonsters, ShowObjects, ShowTraps, Wizardize};
 use crate::actions::GameUpdater;
 use crate::init::GameState;
+use crate::motion::MoveDirection;
 use crate::resources::keyboard;
 use crate::resources::keyboard::{CTRL_A, CTRL_C, CTRL_I, CTRL_M, CTRL_O, CTRL_S, CTRL_T, CTRL_W};
 use crate::systems::play_level::LevelResult;
+use keyboard::CTRL_P;
 
-const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<LevelResult>); 43] = [
+const ROGUE_ACTIONS: [(&[char], UpdateGameFn); 42] = [
 	(&['<'], Ascend::update),
 	(&['c'], CallIt::update),
 	(&['>'], Descend::update),
@@ -49,7 +50,6 @@ const ROGUE_ACTIONS: [(&[char], fn(char, &mut GameState) -> Option<LevelResult>)
 	(&[','], KickIntoPack::update),
 	(&SHIFT_MOTION_KEYS, MoveMultiple::update),
 	(&CTRL_MOTION_KEYS, MoveMultiple::update),
-	(&MOTION_KEYS, MoveOnce::update),
 	(&['m'], MoveOnto::update),
 	(&[CTRL_C], NewObjectForWizard::update),
 	(&['P'], PutOnRing::update),
@@ -83,7 +83,7 @@ const CTRL_MOTION_KEYS: [char; 8] = [
 
 
 lazy_static! {
-	static ref ACTION_UPDATES: HashMap<char, UpdateGame> = {
+	static ref ACTION_UPDATES: HashMap<char, UpdateGameFn> = {
 		let mut actions = HashMap::new();
 		for (key_set, handler) in &ROGUE_ACTIONS {
 			for key in *key_set {
@@ -94,8 +94,31 @@ lazy_static! {
 	};
 }
 
-pub type UpdateGame = fn(char, &mut GameState) -> Option<LevelResult>;
+pub enum PlayerEvent {
+	MoveRogue(MoveDirection),
+	Update(&'static UpdateGameFn),
+}
 
-pub fn to_update_game(key_code: char) -> Option<&'static UpdateGame> {
-	ACTION_UPDATES.get(&key_code)
+impl TryFrom<char> for PlayerEvent {
+	type Error = anyhow::Error;
+
+	fn try_from(value: char) -> Result<Self, Self::Error> {
+		if is_single_move_input(value) {
+			Ok(MoveRogue(MoveDirection::from(value)))
+		} else {
+			match ACTION_UPDATES.get(&value) {
+				None => Err(anyhow::anyhow!("No game event for char: {}", value)),
+				Some(update_game) => Ok(Update(update_game)),
+			}
+		}
+	}
+}
+
+pub type UpdateGameFn = fn(char, &mut GameState) -> Option<LevelResult>;
+
+pub fn is_single_move_input(key_code: char) -> bool {
+	match key_code {
+		'h' | 'j' | 'k' | 'l' | 'y' | 'u' | 'n' | 'b' => true,
+		_ => false
+	}
 }

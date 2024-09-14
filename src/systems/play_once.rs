@@ -1,8 +1,8 @@
 use OnceResult::Idle;
 
-use crate::actions::action_set::to_update_game;
+use crate::actions::action_set::PlayerEvent;
 use crate::init::{GameState, GameTurn};
-use crate::motion::reg_move;
+use crate::motion::{one_move_rogue, reg_move};
 use crate::render_system;
 use crate::resources::keyboard::rgetchar;
 use crate::systems::play_level::{LevelResult, UNKNOWN_COMMAND};
@@ -27,18 +27,31 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> OnceResult {
 		render_system::refresh(game);
 		return Counting(key_code.to_string());
 	}
-	if let Some(update_game) = to_update_game(key_code) {
-		if let Some(play_result) = update_game(key_code, game) {
-			return Leaving(play_result);
+	match PlayerEvent::try_from(key_code) {
+		Ok(player_event) => {
+			if let Some(level_result) = dispatch_player_event(game, key_code, player_event) {
+				return Leaving(level_result);
+			}
+			if game.turn == GameTurn::Monsters {
+				reg_move(game);
+			}
 		}
-		if game.turn == GameTurn::Monsters {
-			reg_move(game);
+		Err(_) => {
+			game.dialog.message(UNKNOWN_COMMAND, 0);
 		}
-	} else {
-		game.dialog.message(UNKNOWN_COMMAND, 0);
 	}
 	render_system::refresh(game);
 	Idle
+}
+
+fn dispatch_player_event(game: &mut GameState, key_code: char, player_event: PlayerEvent) -> Option<LevelResult> {
+	match player_event {
+		PlayerEvent::MoveRogue(direction) => {
+			one_move_rogue(direction, true, game);
+			None
+		}
+		PlayerEvent::Update(update_game) => update_game(key_code, game),
+	}
 }
 
 fn test_and_clear_loop_context(game: &mut GameState) -> Option<LevelResult> {
