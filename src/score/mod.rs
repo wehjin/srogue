@@ -5,7 +5,7 @@ use std::io::{Read, Seek, Write};
 use crate::init::{clean_up, GameState, BYEBYE_STRING};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::machdep::{md_heed_signals, md_ignore_signals};
-use crate::pack::{has_amulet, unwear, unwield};
+use crate::pack::{has_amulet, unwear, unwield, wait_for_ack};
 use crate::player::Player;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat;
@@ -25,12 +25,11 @@ pub fn killed_by(ending: Ending, game: &mut GameState) {
 	if !ending.is_quit() {
 		game.player.rogue.gold = ((game.player.rogue.gold as f64 * 9.0) / 10.0) as usize;
 	}
-
+	backend::erase_screen();
 	let mut how_ended = ending_string(&ending);
 	how_ended += &format!(" with {} gold", game.player.rogue.gold);
-
 	if ending.is_monster() && game.player.settings.show_skull {
-		backend::erase_screen();
+		game.diary.turn_page();
 		backend::set_str("__---------__", (4, 32).into());
 		backend::set_str("_~             ~_", (5, 30).into());
 		backend::set_str("/                 \\", (6, 29).into());
@@ -50,11 +49,11 @@ pub fn killed_by(ending: Ending, game: &mut GameState) {
 		center(21, game.player.settings.player_name().as_str());
 		center(22, &how_ended);
 	} else {
-		game.diary.add_entry(&how_ended);
+		diary::show_prompt(&how_ended, &mut game.diary);
 	}
-	game.diary.add_entry("");
-	diary::show_current_page(&game.diary);
-	game.diary.turn_page();
+	wait_for_ack();
+
+	backend::erase_screen();
 	put_scores(Some(ending), game);
 }
 
@@ -311,7 +310,7 @@ pub fn sell_pack(game: &mut GameState)
 	if game.player.rogue.gold > MAX_GOLD {
 		game.player.rogue.gold = MAX_GOLD;
 	}
-	game.diary.add_entry("");
+	wait_for_ack();
 }
 
 pub fn name_cmp(s1: &str, s2: &str) -> Ordering {
@@ -353,6 +352,5 @@ pub fn center(row: i64, msg: &str) {
 
 pub fn score_file_error(game: &mut GameState) {
 	game.player.interrupt_and_slurp();
-	game.diary.add_entry("");
 	clean_up("sorry, score file is out of order", &mut game.player);
 }

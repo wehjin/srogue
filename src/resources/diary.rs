@@ -14,10 +14,8 @@ impl Diary {
 	}
 	pub fn add_entry(&mut self, entry: impl AsRef<str>) {
 		assert!(!self.rewound);
-		let text = entry.as_ref().to_string();
-		if text.chars().count() > 0 {
-			self.current_page.push(text.to_string());
-		}
+		let text = entry.as_ref();
+		self.current_page.push(text.to_string());
 	}
 	pub fn rewind(&mut self) {
 		assert!(self.current_page.is_empty());
@@ -70,7 +68,7 @@ pub fn show_prompt(prompt: impl AsRef<str>, diary: &mut Diary) {
 		show_current_page(diary);
 		diary.turn_page();
 	}
-	backend::set_full_row(format!("{} ", prompt.as_ref()), DIALOG_ROW);
+	backend::set_full_row(format!("{}", prompt.as_ref()), DIALOG_ROW);
 	backend::push_screen();
 }
 
