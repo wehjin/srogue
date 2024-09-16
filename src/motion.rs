@@ -148,14 +148,14 @@ fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, game: &mut G
 	let obj = game.ground.find_object_at(row, col).expect("moved-on object");
 	let obj_desc = get_obj_desc(obj, game.player.settings.fruit.to_string(), &game.player);
 	let desc = format!("moved onto {}", obj_desc);
-	return stopped_on_something_with_message(&desc, game);
+	stopped_on_something_with_message(&desc, game)
 }
 
 fn stopped_on_something_with_message(desc: &str, game: &mut GameState) -> MoveResult {
 	game.player.interrupt_and_slurp();
 	game.diary.add_entry(desc);
 	reg_move(game);
-	return StoppedOnSomething;
+	StoppedOnSomething
 }
 
 fn moved_unless_hungry_or_confused(game: &mut GameState) -> MoveResult {
@@ -272,7 +272,7 @@ pub fn next_to_something(drow: i64, dcol: i64, player: &Player, level: &Level) -
 			}
 		}
 	}
-	return false;
+	false
 }
 
 pub fn can_move(row1: i64, col1: i64, row2: i64, col2: i64, level: &Level) -> bool {
@@ -303,7 +303,7 @@ pub fn get_dir_or_cancel(game: &mut GameState) -> char {
 		}
 		sound_bell();
 		if first_miss {
-			diary::show_prompt("direction? ", &game.diary);
+			diary::show_prompt("direction? ", &mut game.diary);
 			first_miss = false;
 		}
 	}
@@ -368,7 +368,7 @@ pub fn check_hunger(game: &mut GameState) -> HungerCheckResult {
 	if game.player.hunger == HungerLevel::Faint && random_faint(game) {
 		return HungerCheckResult::DidFaint;
 	}
-	return HungerCheckResult::StillWalking;
+	HungerCheckResult::StillWalking
 }
 
 fn random_faint(game: &mut GameState) -> bool {
@@ -453,7 +453,7 @@ pub fn reg_move(game: &mut GameState) -> bool {
 			search(SearchKind::Auto { n: auto_search as usize }, game);
 		}
 	}
-	return hunger_check == HungerCheckResult::DidFaint;
+	hunger_check == HungerCheckResult::DidFaint
 }
 
 

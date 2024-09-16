@@ -226,7 +226,7 @@ pub fn fight(to_the_death: bool, game: &mut GameState) {
 			}
 			sound_bell();
 			if first_miss {
-				diary::show_prompt("direction?", &game.diary);
+				diary::show_prompt("direction?", &mut game.diary);
 				first_miss = false;
 			}
 		}

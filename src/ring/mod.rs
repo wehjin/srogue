@@ -24,7 +24,7 @@ pub(crate) fn ask_ring_hand(game: &mut GameState) -> Option<PlayerHand> {
 }
 
 fn ask_left_or_right(game: &mut GameState) -> char {
-	diary::show_prompt("left or right hand?", &game.diary);
+	diary::show_prompt("left or right hand?", &mut game.diary);
 	let mut ch;
 	loop {
 		ch = rgetchar();

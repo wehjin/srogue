@@ -215,7 +215,7 @@ fn random_spot_with_floor_or_monster(player: &Player, level: &mut Level) -> (usi
 }
 
 pub fn id_trap(game: &mut GameState) {
-	diary::show_prompt("direction? ", &game.diary);
+	diary::show_prompt("direction? ", &mut game.diary);
 	let mut dir: char;
 	loop {
 		dir = rgetchar();

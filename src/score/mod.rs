@@ -109,7 +109,7 @@ pub fn ask_quit(from_intrpt: bool, game: &mut GameState) -> bool {
 		}
 	}
 	game.player.interrupt_and_slurp();
-	diary::show_prompt("really quit?", &game.diary);
+	diary::show_prompt("really quit?", &mut game.diary);
 	if rgetchar() != 'y' {
 		md_heed_signals();
 		if from_intrpt {

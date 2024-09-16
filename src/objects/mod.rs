@@ -596,7 +596,7 @@ pub fn new_object_for_wizard(game: &mut GameState) {
 		game.diary.add_entry("pack full");
 		return;
 	}
-	diary::show_prompt("type of object?", &game.diary);
+	diary::show_prompt("type of object?", &mut game.diary);
 	let ch = {
 		const CHOICES: &'static str = "!?:)]=/,\x1B";
 		let mut ch: char;

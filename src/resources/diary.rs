@@ -9,6 +9,9 @@ pub struct Diary {
 }
 
 impl Diary {
+	pub fn has_entries(&self) -> bool {
+		self.current_page.len() > 0
+	}
 	pub fn add_entry(&mut self, entry: impl AsRef<str>) {
 		assert!(!self.rewound);
 		let text = entry.as_ref().to_string();
@@ -61,8 +64,12 @@ pub fn show_current_page(diary: &Diary) {
 	}
 }
 
-pub fn show_prompt(prompt: impl AsRef<str>, diary: &Diary) {
-	assert!(diary.current_page.is_empty());
+pub fn show_prompt(prompt: impl AsRef<str>, diary: &mut Diary) {
+	if diary.has_entries() {
+		diary.add_entry("");
+		show_current_page(diary);
+		diary.turn_page();
+	}
 	backend::set_full_row(format!("{} ", prompt.as_ref()), DIALOG_ROW);
 	backend::push_screen();
 }

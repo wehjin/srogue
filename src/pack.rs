@@ -118,7 +118,7 @@ pub fn pack_letter(prompt: &str, filter: PackFilter, game: &mut GameState) -> ch
 	}
 
 	loop {
-		diary::show_prompt(prompt, &game.diary);
+		diary::show_prompt(prompt, &mut game.diary);
 		let pack_op = {
 			let mut pack_op;
 			loop {
