@@ -2,23 +2,23 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 
-pub use cells::*;
-pub use dungeon::*;
-use materials::{CellMaterial, Visibility};
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM, MAX_TRAP};
 use crate::level::materials::TunnelFixture;
 use crate::monster::wake_room;
 use crate::objects::put_amulet;
 use crate::pack::has_amulet;
-use crate::player::{Player, RoomMark};
 use crate::player::constants::INIT_HP;
+use crate::player::{Player, RoomMark};
 use crate::prelude::*;
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system::backend;
-use crate::room::{DoorDirection, gr_spot, is_all_connected, Room, RoomBounds, RoomType, visit_room, visit_spot_area};
 use crate::room::RoomType::Nothing;
+use crate::room::{gr_spot, is_all_connected, visit_room, visit_spot_area, DoorDirection, Room, RoomBounds, RoomType};
 use crate::trap::Trap;
+pub use cells::*;
+pub use dungeon::*;
+use materials::{CellMaterial, Visibility};
 
 pub mod constants;
 mod cells;
@@ -580,7 +580,7 @@ pub fn put_player(avoid_room: RoomMark, game: &mut GameState) {
 		}
 	}
 	if let Some(msg) = &game.level.new_level_message {
-		game.dialog.message(msg, 0);
+		game.diary.add_entry(msg);
 	}
 	game.level.new_level_message = None;
 	game.render_spot(game.player.to_spot());
@@ -595,7 +595,7 @@ pub fn add_exp(e: isize, promotion: bool, game: &mut GameState) {
 		}
 		for i in (game.player.rogue.exp + 1)..=new_exp {
 			let msg = format!("welcome to level {}", i);
-			game.dialog.message(&msg, 0);
+			game.diary.add_entry(&msg);
 			if promotion {
 				let hp = hp_raise(&mut game.player);
 				game.player.rogue.hp_current += hp;
@@ -642,5 +642,5 @@ pub fn show_average_hp(game: &mut GameState) {
 		player.extra_hp,
 		player.less_hp
 	);
-	game.dialog.message(&msg, 0);
+	game.diary.add_entry(&msg);
 }

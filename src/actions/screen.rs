@@ -6,7 +6,7 @@ pub struct ReMessage;
 
 impl GameUpdater for ReMessage {
 	fn update(game: &mut GameState) -> Option<LevelResult> {
-		game.dialog.re_message();
+		game.diary.rewind();
 		None
 	}
 }

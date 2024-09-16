@@ -19,11 +19,11 @@ pub(crate) const CTRL_M: char = '\x0d';
 pub(crate) const CTRL_N: char = '\x0e';
 pub(crate) const CTRL_O: char = '\x0f';
 pub(crate) const CTRL_P: char = '\x10';
-pub(crate) const CTRL_R_CHAR: char = '\u{12}';
+pub(crate) const CTRL_R: char = '\x12';
 pub(crate) const CTRL_S: char = '\x13';
 pub(crate) const CTRL_T: char = '\x14';
 pub(crate) const CTRL_U: char = '\x15';
-pub(crate) const CTRL_W: char = '\u{17}';
+pub(crate) const CTRL_W: char = '\x17';
 pub(crate) const CTRL_Y: char = '\x19';
 
 #[derive(Debug, Copy, Clone)]
@@ -85,7 +85,7 @@ pub fn rgetchar() -> char {
 	loop {
 		let input = backend::read_input_char();
 		match input {
-			CTRL_R_CHAR => {
+			CTRL_R => {
 				backend::reload_screen();
 			}
 			'X' => {

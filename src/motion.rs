@@ -20,6 +20,7 @@ use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
 use crate::render_system::darken_room;
 use crate::render_system::hallucinate::show_hallucination;
+use crate::resources::diary;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::room::{visit_room, visit_spot_area};
 use crate::score::killed_by;
@@ -49,9 +50,9 @@ pub fn one_move_rogue(direction: MoveDirection, pickup: bool, game: &mut GameSta
 		if !game.level.dungeon[row as usize][col as usize].has_monster() {
 			if game.level.being_held {
 				game.player.interrupt_and_slurp();
-				game.dialog.message("you are being held", 1);
+				game.diary.add_entry("you are being held");
 			} else {
-				game.dialog.message("you are still stuck in the bear trap", 0);
+				game.diary.add_entry("you are still stuck in the bear trap");
 				reg_move(game);
 			}
 			return MoveFailed;
@@ -152,7 +153,7 @@ fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, game: &mut G
 
 fn stopped_on_something_with_message(desc: &str, game: &mut GameState) -> MoveResult {
 	game.player.interrupt_and_slurp();
-	game.dialog.message(desc, 1);
+	game.diary.add_entry(desc);
 	reg_move(game);
 	return StoppedOnSomething;
 }
@@ -302,7 +303,7 @@ pub fn get_dir_or_cancel(game: &mut GameState) -> char {
 		}
 		sound_bell();
 		if first_miss {
-			game.dialog.message("direction? ", 0);
+			diary::show_prompt("direction? ", &game.diary);
 			first_miss = false;
 		}
 	}
@@ -356,7 +357,7 @@ pub fn check_hunger(game: &mut GameState) -> HungerCheckResult {
 	game.player.rogue.moves_left -= moves_to_burn;
 	if let Some(next_hunger) = get_hunger_transition_with_burn_count(game.player.rogue.moves_left, moves_to_burn) {
 		game.player.hunger = next_hunger;
-		game.dialog.message(&game.player.hunger.as_str(), 0);
+		game.diary.add_entry(&game.player.hunger.as_str());
 		game.stats_changed = true;
 	}
 
@@ -377,14 +378,14 @@ fn random_faint(game: &mut GameState) -> bool {
 			game.player.rogue.moves_left += 1;
 		}
 		game.player.interrupt_and_slurp();
-		game.dialog.message("you faint", 1);
+		game.diary.add_entry("you faint");
 		for _ in 0..n {
 			if coin_toss() {
 				mv_mons(game);
 			}
 		}
 		game.player.interrupt_and_slurp();
-		game.dialog.message(YOU_CAN_MOVE_AGAIN, 1);
+		game.diary.add_entry(YOU_CAN_MOVE_AGAIN);
 		true
 	} else {
 		false
@@ -433,7 +434,7 @@ pub fn reg_move(game: &mut GameState) -> bool {
 		game.player.levitate.decr();
 		if game.player.levitate.is_inactive() {
 			game.player.interrupt_and_slurp();
-			game.dialog.message("you float gently to the ground", 1);
+			game.diary.add_entry("you float gently to the ground");
 			if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_any_trap() {
 				trap_player(game.player.rogue.row as usize, game.player.rogue.col as usize, game);
 			}
@@ -442,7 +443,7 @@ pub fn reg_move(game: &mut GameState) -> bool {
 	if game.player.haste_self.is_active() {
 		game.player.haste_self.decr();
 		if game.player.haste_self.is_inactive() {
-			game.dialog.message("you feel yourself slowing down", 0);
+			game.diary.add_entry("you feel yourself slowing down");
 		}
 	}
 	game.heal_player();

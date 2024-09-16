@@ -14,11 +14,11 @@ use crate::monster::MonsterMash;
 use crate::objects::{alloc_object, get_food, ObjectPack};
 use crate::pack::{do_wear, do_wield};
 use crate::player::Player;
-use crate::prelude::DungeonSpot;
 use crate::prelude::object_what::ObjectWhat::{Armor, Weapon};
+use crate::prelude::DungeonSpot;
 use crate::random::get_rand;
 use crate::render_system::RenderAction;
-use crate::resources::dialog::PlayerDialog;
+use crate::resources::diary::Diary;
 use crate::resources::healer::Healer;
 use crate::ring::ring_stats;
 use crate::room::RoomBounds;
@@ -56,8 +56,8 @@ pub fn init(settings: Settings) -> Result<InitResult, InitError> {
 	md_heed_signals();
 
 	let mut game = GameState {
+		diary: Diary::default(),
 		healer: Healer::default(),
-		dialog: PlayerDialog::default(),
 		player: Player::new(settings.clone()),
 		level: Level::new(),
 		mash: MonsterMash::default(),
@@ -90,8 +90,8 @@ pub enum GameTurn {
 }
 
 pub struct GameState {
+	pub diary: Diary,
 	pub healer: Healer,
-	pub dialog: PlayerDialog,
 	pub player: Player,
 	pub level: Level,
 	pub mash: MonsterMash,
@@ -194,18 +194,18 @@ pub fn clean_up(estr: &str, player: &mut Player) {
 // 	// md_heed_signals();
 // }
 
-pub fn onintr() {
-	// TODO Will need to restructure this code to use message passing to interrupt the Player and clear the PlayerDialog.
-	// md_ignore_signals();
-	// if cant_int {
-	// 	did_int = true;
-	// } else {
-	//  game.diary.clear_message();
-	//  game.player.interrupt_and_slurp();
-	//  game.diary.message("interrupt", 1);
-	// }
-	// md_heed_signals();
-}
+// pub fn onintr() {
+// TODO Will need to restructure this code to use message passing to interrupt the Player and clear the PlayerDialog.
+// md_ignore_signals();
+// if cant_int {
+// 	did_int = true;
+// } else {
+//  game.diary.clear_message();
+//  game.player.interrupt_and_slurp();
+//  game.diary.message("interrupt", 1);
+// }
+// md_heed_signals();
+// }
 
 // pub fn error_save() {
 // 	save_is_interactive = false;

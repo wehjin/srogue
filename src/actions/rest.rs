@@ -57,8 +57,9 @@ impl GameUpdater for Quit {
 pub struct Version;
 
 impl GameUpdater for Version {
+	//noinspection SpellCheckingInspection
 	fn update(game: &mut GameState) -> Option<LevelResult> {
-		game.dialog.message("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims", 0);
+		game.diary.add_entry("rogue-clone: Version II. (Tim Stoehr was here), tektronix!zeus!tims");
 		None
 	}
 }
@@ -92,7 +93,7 @@ fn call_it(game: &mut GameState) {
 	}
 	match game.player.object_id_with_letter(ch) {
 		None => {
-			game.dialog.message("no such item.", 0);
+			game.diary.add_entry("no such item.");
 			return;
 		}
 		Some(obj_id) => {
@@ -100,7 +101,7 @@ fn call_it(game: &mut GameState) {
 			match what {
 				Scroll | Potion | Wand | Ring => {
 					let kind = game.player.object_kind(obj_id);
-					let new_name = get_input_line::<String>("call it:", None, Some(game.player.notes.title(what, kind as usize).as_str()), true, true, &mut game.dialog);
+					let new_name = get_input_line::<String>("call it:", None, Some(game.player.notes.title(what, kind as usize).as_str()), true, true, &mut game.diary);
 					if !new_name.is_empty() {
 						let id = game.player.notes.note_mut(what, kind as usize);
 						id.status = Called;
@@ -108,7 +109,7 @@ fn call_it(game: &mut GameState) {
 					}
 				}
 				_ => {
-					game.dialog.message("surely you already know what that's called", 0);
+					game.diary.add_entry("surely you already know what that's called");
 					return;
 				}
 			}

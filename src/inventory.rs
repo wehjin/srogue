@@ -1,7 +1,7 @@
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
-use crate::objects::{get_armor_class, name_of, NoteStatus, Object, ObjectId};
 use crate::objects::note_tables::NoteTables;
+use crate::objects::{get_armor_class, name_of, NoteStatus, Object, ObjectId};
 use crate::pack::{pack_letter, wait_for_ack};
 use crate::player::Player;
 use crate::potions::kind::PotionKind;
@@ -28,7 +28,7 @@ pub fn inventory(filter: PackFilter, source: ObjectSource, game: &mut GameState)
 		ObjectSource::Ground => &game.ground,
 	};
 	if pack.is_empty() {
-		game.dialog.message("your pack is empty", 0);
+		game.diary.add_entry("your pack is empty");
 		return;
 	}
 	let item_lines = {
@@ -278,8 +278,8 @@ pub fn single_inv(ichar: Option<char>, game: &mut GameState) {
 		let separator = if obj.what_is == Armor && obj.is_protected != 0 { '}' } else { ')' };
 		let obj_desc = get_obj_desc(obj, game.player.settings.fruit.to_string(), &game.player);
 		let msg = format!("{}{} {}", ch, separator, obj_desc);
-		game.dialog.message(&msg, 0);
+		game.diary.add_entry(&msg);
 	} else {
-		game.dialog.message("no such item.", 0);
+		game.diary.add_entry("no such item.");
 	}
 }

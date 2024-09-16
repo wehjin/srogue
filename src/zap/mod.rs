@@ -20,7 +20,6 @@ pub(crate) mod wand_materials;
 
 pub fn zapp(game: &mut GameState) {
 	let dir = get_dir_or_cancel(game);
-	game.dialog.clear_message();
 	if dir == CANCEL_CHAR {
 		return;
 	}
@@ -29,19 +28,18 @@ pub fn zapp(game: &mut GameState) {
 		return;
 	}
 
-	game.dialog.clear_message();
 	match game.player.object_id_with_letter(ch) {
 		None => {
-			game.dialog.message("no such item.", 0);
+			game.diary.add_entry("no such item.");
 			return;
 		}
 		Some(obj_id) => {
 			if game.player.object_what(obj_id) != Wand {
-				game.dialog.message("you can't zap with that", 0);
+				game.diary.add_entry("you can't zap with that");
 				return;
 			}
 			if game.player.expect_object(obj_id).class <= 0 {
-				game.dialog.message("nothing happens", 0);
+				game.diary.add_entry("nothing happens");
 			} else {
 				game.player.expect_object_mut(obj_id).class -= 1;
 				let mut row = game.player.rogue.row;
@@ -159,7 +157,7 @@ pub fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
 			monster.m_flags.holds = false;
 		}
 		WandKind::DoNothing => {
-			game.dialog.message("nothing happens", 0);
+			game.diary.add_entry("nothing happens");
 		}
 	}
 }

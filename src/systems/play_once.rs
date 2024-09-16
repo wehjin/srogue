@@ -4,8 +4,9 @@ use crate::actions::action_set::PlayerEvent;
 use crate::init::{GameState, GameTurn};
 use crate::motion::{multiple_move_rogue, one_move_rogue, reg_move};
 use crate::render_system;
+use crate::resources::diary;
 use crate::resources::keyboard::rgetchar;
-use crate::systems::play_level::{LevelResult, UNKNOWN_COMMAND};
+use crate::systems::play_level::LevelResult;
 use crate::systems::play_once::OnceResult::{Counting, Leaving};
 
 pub enum OnceResult {
@@ -21,8 +22,8 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> OnceResult {
 	let key_code = key_code.unwrap_or_else(rgetchar);
 	// Keep rgetchar above clear_message(). Otherwise, the dialog row on screen
 	// does not draw correctly.
-	game.dialog.clear_message();
 	game.turn = GameTurn::Player;
+	game.diary.turn_page();
 	if key_code.is_digit(10) {
 		render_system::refresh(game);
 		return Counting(key_code.to_string());
@@ -36,10 +37,11 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> OnceResult {
 				reg_move(game);
 			}
 		}
-		Err(_) => {
-			game.dialog.message(UNKNOWN_COMMAND, 0);
+		Err(e) => {
+			game.diary.add_entry(e.to_string());
 		}
 	}
+	diary::show_current_page(&game.diary);
 	render_system::refresh(game);
 	Idle
 }
@@ -61,7 +63,7 @@ fn test_and_clear_loop_context(game: &mut GameState) -> Option<LevelResult> {
 	game.player.interrupted = false;
 	if !game.player.hit_message.is_empty() {
 		game.player.interrupt_and_slurp();
-		game.dialog.message(&game.player.hit_message, 1);
+		game.diary.add_entry(&game.player.hit_message);
 		game.player.hit_message.clear();
 	}
 	if game.level.trap_door {
@@ -69,6 +71,6 @@ fn test_and_clear_loop_context(game: &mut GameState) -> Option<LevelResult> {
 		return Some(LevelResult::TrapDoorDown);
 	}
 	render_system::refresh(game);
-	return None;
+	None
 }
 

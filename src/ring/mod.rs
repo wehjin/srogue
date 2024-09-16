@@ -7,7 +7,8 @@ use crate::prelude::item_usage::{ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat::Ring;
 use crate::r#use::relight;
 use crate::random::{coin_toss, get_rand};
-use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
+use crate::resources::diary;
+use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 
 pub(crate) mod constants;
 pub(crate) mod ring_kind;
@@ -23,7 +24,7 @@ pub(crate) fn ask_ring_hand(game: &mut GameState) -> Option<PlayerHand> {
 }
 
 fn ask_left_or_right(game: &mut GameState) -> char {
-	game.dialog.message("left or right hand?", 0);
+	diary::show_prompt("left or right hand?", &game.diary);
 	let mut ch;
 	loop {
 		ch = rgetchar();

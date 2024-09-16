@@ -2,6 +2,7 @@ use crate::actions::GameUpdater;
 use crate::init::GameState;
 use crate::monster::show_monsters;
 use crate::objects::{new_object_for_wizard, show_objects};
+
 use crate::resources::input_line::get_input_line;
 use crate::room::draw_magic_map;
 use crate::systems::play_level::{LevelResult, UNKNOWN_COMMAND};
@@ -14,7 +15,7 @@ impl GameUpdater for ShowMonsters {
 		if game.player.wizard {
 			show_monsters(game);
 		} else {
-			game.dialog.message(UNKNOWN_COMMAND, 0);
+			game.diary.add_entry(UNKNOWN_COMMAND);
 		}
 		None
 	}
@@ -27,7 +28,7 @@ impl GameUpdater for NewObjectForWizard {
 		if game.player.wizard {
 			new_object_for_wizard(game);
 		} else {
-			game.dialog.message(UNKNOWN_COMMAND, 0);
+			game.diary.add_entry(UNKNOWN_COMMAND);
 		}
 		None
 	}
@@ -40,7 +41,7 @@ impl GameUpdater for ShowObjects {
 		if game.player.wizard {
 			show_objects(game);
 		} else {
-			game.dialog.message(UNKNOWN_COMMAND, 0);
+			game.diary.add_entry(UNKNOWN_COMMAND);
 		}
 		None
 	}
@@ -54,7 +55,7 @@ impl GameUpdater for ShowTraps {
 			// TODO Fix this to show where the trap is without making it visible so that the Search and IdTrap actions can still work.
 			show_traps(game);
 		} else {
-			game.dialog.message(UNKNOWN_COMMAND, 0);
+			game.diary.add_entry(UNKNOWN_COMMAND);
 		}
 		None
 	}
@@ -67,7 +68,7 @@ impl GameUpdater for DrawMagicMap {
 		if game.player.wizard {
 			draw_magic_map(game);
 		} else {
-			game.dialog.message(UNKNOWN_COMMAND, 0);
+			game.diary.add_entry(UNKNOWN_COMMAND);
 		}
 		None
 	}
@@ -85,18 +86,18 @@ impl GameUpdater for Wizardize {
 fn wizardize(game: &mut GameState) {
 	if game.player.wizard {
 		game.player.wizard = false;
-		game.dialog.message("not wizard anymore", 0);
+		game.diary.add_entry("not wizard anymore");
 	} else {
-		let line = get_input_line::<String>("wizard's password:", None, None, false, false, &mut game.dialog);
+		let line = get_input_line::<String>("wizard's password:", None, None, false, false, &mut game.diary);
 		if !line.is_empty() {
 			//const PW: &str = "\u{A7}DV\u{BA}M\u{A3}\u{17}";
 			const PW: &str = "neko?";
 			if line == PW {
 				game.player.wizard = true;
 				game.player.settings.score_only = true;
-				game.dialog.message("Welcome, mighty wizard!", 0);
+				game.diary.add_entry("Welcome, mighty wizard!");
 			} else {
-				game.dialog.message("sorry", 0);
+				game.diary.add_entry("sorry");
 			}
 		}
 	}

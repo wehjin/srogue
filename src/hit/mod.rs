@@ -11,6 +11,7 @@ use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::AMULET_LEVEL;
 use crate::random::rand_percent;
+use crate::resources::diary;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::score::killed_by;
 use crate::spec_hit::{check_imitator, cough_up, special_hit};
@@ -52,7 +53,7 @@ pub fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, game: &mut GameSta
 			let msg = format!("{}the {} misses", game.player.hit_message, monster_name);
 			game.player.hit_message.clear();
 			game.player.interrupt_and_slurp();
-			game.dialog.message(&msg, 1);
+			game.diary.add_entry(&msg);
 		}
 		return;
 	}
@@ -60,7 +61,7 @@ pub fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, game: &mut GameSta
 		let msg = format!("{}the {} hit", game.player.hit_message, monster_name);
 		game.player.hit_message.clear();
 		game.player.interrupt_and_slurp();
-		game.dialog.message(&msg, 1);
+		game.diary.add_entry(&msg);
 	}
 	let mut damage: isize = if !game.mash.monster_flags(mon_id).stationary {
 		let mut damage = get_damage(game.mash.monster(mon_id).m_damage(), DamageEffect::Roll);
@@ -202,7 +203,7 @@ pub fn mon_damage(mon_id: u64, damage: isize, game: &mut GameState) -> MonDamage
 			let msg = format!("{}defeated the {}", game.player.hit_message, monster_name);
 			game.player.hit_message.clear();
 			game.player.interrupt_and_slurp();
-			game.dialog.message(&msg, 1);
+			game.diary.add_entry(&msg);
 		}
 		add_exp(game.mash.monster(mon_id).kill_exp(), true, game);
 		if game.mash.monster_flags(mon_id).holds {
@@ -225,11 +226,10 @@ pub fn fight(to_the_death: bool, game: &mut GameState) {
 			}
 			sound_bell();
 			if first_miss {
-				game.dialog.message("direction?", 0);
+				diary::show_prompt("direction?", &game.diary);
 				first_miss = false;
 			}
 		}
-		game.dialog.clear_message();
 		if ch == CANCEL_CHAR {
 			return;
 		}
@@ -244,7 +244,7 @@ pub fn fight(to_the_death: bool, game: &mut GameState) {
 	let cannot_move = !can_move(game.player.rogue.row, game.player.rogue.col, fight_spot.row, fight_spot.col, &game.level);
 	let not_a_monster = !game.has_non_imitating_monster_at(fight_spot);
 	if not_a_monster || cannot_move {
-		game.dialog.message("I see no monster there", 0);
+		game.diary.add_entry("I see no monster there");
 		return;
 	}
 	game.player.fight_monster = game.mash.monster_at_spot(fight_spot.row, fight_spot.col).map(|m| m.id());

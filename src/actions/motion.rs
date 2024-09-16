@@ -1,4 +1,3 @@
-use crate::actions::motion::UpResult::{KeepLevel, UpLevel, WonGame};
 use crate::actions::GameUpdater;
 use crate::init::GameState;
 use crate::pack::has_amulet;
@@ -36,13 +35,13 @@ fn drop_check(game: &mut GameState) -> bool {
 	}
 	if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_stairs() {
 		if game.player.levitate.is_active() {
-			game.dialog.message("you're floating in the air!", 0);
+			game.diary.add_entry("you're floating in the air!");
 			return false;
 		}
 		return true;
 	}
-	game.dialog.message("I see no way down", 0);
-	return false;
+	game.diary.add_entry("I see no way down");
+	false
 }
 
 pub enum UpResult {
@@ -54,20 +53,20 @@ pub enum UpResult {
 fn check_up(game: &mut GameState) -> UpResult {
 	if !game.player.wizard {
 		if !game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_stairs() {
-			game.dialog.message("I see no way up", 0);
-			return KeepLevel;
+			game.diary.add_entry("I see no way up");
+			return UpResult::KeepLevel;
 		}
 		if !has_amulet(&game.player) {
-			game.dialog.message("Your way is magically blocked", 0);
-			return KeepLevel;
+			game.diary.add_entry("Your way is magically blocked");
+			return UpResult::KeepLevel;
 		}
 	}
 	game.level.new_level_message = Some("you feel a wrenching sensation in your gut".to_string());
 	if game.player.cur_depth == 1 {
 		win(game);
-		WonGame
+		UpResult::WonGame
 	} else {
 		game.player.ascend();
-		UpLevel
+		UpResult::UpLevel
 	}
 }

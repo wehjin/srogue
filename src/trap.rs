@@ -13,6 +13,7 @@ use crate::prelude::ending::Ending;
 use crate::prelude::*;
 use crate::r#use::{take_a_nap, tele};
 use crate::random::{get_rand, rand_percent};
+use crate::resources::diary;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::room::gr_spot;
 use crate::score::killed_by;
@@ -100,7 +101,7 @@ pub fn trap_at(row: usize, col: usize, level: &Level) -> TrapKind {
 			return level.traps[i].trap_type;
 		}
 	}
-	return NoTrap;
+	NoTrap
 }
 
 pub fn trap_player(row: usize, col: usize, game: &mut GameState) {
@@ -111,7 +112,7 @@ pub fn trap_player(row: usize, col: usize, game: &mut GameState) {
 	game.level.dungeon[row][col].set_visible();
 	if rand_percent(game.player.buffed_exp() as usize) {
 		game.player.interrupt_and_slurp();
-		game.dialog.message("the trap failed", 1);
+		game.diary.add_entry("the trap failed");
 		return;
 	}
 	match t {
@@ -122,7 +123,7 @@ pub fn trap_player(row: usize, col: usize, game: &mut GameState) {
 		}
 		BearTrap => {
 			game.player.interrupt_and_slurp();
-			game.dialog.message(trap_message(t), 1);
+			game.diary.add_entry(trap_message(t));
 			game.level.bear_trap = get_rand(4, 7);
 		}
 		TeleTrap => {
@@ -131,7 +132,7 @@ pub fn trap_player(row: usize, col: usize, game: &mut GameState) {
 		}
 		DartTrap => {
 			game.player.interrupt_and_slurp();
-			game.dialog.message(trap_message(t), 1);
+			game.diary.add_entry(trap_message(t));
 			const DART_DAMAGE: DamageStat = DamageStat { hits: 1, damage: 6 };
 			game.player.rogue.hp_current -= get_damage(&[DART_DAMAGE], DamageEffect::Roll);
 			if game.player.rogue.hp_current <= 0 {
@@ -147,12 +148,12 @@ pub fn trap_player(row: usize, col: usize, game: &mut GameState) {
 		}
 		SleepingGasTrap => {
 			game.player.interrupt_and_slurp();
-			game.dialog.message(trap_message(t), 1);
+			game.diary.add_entry(trap_message(t));
 			take_a_nap(game);
 		}
 		RustTrap => {
 			game.player.interrupt_and_slurp();
-			game.dialog.message(trap_message(t), 1);
+			game.diary.add_entry(trap_message(t));
 			rust(None, game);
 		}
 	}
@@ -214,7 +215,7 @@ fn random_spot_with_floor_or_monster(player: &Player, level: &mut Level) -> (usi
 }
 
 pub fn id_trap(game: &mut GameState) {
-	game.dialog.message("direction? ", 0);
+	diary::show_prompt("direction? ", &game.diary);
 	let mut dir: char;
 	loop {
 		dir = rgetchar();
@@ -223,16 +224,15 @@ pub fn id_trap(game: &mut GameState) {
 		}
 		sound_bell();
 	}
-	game.dialog.clear_message();
 	if dir == CANCEL_CHAR {
 		return;
 	}
 
 	let (look_row, look_col) = MoveDirection::from(dir).apply_confined(game.player.rogue.row, game.player.rogue.col);
 	if game.level.dungeon[look_row][look_col].is_any_trap() && !game.level.dungeon[look_row][look_col].is_any_hidden() {
-		game.dialog.message(trap_at(look_row, look_col, &game.level).name(), 0);
+		game.diary.add_entry(trap_at(look_row, look_col, &game.level).name());
 	} else {
-		game.dialog.message("no trap there", 0);
+		game.diary.add_entry("no trap there");
 	}
 }
 

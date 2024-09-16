@@ -26,7 +26,7 @@ use crate::init::GameState;
 use crate::motion::{MoveDirection, MoveUntil};
 use crate::resources::keyboard;
 use crate::resources::keyboard::{CTRL_A, CTRL_C, CTRL_I, CTRL_M, CTRL_O, CTRL_S, CTRL_T, CTRL_W};
-use crate::systems::play_level::LevelResult;
+use crate::systems::play_level::{LevelResult, UNKNOWN_COMMAND};
 use keyboard::{CTRL_B, CTRL_H, CTRL_J, CTRL_K, CTRL_L, CTRL_N, CTRL_P, CTRL_U, CTRL_Y};
 
 const ROGUE_ACTIONS: [(&[char], UpdateGameFn); 40] = [
@@ -104,7 +104,7 @@ impl TryFrom<char> for PlayerEvent {
 				Ok(MoveRogue(MoveDirection::from(value), Some(MoveUntil::NearSomething)))
 			}
 			_ => match ACTION_UPDATES.get(&value) {
-				None => Err(anyhow::anyhow!("No game event for char: {}", value)),
+				None => Err(anyhow::anyhow!("{} {}", UNKNOWN_COMMAND, value)),
 				Some(update_game) => Ok(Update(update_game)),
 			}
 		}

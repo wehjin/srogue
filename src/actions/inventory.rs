@@ -1,7 +1,6 @@
 use crate::actions::GameUpdater;
 use crate::init::GameState;
-use crate::inventory;
-use crate::inventory::{inventory, ObjectSource, single_inv};
+use crate::inventory::{inventory, single_inv, ObjectSource};
 use crate::player::rings::HandUsage;
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::ring::PlayerHand;
@@ -14,7 +13,7 @@ impl GameUpdater for InventoryGround {
 		if game.player.wizard {
 			inventory(AllObjects, ObjectSource::Ground, game);
 		} else {
-			game.dialog.message(UNKNOWN_COMMAND, 0);
+			game.diary.add_entry(UNKNOWN_COMMAND);
 		}
 		None
 	}
@@ -68,15 +67,15 @@ impl GameUpdater for InventoryRings {
 fn inv_armor_weapon(is_weapon: bool, game: &mut GameState) {
 	if is_weapon {
 		if let Some(weapon) = game.player.weapon() {
-			inventory::single_inv(Some(weapon.ichar), game);
+			single_inv(Some(weapon.ichar), game);
 		} else {
-			game.dialog.message("not wielding anything", 0);
+			game.diary.add_entry("not wielding anything");
 		}
 	} else {
 		if let Some(armor) = game.player.armor() {
-			inventory::single_inv(Some(armor.ichar), game);
+			single_inv(Some(armor.ichar), game);
 		} else {
-			game.dialog.message("not wearing anything", 0);
+			game.diary.add_entry("not wearing anything");
 		}
 	}
 }
@@ -84,17 +83,17 @@ fn inv_armor_weapon(is_weapon: bool, game: &mut GameState) {
 pub fn inv_rings(game: &mut GameState) {
 	let hand_usage = game.player.hand_usage();
 	if hand_usage == HandUsage::None {
-		game.dialog.message("not wearing any rings", 0);
+		game.diary.add_entry("not wearing any rings");
 	} else {
 		for ring_hand in PlayerHand::ALL_HANDS {
 			if let Some(ring_id) = game.player.ring_id(ring_hand) {
 				let msg = game.player.get_obj_desc(ring_id);
-				game.dialog.message(&msg, 0);
+				game.diary.add_entry(&msg);
 			}
 		}
 	}
 	if game.player.wizard {
-		game.dialog.message(
+		game.diary.add_entry(
 			&format!("ste {}, r_r {}, e_r {}, r_t {}, s_s {}, a_s {}, reg {}, r_e {}, s_i {}, m_a {}, aus {}",
 			         game.player.ring_effects.stealthy(), hand_usage.count_hands(),
 			         game.player.ring_effects.calorie_burn(), game.player.ring_effects.has_teleport(),
@@ -102,7 +101,6 @@ pub fn inv_rings(game: &mut GameState) {
 			         game.player.ring_effects.regeneration(), game.player.ring_effects.dexterity(),
 			         game.player.ring_effects.has_see_invisible(), game.player.ring_effects.has_maintain_armor(),
 			         game.player.ring_effects.auto_search()),
-			0,
 		);
 	}
 }

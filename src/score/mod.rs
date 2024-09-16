@@ -2,17 +2,18 @@ use std::cmp::Ordering;
 use std::fs::File;
 use std::io::{Read, Seek, Write};
 
-use crate::init::{BYEBYE_STRING, clean_up, GameState};
+use crate::init::{clean_up, GameState, BYEBYE_STRING};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::machdep::{md_heed_signals, md_ignore_signals};
 use crate::pack::{has_amulet, unwear, unwield};
 use crate::player::Player;
-use crate::prelude::*;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat;
+use crate::prelude::*;
 use crate::render_system::backend;
+use crate::resources::diary;
 use crate::resources::keyboard::rgetchar;
-use crate::ring::{PlayerHand, un_put_hand};
+use crate::ring::{un_put_hand, PlayerHand};
 
 mod values;
 
@@ -49,9 +50,11 @@ pub fn killed_by(ending: Ending, game: &mut GameState) {
 		center(21, game.player.settings.player_name().as_str());
 		center(22, &how_ended);
 	} else {
-		game.dialog.message(&how_ended, 0);
+		game.diary.add_entry(&how_ended);
 	}
-	game.dialog.message("", 0);
+	game.diary.add_entry("");
+	diary::show_current_page(&game.diary);
+	game.diary.turn_page();
 	put_scores(Some(ending), game);
 }
 
@@ -84,10 +87,12 @@ pub fn win(game: &mut GameState) {
 	backend::set_str("Congratulations,  you have  been admitted  to  the", (17, 11).into());
 	backend::set_str("Fighters' Guild.   You return home,  sell all your", (18, 11).into());
 	backend::set_str("treasures at great profit and retire into comfort.", (19, 11).into());
-	game.dialog.message("", 0);
-	game.dialog.message("", 0);
+	game.diary.add_entry("");
+	game.diary.add_entry("");
 	game.player.notes.identify_all();
 	sell_pack(game);
+	diary::show_current_page(&game.diary);
+	game.diary.turn_page();
 	put_scores(Some(Ending::Win), game);
 }
 
@@ -95,27 +100,22 @@ pub fn ask_quit(from_intrpt: bool, game: &mut GameState) -> bool {
 	md_ignore_signals();
 	let mut orow = 0;
 	let mut ocol = 0;
-	let mut mc = false;
 	let mut buf = ['\x00'; 128];
 	if from_intrpt {
 		orow = game.player.rogue.row;
 		ocol = game.player.rogue.col;
-		mc = game.dialog.message_cleared();
 		for i in 0..DCOLS {
 			buf[i] = backend::get_char((0, i).into());
 		}
 	}
-	game.dialog.clear_message();
 	game.player.interrupt_and_slurp();
-	game.dialog.message("really quit?", 1);
+	diary::show_prompt("really quit?", &game.diary);
 	if rgetchar() != 'y' {
 		md_heed_signals();
-		game.dialog.clear_message();
 		if from_intrpt {
 			for i in 0..DCOLS {
 				backend::set_char(buf[i], (0, i).into());
 			}
-			game.dialog.set_message_cleared(mc);
 			backend::move_cursor((orow, ocol).into());
 			backend::push_screen();
 		}
@@ -125,9 +125,8 @@ pub fn ask_quit(from_intrpt: bool, game: &mut GameState) -> bool {
 		clean_up(BYEBYE_STRING, &mut game.player);
 		return true;
 	}
-	game.dialog.clear_message();
 	killed_by(Ending::Quit, game);
-	return true;
+	true
 }
 
 pub fn put_scores(ending: Option<Ending>, game: &mut GameState) {
@@ -137,7 +136,7 @@ pub fn put_scores(ending: Option<Ending>, game: &mut GameState) {
 		Err(_) => match File::options().write(true).open(SCORE_FILE) {
 			Ok(file) => file,
 			Err(_) => {
-				game.dialog.message("cannot read/write/create score file", 0);
+				game.diary.add_entry("cannot read/write/create score file");
 				score_file_error(game);
 				return;
 			}
@@ -241,7 +240,7 @@ pub fn put_scores(ending: Option<Ending>, game: &mut GameState) {
 	}
 	backend::push_screen();
 	drop(file);
-	game.dialog.message("", 0);
+	game.diary.add_entry("");
 	clean_up("", &mut game.player);
 }
 
@@ -312,7 +311,7 @@ pub fn sell_pack(game: &mut GameState)
 	if game.player.rogue.gold > MAX_GOLD {
 		game.player.rogue.gold = MAX_GOLD;
 	}
-	game.dialog.message("", 0);
+	game.diary.add_entry("");
 }
 
 pub fn name_cmp(s1: &str, s2: &str) -> Ordering {
@@ -354,6 +353,6 @@ pub fn center(row: i64, msg: &str) {
 
 pub fn score_file_error(game: &mut GameState) {
 	game.player.interrupt_and_slurp();
-	game.dialog.message("", 1);
+	game.diary.add_entry("");
 	clean_up("sorry, score file is out of order", &mut game.player);
 }

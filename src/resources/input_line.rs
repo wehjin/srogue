@@ -1,28 +1,20 @@
 use crate::prelude::MAX_TITLE_LENGTH;
 use crate::render_system::backend;
-use crate::resources::dialog::{DIALOG_ROW, PlayerDialog};
-use crate::resources::keyboard;
+use crate::resources::diary::DIALOG_ROW;
+use crate::resources::diary::Diary;
 use crate::resources::keyboard::{BACKSPACE_CHAR, CANCEL_CHAR};
+use crate::resources::{diary, keyboard};
 
-pub fn get_input_line<T: AsRef<str>>(
-	prompt: &str,
-	insert: Option<T>,
-	if_cancelled: Option<&str>,
-	add_blank: bool,
-	do_echo: bool,
-	dialog: &mut PlayerDialog,
-) -> String {
-	dialog.message(&format!("{prompt} "), 0);
-	let answer = get_answer(prompt.len() + 1, do_echo, insert);
-	dialog.clear_message();
-	if let Some(answer) = answer {
+pub fn get_input_line<T: AsRef<str>>(prompt: &str, insert: Option<T>, if_cancelled: Option<&str>, add_blank: bool, do_echo: bool, diary: &mut Diary) -> String {
+	diary::show_prompt(&format!("{prompt} "), diary);
+	if let Some(answer) = get_answer(prompt.len() + 1, do_echo, insert) {
 		match add_blank {
 			true => format!("{answer} "),
 			false => answer
 		}
 	} else {
 		if let Some(msg) = if_cancelled {
-			dialog.message(msg, 0);
+			diary.add_entry(msg);
 		}
 		"".to_string()
 	}

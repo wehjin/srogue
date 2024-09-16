@@ -12,8 +12,8 @@ use crate::motion::is_passable;
 use crate::objects::{ObjectId, ObjectPack};
 use crate::odds;
 use crate::player::Player;
-use crate::prelude::*;
 use crate::prelude::object_what::ObjectWhat::Scroll;
+use crate::prelude::*;
 use crate::random::{coin_toss, get_rand, get_rand_indices, rand_percent};
 use crate::render_system::hallucinate::gr_obj_char;
 use crate::render_system::RenderAction;
@@ -72,7 +72,7 @@ pub fn gr_monster(level_depth: isize, first_level_boost: isize, kind: Option<Mon
 		monster.m_flags.hasted = true;
 	}
 	monster.target_spot = None;
-	return monster;
+	monster
 }
 
 pub fn mv_mons(game: &mut GameState) {
@@ -240,7 +240,7 @@ pub fn mtry(mon_id: MonsterIndex, row: i64, col: i64, game: &mut GameState) -> b
 		move_mon_to(mon_id, row, col, game);
 		return true;
 	}
-	return false;
+	false
 }
 
 pub fn move_mon_to(mon_id: MonsterIndex, row: i64, col: i64, game: &mut GameState) {
@@ -295,7 +295,7 @@ pub fn mon_can_go(monster: &Monster, row: i64, col: i64, player: &Player, level:
 			}
 		}
 	}
-	return true;
+	true
 }
 
 pub fn wake_room(rn: usize, entering: bool, row: i64, col: i64, game: &mut GameState) {
@@ -340,7 +340,7 @@ fn random_wanderer(level_depth: isize) -> Option<Monster> {
 			return Some(monster);
 		}
 	}
-	return None;
+	None
 }
 
 fn random_spot_for_wanderer(player: &Player, level: &Level) -> Option<DungeonSpot> {
@@ -410,7 +410,7 @@ pub fn create_monster(game: &mut GameState) {
 			monster.wake_up();
 		}
 	} else {
-		game.dialog.message("you hear a faint cry of anguish in the distance", 0);
+		game.diary.add_entry("you hear a faint cry of anguish in the distance");
 	}
 }
 
@@ -498,11 +498,11 @@ pub fn no_spot_for_monster(rn: usize, level: &Level) -> bool {
 			}
 		}
 	}
-	return true;
+	true
 }
 
 pub fn aggravate(game: &mut GameState) {
-	game.dialog.message("you hear a high pitched humming noise", 0);
+	game.diary.add_entry("you hear a high pitched humming noise");
 	for monster in game.mash.monster_ids() {
 		let monster = game.mash.monster_mut(monster);
 		monster.wake_up();

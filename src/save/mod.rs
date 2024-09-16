@@ -12,13 +12,12 @@ use crate::save::data::SaveData;
 pub fn save_game(game: &mut GameState) -> bool {
 	let save_file = game.player.settings.save_file.clone();
 	let cancellation_prompt = Some("game not saved");
-	let file_name = get_input_line("file name?", save_file, cancellation_prompt, false, true, &mut game.dialog);
+	let file_name = get_input_line("file name?", save_file, cancellation_prompt, false, true, &mut game.diary);
 	if file_name.is_empty() {
 		return false;
 	}
-	game.dialog.clear_message();
-	game.dialog.message(&file_name, 0);
-	return save_into_file(&file_name, game);
+	game.diary.add_entry(&file_name);
+	save_into_file(&file_name, game)
 }
 
 mod data;
@@ -28,7 +27,7 @@ fn save_into_file(save_path: &str, game: &mut GameState) -> bool {
 	let file = File::create(&save_path);
 	let mut file = match file {
 		Err(_) => {
-			game.dialog.message("problem accessing the save file", 0);
+			game.diary.add_entry("problem accessing the save file");
 			return false;
 		}
 		Ok(file) => {
@@ -39,7 +38,7 @@ fn save_into_file(save_path: &str, game: &mut GameState) -> bool {
 	let file_id = match file_id {
 		Ok(id) => id,
 		Err(_) => {
-			game.dialog.message("problem accessing the save file", 0);
+			game.diary.add_entry("problem accessing the save file");
 			return false;
 		}
 	};
@@ -47,20 +46,20 @@ fn save_into_file(save_path: &str, game: &mut GameState) -> bool {
 	let save_data = SaveData::read_from_statics(file_id, game);
 	let json = serde_json::to_string_pretty(&save_data).expect("serialize data");
 	let write_failed = if let Err(_) = file.write(json.as_bytes()) {
-		game.dialog.message("write() failed, don't know why", 0);
+		game.diary.add_entry("write() failed, don't know why");
 		sound_bell();
 		true
 	} else {
 		false
 	};
 	drop(file);
-	return if write_failed {
+	if write_failed {
 		delete_file(&save_path);
 		false
 	} else {
 		clean_up("", &mut game.player);
 		true
-	};
+	}
 }
 
 fn expand_tilde(file: &str) -> String {
@@ -127,7 +126,7 @@ pub fn restore(file_path: &str, game: &mut GameState) -> bool {
 	}
 
 	ring_stats(false, game);
-	return true;
+	true
 }
 
 fn has_been_touched(saved_time: &RogueTime, mod_time: &RogueTime) -> bool {

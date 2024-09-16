@@ -4,19 +4,19 @@ use rand::thread_rng;
 use crate::hit::{get_hit_chance, get_weapon_damage, mon_damage};
 use crate::init::GameState;
 use crate::level::DungeonCell;
-use crate::resources::keyboard::CANCEL_CHAR;
-use crate::monster::{MonsterIndex, mv_aquatars};
+use crate::monster::{mv_aquatars, MonsterIndex};
 use crate::motion::{get_dir_or_cancel, is_passable};
-use crate::objects::{Object, ObjectId, place_at};
-use crate::pack::{CURSE_MESSAGE, pack_letter, unwear, unwield};
+use crate::objects::{place_at, Object, ObjectId};
+use crate::pack::{pack_letter, unwear, unwield, CURSE_MESSAGE};
 use crate::player::Player;
-use crate::prelude::*;
 use crate::prelude::item_usage::NOT_USED;
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Weapons;
+use crate::prelude::*;
 use crate::r#use::vanish;
 use crate::random::{get_rand, rand_percent};
 use crate::render_system::animation;
+use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::un_put_hand;
 use crate::throw::Motion::{Down, DownLeft, DownRight, Left, Right, Same, Up, UpLeft, UpRight};
 use crate::weapons::constants::ARROW;
@@ -54,7 +54,6 @@ impl GameState {
 
 pub fn throw(game: &mut GameState) {
 	let dir = get_dir_or_cancel(game);
-	game.dialog.clear_message();
 	if dir == CANCEL_CHAR {
 		return;
 	}
@@ -62,15 +61,14 @@ pub fn throw(game: &mut GameState) {
 	if wch == CANCEL_CHAR {
 		return;
 	}
-	game.dialog.clear_message();
 	match game.player.object_id_with_letter(wch) {
 		None => {
-			game.dialog.message("no such item.", 0);
+			game.diary.add_entry("no such item.");
 			return;
 		}
 		Some(obj_id) => {
 			if game.player.check_object(obj_id, |it| it.is_being_used() && it.is_cursed()) {
-				game.dialog.message(CURSE_MESSAGE, 0);
+				game.diary.add_entry(CURSE_MESSAGE);
 				return;
 			}
 			if game.player.check_object(obj_id, |it| it.is_being_wielded() && it.quantity <= 1) {
@@ -148,7 +146,7 @@ fn throw_at_monster(mon_id: u64, obj_id: ObjectId, game: &mut GameState) -> bool
 		};
 		mon_damage(mon_id, damage, game);
 	}
-	return true;
+	true
 }
 
 fn rogue_weapon_is_bow(player: &Player) -> bool {
@@ -191,7 +189,7 @@ fn simulate_throw(motion: Motion, game: &GameState) -> ThrowEnding {
 		}
 	}
 	let landing_spot = *flight_path.last().expect("spot in flight path");
-	return ThrowEnding::LandsOnGround { landing_spot, flight_path, rogue_spot };
+	ThrowEnding::LandsOnGround { landing_spot, flight_path, rogue_spot }
 }
 
 pub enum ThrowEnding {
@@ -249,7 +247,7 @@ fn flop_object_from_spot(obj_id: ObjectId, spot: DungeonSpot, game: &mut GameSta
 	} else {
 		let obj_name = game.player.to_object_name_with_quantity(obj_id, 1);
 		let msg = format!("the {}vanishes as it hits the ground", obj_name);
-		game.dialog.message(&msg, 0);
+		game.diary.add_entry(&msg);
 	}
 }
 

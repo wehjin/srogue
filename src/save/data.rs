@@ -45,7 +45,6 @@ impl SaveData {
 		game.ground = self.ground;
 		game.mash = self.mash;
 		game.player = self.player;
-		game.dialog.reset();
 		game.level = self.level;
 	}
 }

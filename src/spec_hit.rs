@@ -60,13 +60,13 @@ pub fn rust(mon_id: Option<u64>, game: &mut GameState) {
 	if armor.is_protected != 0 || player_has_maintain_armor {
 		if let Some(mon_id) = mon_id {
 			if !game.mash.monster_flags(mon_id).rust_vanished {
-				game.dialog.message("the rust vanishes instantly", 0);
+				game.diary.add_entry("the rust vanishes instantly");
 				game.mash.monster_flags_mut(mon_id).rust_vanished = true;
 			}
 		}
 	} else {
 		armor.d_enchant -= 1;
-		game.dialog.message("your armor weakens", 0);
+		game.diary.add_entry("your armor weakens");
 		game.stats_changed = true;
 	}
 }
@@ -83,7 +83,7 @@ fn freeze(mon_id: u64, game: &mut GameState) {
 	if freeze_percent > 10 {
 		game.mash.monster_flags_mut(mon_id).freezing_rogue = true;
 		game.player.interrupt_and_slurp();
-		game.dialog.message("you are frozen", 1);
+		game.diary.add_entry("you are frozen");
 
 		let n = get_rand(4, 8);
 		for _ in 0..n {
@@ -96,7 +96,7 @@ fn freeze(mon_id: u64, game: &mut GameState) {
 			killed_by(Ending::Hypothermia, game);
 		}
 		game.player.interrupt_and_slurp();
-		game.dialog.message(YOU_CAN_MOVE_AGAIN, 1);
+		game.diary.add_entry(YOU_CAN_MOVE_AGAIN);
 		game.mash.monster_flags_mut(mon_id).freezing_rogue = false;
 	}
 }
@@ -109,7 +109,7 @@ fn steal_gold(mon_id: u64, game: &mut GameState) {
 	let cur_depth = game.player.cur_depth as usize;
 	let amount = get_rand(cur_depth * 10, cur_depth * 30).min(game.player.rogue.gold);
 	game.player.rogue.gold -= amount;
-	game.dialog.message("your purse feels lighter", 0);
+	game.diary.add_entry("your purse feels lighter");
 	game.stats_changed = true;
 	disappear(mon_id, game);
 }
@@ -138,7 +138,7 @@ fn steal_item(mon_id: u64, game: &mut GameState) {
 				};
 				format!("she stole {}", obj_desc)
 			};
-			game.dialog.message(&msg, 0);
+			game.diary.add_entry(&msg);
 			vanish(obj_id, false, game);
 			disappear(mon_id, game);
 		}
@@ -208,7 +208,7 @@ fn try_to_cough(row: i64, col: i64, obj: &Object, game: &mut GameState) -> bool 
 		game.render_spot(DungeonSpot { row, col });
 		return true;
 	}
-	return false;
+	false
 }
 
 pub fn seek_gold(mon_id: u64, game: &mut GameState) -> bool {
@@ -244,7 +244,7 @@ pub fn seek_gold(mon_id: u64, game: &mut GameState) -> bool {
 			}
 		}
 	}
-	return false;
+	false
 }
 
 fn gold_at(row: i64, col: i64, level: &Level, ground: &ObjectPack) -> bool {
@@ -255,7 +255,7 @@ fn gold_at(row: i64, col: i64, level: &Level, ground: &ObjectPack) -> bool {
 			}
 		}
 	}
-	return false;
+	false
 }
 
 pub fn check_imitator(mon_id: u64, game: &mut GameState) -> bool {
@@ -267,13 +267,12 @@ pub fn check_imitator(mon_id: u64, game: &mut GameState) -> bool {
 			let mon_name = mon_name(monster, &game.player, &game.level);
 			let mon_spot = monster.spot;
 			game.render_spot(mon_spot);
-			game.dialog.clear_message();
 			game.player.interrupt_and_slurp();
-			game.dialog.message(&format!("wait, that's a {mon_name}!"), 1);
+			game.diary.add_entry(&format!("wait, that's a {mon_name}!"));
 		}
 		return true;
 	}
-	return false;
+	false
 }
 
 pub fn imitating(row: usize, col: usize, mash: &MonsterMash, level: &Level) -> bool {
@@ -284,7 +283,7 @@ pub fn imitating(row: usize, col: usize, mash: &MonsterMash, level: &Level) -> b
 			}
 		}
 	}
-	return false;
+	false
 }
 
 fn sting(mon_id: u64, game: &mut GameState) {
@@ -301,7 +300,7 @@ fn sting(mon_id: u64, game: &mut GameState) {
 	}
 	if rand_percent(sting_chance as usize) {
 		let name = mon_name(game.mash.monster(mon_id), &game.player, &game.level);
-		game.dialog.message(&format!("the {}'s bite has weakened you", name), 0);
+		game.diary.add_entry(&format!("the {}'s bite has weakened you", name));
 		game.player.rogue.str_current -= 1;
 		game.stats_changed = true;
 	}
@@ -334,7 +333,7 @@ fn drain_life(game: &mut GameState) {
 
 	let n = get_rand(1, 3);             /* 1 Hp, 2 Str, 3 both */
 	if n != 2 || !game.player.ring_effects.has_sustain_strength() {
-		game.dialog.message("you feel weaker", 0);
+		game.diary.add_entry("you feel weaker");
 	}
 	if n != 2 {
 		let drain = 1;
@@ -370,11 +369,11 @@ pub fn m_confuse(mon_id: u64, game: &mut GameState) -> bool {
 		monster.m_flags.confuses = false;
 		let msg = format!("the gaze of the {} has confused you", mon_name(monster, &game.player, &game.level));
 		game.player.interrupt_and_slurp();
-		game.dialog.message(&msg, 1);
+		game.diary.add_entry(&msg);
 		confuse(&mut game.player);
 		return true;
 	}
-	return false;
+	false
 }
 
 pub fn flame_broil(mon_id: u64, game: &mut GameState) -> bool {
@@ -391,5 +390,5 @@ pub fn flame_broil(mon_id: u64, game: &mut GameState) -> bool {
 		animate_flame_broil(&path);
 	}
 	mon_hit(mon_id, Some(FLAME_NAME), true, game);
-	return true;
+	true
 }

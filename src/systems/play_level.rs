@@ -1,7 +1,7 @@
 use crate::init::GameState;
 use crate::render_system;
 use crate::render_system::RenderAction;
-use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
+use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::state::input::{KEY_REST, KEY_SEARCH};
 use crate::state::player::PlayState;
 use crate::systems::play_level::LevelResult::CleanedUp;
@@ -29,7 +29,11 @@ pub fn play_level(game: &mut GameState) -> LevelResult {
 			return CleanedUp(exit.to_string());
 		}
 		let next_state = match player_state {
-			PlayState::Idle => when_idle(game),
+			PlayState::Idle => match play_once(None, game) {
+				OnceResult::Leaving(ending) => PlayState::Leaving(ending),
+				OnceResult::Counting(digits) => PlayState::Counting(digits),
+				OnceResult::Idle => PlayState::Idle,
+			},
 			PlayState::Counting(digits) => when_counting(digits),
 			PlayState::Busy { key_code, completed, remaining } => {
 				when_busy(key_code, completed, remaining, game)
@@ -37,14 +41,6 @@ pub fn play_level(game: &mut GameState) -> LevelResult {
 			PlayState::Leaving(ending) => return ending.clone(),
 		};
 		player_state = next_state;
-	}
-}
-
-fn when_idle(game: &mut GameState) -> PlayState {
-	match play_once(None, game) {
-		OnceResult::Leaving(ending) => PlayState::Leaving(ending),
-		OnceResult::Counting(digits) => PlayState::Counting(digits),
-		OnceResult::Idle => PlayState::Idle,
 	}
 }
 

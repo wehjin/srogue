@@ -50,13 +50,13 @@ pub fn unhallucinate(game: &mut GameState) {
 	game.player.halluc.clear();
 	relight(game);
 	game.player.interrupt_and_slurp();
-	game.dialog.message("everything looks SO boring now", 1);
+	game.diary.add_entry("everything looks SO boring now");
 }
 
 pub fn unblind(game: &mut GameState) {
 	game.player.blind.clear();
 	game.player.interrupt_and_slurp();
-	game.dialog.message("the veil of darkness lifts", 1);
+	game.diary.add_entry("the veil of darkness lifts");
 	relight(game);
 	if game.player.halluc.is_active() {
 		show_hallucination(game);
@@ -87,7 +87,7 @@ pub fn take_a_nap(game: &mut GameState) {
 		mv_mons(game);
 		backend::await_frame()
 	}
-	game.dialog.message(YOU_CAN_MOVE_AGAIN, 0);
+	game.diary.add_entry(YOU_CAN_MOVE_AGAIN);
 }
 
 pub fn get_ench_color(player: &Player) -> &'static str {
@@ -108,5 +108,5 @@ pub fn unconfuse(game: &mut GameState) {
 	let feeling = if game.player.halluc.is_active() { "trippy" } else { "confused" };
 	let msg = format!("you feel less {} now", feeling);
 	game.player.interrupt_and_slurp();
-	game.dialog.message(&msg, 1);
+	game.diary.add_entry(&msg);
 }

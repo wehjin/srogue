@@ -46,13 +46,19 @@ pub mod settings;
 pub(crate) mod files;
 pub mod actions;
 
-pub fn main() {
+pub fn main() -> anyhow::Result<()> {
+	fern::Dispatch::new()
+		.chain(std::io::stderr())
+		.chain(fern::log_file("srogue.log")?)
+		.apply()?;
+	log_panics::init();
+
 	let settings = match settings::load() {
 		Ok(settings) => settings,
 		Err(e) => match e {
 			SettingsError::LoginName => {
 				println!("Hey!  Who are you?");
-				return;
+				return Ok(());
 			}
 		},
 	};
@@ -66,19 +72,19 @@ pub fn main() {
 						println!("must be played on {} x {} or better screen", min_rows, min_cols);
 					}
 				}
-				return;
+				return Ok(());
 			}
 			InitError::BadRestore(exit) => {
 				if let Some(exit) = exit {
 					eprintln!("\n{}", exit);
 				}
-				return;
+				return Ok(());
 			}
 		},
 	};
 	let (mut game, console, mut restored) = match result {
 		InitResult::ScoreOnly(_player, _console, _settings) => {
-			return;
+			return Ok(());
 		}
 		InitResult::Restored(game, console) => (game, console, true),
 		InitResult::Initialized(game, console) => (game, console, false),
@@ -114,4 +120,6 @@ pub fn main() {
 	if let Some(exit) = exit_line {
 		println!("\n{}", exit);
 	}
+
+	Ok(())
 }

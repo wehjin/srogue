@@ -7,14 +7,14 @@ pub use object_id::*;
 pub use object_pack::*;
 use ObjectWhat::{Armor, Potion, Scroll, Weapon};
 
-use crate::armors::ArmorKind;
 use crate::armors::constants::{ARMORS, PLATE, SPLINT};
+use crate::armors::ArmorKind;
 use crate::hit::DamageStat;
 use crate::init::GameState;
 use crate::inventory::get_obj_desc;
 use crate::level::constants::MAX_ROOM;
-use crate::level::Level;
 use crate::level::materials::{CellMaterial, FloorFixture, TunnelFixture, Visibility};
+use crate::level::Level;
 use crate::message::sound_bell;
 use crate::monster::party_monsters;
 use crate::objects::note_tables::NoteTables;
@@ -22,16 +22,17 @@ use crate::odds::GOLD_PERCENT;
 use crate::pack::MAX_PACK_COUNT;
 use crate::player::Player;
 use crate::potions::colors::PotionColor;
-use crate::potions::kind::{PotionKind, POTIONS};
 use crate::potions::kind::PotionKind::{Blindness, Confusion, DetectMonster, DetectObjects, ExtraHealing, Hallucination, Healing, IncreaseStrength, Levitation, Poison, RaiseLevel, RestoreStrength, SeeInvisible};
-use crate::prelude::{DungeonSpot, MAX_ARMOR};
+use crate::potions::kind::{PotionKind, POTIONS};
 use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::item_usage::{BEING_USED, BEING_WIELDED, BEING_WORN, NOT_USED, ON_EITHER_HAND, ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
+use crate::prelude::{DungeonSpot, MAX_ARMOR};
 use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::resources::diary;
 use crate::resources::input_line::get_input_line;
-use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
+use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::ring::constants::RINGS;
 use crate::ring::gr_ring;
 use crate::ring::ring_gem::RingGem;
@@ -547,7 +548,7 @@ pub fn alloc_object() -> Object {
 	obj.picked_up = 0;
 	obj.in_use_flags = NOT_USED;
 	obj.identified = false;
-	return obj;
+	obj
 }
 
 pub fn make_party(level_depth: isize, game: &mut GameState) {
@@ -592,10 +593,10 @@ pub fn rand_place(obj: Object, game: &mut GameState) {
 
 pub fn new_object_for_wizard(game: &mut GameState) {
 	if game.player.pack_weight_with_new_object(None) >= MAX_PACK_COUNT {
-		game.dialog.message("pack full", 0);
+		game.diary.add_entry("pack full");
 		return;
 	}
-	game.dialog.message("type of object?", 0);
+	diary::show_prompt("type of object?", &game.diary);
 	let ch = {
 		const CHOICES: &'static str = "!?:)]=/,\x1B";
 		let mut ch: char;
@@ -612,7 +613,6 @@ pub fn new_object_for_wizard(game: &mut GameState) {
 		}
 		ch
 	};
-	game.dialog.clear_message();
 	if ch == CANCEL_CHAR {
 		return;
 	}
@@ -663,7 +663,7 @@ pub fn new_object_for_wizard(game: &mut GameState) {
 		}
 	}
 	let obj_desc = get_obj_desc(&obj, game.player.settings.fruit.to_string(), &game.player);
-	game.dialog.message(&obj_desc, 0);
+	game.diary.add_entry(&obj_desc);
 	game.player.combine_or_add_item_to_pack(obj);
 }
 
@@ -671,7 +671,7 @@ fn get_kind(max_kind: usize, game: &mut GameState) -> Option<usize> {
 	let good_kind = {
 		let good_kind;
 		loop {
-			let line = get_input_line::<String>("which kind?", None, None, false, true, &mut game.dialog);
+			let line = get_input_line::<String>("which kind?", None, None, false, true, &mut game.diary);
 			let trimmed_line = line.trim();
 			if trimmed_line.is_empty() {
 				good_kind = None;

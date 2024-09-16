@@ -23,13 +23,13 @@ pub fn quaff(game: &mut GameState) {
 	}
 	match game.player.object_id_with_letter(ch) {
 		None => {
-			game.dialog.message("no such item.", 0);
+			game.diary.add_entry("no such item.");
 			return;
 		}
 		Some(obj_id) => {
 			match game.player.expect_object(obj_id).potion_kind() {
 				None => {
-					game.dialog.message("you can't drink that", 0);
+					game.diary.add_entry("you can't drink that");
 					return;
 				}
 				Some(potion_kind) => {

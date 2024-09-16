@@ -33,11 +33,11 @@ impl GameUpdater for DropItem {
 fn drop_item(game: &mut GameState) {
 	let player_cell = game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize];
 	if player_cell.has_object() || player_cell.is_stairs() || player_cell.is_any_trap() {
-		game.dialog.message("there's already something there", 0);
+		game.diary.add_entry("there's already something there");
 		return;
 	}
 	if game.player.pack().is_empty() {
-		game.dialog.message("you have nothing to drop", 0);
+		game.diary.add_entry("you have nothing to drop");
 		return;
 	}
 	let ch = pack::pack_letter("drop what?", AllObjects, game);
@@ -46,18 +46,18 @@ fn drop_item(game: &mut GameState) {
 	}
 	match game.player.object_id_with_letter(ch) {
 		None => {
-			game.dialog.message("no such item.", 0)
+			game.diary.add_entry("no such item.")
 		}
 		Some(obj_id) => {
 			if game.player.check_object(obj_id, Object::is_being_wielded) {
 				if game.player.check_object(obj_id, Object::is_cursed) {
-					game.dialog.message(CURSE_MESSAGE, 0);
+					game.diary.add_entry(CURSE_MESSAGE);
 					return;
 				}
 				pack::unwield(&mut game.player);
 			} else if game.player.check_object(obj_id, Object::is_being_worn) {
 				if game.player.check_object(obj_id, Object::is_cursed) {
-					game.dialog.message(CURSE_MESSAGE, 0);
+					game.diary.add_entry(CURSE_MESSAGE);
 					return;
 				}
 				mv_aquatars(game);
@@ -65,7 +65,7 @@ fn drop_item(game: &mut GameState) {
 				game.stats_changed = true;
 			} else if let Some(hand) = game.player.ring_hand(obj_id) {
 				if game.player.check_ring(hand, Object::is_cursed) {
-					game.dialog.message(CURSE_MESSAGE, 0);
+					game.diary.add_entry(CURSE_MESSAGE);
 					return;
 				}
 				un_put_hand(hand, game);
@@ -82,7 +82,7 @@ fn drop_item(game: &mut GameState) {
 			};
 			let obj_desc = get_obj_desc(&place_obj, game.player.settings.fruit.to_string(), &game.player);
 			place_at(place_obj, game.player.rogue.row, game.player.rogue.col, &mut game.level, &mut game.ground);
-			game.dialog.message(&format!("dropped {}", obj_desc), 0);
+			game.diary.add_entry(&format!("dropped {}", obj_desc));
 			reg_move(game);
 		}
 	}
@@ -99,7 +99,6 @@ impl GameUpdater for MoveOnto {
 
 pub fn move_onto(game: &mut GameState) {
 	let ch = motion::get_dir_or_cancel(game);
-	game.dialog.clear_message();
 	if ch != CANCEL_CHAR {
 		motion::one_move_rogue(MoveDirection::from(ch), false, game);
 	}

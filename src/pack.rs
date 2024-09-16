@@ -2,15 +2,16 @@ use crate::init::GameState;
 use crate::inventory::{get_obj_desc, inventory, ObjectSource};
 use crate::message::sound_bell;
 use crate::motion::reg_move;
-use crate::objects::{Object, ObjectId, ObjectPack};
 use crate::objects::NoteStatus::{Identified, Unidentified};
+use crate::objects::{Object, ObjectId, ObjectPack};
 use crate::player::Player;
 use crate::prelude::food_kind::FRUIT;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::object_what::ObjectWhat::{Food, Potion, Scroll, Weapon};
 use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::PackFilter::{Amulets, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
-use crate::resources::keyboard::{CANCEL_CHAR, rgetchar};
+use crate::resources::diary;
+use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::scrolls::ScrollKind::ScareMonster;
 use crate::weapons::kind::WeaponKind;
 
@@ -31,7 +32,7 @@ pub enum PickUpResult {
 pub fn pick_up(row: i64, col: i64, game: &mut GameState) -> PickUpResult {
 	let obj_id = game.ground.find_id_at(row, col).expect("obj_id in level-objects at pick-up spot");
 	if game.ground.check_object(obj_id, Object::is_used_scare_monster_scroll) {
-		game.dialog.message("the scroll turns to dust as you pick it up", 0);
+		game.diary.add_entry("the scroll turns to dust as you pick it up");
 		game.level.dungeon[row as usize][col as usize].clear_object();
 		game.ground.remove(obj_id);
 		if game.player.notes.scrolls[ScareMonster.to_index()].status == Unidentified {
@@ -47,7 +48,7 @@ pub fn pick_up(row: i64, col: i64, game: &mut GameState) -> PickUpResult {
 	} else if game.player.pack_weight_with_new_object(game.ground.object(obj_id))
 		>= MAX_PACK_COUNT {
 		game.player.interrupt_and_slurp();
-		game.dialog.message("pack too full", 1);
+		game.diary.add_entry("pack too full");
 		PickUpResult::PackTooFull
 	} else {
 		game.level.dungeon[row as usize][col as usize].clear_object();
@@ -102,6 +103,7 @@ pub fn next_avail_ichar(player: &Player) -> char {
 }
 
 pub fn wait_for_ack() {
+	// TODO: Slurp and defer interrupts like in original message function.
 	loop {
 		if rgetchar() == ' ' {
 			break;
@@ -111,12 +113,12 @@ pub fn wait_for_ack() {
 
 pub fn pack_letter(prompt: &str, filter: PackFilter, game: &mut GameState) -> char {
 	if !mask_pack(&game.player.rogue.pack, filter.clone()) {
-		game.dialog.message("nothing appropriate", 0);
+		game.diary.add_entry("nothing appropriate");
 		return CANCEL_CHAR;
 	}
 
 	loop {
-		game.dialog.message(prompt, 0);
+		diary::show_prompt(prompt, &game.diary);
 		let pack_op = {
 			let mut pack_op;
 			loop {
@@ -130,7 +132,6 @@ pub fn pack_letter(prompt: &str, filter: PackFilter, game: &mut GameState) -> ch
 			}
 			pack_op.expect("some pack operation")
 		};
-		game.dialog.clear_message();
 		match pack_op {
 			PackOp::List(filter) => {
 				inventory(filter, ObjectSource::Player, game);
@@ -219,7 +220,7 @@ pub fn mask_pack(pack: &ObjectPack, mask: PackFilter) -> bool {
 			return true;
 		}
 	}
-	return false;
+	false
 }
 
 pub enum PackOp {
@@ -251,7 +252,7 @@ pub fn has_amulet(player: &Player) -> bool {
 
 pub fn kick_into_pack(game: &mut GameState) {
 	if !game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].has_object() {
-		game.dialog.message("nothing here", 0);
+		game.diary.add_entry("nothing here");
 	} else {
 		let settings = game.player.settings.clone();
 		match pick_up(game.player.rogue.row, game.player.rogue.col, game) {
@@ -260,11 +261,11 @@ pub fn kick_into_pack(game: &mut GameState) {
 			}
 			PickUpResult::AddedToGold(obj) => {
 				let msg = get_obj_desc(&obj, settings.fruit.to_string(), &game.player);
-				game.dialog.message(&msg, 0);
+				game.diary.add_entry(&msg);
 			}
 			PickUpResult::AddedToPack { added_id: obj_id, .. } => {
 				let msg = game.player.get_obj_desc(obj_id);
-				game.dialog.message(&msg, 0);
+				game.diary.add_entry(&msg);
 			}
 			PickUpResult::PackTooFull => {
 				// No message, pick_up displays a message

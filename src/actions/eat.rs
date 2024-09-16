@@ -27,12 +27,12 @@ fn eat(game: &mut GameState) {
 	}
 	match game.player.object_id_with_letter(ch) {
 		None => {
-			game.dialog.message("no such item.", 0);
+			game.diary.add_entry("no such item.");
 			return;
 		}
 		Some(obj_id) => {
 			if game.player.object_what(obj_id) != Food {
-				game.dialog.message("you can't eat that", 0);
+				game.diary.add_entry("you can't eat that");
 				return;
 			}
 			let kind = game.player.object_kind(obj_id);
@@ -42,10 +42,10 @@ fn eat(game: &mut GameState) {
 				} else {
 					format!("my, that was a yummy {}", &game.player.settings.fruit)
 				};
-				game.dialog.message(&msg, 0);
+				game.diary.add_entry(&msg);
 				get_rand(900, 1100)
 			} else {
-				game.dialog.message("yuk, that food tasted awful", 0);
+				game.diary.add_entry("yuk, that food tasted awful");
 				add_exp(2, true, game);
 				get_rand(700, 900)
 			};

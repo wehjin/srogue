@@ -58,7 +58,7 @@ pub(crate) fn search(kind: SearchKind, game: &mut GameState) {
 				if game.cell_at(spot).is_any_trap() {
 					let msg = trap::trap_at(spot.row as usize, spot.col as usize, &game.level).name();
 					game.player.interrupt_and_slurp();
-					game.dialog.message(msg, 1);
+					game.diary.add_entry(msg);
 				}
 			} else {
 				unlucky_spots.push(spot);
