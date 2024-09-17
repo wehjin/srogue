@@ -3,9 +3,9 @@ use std::ops::RangeInclusive;
 use serde::{Deserialize, Serialize};
 
 use crate::init::GameState;
-use crate::level::{DungeonCell, Level, same_col, same_row};
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM};
 use crate::level::materials::{CellMaterial, FloorFixture, TunnelFixture, Visibility};
+use crate::level::{same_col, same_row, DungeonCell, Level};
 use crate::monster::Monster;
 use crate::motion::can_move;
 use crate::objects::{gr_object, place_at};
@@ -13,8 +13,8 @@ use crate::player::{Player, RoomMark};
 use crate::prelude::*;
 use crate::random::get_rand;
 use crate::render_system::RenderAction::RoomAndPlayer;
-use crate::room::DoorDirection::{Down, Left, Right, Up};
 use crate::room::room_visitor::RoomVisitor;
+use crate::room::DoorDirection::{Down, Left, Right, Up};
 
 #[derive(Copy, Clone, Default, Serialize, Deserialize)]
 pub struct Dr {
@@ -118,7 +118,7 @@ impl DoorDirection {
 	}
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub struct RoomBounds {
 	pub top: i64,
 	pub right: i64,
