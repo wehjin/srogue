@@ -1,11 +1,10 @@
 use crate::level::constants::{DCOLS, DROWS};
 use crate::random::{get_rand, rand_percent};
 use crate::resources::level::design::{Design, SECTOR_DESIGNS};
-use crate::resources::level::room::{RoomId, LITTLE_ROOMS};
+use crate::resources::level::room::RoomId;
 use crate::resources::level::sector::{SectorBounds, ALL_SECTORS, COL0, COL3, ROW0, ROW3};
 use crate::room::RoomBounds;
 use rand::seq::SliceRandom;
-use serde::Deserialize;
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -32,7 +31,7 @@ pub mod room;
 pub mod sector;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-enum LevelSprite {
+pub enum LevelSprite {
 	None,
 	HorizWall,
 	VertWall,
@@ -204,11 +203,6 @@ impl LevelMaze {
 #[derive(Debug)]
 pub struct LevelRoom {
 	pub bounds: RoomBounds,
-}
-
-fn get_random_little_room() -> RoomId {
-	let index = get_rand(0usize, LITTLE_ROOMS.len() - 1);
-	LITTLE_ROOMS[index]
 }
 
 fn get_random_level_design(party_level: bool) -> Design {
