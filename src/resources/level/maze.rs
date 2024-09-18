@@ -1,6 +1,6 @@
 use crate::random::{get_rand, rand_percent};
-use crate::resources::level::size::RoomSpot;
 use crate::resources::level::size::LevelSize;
+use crate::resources::level::size::RoomSpot;
 use crate::room::RoomBounds;
 use rand::prelude::SliceRandom;
 use std::collections::HashSet;
@@ -109,6 +109,32 @@ fn maze_steps_with_random_shuffle(percentage: usize) -> Vec<MazeStep> {
 		shuffled.shuffle(&mut rand::thread_rng());
 	}
 	shuffled
+}
+
+pub fn hide_random_maze_tunnels(count: usize, current_level: usize, maze: &mut LevelMaze) {
+	if current_level <= 2 {
+		return;
+	}
+	let (height, width) = maze.bounds.height_width();
+	if height >= 5 || width >= 5 {
+		let search_bounds = {
+			let (row_cut, col_cut) = (
+				if height >= 2 { 1u64 } else { 0 },
+				if width >= 2 { 1u64 } else { 0 },
+			);
+			maze.bounds.inset(row_cut, col_cut)
+		};
+		for _ in 0..count {
+			const MAX_ATTEMPTS: usize = 10;
+			'attempts: for _ in 0..MAX_ATTEMPTS {
+				let (search_row, search_col) = (search_bounds.to_random_row(), search_bounds.to_random_col());
+				if maze.check_tunnel(search_row, search_col) {
+					maze.set_concealed(search_row, search_col);
+					break 'attempts;
+				}
+			}
+		}
+	}
 }
 
 const ALL_MAZE_STEPS: &[MazeStep] = &[MazeStep::Up, MazeStep::Down, MazeStep::Left, MazeStep::Right];

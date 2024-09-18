@@ -1,7 +1,7 @@
 use crate::level::constants::{DCOLS, DROWS};
 use crate::random::{get_rand, rand_percent};
 use crate::resources::level::design::{Design, SECTOR_DESIGNS};
-use crate::resources::level::maze::add_random_maze_tunnels;
+use crate::resources::level::maze::{add_random_maze_tunnels, hide_random_maze_tunnels};
 use crate::resources::level::room::RoomId;
 use crate::resources::level::sector::{SectorBounds, ALL_SECTORS, COL0, COL3, ROW0, ROW3};
 use crate::room::RoomBounds;
@@ -137,32 +137,6 @@ fn make_level(current_level: usize, party_level: bool) -> DungeonLevel {
 		}
 	}
 	DungeonLevel { rooms, mazes }
-}
-
-pub fn hide_random_maze_tunnels(count: usize, current_level: usize, maze: &mut LevelMaze) {
-	if current_level <= 2 {
-		return;
-	}
-	let (height, width) = maze.bounds.height_width();
-	if height >= 5 || width >= 5 {
-		let search_bounds = {
-			let (row_cut, col_cut) = (
-				if height >= 2 { 1u64 } else { 0 },
-				if width >= 2 { 1u64 } else { 0 },
-			);
-			maze.bounds.inset(row_cut, col_cut)
-		};
-		for _ in 0..count {
-			const MAX_ATTEMPTS: usize = 10;
-			'attempts: for _ in 0..MAX_ATTEMPTS {
-				let (search_row, search_col) = (search_bounds.to_random_row(), search_bounds.to_random_col());
-				if maze.check_tunnel(search_row, search_col) {
-					maze.set_concealed(search_row, search_col);
-					break 'attempts;
-				}
-			}
-		}
-	}
 }
 
 #[derive(Debug)]
