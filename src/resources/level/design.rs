@@ -17,7 +17,7 @@ pub enum Design {
 }
 
 impl Design {
-	pub fn requires_sector(&self, sector: Sector) -> bool {
+	pub fn requires_room_in_sector(&self, sector: Sector) -> bool {
 		match self {
 			Design::RequireTop => sector.is_top(),
 			Design::RequireMiddle => sector.is_middle(),

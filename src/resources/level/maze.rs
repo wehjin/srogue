@@ -6,7 +6,7 @@ use rand::prelude::SliceRandom;
 use std::collections::HashSet;
 use std::ops::RangeInclusive;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LevelMaze {
 	pub bounds: RoomBounds,
 	pub width: usize,
