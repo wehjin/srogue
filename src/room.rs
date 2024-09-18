@@ -150,6 +150,8 @@ impl RoomBounds {
 }
 
 impl RoomBounds {
+	pub fn random_col(&self) -> i64 { get_rand(self.left, self.right) }
+	pub fn random_row(&self) -> i64 { get_rand(self.top, self.bottom) }
 	pub fn to_random_spot(&self) -> DungeonSpot {
 		let row = get_rand(self.top, self.bottom);
 		let col = get_rand(self.left, self.right);

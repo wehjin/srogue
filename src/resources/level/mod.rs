@@ -30,7 +30,10 @@ fn make_level(current_level: usize, party_level: bool) -> DungeonLevel {
 		rooms.insert(RoomId::Big, LevelRoom { bounds });
 		level_map = map;
 	} else {
-		let level = PlainLevel::new().add_rooms(design).add_mazes(current_level)
+		let level = PlainLevel::new(current_level)
+			.add_rooms(design)
+			.add_mazes()
+			.connect_spaces()
 			;
 		for sector in ALL_SECTORS {
 			let space = level.space(sector);

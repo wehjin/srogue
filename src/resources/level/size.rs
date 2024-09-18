@@ -26,7 +26,8 @@ impl RoomSpot {
 	pub fn as_col(&self) -> &RoomSize { &self.1 }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Default)]
 pub struct LevelSize(pub isize);
 
 impl LevelSize {
@@ -45,5 +46,20 @@ impl LevelSize {
 	}
 	pub fn to_room_col(&self, room_bounds: &RoomBounds) -> RoomSize {
 		RoomSize(self.0 - room_bounds.left as isize)
+	}
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Default)]
+pub struct LevelSpot {
+	pub row: LevelSize,
+	pub col: LevelSize,
+}
+
+impl LevelSpot {
+	pub fn from_i64(row: i64, col: i64) -> Self {
+		Self {
+			row: LevelSize(row as isize),
+			col: LevelSize(col as isize),
+		}
 	}
 }
