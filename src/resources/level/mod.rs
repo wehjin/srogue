@@ -1,36 +1,25 @@
 use crate::random::{get_rand, rand_percent};
 use crate::resources::level::design::{Design, SECTOR_DESIGNS};
+use crate::resources::level::map::LevelMap;
 use crate::resources::level::maze::{add_random_maze_tunnels, hide_random_maze_tunnels};
 use crate::resources::level::room::RoomId;
 use crate::resources::level::sector::{SectorBounds, ALL_SECTORS, COL0, COL3, ROW0, ROW3};
 use crate::room::RoomBounds;
 use maze::LevelMaze;
-use report::LevelReport;
 use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct DungeonLevel {
 	pub rooms: HashMap<RoomId, LevelRoom>,
 	pub mazes: HashMap<RoomId, LevelMaze>,
-}
-
-impl DungeonLevel {
-	pub fn to_map(&self) -> LevelReport {
-		let mut map = LevelReport::new();
-		for (_id, room) in &self.rooms {
-			map.put_walls_and_floor(&room.bounds);
-		}
-		for (_id, maze) in &self.mazes {
-			map.put_tunnels(maze);
-		}
-		map
-	}
+	pub map: LevelMap,
 }
 
 fn make_level(current_level: usize, party_level: bool) -> DungeonLevel {
 	let mut rooms = HashMap::<RoomId, LevelRoom>::new();
 	let mut mazes = HashMap::<RoomId, LevelMaze>::new();
 
+	let mut map = LevelMap::new();
 	let design = get_random_level_design(party_level);
 	if design == Design::BigRoom {
 		let bounds = RoomBounds {
@@ -39,6 +28,7 @@ fn make_level(current_level: usize, party_level: bool) -> DungeonLevel {
 			left: get_rand(COL0, 10),
 			right: get_rand(COL3 - 11, COL3 - 1),
 		};
+		map.put_walls_and_floor(&bounds);
 		rooms.insert(RoomId::Big, LevelRoom { bounds });
 	} else {
 		let mut maze_candidates = HashMap::<RoomId, RoomBounds>::new();
@@ -48,6 +38,7 @@ fn make_level(current_level: usize, party_level: bool) -> DungeonLevel {
 			if !design.requires_sector(sector) && rand_percent(40) {
 				maze_candidates.insert(room_id, bounds);
 			} else {
+				map.put_walls_and_floor(&bounds);
 				rooms.insert(room_id, LevelRoom { bounds });
 			}
 		}
@@ -59,12 +50,13 @@ fn make_level(current_level: usize, party_level: bool) -> DungeonLevel {
 					let mut maze = LevelMaze::new(bounds.clone());
 					add_random_maze_tunnels(&mut maze);
 					hide_random_maze_tunnels(get_rand(0, 2), current_level, &mut maze);
+					map.put_maze(&maze);
 					mazes.insert(id, maze);
 				}
 			}
 		}
 	}
-	DungeonLevel { rooms, mazes }
+	DungeonLevel { rooms, mazes, map }
 }
 
 #[derive(Debug)]
@@ -97,14 +89,13 @@ mod tests {
 	#[test]
 	fn make_level_works() {
 		let level = make_level(16, false);
-		let map = level.to_map();
-		map.print();
+		level.map.print();
 	}
 }
 
 pub mod design;
+pub mod map;
 pub mod maze;
-pub mod report;
 pub mod room;
 pub mod sector;
 pub mod size;
