@@ -106,7 +106,7 @@ impl LevelMap {
 			let line = row.iter().map(|sprite| {
 				match sprite {
 					Feature::None => ' ',
-					Feature::HorizWall => '=',
+					Feature::HorizWall => '-',
 					Feature::VertWall => '|',
 					Feature::Floor => '.',
 					Feature::Tunnel => '#',
