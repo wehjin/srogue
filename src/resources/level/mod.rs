@@ -2,10 +2,11 @@ use crate::level::constants::{DCOLS, DROWS};
 use crate::random::{get_rand, rand_percent};
 use crate::resources::level::design::{Design, SECTOR_DESIGNS};
 use crate::resources::level::maze::add_random_maze_tunnels;
-use crate::resources::level::room::{RoomId, RoomSize};
+use crate::resources::level::room::RoomId;
 use crate::resources::level::sector::{SectorBounds, ALL_SECTORS, COL0, COL3, ROW0, ROW3};
 use crate::room::RoomBounds;
 use maze::LevelMaze;
+use size::LevelSize;
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -31,6 +32,7 @@ pub mod design;
 pub mod maze;
 pub mod room;
 pub mod sector;
+pub mod size;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum LevelSprite {
@@ -162,27 +164,6 @@ pub fn hide_random_maze_tunnels(count: usize, current_level: usize, maze: &mut L
 		}
 	}
 }
-
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
-pub struct LevelSize(pub isize);
-impl LevelSize {
-	pub fn from_usize(value: usize) -> Self { Self(value as isize) }
-	pub fn to_usize(&self) -> usize { self.0 as usize }
-}
-impl LevelSize {
-	pub fn from_i64(value: i64) -> Self { Self(value as isize) }
-	pub fn i64(&self) -> i64 { self.0 as i64 }
-}
-impl LevelSize {
-	pub fn to_room_row(&self, room_bounds: &RoomBounds) -> RoomSize {
-		RoomSize(self.0 - room_bounds.top as isize)
-	}
-	pub fn to_room_col(&self, room_bounds: &RoomBounds) -> RoomSize {
-		RoomSize(self.0 - room_bounds.left as isize)
-	}
-}
-
 
 #[derive(Debug)]
 pub struct LevelRoom {

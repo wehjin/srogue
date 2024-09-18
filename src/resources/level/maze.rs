@@ -1,6 +1,6 @@
 use crate::random::{get_rand, rand_percent};
-use crate::resources::level::room::RoomSpot;
-use crate::resources::level::LevelSize;
+use crate::resources::level::size::RoomSpot;
+use crate::resources::level::size::LevelSize;
 use crate::room::RoomBounds;
 use rand::prelude::SliceRandom;
 use std::collections::HashSet;

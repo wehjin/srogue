@@ -13,7 +13,7 @@ use crate::player::{Player, RoomMark};
 use crate::prelude::*;
 use crate::random::get_rand;
 use crate::render_system::RenderAction::RoomAndPlayer;
-use crate::resources::level::LevelSize;
+use crate::resources::level::size::LevelSize;
 use crate::room::room_visitor::RoomVisitor;
 use crate::room::DoorDirection::{Down, Left, Right, Up};
 
