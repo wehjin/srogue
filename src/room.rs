@@ -13,6 +13,7 @@ use crate::player::{Player, RoomMark};
 use crate::prelude::*;
 use crate::random::get_rand;
 use crate::render_system::RenderAction::RoomAndPlayer;
+use crate::resources::level::LevelSize;
 use crate::room::room_visitor::RoomVisitor;
 use crate::room::DoorDirection::{Down, Left, Right, Up};
 
@@ -127,13 +128,32 @@ pub struct RoomBounds {
 }
 
 impl RoomBounds {
+	pub fn area(&self) -> i64 { self.height() * self.width() }
+	pub fn width(&self) -> i64 { self.right - self.left + 1 }
+	pub fn height(&self) -> i64 { self.bottom - self.top + 1 }
+	pub fn height_width(&self) -> (i64, i64) { (self.height(), self.width()) }
+	pub fn inset(&self, row_cut: u64, col_cut: u64) -> Self {
+		let (row_cut, col_cut) = (row_cut as i64, col_cut as i64);
+		Self {
+			top: self.top + row_cut,
+			right: self.right - col_cut,
+			bottom: self.bottom - row_cut,
+			left: self.left + col_cut,
+		}
+	}
+	pub fn to_random_row(&self) -> LevelSize {
+		LevelSize(get_rand(self.top, self.bottom) as isize)
+	}
+	pub fn to_random_col(&self) -> LevelSize {
+		LevelSize(get_rand(self.left, self.right) as isize)
+	}
+}
+
+impl RoomBounds {
 	pub fn to_random_spot(&self) -> DungeonSpot {
 		let row = get_rand(self.top, self.bottom);
 		let col = get_rand(self.left, self.right);
 		(row, col).into()
-	}
-	pub fn area(&self) -> i64 {
-		(self.bottom - self.top + 1) * (self.right - self.left + 1)
 	}
 	pub fn cell_material_for_spot(&self, spot: &DungeonSpot) -> CellMaterial {
 		if spot.row == self.top || spot.row == self.bottom {

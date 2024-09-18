@@ -1,10 +1,11 @@
 use crate::level::constants::{DCOLS, DROWS};
 use crate::random::{get_rand, rand_percent};
 use crate::resources::level::design::{Design, SECTOR_DESIGNS};
-use crate::resources::level::room::RoomId;
+use crate::resources::level::maze::add_random_maze_tunnels;
+use crate::resources::level::room::{RoomId, RoomSize};
 use crate::resources::level::sector::{SectorBounds, ALL_SECTORS, COL0, COL3, ROW0, ROW3};
 use crate::room::RoomBounds;
-use rand::seq::SliceRandom;
+use maze::LevelMaze;
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -27,6 +28,7 @@ impl DungeonLevel {
 }
 
 pub mod design;
+pub mod maze;
 pub mod room;
 pub mod sector;
 
@@ -37,6 +39,7 @@ pub enum LevelSprite {
 	VertWall,
 	Floor,
 	Tunnel,
+	HiddenTunnel,
 }
 #[derive(Debug)]
 pub struct LevelMap {
@@ -47,12 +50,15 @@ impl LevelMap {
 		Self { rows: [[LevelSprite::None; DCOLS]; DROWS] }
 	}
 	pub fn put_tunnels(&mut self, maze: &LevelMaze) {
-		for d_row in 0..maze.height {
-			let row = maze.bounds.top + d_row as i64;
-			for d_col in 0..maze.width {
-				let col = maze.bounds.left + d_col as i64;
-				if maze.tunnels[d_row][d_col] {
-					self.put_sprite(row, col, LevelSprite::Tunnel)
+		for row in maze.rows() {
+			for col in maze.cols() {
+				let (level_row, level_col) = (LevelSize::from_i64(row), LevelSize::from_i64(col));
+				if maze.check_tunnel(level_row, level_col) {
+					if maze.check_concealed(level_row, level_col) {
+						self.put_sprite(row, col, LevelSprite::HiddenTunnel)
+					} else {
+						self.put_sprite(row, col, LevelSprite::Tunnel)
+					}
 				}
 			}
 		}
@@ -83,6 +89,7 @@ impl LevelMap {
 					LevelSprite::VertWall => '|',
 					LevelSprite::Floor => '.',
 					LevelSprite::Tunnel => '#',
+					LevelSprite::HiddenTunnel => 'W',
 				}
 			}).collect::<String>();
 			println!("{}", line);
@@ -119,7 +126,9 @@ fn make_level(current_level: usize, party_level: bool) -> DungeonLevel {
 			let maze_percent = (current_level * 5) / 4 + if current_level > 15 { current_level } else { 0 };
 			for (id, bounds) in maze_candidates {
 				if rand_percent(maze_percent) {
-					let maze = LevelMaze::new(bounds);
+					let mut maze = LevelMaze::new(bounds.clone());
+					add_random_maze_tunnels(&mut maze);
+					hide_random_maze_tunnels(get_rand(0, 2), current_level, &mut maze);
 					mazes.insert(id, maze);
 				}
 			}
@@ -128,77 +137,52 @@ fn make_level(current_level: usize, party_level: bool) -> DungeonLevel {
 	DungeonLevel { rooms, mazes }
 }
 
-const ALL_TUNNEL_DIRS: &[TunnelDir] = &[TunnelDir::Up, TunnelDir::Down, TunnelDir::Left, TunnelDir::Right];
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-enum TunnelDir { Up, Down, Left, Right }
-
-impl TunnelDir {
-	pub fn derive_tunnel_spot(&self, row: usize, col: usize, maze: &LevelMaze) -> Option<(usize, usize)> {
-		if let Some((check_row, check_col)) = self.to_candidate_spot(row, col, maze) {
-			if maze.count_tunnels(check_row, check_col) == 1 {
-				Some((check_row, check_col))
-			} else {
-				None
-			}
-		} else {
-			None
-		}
+pub fn hide_random_maze_tunnels(count: usize, current_level: usize, maze: &mut LevelMaze) {
+	if current_level <= 2 {
+		return;
 	}
-	fn to_candidate_spot(&self, row: usize, col: usize, maze: &LevelMaze) -> Option<(usize, usize)> {
-		match self {
-			TunnelDir::Up => if row == 0 { None } else { Some((row - 1, col)) },
-			TunnelDir::Down => if row == maze.height - 1 { None } else { Some((row + 1, col)) },
-			TunnelDir::Left => if col == 0 { None } else { Some((row, col - 1)) },
-			TunnelDir::Right => if col == maze.width - 1 { None } else { Some((row, col + 1)) },
-		}
-	}
-}
-
-#[derive(Debug)]
-pub struct LevelMaze {
-	pub bounds: RoomBounds,
-	pub width: usize,
-	pub height: usize,
-	pub tunnels: Vec<Vec<bool>>,
-}
-
-impl LevelMaze {
-	pub fn new(bounds: RoomBounds) -> Self {
-		let height = dbg!(bounds.rows().count());
-		let width = dbg!(bounds.cols().count());
-		let mut maze = Self { bounds, width, height, tunnels: vec![vec![false; width]; height] };
-		let start_row = get_rand(1, height - 2);
-		let start_col = get_rand(1, width - 2);
-		maze.add_tunnels(start_row, start_col);
-		maze
-	}
-	fn add_tunnels(&mut self, row: usize, col: usize) {
-		self.tunnels[row][col] = true;
-		let mut shuffled = ALL_TUNNEL_DIRS.to_vec();
-		shuffled.shuffle(&mut rand::thread_rng());
-		for tunnel_dir in shuffled {
-			let tunnel_spot = tunnel_dir.derive_tunnel_spot(row, col, self);
-			if let Some((next_row, next_col)) = tunnel_spot {
-				self.add_tunnels(next_row, next_col);
+	let (height, width) = maze.bounds.height_width();
+	if height >= 5 || width >= 5 {
+		let search_bounds = {
+			let (row_cut, col_cut) = (
+				if height >= 2 { 1u64 } else { 0 },
+				if width >= 2 { 1u64 } else { 0 },
+			);
+			maze.bounds.inset(row_cut, col_cut)
+		};
+		for _ in 0..count {
+			const MAX_ATTEMPTS: usize = 10;
+			'attempts: for _ in 0..MAX_ATTEMPTS {
+				let (search_row, search_col) = (search_bounds.to_random_row(), search_bounds.to_random_col());
+				if maze.check_tunnel(search_row, search_col) {
+					maze.set_concealed(search_row, search_col);
+					break 'attempts;
+				}
 			}
 		}
 	}
-	fn count_tunnels(&self, row: usize, col: usize) -> usize {
-		let (row, col) = (row as isize, col as isize);
-		let positions = [(row - 1, col), (row, col - 1), (row, col), (row, col + 1), (row + 1, col)];
-		let count = positions.iter()
-			.map(|&(row, col)| self.tunnel_exists(row, col) as usize)
-			.sum();
-		count
+}
+
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
+pub struct LevelSize(pub isize);
+impl LevelSize {
+	pub fn from_usize(value: usize) -> Self { Self(value as isize) }
+	pub fn to_usize(&self) -> usize { self.0 as usize }
+}
+impl LevelSize {
+	pub fn from_i64(value: i64) -> Self { Self(value as isize) }
+	pub fn i64(&self) -> i64 { self.0 as i64 }
+}
+impl LevelSize {
+	pub fn to_room_row(&self, room_bounds: &RoomBounds) -> RoomSize {
+		RoomSize(self.0 - room_bounds.top as isize)
 	}
-	fn tunnel_exists(&self, row: isize, col: isize) -> bool {
-		if row < 0 || row >= self.height as isize || col < 0 || col >= self.width as isize {
-			false
-		} else {
-			self.tunnels[row as usize][col as usize]
-		}
+	pub fn to_room_col(&self, room_bounds: &RoomBounds) -> RoomSize {
+		RoomSize(self.0 - room_bounds.left as isize)
 	}
 }
+
 
 #[derive(Debug)]
 pub struct LevelRoom {
