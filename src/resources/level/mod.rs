@@ -34,11 +34,12 @@ fn make_level(current_level: usize, party_level: bool) -> DungeonLevel {
 			.add_rooms(design)
 			.add_mazes()
 			.connect_spaces()
+			.add_deadends()
 			;
 		for sector in ALL_SECTORS {
 			let space = level.space(sector);
 			if space.is_room() {
-				rooms.insert(RoomId::Little(sector), LevelRoom { bounds: space.bounds.clone() });
+				rooms.insert(RoomId::Little(sector), LevelRoom { bounds: space.bounds });
 			}
 		}
 		level_map = level.into_map();
@@ -68,6 +69,7 @@ mod tests {
 }
 
 pub mod design;
+pub mod deadend;
 pub mod map;
 pub mod maze;
 pub mod plain;

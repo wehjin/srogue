@@ -1,8 +1,6 @@
-
-
-use rand::{random, Rng, thread_rng};
 use rand::distributions::uniform::SampleUniform;
 use rand::prelude::SliceRandom;
+use rand::{random, thread_rng, Rng};
 
 pub fn get_rand<T: SampleUniform + PartialOrd>(x: T, y: T) -> T {
 	thread_rng().gen_range(x..=y)

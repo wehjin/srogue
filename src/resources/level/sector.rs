@@ -36,6 +36,17 @@ pub fn shuffled_sectors() -> Vec<Sector> {
 }
 
 impl Sector {
+	pub fn find_neighbor(&self, neighbor: SectorNeighbor) -> Option<Self> {
+		match neighbor {
+			SectorNeighbor::Above => self.neighbor_above(),
+			SectorNeighbor::Below => self.neighbor_below(),
+			SectorNeighbor::Right => self.neighbor_to_right(),
+			SectorNeighbor::Left => self.neighbor_to_left(),
+		}
+	}
+}
+
+impl Sector {
 	pub fn neighbor_to_right(&self) -> Option<Self> {
 		match self {
 			TopLeft => Some(TopCenter),
@@ -47,6 +58,32 @@ impl Sector {
 			BottomLeft => Some(BottomCenter),
 			BottomCenter => Some(BottomRight),
 			BottomRight => None,
+		}
+	}
+	pub fn neighbor_to_left(&self) -> Option<Self> {
+		match self {
+			TopLeft => None,
+			TopCenter => Some(TopLeft),
+			TopRight => Some(TopCenter),
+			MiddleLeft => None,
+			MiddleCenter => Some(MiddleLeft),
+			MiddleRight => Some(MiddleCenter),
+			BottomLeft => None,
+			BottomCenter => Some(BottomLeft),
+			BottomRight => Some(BottomCenter),
+		}
+	}
+	pub fn neighbor_above(&self) -> Option<Self> {
+		match self {
+			TopLeft => None,
+			TopCenter => None,
+			TopRight => None,
+			MiddleLeft => Some(TopLeft),
+			MiddleCenter => Some(TopCenter),
+			MiddleRight => Some(TopRight),
+			BottomLeft => Some(MiddleLeft),
+			BottomCenter => Some(MiddleCenter),
+			BottomRight => Some(MiddleRight),
 		}
 	}
 	pub fn neighbor_below(&self) -> Option<Self> {
@@ -91,6 +128,25 @@ const SECTOR_BOUNDS: [SectorBounds; 9] = [
 	SectorBounds { top: ROW2 + 1, right: COL2 - 1, bottom: ROW3 - 1, left: COL1 + 1 },
 	SectorBounds { top: ROW2 + 1, right: COL3 - 1, bottom: ROW3 - 1, left: COL2 + 1 },
 ];
+
+
+pub fn shuffled_sector_neighbors() -> Vec<SectorNeighbor> {
+	let mut neighbors = SECTOR_NEIGHBORS.to_vec();
+	neighbors.shuffle(&mut rand::thread_rng());
+	neighbors
+}
+
+pub const SECTOR_NEIGHBORS: &'static [SectorNeighbor] = &[
+	SectorNeighbor::Left, SectorNeighbor::Right, SectorNeighbor::Below, SectorNeighbor::Above
+];
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum SectorNeighbor {
+	Above,
+	Below,
+	Right,
+	Left,
+}
 
 #[cfg(test)]
 mod tests {

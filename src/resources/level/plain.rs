@@ -1,12 +1,13 @@
-use crate::random::{get_rand, rand_percent};
+use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::resources::level::design::Design;
 use crate::resources::level::map::LevelMap;
-use crate::resources::level::maze;
 use crate::resources::level::maze::hide_random_tunnels;
 use crate::resources::level::plain::space::{ExitId, SectorSpace};
 use crate::resources::level::sector::{shuffled_sectors, Sector, ALL_SECTORS};
 use crate::resources::level::size::LevelSpot;
+use crate::resources::level::{deadend, maze};
 use crate::room::RoomType;
+use deadend::make_deadend;
 use maze::make_maze;
 
 #[derive(Debug, Clone)]
@@ -71,6 +72,31 @@ impl PlainLevel {
 			self
 		}
 	}
+
+	pub fn add_deadends(self) -> Self {
+		let PlainLevel { level, mut spaces, mut map, } = self;
+		let mut recursed_sectors = Vec::new();
+		let candidate_sectors = shuffled_sectors()
+			.into_iter()
+			.filter(|sector| {
+				match spaces[*sector as usize].ty {
+					RoomType::Nothing => true,
+					RoomType::Cross if coin_toss() => true,
+					_ => false,
+				}
+			})
+			.collect::<Vec<_>>();
+		for sector in candidate_sectors {
+			let new_recursed = make_deadend(sector, true, level, &mut spaces, &mut map);
+			recursed_sectors.extend(new_recursed);
+		}
+		// Make sure the last recursed deadend connects to a room or maze.
+		if let Some(&recursed_sector) = recursed_sectors.last() {
+			make_deadend(recursed_sector, false, level, &mut spaces, &mut map);
+		}
+		Self { level, spaces, map }
+	}
+
 	fn get_percent_of_empty_sectors(&self, percent: usize) -> Vec<Sector> {
 		let mut empty_sectors = Vec::new();
 		for sector in ALL_SECTORS {
@@ -91,7 +117,16 @@ impl PlainLevel {
 	}
 }
 
+#[derive(Debug)]
 pub enum Axis { Horizontal, Vertical }
+impl Axis {
+	pub fn sort_spots(&self, spot1: LevelSpot, spot2: LevelSpot) -> (LevelSpot, LevelSpot) {
+		match self {
+			Axis::Horizontal => if spot1.col < spot2.col { (spot1, spot2) } else { (spot2, spot1) },
+			Axis::Vertical => if spot1.row < spot2.row { (spot1, spot2) } else { (spot2, spot1) }
+		}
+	}
+}
 
 fn connect_neighbors(axis: Axis, sector: Sector, current_level: usize, spaces: &mut [SectorSpace; 9], map: &mut LevelMap) {
 	if !spaces[sector as usize].is_room_or_maze() {
@@ -133,7 +168,7 @@ fn connect_spaces(axis: Axis, sector1: Sector, sector2: Sector, current_level: u
 	map.put_passage(axis, start, end, current_level);
 }
 
-mod space {
+pub mod space {
 	use crate::prelude::HIDE_PERCENT;
 	use crate::random::{get_rand, rand_percent};
 	use crate::resources::level::map::{Feature, LevelMap};
@@ -149,9 +184,8 @@ mod space {
 	}
 
 	impl SectorSpace {
-		pub fn from_sector(sector: Sector) -> Self {
-			let bounds = get_random_room_bounds(&sector.bounds());
-			Self { ty: RoomType::Nothing, bounds, exits: [SpaceExit::None; 4] }
+		pub fn exit_at(&self, exit: ExitId) -> &SpaceExit {
+			&self.exits[exit as usize]
 		}
 		pub fn put_exit(&mut self, exit: ExitId, sector: Sector, current_level: usize, map: &mut LevelMap) -> LevelSpot {
 			let wall_width = if self.is_maze() { 0u64 } else { 1 };
@@ -195,6 +229,13 @@ mod space {
 			self.exits[exit as usize] = SpaceExit::Passage { to: sector, row, col };
 			LevelSpot::from_i64(row, col)
 		}
+	}
+
+	impl SectorSpace {
+		pub fn from_sector(sector: Sector) -> Self {
+			let bounds = get_random_room_bounds(&sector.bounds());
+			Self { ty: RoomType::Nothing, bounds, exits: [SpaceExit::None; 4] }
+		}
 		pub fn is_nothing(&self) -> bool { self.ty == RoomType::Nothing }
 		pub fn is_room(&self) -> bool { self.ty == RoomType::Room }
 		pub fn is_maze(&self) -> bool { self.ty == RoomType::Maze }
@@ -202,10 +243,10 @@ mod space {
 	}
 
 	fn get_random_room_bounds(sector_bounds: &SectorBounds) -> RoomBounds {
-		let height = get_rand(4, sector_bounds.bottom - sector_bounds.top + 1);
-		let width = get_rand(8, sector_bounds.right - sector_bounds.left - 2);
-		let row_offset = get_rand(0, (sector_bounds.bottom - sector_bounds.top) - height + 1);
-		let col_offset = get_rand(0, (sector_bounds.right - sector_bounds.left) - width + 1);
+		let height = get_rand(4, sector_bounds.height());
+		let width = get_rand(7, sector_bounds.width() - 3);
+		let row_offset = get_rand(0, sector_bounds.height() - height);
+		let col_offset = get_rand(0, sector_bounds.width() - width);
 
 		let top = sector_bounds.top + row_offset;
 		let bottom = top + height - 1;
@@ -236,5 +277,20 @@ mod space {
 	pub enum SpaceExit {
 		None,
 		Passage { to: Sector, row: i64, col: i64 },
+	}
+
+	impl SpaceExit {
+		pub fn is_empty(&self) -> bool {
+			match self {
+				SpaceExit::None => true,
+				SpaceExit::Passage { .. } => false,
+			}
+		}
+		pub fn is_passage(&self) -> bool {
+			match self {
+				SpaceExit::Passage { .. } => true,
+				SpaceExit::None => false,
+			}
+		}
 	}
 }

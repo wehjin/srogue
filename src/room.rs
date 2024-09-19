@@ -152,6 +152,11 @@ impl RoomBounds {
 		let col = self.to_random_col();
 		LevelSpot::new(row, col)
 	}
+	pub fn to_center_level_spot(&self) -> LevelSpot {
+		let row = (self.top + self.bottom) / 2;
+		let col = (self.left + self.right) / 2;
+		LevelSpot::from_i64(row, col)
+	}
 }
 
 impl RoomBounds {

@@ -17,6 +17,14 @@ pub enum Feature {
 	Door,
 	ConcealedDoor,
 }
+impl Feature {
+	pub fn is_any_tunnel(&self) -> bool {
+		match self {
+			Feature::Tunnel | Feature::ConcealedTunnel => true,
+			_ => false,
+		}
+	}
+}
 
 #[derive(Debug, Copy, Clone)]
 pub struct LevelMap {
@@ -40,7 +48,13 @@ impl LevelMap {
 
 impl LevelMap {
 	pub fn feature_at_spot(&self, spot: LevelSpot) -> Feature {
-		self.rows[spot.row.usize()][spot.col.usize()]
+		let row = spot.row.i64();
+		let col = spot.col.i64();
+		if row < 0 || row >= 24 || col < 0 || col >= 80 {
+			Feature::None
+		} else {
+			self.rows[row as usize][col as usize]
+		}
 	}
 	pub fn put_feature_at_spot(&mut self, spot: LevelSpot, feature: Feature) {
 		self.rows[spot.row.usize()][spot.col.usize()] = feature;
@@ -48,9 +62,10 @@ impl LevelMap {
 }
 
 impl LevelMap {
-	pub fn put_passage(&mut self, axis: Axis, start: LevelSpot, end: LevelSpot, current_level: usize) {
-		let (start_row, end_row) = (start.row.i64(), end.row.i64());
-		let (start_col, end_col) = (start.col.i64(), end.col.i64());
+	pub fn put_passage(&mut self, axis: Axis, spot1: LevelSpot, spot2: LevelSpot, current_level: usize) {
+		let (start, end) = axis.sort_spots(spot1, spot2);
+		let (start_row, start_col) = start.i64();
+		let (end_row, end_col) = end.i64();
 		match axis {
 			Axis::Horizontal => {
 				let middle_col = get_rand(start_col + 1, end_col - 1);
@@ -92,7 +107,9 @@ impl LevelMap {
 			hide_random_tunnels(bounds, 1, current_level, self)
 		}
 	}
+}
 
+impl LevelMap {
 	pub fn put_walls_and_floor(&mut self, room: &RoomBounds) {
 		for row in room.top..=room.bottom {
 			for col in room.left..=room.right {

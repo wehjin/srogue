@@ -32,8 +32,8 @@ pub fn hide_random_tunnels(bounds: RoomBounds, count: usize, current_level: usiz
 	let (height, width) = bounds.height_width();
 	if height >= 5 || width >= 5 {
 		let search_bounds = {
-			let row_cut = if height >= 2 { 1u64 } else { 0 };
-			let col_cut = if width >= 2 { 1u64 } else { 0 };
+			let row_cut = if height > 2 { 1u64 } else { 0 };
+			let col_cut = if width > 2 { 1u64 } else { 0 };
 			bounds.inset(row_cut, col_cut)
 		};
 		for _ in 0..count {
