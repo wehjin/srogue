@@ -25,7 +25,7 @@ fn make_maze_from_spot(spot: LevelSpot, bounds: RoomBounds, map: &mut LevelMap) 
 	}
 }
 
-pub fn hide_random_tunnels(count: usize, bounds: RoomBounds, current_level: usize, map: &mut LevelMap) {
+pub fn hide_random_tunnels(bounds: RoomBounds, count: usize, current_level: usize, map: &mut LevelMap) {
 	if current_level <= 2 {
 		return;
 	}

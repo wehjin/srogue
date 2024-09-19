@@ -1,5 +1,7 @@
 use crate::level::constants::{DCOLS, DROWS};
-use crate::random::get_rand;
+use crate::prelude::HIDE_PERCENT;
+use crate::random::{get_rand, rand_percent};
+use crate::resources::level::maze::hide_random_tunnels;
 use crate::resources::level::plain::Axis;
 use crate::resources::level::size::LevelSpot;
 use crate::room::RoomBounds;
@@ -46,7 +48,7 @@ impl LevelMap {
 }
 
 impl LevelMap {
-	pub fn put_passage(&mut self, axis: Axis, start: LevelSpot, end: LevelSpot) {
+	pub fn put_passage(&mut self, axis: Axis, start: LevelSpot, end: LevelSpot, current_level: usize) {
 		let (start_row, end_row) = (start.row.i64(), end.row.i64());
 		let (start_col, end_col) = (start.col.i64(), end.col.i64());
 		match axis {
@@ -81,7 +83,14 @@ impl LevelMap {
 				}
 			}
 		}
-		// TODO: hide some of the tunnels
+		if rand_percent(HIDE_PERCENT) {
+			let top = start_row.min(end_row);
+			let bottom = start_row.max(end_row);
+			let left = start_col.min(end_col);
+			let right = start_col.max(end_col);
+			let bounds = RoomBounds { top, right, bottom, left };
+			hide_random_tunnels(bounds, 1, current_level, self)
+		}
 	}
 
 	pub fn put_walls_and_floor(&mut self, room: &RoomBounds) {

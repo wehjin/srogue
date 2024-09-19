@@ -63,7 +63,7 @@ impl PlainLevel {
 			for sector in self.get_percent_of_empty_sectors(maze_percent) {
 				let maze_bounds = spaces[sector as usize].bounds;
 				make_maze(maze_bounds, &mut map);
-				hide_random_tunnels(get_rand(0, 2), maze_bounds, self.level, &mut map);
+				hide_random_tunnels(maze_bounds, get_rand(0, 2), self.level, &mut map);
 				spaces[sector as usize].ty = RoomType::Maze;
 			}
 			Self { level, spaces, map }
@@ -130,7 +130,7 @@ fn connect_spaces(axis: Axis, sector1: Sector, sector2: Sector, current_level: u
 			end = spaces[sector2 as usize].put_exit(ExitId::Top, sector1, current_level, map);
 		}
 	}
-	map.put_passage(axis, start, end);
+	map.put_passage(axis, start, end, current_level);
 }
 
 mod space {
