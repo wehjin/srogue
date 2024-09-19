@@ -98,14 +98,18 @@ fn connect_neighbors(axis: Axis, sector: Sector, current_level: usize, spaces: &
 		Axis::Horizontal => Sector::neighbor_to_right,
 		Axis::Vertical => Sector::neighbor_below
 	};
-	if let Some(neighbor) = find_neighbor(&sector) {
-		if spaces[neighbor as usize].is_room_or_maze() {
-			connect_spaces(axis, sector, neighbor, current_level, spaces, map);
-		} else if let Some(far_neighbor) = find_neighbor(&neighbor) {
-			if spaces[far_neighbor as usize].is_room_or_maze() {
-				connect_spaces(axis, sector, far_neighbor, current_level, spaces, map);
-				spaces[neighbor as usize].ty = RoomType::Cross;
+	if let Some(near_sector) = find_neighbor(&sector) {
+		match spaces[near_sector as usize].ty {
+			RoomType::Room | RoomType::Maze => {
+				connect_spaces(axis, sector, near_sector, current_level, spaces, map);
 			}
+			RoomType::Nothing => if let Some(far_sector) = find_neighbor(&near_sector) {
+				if spaces[far_sector as usize].is_room_or_maze() {
+					connect_spaces(axis, sector, far_sector, current_level, spaces, map);
+					spaces[near_sector as usize].ty = RoomType::Cross;
+				}
+			},
+			_ => {}
 		}
 	}
 }
