@@ -1,8 +1,7 @@
 use crate::level::constants::{DCOLS, DROWS};
 use crate::random::get_rand;
-use crate::resources::level::maze::LevelMaze;
 use crate::resources::level::plain::Axis;
-use crate::resources::level::size::{LevelSize, LevelSpot};
+use crate::resources::level::size::LevelSpot;
 use crate::room::RoomBounds;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -26,11 +25,26 @@ impl LevelMap {
 	pub fn new() -> Self {
 		Self { rows: [[Feature::None; DCOLS]; DROWS] }
 	}
-	pub fn feature_at(&self, row: usize, col: usize) -> Feature { self.rows[row][col] }
+}
+
+impl LevelMap {
+	pub fn feature_at(&self, row: usize, col: usize) -> Feature {
+		self.rows[row][col]
+	}
 	pub fn put_feature(&mut self, row: i64, col: i64, feature: Feature) {
 		self.rows[row as usize][col as usize] = feature;
 	}
 }
+
+impl LevelMap {
+	pub fn feature_at_spot(&self, spot: LevelSpot) -> Feature {
+		self.rows[spot.row.usize()][spot.col.usize()]
+	}
+	pub fn put_feature_at_spot(&mut self, spot: LevelSpot, feature: Feature) {
+		self.rows[spot.row.usize()][spot.col.usize()] = feature;
+	}
+}
+
 impl LevelMap {
 	pub fn put_passage(&mut self, axis: Axis, start: LevelSpot, end: LevelSpot) {
 		let (start_row, end_row) = (start.row.i64(), end.row.i64());
@@ -70,20 +84,6 @@ impl LevelMap {
 		// TODO: hide some of the tunnels
 	}
 
-	pub fn put_maze(&mut self, maze: &LevelMaze) {
-		for row in maze.rows() {
-			for col in maze.cols() {
-				let (level_row, level_col) = (LevelSize::from_i64(row), LevelSize::from_i64(col));
-				if maze.check_tunnel(level_row, level_col) {
-					if maze.check_concealed(level_row, level_col) {
-						self.put_sprite(row, col, Feature::ConcealedTunnel)
-					} else {
-						self.put_sprite(row, col, Feature::Tunnel)
-					}
-				}
-			}
-		}
-	}
 	pub fn put_walls_and_floor(&mut self, room: &RoomBounds) {
 		for row in room.top..=room.bottom {
 			for col in room.left..=room.right {

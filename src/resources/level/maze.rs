@@ -1,135 +1,47 @@
-use crate::random::{get_rand, rand_percent};
-use crate::resources::level::size::LevelSize;
-use crate::resources::level::size::RoomSpot;
+use crate::random::rand_percent;
+use crate::resources::level::map::{Feature, LevelMap};
+use crate::resources::level::size::LevelSpot;
 use crate::room::RoomBounds;
 use rand::prelude::SliceRandom;
-use std::collections::HashSet;
-use std::ops::RangeInclusive;
 
-#[derive(Debug, Clone)]
-pub struct LevelMaze {
-	pub bounds: RoomBounds,
-	pub width: usize,
-	pub height: usize,
-	pub tunnels: Vec<Vec<bool>>,
-	pub concealed_tunnel_spots: HashSet<RoomSpot>,
+pub fn make_maze(bounds: RoomBounds, map: &mut LevelMap) {
+	let start_spot = bounds.inset(1, 1).to_random_level_spot();
+	make_maze_from_spot(start_spot, bounds, map);
 }
 
-impl LevelMaze {
-	pub fn rows(&self) -> RangeInclusive<i64> { self.bounds.rows() }
-	pub fn cols(&self) -> RangeInclusive<i64> { self.bounds.cols() }
-}
-
-impl LevelMaze {
-	pub fn set_concealed(&mut self, level_row: LevelSize, level_col: LevelSize) {
-		let room_spot = self.get_room_spot(level_row, level_col);
-		self.concealed_tunnel_spots.insert(room_spot);
-	}
-	pub fn check_concealed(&self, level_row: LevelSize, level_col: LevelSize) -> bool {
-		let room_spot = self.get_room_spot(level_row, level_col);
-		self.concealed_tunnel_spots.contains(&room_spot)
-	}
-}
-
-impl LevelMaze {
-	pub fn check_tunnel(&self, level_row: LevelSize, level_col: LevelSize) -> bool {
-		let room_spot = self.get_room_spot(level_row, level_col);
-		let tunnels_row = room_spot.as_row().to_usize();
-		let tunnels_col = room_spot.as_col().to_usize();
-		self.tunnels[tunnels_row][tunnels_col]
-	}
-
-
-	fn get_room_spot(&self, level_row: LevelSize, level_col: LevelSize) -> RoomSpot {
-		let room_spot = RoomSpot::from_level_sizes(level_row, level_col, &self.bounds);
-		room_spot
-	}
-}
-
-impl LevelMaze {
-	pub fn new(bounds: RoomBounds) -> Self {
-		let height = dbg!(bounds.rows().count());
-		let width = dbg!(bounds.cols().count());
-		Self {
-			bounds,
-			width,
-			height,
-			tunnels: vec![vec![false; width]; height],
-			concealed_tunnel_spots: HashSet::new(),
-		}
-	}
-
-	fn add_tunnels_from_spot(&mut self, row: usize, col: usize) {
-		self.tunnels[row][col] = true;
-		let mut shuffled = ALL_MAZE_STEPS.to_vec();
-		shuffled.shuffle(&mut rand::thread_rng());
-		for tunnel_dir in shuffled {
-			let tunnel_spot = tunnel_dir.derive_tunnel_spot(row, col, self);
-			if let Some((next_row, next_col)) = tunnel_spot {
-				self.add_tunnels_from_spot(next_row, next_col);
-			}
-		}
-	}
-	fn count_tunnels(&self, row: usize, col: usize) -> usize {
-		let (row, col) = (row as isize, col as isize);
-		let positions = [(row - 1, col), (row, col - 1), (row, col), (row, col + 1), (row + 1, col)];
-		let count = positions.iter()
-			.map(|&(row, col)| self.tunnel_exists(row, col) as usize)
-			.sum();
-		count
-	}
-	fn tunnel_exists(&self, row: isize, col: isize) -> bool {
-		if row < 0 || row >= self.height as isize || col < 0 || col >= self.width as isize {
-			false
-		} else {
-			self.tunnels[row as usize][col as usize]
+fn make_maze_from_spot(spot: LevelSpot, bounds: RoomBounds, map: &mut LevelMap) {
+	map.put_feature_at_spot(spot, Feature::Tunnel);
+	let maze_steps = if rand_percent(33) {
+		let mut steps = ALL_MAZE_STEPS.to_vec();
+		steps.shuffle(&mut rand::thread_rng());
+		steps
+	} else {
+		ALL_MAZE_STEPS.to_vec()
+	};
+	for maze_step in maze_steps {
+		if let Some(new_tunnel_spot) = maze_step.find_new_tunnel_spot(spot, bounds, map) {
+			make_maze_from_spot(new_tunnel_spot, bounds, map);
 		}
 	}
 }
 
-pub fn add_random_maze_tunnels(maze: &mut LevelMaze) {
-	let start_row = get_rand(1, maze.height - 2);
-	let start_col = get_rand(1, maze.width - 2);
-	add_random_maze_tunnels_from_spot(start_row, start_col, maze);
-}
-
-fn add_random_maze_tunnels_from_spot(row: usize, col: usize, maze: &mut LevelMaze) {
-	maze.tunnels[row][col] = true;
-	for step in maze_steps_with_random_shuffle(33) {
-		let tunnel_spot = step.derive_tunnel_spot(row, col, maze);
-		if let Some((next_row, next_col)) = tunnel_spot {
-			maze.add_tunnels_from_spot(next_row, next_col);
-		}
-	}
-}
-
-fn maze_steps_with_random_shuffle(percentage: usize) -> Vec<MazeStep> {
-	let mut shuffled = ALL_MAZE_STEPS.to_vec();
-	if rand_percent(percentage) {
-		shuffled.shuffle(&mut rand::thread_rng());
-	}
-	shuffled
-}
-
-pub fn hide_random_maze_tunnels(count: usize, current_level: usize, maze: &mut LevelMaze) {
+pub fn hide_random_tunnels(count: usize, bounds: RoomBounds, current_level: usize, map: &mut LevelMap) {
 	if current_level <= 2 {
 		return;
 	}
-	let (height, width) = maze.bounds.height_width();
+	let (height, width) = bounds.height_width();
 	if height >= 5 || width >= 5 {
 		let search_bounds = {
-			let (row_cut, col_cut) = (
-				if height >= 2 { 1u64 } else { 0 },
-				if width >= 2 { 1u64 } else { 0 },
-			);
-			maze.bounds.inset(row_cut, col_cut)
+			let row_cut = if height >= 2 { 1u64 } else { 0 };
+			let col_cut = if width >= 2 { 1u64 } else { 0 };
+			bounds.inset(row_cut, col_cut)
 		};
 		for _ in 0..count {
 			const MAX_ATTEMPTS: usize = 10;
 			'attempts: for _ in 0..MAX_ATTEMPTS {
-				let (search_row, search_col) = (search_bounds.to_random_row(), search_bounds.to_random_col());
-				if maze.check_tunnel(search_row, search_col) {
-					maze.set_concealed(search_row, search_col);
+				let conceal_spot = search_bounds.to_random_level_spot();
+				if map.feature_at_spot(conceal_spot) == Feature::Tunnel {
+					map.put_feature_at_spot(conceal_spot, Feature::ConcealedTunnel);
 					break 'attempts;
 				}
 			}
@@ -138,15 +50,13 @@ pub fn hide_random_maze_tunnels(count: usize, current_level: usize, maze: &mut L
 }
 
 const ALL_MAZE_STEPS: &[MazeStep] = &[MazeStep::Up, MazeStep::Down, MazeStep::Left, MazeStep::Right];
-
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum MazeStep { Up, Down, Left, Right }
-
 impl MazeStep {
-	pub fn derive_tunnel_spot(&self, row: usize, col: usize, maze: &LevelMaze) -> Option<(usize, usize)> {
-		if let Some((check_row, check_col)) = self.to_candidate_spot(row, col, maze) {
-			if maze.count_tunnels(check_row, check_col) == 1 {
-				Some((check_row, check_col))
+	pub fn find_new_tunnel_spot(&self, spot: LevelSpot, bounds: RoomBounds, map: &LevelMap) -> Option<LevelSpot> {
+		if let Some(destination_spot) = self.find_destination_spot(spot, bounds) {
+			if count_axial_tunnels(destination_spot, map) == 1 {
+				Some(destination_spot)
 			} else {
 				None
 			}
@@ -154,12 +64,21 @@ impl MazeStep {
 			None
 		}
 	}
-	fn to_candidate_spot(&self, row: usize, col: usize, maze: &LevelMaze) -> Option<(usize, usize)> {
+	fn find_destination_spot(&self, spot: LevelSpot, bounds: RoomBounds) -> Option<LevelSpot> {
+		let row = spot.row.i64();
+		let col = spot.col.i64();
 		match self {
-			MazeStep::Up => if row == 0 { None } else { Some((row - 1, col)) },
-			MazeStep::Down => if row == maze.height - 1 { None } else { Some((row + 1, col)) },
-			MazeStep::Left => if col == 0 { None } else { Some((row, col - 1)) },
-			MazeStep::Right => if col == maze.width - 1 { None } else { Some((row, col + 1)) },
+			MazeStep::Up => if row == bounds.top { None } else { Some(LevelSpot::from_i64(row - 1, col)) },
+			MazeStep::Down => if row == bounds.bottom { None } else { Some(LevelSpot::from_i64(row + 1, col)) },
+			MazeStep::Left => if col == bounds.left { None } else { Some(LevelSpot::from_i64(row, col - 1)) },
+			MazeStep::Right => if col == bounds.right { None } else { Some(LevelSpot::from_i64(row, col + 1)) },
 		}
 	}
+}
+
+fn count_axial_tunnels(spot: LevelSpot, map: &LevelMap) -> usize {
+	spot.with_axial_neighbors()
+		.into_iter()
+		.filter(|spot| map.feature_at_spot(*spot) == Feature::Tunnel)
+		.count()
 }

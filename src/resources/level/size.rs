@@ -32,7 +32,7 @@ pub struct LevelSize(pub isize);
 
 impl LevelSize {
 	pub fn from_usize(value: usize) -> Self { Self(value as isize) }
-	pub fn to_usize(&self) -> usize { self.0 as usize }
+	pub fn usize(&self) -> usize { self.0 as usize }
 }
 
 impl LevelSize {
@@ -56,10 +56,27 @@ pub struct LevelSpot {
 }
 
 impl LevelSpot {
+	pub fn new(row: LevelSize, col: LevelSize) -> Self {
+		Self { row, col }
+	}
 	pub fn from_i64(row: i64, col: i64) -> Self {
 		Self {
 			row: LevelSize(row as isize),
 			col: LevelSize(col as isize),
 		}
+	}
+}
+
+impl LevelSpot {
+	pub fn with_axial_neighbors(&self) -> [LevelSpot; 5] {
+		let center_row = self.row.i64();
+		let center_col = self.col.i64();
+		[
+			LevelSpot::from_i64(center_row - 1, center_col),
+			LevelSpot::from_i64(center_row, center_col - 1),
+			LevelSpot::from_i64(center_row, center_col),
+			LevelSpot::from_i64(center_row, center_col + 1),
+			LevelSpot::from_i64(center_row + 1, center_col)
+		]
 	}
 }

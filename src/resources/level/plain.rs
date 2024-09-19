@@ -1,19 +1,19 @@
 use crate::random::{get_rand, rand_percent};
 use crate::resources::level::design::Design;
 use crate::resources::level::map::LevelMap;
-use crate::resources::level::maze::{add_random_maze_tunnels, hide_random_maze_tunnels, LevelMaze};
+use crate::resources::level::maze;
+use crate::resources::level::maze::hide_random_tunnels;
 use crate::resources::level::plain::space::{ExitId, SectorSpace};
 use crate::resources::level::sector::{shuffled_sectors, Sector, ALL_SECTORS};
 use crate::resources::level::size::LevelSpot;
 use crate::room::RoomType;
-use std::collections::HashMap;
+use maze::make_maze;
 
 #[derive(Debug, Clone)]
 pub struct PlainLevel {
 	level: usize,
 	spaces: [SectorSpace; 9],
 	map: LevelMap,
-	mazes: HashMap<Sector, LevelMaze>,
 }
 impl PlainLevel {
 	pub fn new(level: usize) -> Self {
@@ -28,12 +28,11 @@ impl PlainLevel {
 			SectorSpace::from_sector(Sector::BottomCenter),
 			SectorSpace::from_sector(Sector::BottomRight),
 		];
-		Self { level, spaces, map: LevelMap::new(), mazes: HashMap::new() }
+		Self { level, spaces, map: LevelMap::new() }
 	}
 	pub fn space_mut(&mut self, sector: Sector) -> &mut SectorSpace {
 		&mut self.spaces[sector as usize]
 	}
-
 	pub fn space(&self, sector: Sector) -> &SectorSpace {
 		&self.spaces[sector as usize]
 	}
@@ -45,7 +44,7 @@ impl PlainLevel {
 
 impl PlainLevel {
 	pub fn add_rooms(self, design: Design) -> Self {
-		let PlainLevel { level, mut spaces, mut map, mazes } = self;
+		let PlainLevel { level, mut spaces, mut map, } = self;
 		for sector in ALL_SECTORS {
 			if !design.requires_room_in_sector(sector) && rand_percent(40) {
 				continue;
@@ -55,36 +54,40 @@ impl PlainLevel {
 				map.put_walls_and_floor(&spaces[space_index].bounds);
 			}
 		}
-		Self { level, spaces, map, mazes }
+		Self { level, spaces, map }
 	}
 	pub fn add_mazes(self) -> Self {
-		if self.level <= 1 {
-			self
-		} else {
-			let Self { level, mut spaces, mut map, mut mazes } = self;
+		if self.level > 1 {
+			let Self { level, mut spaces, mut map, } = self;
 			let maze_percent = (self.level * 5) / 4 + if self.level > 15 { self.level } else { 0 };
-			for sector in ALL_SECTORS {
-				let space_index = sector as usize;
-				if spaces[space_index].is_nothing() && rand_percent(maze_percent) {
-					let mut maze = LevelMaze::new(spaces[space_index].bounds.clone());
-					add_random_maze_tunnels(&mut maze);
-					hide_random_maze_tunnels(get_rand(0, 2), self.level, &mut maze);
-					map.put_maze(&maze);
-					mazes.insert(sector, maze);
-					spaces[space_index].ty = RoomType::Maze;
-				}
+			for sector in self.get_percent_of_empty_sectors(maze_percent) {
+				let maze_bounds = spaces[sector as usize].bounds;
+				make_maze(maze_bounds, &mut map);
+				hide_random_tunnels(get_rand(0, 2), maze_bounds, self.level, &mut map);
+				spaces[sector as usize].ty = RoomType::Maze;
 			}
-			Self { level, spaces, map, mazes }
+			Self { level, spaces, map }
+		} else {
+			self
 		}
+	}
+	fn get_percent_of_empty_sectors(&self, percent: usize) -> Vec<Sector> {
+		let mut empty_sectors = Vec::new();
+		for sector in ALL_SECTORS {
+			if self.spaces[sector as usize].is_nothing() && rand_percent(percent) {
+				empty_sectors.push(sector);
+			}
+		}
+		empty_sectors
 	}
 
 	pub fn connect_spaces(self) -> Self {
-		let Self { level, mut spaces, mut map, mazes } = self;
+		let Self { level, mut spaces, mut map, } = self;
 		for sector in shuffled_sectors() {
 			connect_neighbors(Axis::Horizontal, sector, level, &mut spaces, &mut map);
 			connect_neighbors(Axis::Vertical, sector, level, &mut spaces, &mut map);
 		}
-		Self { level, spaces, map, mazes }
+		Self { level, spaces, map }
 	}
 }
 
