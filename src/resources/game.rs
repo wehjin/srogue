@@ -7,10 +7,11 @@ pub fn run() {
 	let rogue_depth: usize = 1;
 
 
-	let party_type = if rogue_depth == party_depth { LevelType::PlainAlways } else { LevelType::PartyRoll };
-	if party_type == LevelType::PartyRoll {
+	let level_type = if rogue_depth == party_depth { LevelType::PlainAlways } else { LevelType::PartyRoll };
+	if level_type == LevelType::PartyRoll {
 		party_depth = party::roll_depth(rogue_depth);
 	}
-	let level = roll_level(rogue_depth, party_type);
+
+	let level = roll_level(rogue_depth, level_type);
 	level.map.print();
 }

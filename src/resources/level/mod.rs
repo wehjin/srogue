@@ -20,13 +20,6 @@ impl DungeonLevel {
 	}
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
-pub enum LevelType {
-	PlainAlways,
-	PartyRoll,
-	PartyAlways,
-}
-
 pub fn roll_level(depth: usize, level_type: LevelType) -> DungeonLevel {
 	let design = roll_design(level_type);
 	if design == Design::BigRoom {
@@ -63,6 +56,13 @@ pub fn roll_level(depth: usize, level_type: LevelType) -> DungeonLevel {
 		let map = level.into_map();
 		DungeonLevel { depth, rooms, map }
 	}
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum LevelType {
+	PlainAlways,
+	PartyRoll,
+	PartyAlways,
 }
 
 
