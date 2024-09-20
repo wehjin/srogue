@@ -1,17 +1,18 @@
 use crate::resources::dungeon::party;
 use crate::resources::level::roll_level;
-use crate::resources::level::LevelType;
+use crate::resources::level::RoomSizing;
 
 pub fn run() {
-	let mut party_depth = party::roll_depth(0);
+	let mut party_depth = party::roll_next_depth(0);
 	let rogue_depth: usize = 1;
+	for _ in 0..1 {
+		let room_sizing = if rogue_depth == party_depth { RoomSizing::BigRoll } else { RoomSizing::SmallAlways };
+		let level = roll_level(rogue_depth, room_sizing);
 
+		level.map.print();
 
-	let level_type = if rogue_depth == party_depth { LevelType::PlainAlways } else { LevelType::PartyRoll };
-	if level_type == LevelType::PartyRoll {
-		party_depth = party::roll_depth(rogue_depth);
+		if level.depth == party_depth {
+			party_depth = party::roll_next_depth(party_depth);
+		}
 	}
-
-	let level = roll_level(rogue_depth, level_type);
-	level.map.print();
 }

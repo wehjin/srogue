@@ -1,5 +1,4 @@
-use crate::random::get_rand;
-use crate::resources::level::design::Design;
+use crate::random::{get_rand, rand_percent};
 use crate::resources::level::map::LevelMap;
 use crate::resources::level::plain::PlainLevel;
 use crate::resources::level::room::RoomId;
@@ -20,9 +19,8 @@ impl DungeonLevel {
 	}
 }
 
-pub fn roll_level(depth: usize, level_type: LevelType) -> DungeonLevel {
-	let design = roll_design(level_type);
-	if design == Design::BigRoom {
+pub fn roll_level(depth: usize, room_sizing: RoomSizing) -> DungeonLevel {
+	if roll_big_room(room_sizing) {
 		let bounds = RoomBounds {
 			top: get_rand(ROW0, ROW0 + 1),
 			bottom: get_rand(ROW3 - 6, ROW3 - 1),
@@ -37,6 +35,7 @@ pub fn roll_level(depth: usize, level_type: LevelType) -> DungeonLevel {
 		};
 		DungeonLevel { depth, rooms, map }
 	} else {
+		let design = roll_design();
 		let level = PlainLevel::new(depth)
 			.add_rooms(design)
 			.add_mazes()
@@ -58,11 +57,20 @@ pub fn roll_level(depth: usize, level_type: LevelType) -> DungeonLevel {
 	}
 }
 
+fn roll_big_room(sizing: RoomSizing) -> bool {
+	let big_room = match sizing {
+		RoomSizing::BigAlways => true,
+		RoomSizing::BigRoll if rand_percent(1) => true,
+		_ => false,
+	};
+	big_room
+}
+
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum LevelType {
-	PlainAlways,
-	PartyRoll,
-	PartyAlways,
+pub enum RoomSizing {
+	BigAlways,
+	BigRoll,
+	SmallAlways,
 }
 
 
@@ -74,11 +82,11 @@ pub struct LevelRoom {
 #[cfg(test)]
 mod tests {
 	use crate::resources::level::roll_level;
-	use crate::resources::level::LevelType;
+	use crate::resources::level::RoomSizing;
 
 	#[test]
 	fn make_level_works() {
-		let level = roll_level(16, LevelType::PlainAlways);
+		let level = roll_level(16, RoomSizing::BigRoll);
 		level.map.print();
 	}
 }

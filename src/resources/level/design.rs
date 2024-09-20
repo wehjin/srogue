@@ -1,13 +1,8 @@
-use crate::random::{get_rand, rand_percent};
+use crate::random::get_rand;
 use crate::resources::level::sector::Sector;
-use crate::resources::level::LevelType;
 
-pub fn roll_design(level_type: LevelType) -> Design {
-	match level_type {
-		LevelType::PartyAlways => Design::BigRoom,
-		LevelType::PartyRoll if rand_percent(1) => Design::BigRoom,
-		_ => SECTOR_DESIGNS[get_rand(0usize, 5)]
-	}
+pub fn roll_design() -> Design {
+	SECTOR_DESIGNS[get_rand(0usize, 5)]
 }
 
 pub const SECTOR_DESIGNS: [Design; 6] = [
@@ -23,7 +18,6 @@ pub enum Design {
 	RequireLeft = 3,
 	RequireCenter = 4,
 	RequireRight = 5,
-	BigRoom = 6,
 }
 
 impl Design {
@@ -35,7 +29,6 @@ impl Design {
 			Design::RequireLeft => sector.is_left(),
 			Design::RequireCenter => sector.is_center(),
 			Design::RequireRight => sector.is_right(),
-			Design::BigRoom => false,
 		}
 	}
 }
