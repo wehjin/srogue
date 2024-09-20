@@ -50,9 +50,9 @@ impl PlainLevel {
 			if !design.requires_room_in_sector(sector) && rand_percent(40) {
 				continue;
 			} else {
-				let space_index = sector as usize;
-				spaces[space_index].ty = RoomType::Room;
-				map.put_walls_and_floor(&spaces[space_index].bounds);
+				let space = &mut spaces[sector as usize];
+				space.ty = RoomType::Room;
+				map = map.put_walls_and_floor(space.bounds);
 			}
 		}
 		Self { level, spaces, map }

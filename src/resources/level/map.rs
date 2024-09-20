@@ -5,6 +5,7 @@ use crate::resources::level::maze::hide_random_tunnels;
 use crate::resources::level::plain::Axis;
 use crate::resources::level::size::LevelSpot;
 use crate::room::RoomBounds;
+use std::fmt::Debug;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Feature {
@@ -30,7 +31,6 @@ impl Feature {
 pub struct LevelMap {
 	pub rows: [[Feature; DCOLS]; DROWS],
 }
-
 impl LevelMap {
 	pub fn new() -> Self {
 		Self { rows: [[Feature::None; DCOLS]; DROWS] }
@@ -110,7 +110,7 @@ impl LevelMap {
 }
 
 impl LevelMap {
-	pub fn put_walls_and_floor(&mut self, room: &RoomBounds) {
+	pub fn put_walls_and_floor(mut self, room: RoomBounds) -> Self {
 		for row in room.top..=room.bottom {
 			for col in room.left..=room.right {
 				if row == room.top || row == room.bottom {
@@ -122,6 +122,7 @@ impl LevelMap {
 				}
 			}
 		}
+		self
 	}
 	fn put_sprite(&mut self, row: i64, col: i64, sprite: Feature) {
 		self.rows[row as usize][col as usize] = sprite;

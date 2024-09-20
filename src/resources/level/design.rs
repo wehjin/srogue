@@ -1,4 +1,14 @@
+use crate::random::{get_rand, rand_percent};
 use crate::resources::level::sector::Sector;
+use crate::resources::level::LevelType;
+
+pub fn roll_design(level_type: LevelType) -> Design {
+	match level_type {
+		LevelType::PartyAlways => Design::BigRoom,
+		LevelType::PartyRoll if rand_percent(1) => Design::BigRoom,
+		_ => SECTOR_DESIGNS[get_rand(0usize, 5)]
+	}
+}
 
 pub const SECTOR_DESIGNS: [Design; 6] = [
 	Design::RequireTop, Design::RequireMiddle, Design::RequireBottom,
