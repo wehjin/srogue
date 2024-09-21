@@ -1,5 +1,5 @@
 use crate::resources::dungeon::stats::DungeonStats;
-use crate::resources::level::roll_filled_level;
+use crate::resources::level::setup::roll_filled_level;
 use crate::resources::level::LevelType;
 use crate::resources::party::PartyDepth;
 use crate::resources::rogue::depth::RogueDepth;

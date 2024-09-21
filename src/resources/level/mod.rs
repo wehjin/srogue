@@ -1,20 +1,14 @@
 use crate::objects::Object;
-use crate::random::{get_rand, rand_percent};
 use crate::resources::level::map::LevelMap;
-use crate::resources::level::plain::PlainLevel;
 use crate::resources::level::room_id::RoomId;
-use crate::resources::level::sector::{ALL_SECTORS, COL0, COL3, ROW0, ROW3};
 use crate::resources::level::size::LevelSpot;
 
 use crate::prelude::object_what::ObjectWhat;
-use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::level::map::feature::Feature;
 use crate::resources::level::room::LevelRoom;
-use crate::resources::level::setup::{roll_objects, roll_stairs};
 use crate::resources::party::PartyDepth;
 use crate::resources::rogue::depth::RogueDepth;
-use crate::room::{RoomBounds, RoomType};
-use design::roll_design;
+use crate::room::RoomType;
 use std::collections::HashMap;
 
 pub struct DungeonLevel {
@@ -103,58 +97,6 @@ impl DungeonLevel {
 	}
 }
 
-pub fn roll_filled_level(depth: usize, is_max: bool, party_type: LevelType, stats: &mut DungeonStats) -> DungeonLevel {
-	let mut level = roll_level_with_rooms(depth, is_max, party_type);
-	roll_objects(&mut level, stats);
-	roll_stairs(&mut level);
-	level
-}
-fn roll_level_with_rooms(depth: usize, is_max: bool, party_type: LevelType) -> DungeonLevel {
-	if roll_big_room(party_type) {
-		let bounds = RoomBounds {
-			top: get_rand(ROW0, ROW0 + 1),
-			bottom: get_rand(ROW3 - 6, ROW3 - 1),
-			left: get_rand(COL0, 10),
-			right: get_rand(COL3 - 11, COL3 - 1),
-		};
-		let room = LevelRoom { ty: RoomType::Room, bounds, ..LevelRoom::default() };
-		DungeonLevel {
-			depth,
-			is_max,
-			ty: party_type,
-			rooms: vec![(RoomId::Big, room)].into_iter().collect(),
-			map: LevelMap::new().put_walls_and_floor(bounds),
-			rogue_spot: LevelSpot::from_i64(0, 0),
-		}
-	} else {
-		let design = roll_design();
-		let level = PlainLevel::new(depth)
-			.add_rooms(design)
-			.add_mazes()
-			.connect_spaces()
-			.add_deadends()
-			;
-		let rooms = ALL_SECTORS
-			.into_iter()
-			.map(|sector| {
-				let space = level.space(sector);
-				let room_id = RoomId::Little(sector, space.ty);
-				(room_id, *space)
-			})
-			.collect();
-		let map = level.into_map();
-		DungeonLevel { depth, is_max, ty: party_type, rooms, map, rogue_spot: LevelSpot::from_i64(0, 0) }
-	}
-}
-
-fn roll_big_room(level_type: LevelType) -> bool {
-	match level_type {
-		LevelType::PartyBig => true,
-		LevelType::PartyRollBig => rand_percent(1),
-		LevelType::Plain => false
-	}
-}
-
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum LevelType {
 	PartyBig,
@@ -202,7 +144,7 @@ pub mod room_id {
 #[cfg(test)]
 mod tests {
 	use crate::resources::dungeon::stats::DungeonStats;
-	use crate::resources::level::roll_filled_level;
+	use crate::resources::level::setup::roll_filled_level;
 	use crate::resources::level::LevelType;
 
 	#[test]

@@ -2,14 +2,63 @@ use crate::objects::Object;
 use crate::odds::GOLD_PERCENT;
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::resources::dungeon::stats::DungeonStats;
+use crate::resources::level::design::roll_design;
+use crate::resources::level::map::LevelMap;
+use crate::resources::level::plain::PlainLevel;
+use crate::resources::level::room::LevelRoom;
 use crate::resources::level::room_id::RoomId;
+use crate::resources::level::sector::{ALL_SECTORS, COL0, COL3, ROW0, ROW3};
 use crate::resources::level::setup::random_what::RandomWhat;
 use crate::resources::level::size::LevelSpot;
-use crate::resources::level::DungeonLevel;
-use crate::room::RoomBounds;
+use crate::resources::level::{DungeonLevel, LevelType};
+use crate::room::{RoomBounds, RoomType};
 use rand::prelude::SliceRandom;
 use std::collections::HashSet;
 
+pub fn roll_filled_level(depth: usize, is_max: bool, party_type: LevelType, stats: &mut DungeonStats) -> DungeonLevel {
+	let mut level = roll_level_with_rooms(depth, is_max, party_type);
+	roll_objects(&mut level, stats);
+	roll_stairs(&mut level);
+	level
+}
+
+fn roll_level_with_rooms(depth: usize, is_max: bool, party_type: LevelType) -> DungeonLevel {
+	if roll_build_big_room(party_type) {
+		let bounds = RoomBounds {
+			top: get_rand(ROW0, ROW0 + 1),
+			bottom: get_rand(ROW3 - 6, ROW3 - 1),
+			left: get_rand(COL0, 10),
+			right: get_rand(COL3 - 11, COL3 - 1),
+		};
+		let room = LevelRoom { ty: RoomType::Room, bounds, ..LevelRoom::default() };
+		DungeonLevel {
+			depth,
+			is_max,
+			ty: party_type,
+			rooms: vec![(RoomId::Big, room)].into_iter().collect(),
+			map: LevelMap::new().put_walls_and_floor(bounds),
+			rogue_spot: LevelSpot::from_i64(0, 0),
+		}
+	} else {
+		let design = roll_design();
+		let level = PlainLevel::new(depth)
+			.add_rooms(design)
+			.add_mazes()
+			.connect_spaces()
+			.add_deadends()
+			;
+		let rooms = ALL_SECTORS
+			.into_iter()
+			.map(|sector| {
+				let space = level.space(sector);
+				let room_id = RoomId::Little(sector, space.ty);
+				(room_id, *space)
+			})
+			.collect();
+		let map = level.into_map();
+		DungeonLevel { depth, is_max, ty: party_type, rooms, map, rogue_spot: LevelSpot::from_i64(0, 0) }
+	}
+}
 
 pub fn roll_stairs(level: &mut DungeonLevel) {
 	let spot = level.roll_required_vacant_spot();
@@ -34,7 +83,7 @@ fn roll_party(level: &mut DungeonLevel, stats: &mut DungeonStats) {
 	let room_id = roll_vault_or_maze(level);
 
 	// Favors
-	let objects_added = if rand_percent(99) {
+	let _objects_added = if rand_percent(99) {
 		let added = roll_party_objects(room_id, level, stats);
 		Some(added)
 	} else {
@@ -79,6 +128,7 @@ fn roll_vault_or_maze(level: &DungeonLevel) -> RoomId {
 	*rooms.first().expect("no vault or maze in level")
 }
 
+
 fn roll_gold(level: &mut DungeonLevel) {
 	let rooms_and_mazes = level.vaults_and_mazes();
 	for room_id in rooms_and_mazes {
@@ -115,7 +165,6 @@ fn roll_object(depth: usize, stats: &mut DungeonStats) -> Object {
 	}
 }
 
-
 fn roll_object_count() -> usize {
 	let mut n = if coin_toss() { get_rand(2, 4) } else { get_rand(3, 5) };
 	while rand_percent(33) {
@@ -125,3 +174,11 @@ fn roll_object_count() -> usize {
 }
 
 pub mod random_what;
+
+fn roll_build_big_room(level_type: LevelType) -> bool {
+	match level_type {
+		LevelType::PartyBig => true,
+		LevelType::PartyRollBig => rand_percent(1),
+		LevelType::Plain => false
+	}
+}
