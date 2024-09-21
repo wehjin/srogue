@@ -1,23 +1,24 @@
-use crate::player::LAST_DUNGEON;
-use crate::resources::dungeon::party;
+use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::level::roll_level;
+use crate::resources::level::setup::roll_objects;
 use crate::resources::level::RoomSizing;
+use crate::resources::party::PartyDepth;
+use crate::resources::rogue::depth::RogueDepth;
 
 pub fn run() {
-	let mut party_depth = party::roll_next_depth(0);
-	let mut depth: usize = 0;
-	let mut max_depth: usize = 0;
+	let mut party_depth = PartyDepth::new();
+	let mut rogue_depth = RogueDepth::new(0);
+	let mut dungeon_stats = DungeonStats::new();
 	for _ in 0..1 {
-		if depth < LAST_DUNGEON as usize {
-			depth += 1;
-			max_depth = max_depth.max(depth);
-		}
-		let room_sizing = if depth == party_depth { RoomSizing::BigRoll } else { RoomSizing::SmallAlways };
-		let level = roll_level(depth, room_sizing);
+		// Drop depth to next value.
+		rogue_depth = rogue_depth.descend();
+
+		// Build a level.
+		let mut level = roll_level(rogue_depth.usize(), rogue_depth.is_max(), RoomSizing::from_depths(&rogue_depth, &party_depth));
+		roll_objects(&mut level, &mut dungeon_stats);
 		level.map.print();
 
-		if level.depth == party_depth {
-			party_depth = party::roll_next_depth(party_depth);
-		}
+		// Recompute the party depth depending on the current level.
+		party_depth = party_depth.recompute(level.depth);
 	}
 }

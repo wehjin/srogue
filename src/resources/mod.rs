@@ -5,3 +5,5 @@ pub mod healer;
 pub mod input_line;
 pub mod keyboard;
 pub mod level;
+pub mod rogue;
+pub mod party;

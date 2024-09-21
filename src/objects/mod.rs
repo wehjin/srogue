@@ -130,6 +130,20 @@ Object {
 	pub picked_up: i16,
 }
 
+impl Object {
+	pub fn new(what: ObjectWhat) -> Self {
+		let mut obj = empty_obj();
+		obj.what_is = what;
+		obj.quantity = 1;
+		obj.ichar = 'L';
+		obj.is_cursed = 0;
+		obj.picked_up = 0;
+		obj.in_use_flags = NOT_USED;
+		obj.identified = false;
+		obj
+	}
+}
+
 pub fn empty_obj() -> Object {
 	Object {
 		id: ObjectId::random(),
@@ -360,7 +374,6 @@ pub fn gr_object(player: &mut Player) -> Object {
 	obj
 }
 
-
 pub fn gr_what_is() -> ObjectWhat {
 	let percent = get_rand(1, 91);
 	if percent <= 30 {
@@ -380,6 +393,43 @@ pub fn gr_what_is() -> ObjectWhat {
 	}
 }
 
+impl Object {
+	pub fn roll_scroll() -> Object {
+		let mut object = Object::new(Scroll);
+		gr_scroll(&mut object);
+		object
+	}
+	pub fn roll_potion() -> Object {
+		let mut object = Object::new(Potion);
+		gr_potion(&mut object);
+		object
+	}
+	pub fn roll_weapon(assign_kind: bool) -> Object {
+		let mut object = Object::new(Weapon);
+		gr_weapon(&mut object, assign_kind);
+		object
+	}
+	pub fn roll_armor() -> Object {
+		let mut object = Object::new(Armor);
+		gr_armor(&mut object);
+		object
+	}
+	pub fn roll_wand() -> Object {
+		let mut object = Object::new(Wand);
+		gr_wand(&mut object);
+		object
+	}
+	pub fn roll_food(force_ration: bool) -> Object {
+		let mut object = Object::new(Food);
+		get_food(&mut object, force_ration);
+		object
+	}
+	pub fn roll_ring(assign_kind: bool) -> Object {
+		let mut object = Object::new(Ring);
+		gr_ring(&mut object, assign_kind);
+		object
+	}
+}
 
 pub fn gr_scroll(obj: &mut Object) {
 	let percent = get_rand(0, 85);

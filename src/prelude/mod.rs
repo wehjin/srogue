@@ -170,7 +170,7 @@ pub mod object_what {
 
 	use crate::render_system::{AMULET_CHAR, ARMOR_CHAR, FOOD_CHAR, GOLD_CHAR, NOT_CHAR, POTION_CHAR, RING_CHAR, SCROLL_CHAR, WAND_CHAR, WEAPON_CHAR};
 
-	#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 	pub enum ObjectWhat {
 		Armor,
 		Weapon,

@@ -34,7 +34,7 @@ impl Dr {
 	}
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub enum RoomType {
 	Nothing,
 	Room,
@@ -146,6 +146,13 @@ impl RoomBounds {
 	}
 	pub fn to_random_col(&self) -> LevelSize {
 		LevelSize(get_rand(self.left, self.right) as isize)
+	}
+}
+
+impl RoomBounds {
+	pub fn contains_spot(&self, spot: LevelSpot) -> bool {
+		let (row, col) = spot.i64();
+		row >= self.top && row <= self.bottom && col >= self.left && col <= self.right
 	}
 	pub fn to_random_level_spot(&self) -> LevelSpot {
 		let row = self.to_random_row();

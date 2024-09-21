@@ -61,7 +61,8 @@ impl PlainLevel {
 		if self.level > 1 {
 			let Self { level, mut spaces, mut map, } = self;
 			let maze_percent = (self.level * 5) / 4 + if self.level > 15 { self.level } else { 0 };
-			for sector in self.get_percent_of_empty_sectors(maze_percent) {
+			let candidate_sectors = roll_empty_sectors(&spaces, maze_percent);
+			for sector in candidate_sectors {
 				let maze_bounds = spaces[sector as usize].bounds;
 				make_maze(maze_bounds, &mut map);
 				hide_random_tunnels(maze_bounds, get_rand(0, 2), self.level, &mut map);
@@ -97,16 +98,6 @@ impl PlainLevel {
 		Self { level, spaces, map }
 	}
 
-	fn get_percent_of_empty_sectors(&self, percent: usize) -> Vec<Sector> {
-		let mut empty_sectors = Vec::new();
-		for sector in ALL_SECTORS {
-			if self.spaces[sector as usize].is_nothing() && rand_percent(percent) {
-				empty_sectors.push(sector);
-			}
-		}
-		empty_sectors
-	}
-
 	pub fn connect_spaces(self) -> Self {
 		let Self { level, mut spaces, mut map, } = self;
 		for sector in shuffled_sectors() {
@@ -116,6 +107,17 @@ impl PlainLevel {
 		Self { level, spaces, map }
 	}
 }
+
+fn roll_empty_sectors(spaces: &[SectorSpace; 9], percent: usize) -> Vec<Sector> {
+	let mut empty_sectors = Vec::new();
+	for sector in ALL_SECTORS {
+		if spaces[sector as usize].is_nothing() && rand_percent(percent) {
+			empty_sectors.push(sector);
+		}
+	}
+	empty_sectors
+}
+
 
 #[derive(Debug)]
 pub enum Axis { Horizontal, Vertical }
@@ -171,7 +173,8 @@ fn connect_spaces(axis: Axis, sector1: Sector, sector2: Sector, current_level: u
 pub mod space {
 	use crate::prelude::HIDE_PERCENT;
 	use crate::random::{get_rand, rand_percent};
-	use crate::resources::level::map::{Feature, LevelMap};
+	use crate::resources::level::map::feature::Feature;
+	use crate::resources::level::map::LevelMap;
 	use crate::resources::level::sector::{Sector, SectorBounds};
 	use crate::resources::level::size::LevelSpot;
 	use crate::room::{RoomBounds, RoomType};

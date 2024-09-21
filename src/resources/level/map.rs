@@ -1,39 +1,79 @@
 use crate::level::constants::{DCOLS, DROWS};
-use crate::prelude::HIDE_PERCENT;
+use crate::prelude::object_what::ObjectWhat;
+use crate::prelude::{HIDE_PERCENT, MIN_ROW};
 use crate::random::{get_rand, rand_percent};
+use crate::resources::level::map::feature::Feature;
 use crate::resources::level::maze::hide_random_tunnels;
 use crate::resources::level::plain::Axis;
 use crate::resources::level::size::LevelSpot;
 use crate::room::RoomBounds;
+use std::collections::HashMap;
 use std::fmt::Debug;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Feature {
-	None,
-	HorizWall,
-	VertWall,
-	Floor,
-	Tunnel,
-	ConcealedTunnel,
-	Door,
-	ConcealedDoor,
-}
-impl Feature {
-	pub fn is_any_tunnel(&self) -> bool {
-		match self {
-			Feature::Tunnel | Feature::ConcealedTunnel => true,
-			_ => false,
+pub mod feature {
+	#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+	pub enum Feature {
+		None,
+		HorizWall,
+		VertWall,
+		Floor,
+		Tunnel,
+		ConcealedTunnel,
+		Door,
+		ConcealedDoor,
+	}
+	impl Feature {
+		pub fn is_any_tunnel(&self) -> bool {
+			match self {
+				Feature::Tunnel | Feature::ConcealedTunnel => true,
+				_ => false,
+			}
 		}
 	}
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct LevelMap {
+	pub min_spot: LevelSpot,
+	pub max_spot: LevelSpot,
 	pub rows: [[Feature; DCOLS]; DROWS],
+	pub objects: HashMap<LevelSpot, ObjectWhat>,
 }
+
 impl LevelMap {
 	pub fn new() -> Self {
-		Self { rows: [[Feature::None; DCOLS]; DROWS] }
+		Self {
+			min_spot: LevelSpot::from_i64(MIN_ROW, 0),
+			max_spot: LevelSpot::from_i64((DROWS - 2) as i64, (DCOLS - 1) as i64),
+			rows: [[Feature::None; DCOLS]; DROWS],
+			objects: Default::default(),
+		}
+	}
+}
+
+impl LevelMap {
+	pub fn object_at(&self, spot: LevelSpot) -> Option<&ObjectWhat> {
+		self.objects.get(&spot)
+	}
+	pub fn add_object(&mut self, object: ObjectWhat, spot: LevelSpot) {
+		self.objects.insert(spot, object);
+	}
+}
+
+impl LevelMap {
+	pub fn roll_spot(&self) -> LevelSpot {
+		let row = get_rand(self.min_spot.row.i64(), self.max_spot.row.i64());
+		let col = get_rand(self.min_spot.col.i64(), self.max_spot.col.i64());
+		LevelSpot::from_i64(row, col)
+	}
+	pub fn roll_floor_or_tunnel_spot(&self) -> LevelSpot {
+		loop {
+			let spot = self.roll_spot();
+			let feature = self.feature_at_spot(spot);
+			if feature == Feature::Floor || feature == Feature::Tunnel {
+				return spot;
+			}
+		}
 	}
 }
 
@@ -129,19 +169,26 @@ impl LevelMap {
 	}
 
 	pub fn print(&self) {
-		for row in &self.rows {
-			let line = row.iter().map(|sprite| {
-				match sprite {
-					Feature::None => ' ',
-					Feature::HorizWall => '-',
-					Feature::VertWall => '|',
-					Feature::Floor => '.',
-					Feature::Tunnel => '#',
-					Feature::ConcealedTunnel => '_',
-					Feature::Door => '+',
-					Feature::ConcealedDoor => '_',
-				}
-			}).collect::<String>();
+		for row in 0..self.rows.len() {
+			let mut line = String::new();
+			let features = &self.rows[row];
+			for col in 0..features.len() {
+				let char = if let Some(what) = self.object_at(LevelSpot::from_usize(row, col)) {
+					what.to_char()
+				} else {
+					match features[col] {
+						Feature::None => ' ',
+						Feature::HorizWall => '-',
+						Feature::VertWall => '|',
+						Feature::Floor => '.',
+						Feature::Tunnel => '#',
+						Feature::ConcealedTunnel => '_',
+						Feature::Door => '+',
+						Feature::ConcealedDoor => '_',
+					}
+				};
+				line.push(char);
+			}
 			println!("{}", line);
 		}
 	}

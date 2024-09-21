@@ -1,5 +1,6 @@
 use crate::random::rand_percent;
-use crate::resources::level::map::{Feature, LevelMap};
+use crate::resources::level::map::feature::Feature;
+use crate::resources::level::map::LevelMap;
 use crate::resources::level::size::LevelSpot;
 use crate::room::RoomBounds;
 use rand::prelude::SliceRandom;

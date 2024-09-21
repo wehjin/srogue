@@ -1,5 +1,6 @@
 use crate::random::coin_toss;
-use crate::resources::level::map::{Feature, LevelMap};
+use crate::resources::level::map::feature::Feature;
+use crate::resources::level::map::LevelMap;
 use crate::resources::level::plain::space::{ExitId, SectorSpace};
 use crate::resources::level::plain::Axis;
 use crate::resources::level::sector::{shuffled_sector_neighbors, Sector, SectorNeighbor};

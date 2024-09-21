@@ -1,25 +1,60 @@
+use crate::objects::Object;
 use crate::random::{get_rand, rand_percent};
 use crate::resources::level::map::LevelMap;
 use crate::resources::level::plain::PlainLevel;
 use crate::resources::level::room::RoomId;
 use crate::resources::level::sector::{ALL_SECTORS, COL0, COL3, ROW0, ROW3};
-use crate::room::RoomBounds;
+use crate::resources::level::size::LevelSpot;
+use crate::resources::party::PartyDepth;
+use crate::resources::rogue::depth::RogueDepth;
+use crate::room::{RoomBounds, RoomType};
 use design::roll_design;
 use std::collections::HashMap;
 
-#[derive(Debug)]
 pub struct DungeonLevel {
 	pub depth: usize,
+	pub is_max: bool,
 	pub rooms: HashMap<RoomId, LevelRoom>,
 	pub map: LevelMap,
+	pub rogue_spot: LevelSpot,
 }
 impl DungeonLevel {
-	pub fn new(depth: usize) -> Self {
-		Self { depth, rooms: HashMap::new(), map: LevelMap::new() }
+	pub fn new(depth: usize, is_max: bool) -> Self {
+		Self {
+			depth,
+			is_max,
+			rooms: HashMap::new(),
+			map: LevelMap::new(),
+			rogue_spot: LevelSpot::from_i64(0, 0),
+		}
+	}
+	pub fn put_object(&mut self, spot: LevelSpot, object: Object) {
+		self.map.add_object(object.what_is, spot);
+	}
+}
+impl DungeonLevel {
+	pub fn roll_drop_spot(&self) -> LevelSpot {
+		loop {
+			let spot = self.map.roll_floor_or_tunnel_spot();
+			if self.room_or_maze_at_spot(spot).is_some() && spot != self.rogue_spot {
+				return spot;
+			}
+		}
+	}
+	fn room_or_maze_at_spot(&self, spot: LevelSpot) -> Option<&LevelRoom> {
+		for (id, room) in &self.rooms {
+			let ty = id.room_type();
+			let is_room_or_maze_space = ty == RoomType::Room || ty == RoomType::Maze;
+			let is_within_room = room.contains_spot(spot);
+			if is_room_or_maze_space && is_within_room {
+				return Some(room);
+			}
+		}
+		None
 	}
 }
 
-pub fn roll_level(depth: usize, room_sizing: RoomSizing) -> DungeonLevel {
+pub fn roll_level(depth: usize, is_max: bool, room_sizing: RoomSizing) -> DungeonLevel {
 	if roll_big_room(room_sizing) {
 		let bounds = RoomBounds {
 			top: get_rand(ROW0, ROW0 + 1),
@@ -33,7 +68,7 @@ pub fn roll_level(depth: usize, room_sizing: RoomSizing) -> DungeonLevel {
 			rooms.insert(RoomId::Big, LevelRoom { bounds });
 			rooms
 		};
-		DungeonLevel { depth, rooms, map }
+		DungeonLevel { depth, is_max, rooms, map, rogue_spot: LevelSpot::from_i64(0, 0) }
 	} else {
 		let design = roll_design();
 		let level = PlainLevel::new(depth)
@@ -47,13 +82,14 @@ pub fn roll_level(depth: usize, room_sizing: RoomSizing) -> DungeonLevel {
 			for sector in ALL_SECTORS {
 				let space = level.space(sector);
 				if space.is_room() {
-					rooms.insert(RoomId::Little(sector), LevelRoom { bounds: space.bounds });
+					let room_id = RoomId::Little(sector, space.ty);
+					rooms.insert(room_id, LevelRoom { bounds: space.bounds });
 				}
 			}
 			rooms
 		};
 		let map = level.into_map();
-		DungeonLevel { depth, rooms, map }
+		DungeonLevel { depth, is_max, rooms, map, rogue_spot: LevelSpot::from_i64(0, 0) }
 	}
 }
 
@@ -73,20 +109,40 @@ pub enum RoomSizing {
 	SmallAlways,
 }
 
+impl RoomSizing {
+	pub fn from_depths(rogue: &RogueDepth, party: &PartyDepth) -> Self {
+		if rogue.usize() == party.usize() {
+			Self::BigRoll
+		} else {
+			Self::SmallAlways
+		}
+	}
+}
+
 
 #[derive(Debug)]
 pub struct LevelRoom {
 	pub bounds: RoomBounds,
 }
 
+impl LevelRoom {
+	pub fn contains_spot(&self, spot: LevelSpot) -> bool {
+		self.bounds.contains_spot(spot)
+	}
+}
+
 #[cfg(test)]
 mod tests {
+	use crate::resources::dungeon::stats::DungeonStats;
 	use crate::resources::level::roll_level;
+	use crate::resources::level::setup::roll_objects;
 	use crate::resources::level::RoomSizing;
 
 	#[test]
 	fn make_level_works() {
-		let level = roll_level(16, RoomSizing::BigRoll);
+		let mut stats = DungeonStats { food_drops: 7 };
+		let mut level = roll_level(16, true, RoomSizing::BigRoll);
+		roll_objects(&mut level, &mut stats);
 		level.map.print();
 	}
 }
@@ -98,5 +154,5 @@ pub mod maze;
 pub mod plain;
 pub mod room;
 pub mod sector;
-
+pub mod setup;
 pub mod size;
