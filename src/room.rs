@@ -134,6 +134,8 @@ impl RoomBounds {
 	pub fn height_width(&self) -> (i64, i64) { (self.height(), self.width()) }
 	pub fn inset(&self, row_cut: u64, col_cut: u64) -> Self {
 		let (row_cut, col_cut) = (row_cut as i64, col_cut as i64);
+		let row_cut = if self.height() < 3 { 0 } else { row_cut };
+		let col_cut = if self.width() < 3 { 0 } else { col_cut };
 		Self {
 			top: self.top + row_cut,
 			right: self.right - col_cut,
@@ -154,7 +156,7 @@ impl RoomBounds {
 		let (row, col) = spot.i64();
 		row >= self.top && row <= self.bottom && col >= self.left && col <= self.right
 	}
-	pub fn to_random_level_spot(&self) -> LevelSpot {
+	pub fn roll_spot(&self) -> LevelSpot {
 		let row = self.to_random_row();
 		let col = self.to_random_col();
 		LevelSpot::new(row, col)

@@ -1,4 +1,5 @@
 use crate::objects::Object;
+use crate::odds::GOLD_PERCENT;
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::level::setup::random_what::RandomWhat;
@@ -11,12 +12,31 @@ pub fn roll_objects(level: &mut DungeonLevel, stats: &mut DungeonStats) {
 		// if depth == party_depth.usize() {
 		// 	make_party(game.player.cur_depth, game);
 		// }
-		for _ in 0..roll_drop_count() {
+		let count = roll_object_count();
+		for _ in 0..count {
+			let spot = level.roll_object_spot();
 			let object = roll_object(depth, stats);
-			let spot = level.roll_drop_spot();
 			level.put_object(spot, object);
 		}
-		//put_gold(game.player.cur_depth, &mut game.level, &mut game.ground);
+		roll_gold(level);
+	}
+}
+
+fn roll_gold(level: &mut DungeonLevel) {
+	let rooms_and_mazes = level.vaults_and_mazes();
+	for room_id in rooms_and_mazes {
+		let room = level.as_room(room_id).expect("level should have room");
+		if room.is_maze() || rand_percent(GOLD_PERCENT) {
+			let search_bounds = room.bounds.inset(1, 1);
+			for _ in 0..50 {
+				let spot = search_bounds.roll_spot();
+				if level.has_floor_or_tunnel_at_spot(spot) {
+					let object = Object::roll_gold(level.depth, room.is_maze());
+					level.put_object(spot, object);
+					break;
+				}
+			}
+		}
 	}
 }
 
@@ -39,7 +59,7 @@ fn roll_object(depth: usize, stats: &mut DungeonStats) -> Object {
 }
 
 
-fn roll_drop_count() -> usize {
+fn roll_object_count() -> usize {
 	let mut n = if coin_toss() { get_rand(2, 4) } else { get_rand(3, 5) };
 	while rand_percent(33) {
 		n += 1;

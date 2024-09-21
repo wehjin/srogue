@@ -1,15 +1,15 @@
 use crate::random::coin_toss;
 use crate::resources::level::map::feature::Feature;
 use crate::resources::level::map::LevelMap;
-use crate::resources::level::room::{ExitId, LevelRoom};
 use crate::resources::level::plain::Axis;
+use crate::resources::level::room::{ExitId, LevelRoom};
 use crate::resources::level::sector::{shuffled_sector_neighbors, Sector, SectorNeighbor};
 use crate::resources::level::size::LevelSpot;
 use crate::room::RoomType;
 
 pub fn make_deadend(sector: Sector, do_recurse: bool, current_level: usize, spaces: &mut [LevelRoom; 9], map: &mut LevelMap) -> Vec<Sector> {
 	let bounds = spaces[sector as usize].bounds;
-	let random_spot = bounds.to_random_level_spot();
+	let random_spot = bounds.roll_spot();
 	let mut found = 0usize;
 	for (i, target) in get_targets(sector, spaces).iter().enumerate() {
 		let spot = if !do_recurse || found > 0 || !map.feature_at_spot(random_spot).is_any_tunnel() { bounds.to_center_level_spot() } else { random_spot };
@@ -77,7 +77,7 @@ impl Target {
 	pub fn try_new(sector: Sector, neighbor: SectorNeighbor, spaces: &[LevelRoom; 9]) -> Option<Self> {
 		let exit = get_neighbor_exit(neighbor);
 		let space = &spaces[sector as usize];
-		if space.is_room_or_maze() && space.exit_at(exit).is_empty() {
+		if space.is_vault_or_maze() && space.exit_at(exit).is_empty() {
 			Some(Self { sector, exit })
 		} else {
 			None

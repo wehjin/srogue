@@ -131,7 +131,7 @@ impl Axis {
 }
 
 fn connect_neighbors(axis: Axis, sector: Sector, current_level: usize, spaces: &mut [LevelRoom; 9], map: &mut LevelMap) {
-	if !spaces[sector as usize].is_room_or_maze() {
+	if !spaces[sector as usize].is_vault_or_maze() {
 		return;
 	}
 	let find_neighbor = match axis {
@@ -144,7 +144,7 @@ fn connect_neighbors(axis: Axis, sector: Sector, current_level: usize, spaces: &
 				connect_spaces(axis, sector, near_sector, current_level, spaces, map);
 			}
 			RoomType::Nothing => if let Some(far_sector) = find_neighbor(&near_sector) {
-				if spaces[far_sector as usize].is_room_or_maze() {
+				if spaces[far_sector as usize].is_vault_or_maze() {
 					connect_spaces(axis, sector, far_sector, current_level, spaces, map);
 					spaces[near_sector as usize].ty = RoomType::Cross;
 				}

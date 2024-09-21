@@ -6,7 +6,7 @@ use crate::room::RoomBounds;
 use rand::prelude::SliceRandom;
 
 pub fn make_maze(bounds: RoomBounds, map: &mut LevelMap) {
-	let start_spot = bounds.inset(1, 1).to_random_level_spot();
+	let start_spot = bounds.inset(1, 1).roll_spot();
 	make_maze_from_spot(start_spot, bounds, map);
 }
 
@@ -40,7 +40,7 @@ pub fn hide_random_tunnels(bounds: RoomBounds, count: usize, current_level: usiz
 		for _ in 0..count {
 			const MAX_ATTEMPTS: usize = 10;
 			'attempts: for _ in 0..MAX_ATTEMPTS {
-				let conceal_spot = search_bounds.to_random_level_spot();
+				let conceal_spot = search_bounds.roll_spot();
 				if map.feature_at_spot(conceal_spot) == Feature::Tunnel {
 					map.put_feature_at_spot(conceal_spot, Feature::ConcealedTunnel);
 					break 'attempts;

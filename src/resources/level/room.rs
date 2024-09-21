@@ -73,9 +73,9 @@ impl LevelRoom {
 		Self { ty: RoomType::Nothing, bounds, exits: [RoomExit::None; 4] }
 	}
 	pub fn is_nothing(&self) -> bool { self.ty == RoomType::Nothing }
-	pub fn is_room(&self) -> bool { self.ty == RoomType::Room }
+	pub fn is_vault(&self) -> bool { self.ty == RoomType::Room }
 	pub fn is_maze(&self) -> bool { self.ty == RoomType::Maze }
-	pub fn is_room_or_maze(&self) -> bool { self.ty == RoomType::Room || self.ty == RoomType::Maze }
+	pub fn is_vault_or_maze(&self) -> bool { self.ty == RoomType::Room || self.ty == RoomType::Maze }
 }
 
 fn get_random_room_bounds(sector_bounds: &SectorBounds) -> RoomBounds {

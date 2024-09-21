@@ -6,6 +6,7 @@ use crate::resources::level::room_id::RoomId;
 use crate::resources::level::sector::{ALL_SECTORS, COL0, COL3, ROW0, ROW3};
 use crate::resources::level::size::LevelSpot;
 
+use crate::resources::level::map::feature::Feature;
 use crate::resources::level::room::LevelRoom;
 use crate::resources::party::PartyDepth;
 use crate::resources::rogue::depth::RogueDepth;
@@ -20,6 +21,29 @@ pub struct DungeonLevel {
 	pub map: LevelMap,
 	pub rogue_spot: LevelSpot,
 }
+
+impl DungeonLevel {
+	pub fn as_room(&self, room_id: RoomId) -> Option<&LevelRoom> {
+		self.rooms.get(&room_id)
+	}
+	pub fn vaults_and_mazes(&self) -> Vec<RoomId> {
+		let result = self.rooms
+			.iter()
+			.filter_map(|(id, room)| {
+				if room.is_vault_or_maze() {
+					Some(*id)
+				} else {
+					None
+				}
+			})
+			.collect();
+		result
+	}
+	pub fn has_floor_or_tunnel_at_spot(&self, spot: LevelSpot) -> bool {
+		let feature = self.map.feature_at_spot(spot);
+		feature == Feature::Floor || feature == Feature::Tunnel
+	}
+}
 impl DungeonLevel {
 	pub fn new(depth: usize, is_max: bool) -> Self {
 		Self {
@@ -30,12 +54,13 @@ impl DungeonLevel {
 			rogue_spot: LevelSpot::from_i64(0, 0),
 		}
 	}
-	pub fn put_object(&mut self, spot: LevelSpot, object: Object) {
+	pub fn put_object(&mut self, spot: LevelSpot, mut object: Object) {
+		object.set_spot(spot);
 		self.map.add_object(object.what_is, spot);
 	}
 }
 impl DungeonLevel {
-	pub fn roll_drop_spot(&self) -> LevelSpot {
+	pub fn roll_object_spot(&self) -> LevelSpot {
 		loop {
 			let spot = self.map.roll_floor_or_tunnel_spot();
 			if self.room_or_maze_at_spot(spot).is_some() && spot != self.rogue_spot {

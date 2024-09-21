@@ -33,6 +33,7 @@ use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::resources::diary;
 use crate::resources::input_line::get_input_line;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
+use crate::resources::level::size::LevelSpot;
 use crate::ring::constants::RINGS;
 use crate::ring::gr_ring;
 use crate::ring::ring_gem::RingGem;
@@ -141,6 +142,10 @@ impl Object {
 		obj.in_use_flags = NOT_USED;
 		obj.identified = false;
 		obj
+	}
+	pub fn set_spot(&mut self, spot: LevelSpot) {
+		let (row, col) = spot.usize();
+		self.spot = DungeonSpot::new(row, col)
 	}
 }
 
@@ -427,6 +432,13 @@ impl Object {
 	pub fn roll_ring(assign_kind: bool) -> Object {
 		let mut object = Object::new(Ring);
 		gr_ring(&mut object, assign_kind);
+		object
+	}
+	pub fn roll_gold(depth: usize, boosted: bool) -> Object {
+		let mut object = Object::new(Gold);
+		let boost = if boosted { 1.5 } else { 1.0 };
+		let quantity = get_rand(2 * depth, 16 * depth) as f64 * boost;
+		object.quantity = quantity as i16;
 		object
 	}
 }
