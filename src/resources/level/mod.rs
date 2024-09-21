@@ -2,9 +2,11 @@ use crate::objects::Object;
 use crate::random::{get_rand, rand_percent};
 use crate::resources::level::map::LevelMap;
 use crate::resources::level::plain::PlainLevel;
-use crate::resources::level::room::RoomId;
+use crate::resources::level::room_id::RoomId;
 use crate::resources::level::sector::{ALL_SECTORS, COL0, COL3, ROW0, ROW3};
 use crate::resources::level::size::LevelSpot;
+
+use crate::resources::level::room::LevelRoom;
 use crate::resources::party::PartyDepth;
 use crate::resources::rogue::depth::RogueDepth;
 use crate::room::{RoomBounds, RoomType};
@@ -62,13 +64,14 @@ pub fn roll_level(depth: usize, is_max: bool, room_sizing: RoomSizing) -> Dungeo
 			left: get_rand(COL0, 10),
 			right: get_rand(COL3 - 11, COL3 - 1),
 		};
-		let map = LevelMap::new().put_walls_and_floor(bounds);
-		let rooms = {
-			let mut rooms = HashMap::<RoomId, LevelRoom>::new();
-			rooms.insert(RoomId::Big, LevelRoom { bounds });
-			rooms
-		};
-		DungeonLevel { depth, is_max, rooms, map, rogue_spot: LevelSpot::from_i64(0, 0) }
+		let room = LevelRoom { ty: RoomType::Room, bounds, ..LevelRoom::default() };
+		DungeonLevel {
+			depth,
+			is_max,
+			rooms: vec![(RoomId::Big, room)].into_iter().collect(),
+			map: LevelMap::new().put_walls_and_floor(bounds),
+			rogue_spot: LevelSpot::from_i64(0, 0),
+		}
 	} else {
 		let design = roll_design();
 		let level = PlainLevel::new(depth)
@@ -77,17 +80,14 @@ pub fn roll_level(depth: usize, is_max: bool, room_sizing: RoomSizing) -> Dungeo
 			.connect_spaces()
 			.add_deadends()
 			;
-		let rooms = {
-			let mut rooms = HashMap::<RoomId, LevelRoom>::new();
-			for sector in ALL_SECTORS {
+		let rooms = ALL_SECTORS
+			.into_iter()
+			.map(|sector| {
 				let space = level.space(sector);
-				if space.is_room() {
-					let room_id = RoomId::Little(sector, space.ty);
-					rooms.insert(room_id, LevelRoom { bounds: space.bounds });
-				}
-			}
-			rooms
-		};
+				let room_id = RoomId::Little(sector, space.ty);
+				(room_id, *space)
+			})
+			.collect();
 		let map = level.into_map();
 		DungeonLevel { depth, is_max, rooms, map, rogue_spot: LevelSpot::from_i64(0, 0) }
 	}
@@ -119,15 +119,23 @@ impl RoomSizing {
 	}
 }
 
+pub mod room_id {
+	use crate::resources::level::sector::Sector;
+	use crate::room::RoomType;
 
-#[derive(Debug)]
-pub struct LevelRoom {
-	pub bounds: RoomBounds,
-}
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+	pub enum RoomId {
+		Big,
+		Little(Sector, RoomType),
+	}
 
-impl LevelRoom {
-	pub fn contains_spot(&self, spot: LevelSpot) -> bool {
-		self.bounds.contains_spot(spot)
+	impl RoomId {
+		pub fn room_type(&self) -> RoomType {
+			match self {
+				RoomId::Big => RoomType::Room,
+				RoomId::Little(_, ty) => *ty,
+			}
+		}
 	}
 }
 
@@ -152,9 +160,7 @@ pub mod deadend;
 pub mod map;
 pub mod maze;
 pub mod plain;
-pub mod room;
 pub mod sector;
 pub mod setup;
 pub mod size;
-pub mod space;
-
+pub mod room;

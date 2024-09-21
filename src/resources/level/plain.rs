@@ -2,7 +2,7 @@ use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::resources::level::design::Design;
 use crate::resources::level::map::LevelMap;
 use crate::resources::level::maze::hide_random_tunnels;
-use crate::resources::level::space::{ExitId, LevelSpace};
+use crate::resources::level::room::{ExitId, LevelRoom};
 use crate::resources::level::sector::{shuffled_sectors, Sector, ALL_SECTORS};
 use crate::resources::level::size::LevelSpot;
 use crate::resources::level::{deadend, maze};
@@ -13,28 +13,28 @@ use maze::make_maze;
 #[derive(Debug, Clone)]
 pub struct PlainLevel {
 	level: usize,
-	spaces: [LevelSpace; 9],
+	spaces: [LevelRoom; 9],
 	map: LevelMap,
 }
 impl PlainLevel {
 	pub fn new(level: usize) -> Self {
 		let spaces = [
-			LevelSpace::from_sector(Sector::TopLeft),
-			LevelSpace::from_sector(Sector::TopCenter),
-			LevelSpace::from_sector(Sector::TopRight),
-			LevelSpace::from_sector(Sector::MiddleLeft),
-			LevelSpace::from_sector(Sector::MiddleCenter),
-			LevelSpace::from_sector(Sector::MiddleRight),
-			LevelSpace::from_sector(Sector::BottomLeft),
-			LevelSpace::from_sector(Sector::BottomCenter),
-			LevelSpace::from_sector(Sector::BottomRight),
+			LevelRoom::from_sector(Sector::TopLeft),
+			LevelRoom::from_sector(Sector::TopCenter),
+			LevelRoom::from_sector(Sector::TopRight),
+			LevelRoom::from_sector(Sector::MiddleLeft),
+			LevelRoom::from_sector(Sector::MiddleCenter),
+			LevelRoom::from_sector(Sector::MiddleRight),
+			LevelRoom::from_sector(Sector::BottomLeft),
+			LevelRoom::from_sector(Sector::BottomCenter),
+			LevelRoom::from_sector(Sector::BottomRight),
 		];
 		Self { level, spaces, map: LevelMap::new() }
 	}
-	pub fn space_mut(&mut self, sector: Sector) -> &mut LevelSpace {
+	pub fn space_mut(&mut self, sector: Sector) -> &mut LevelRoom {
 		&mut self.spaces[sector as usize]
 	}
-	pub fn space(&self, sector: Sector) -> &LevelSpace {
+	pub fn space(&self, sector: Sector) -> &LevelRoom {
 		&self.spaces[sector as usize]
 	}
 	pub fn into_map(self) -> LevelMap {
@@ -108,7 +108,7 @@ impl PlainLevel {
 	}
 }
 
-fn roll_empty_sectors(spaces: &[LevelSpace; 9], percent: usize) -> Vec<Sector> {
+fn roll_empty_sectors(spaces: &[LevelRoom; 9], percent: usize) -> Vec<Sector> {
 	let mut empty_sectors = Vec::new();
 	for sector in ALL_SECTORS {
 		if spaces[sector as usize].is_nothing() && rand_percent(percent) {
@@ -130,7 +130,7 @@ impl Axis {
 	}
 }
 
-fn connect_neighbors(axis: Axis, sector: Sector, current_level: usize, spaces: &mut [LevelSpace; 9], map: &mut LevelMap) {
+fn connect_neighbors(axis: Axis, sector: Sector, current_level: usize, spaces: &mut [LevelRoom; 9], map: &mut LevelMap) {
 	if !spaces[sector as usize].is_room_or_maze() {
 		return;
 	}
@@ -154,7 +154,7 @@ fn connect_neighbors(axis: Axis, sector: Sector, current_level: usize, spaces: &
 	}
 }
 
-fn connect_spaces(axis: Axis, sector1: Sector, sector2: Sector, current_level: usize, spaces: &mut [LevelSpace; 9], map: &mut LevelMap) {
+fn connect_spaces(axis: Axis, sector1: Sector, sector2: Sector, current_level: usize, spaces: &mut [LevelRoom; 9], map: &mut LevelMap) {
 	let start: LevelSpot;
 	let end: LevelSpot;
 	match axis {
