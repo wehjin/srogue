@@ -10,13 +10,19 @@ use crate::room::RoomBounds;
 use rand::prelude::SliceRandom;
 use std::collections::HashSet;
 
+
+pub fn roll_stairs(level: &mut DungeonLevel) {
+	let spot = level.roll_required_vacant_spot();
+	level.put_stairs(spot);
+}
+
 pub fn roll_objects(level: &mut DungeonLevel, stats: &mut DungeonStats) {
 	if level.is_max {
 		if level.ty.is_party() {
 			roll_party(level, stats);
 		}
 		for _ in 0..roll_object_count() {
-			let spot = level.roll_object_spot();
+			let spot = level.roll_required_vacant_spot();
 			let object = roll_object(level.depth, stats);
 			level.put_object(spot, object);
 		}
@@ -34,18 +40,18 @@ fn roll_party(level: &mut DungeonLevel, stats: &mut DungeonStats) {
 	} else {
 		None
 	};
-	// Guests
-	if rand_percent(99) {
-		let count = objects_added.unwrap_or(11);
-		roll_party_monsters(count, room_id, level, stats);
-	}
+	// TODO Guests
+	// if rand_percent(99) {
+	// 	let count = objects_added.unwrap_or(11);
+	// 	roll_party_monsters(count, room_id, level, stats);
+	// }
 }
 
 fn roll_party_objects(room_id: RoomId, level: &mut DungeonLevel, stats: &mut DungeonStats) -> usize {
 	let room = level.as_room(room_id).expect("invalid room id");
 	let search_bounds = room.bounds.inset(1, 1);
 	let count = get_rand(5, 10) as usize;
-	let vacant_spots = roll_vacant_spots(search_bounds, count, level);
+	let vacant_spots = roll_optional_vacant_spots(search_bounds, count, level);
 	for spot in &vacant_spots {
 		let object = roll_object(level.depth, stats);
 		level.put_object(*spot, object);
@@ -53,7 +59,7 @@ fn roll_party_objects(room_id: RoomId, level: &mut DungeonLevel, stats: &mut Dun
 	vacant_spots.len()
 }
 
-fn roll_vacant_spots(search_bounds: RoomBounds, count: usize, level: &mut DungeonLevel) -> HashSet<LevelSpot> {
+fn roll_optional_vacant_spots(search_bounds: RoomBounds, count: usize, level: &mut DungeonLevel) -> HashSet<LevelSpot> {
 	let mut spots = HashSet::new();
 	for _ in 0..count.min(search_bounds.area() as usize) {
 		'search: for _ in 0..250 {
@@ -65,10 +71,6 @@ fn roll_vacant_spots(search_bounds: RoomBounds, count: usize, level: &mut Dungeo
 		}
 	}
 	spots
-}
-
-fn roll_party_monsters(_count: usize, _room_id: RoomId, _level: &mut DungeonLevel, _stats: &mut DungeonStats) {
-	// TODO
 }
 
 fn roll_vault_or_maze(level: &DungeonLevel) -> RoomId {

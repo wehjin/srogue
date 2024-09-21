@@ -2,6 +2,7 @@ use crate::level::constants::{DCOLS, DROWS};
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::{HIDE_PERCENT, MIN_ROW};
 use crate::random::{get_rand, rand_percent};
+use crate::render_system::STAIRS_CHAR;
 use crate::resources::level::map::feature::Feature;
 use crate::resources::level::maze::hide_random_tunnels;
 use crate::resources::level::plain::Axis;
@@ -21,6 +22,7 @@ pub mod feature {
 		ConcealedTunnel,
 		Door,
 		ConcealedDoor,
+		Stairs,
 	}
 	impl Feature {
 		pub fn is_any_tunnel(&self) -> bool {
@@ -185,6 +187,7 @@ impl LevelMap {
 						Feature::ConcealedTunnel => '_',
 						Feature::Door => '+',
 						Feature::ConcealedDoor => '_',
+						Feature::Stairs => STAIRS_CHAR,
 					}
 				};
 				line.push(char);

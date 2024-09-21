@@ -41,6 +41,9 @@ impl DungeonLevel {
 			.collect();
 		result
 	}
+}
+
+impl DungeonLevel {
 	pub fn spot_is_vacant(&self, spot: LevelSpot) -> bool {
 		let is_floor_or_tunnel = self.spot_is_floor_or_tunnel(spot);
 		let no_object = self.object_at(spot).is_none();
@@ -50,6 +53,39 @@ impl DungeonLevel {
 	pub fn spot_is_floor_or_tunnel(&self, spot: LevelSpot) -> bool {
 		let feature = self.map.feature_at_spot(spot);
 		feature == Feature::Floor || feature == Feature::Tunnel
+	}
+	pub fn spot_in_vault_or_maze(&self, spot: LevelSpot) -> bool {
+		for (id, room) in &self.rooms {
+			let ty = id.room_type();
+			let is_room_or_maze_space = ty == RoomType::Room || ty == RoomType::Maze;
+			let is_within_room = room.contains_spot(spot);
+			if is_room_or_maze_space && is_within_room {
+				return true;
+			}
+		}
+		false
+	}
+	pub fn roll_required_vacant_spot(&self) -> LevelSpot {
+		loop {
+			let spot = self.map.roll_floor_or_tunnel_spot();
+			let in_vault_or_maze = self.spot_in_vault_or_maze(spot);
+			let is_vacant = self.spot_is_vacant(spot);
+			if is_vacant && in_vault_or_maze {
+				return spot;
+			}
+		}
+	}
+}
+impl DungeonLevel {
+	pub fn object_at(&self, spot: LevelSpot) -> Option<&ObjectWhat> {
+		self.map.object_at(spot)
+	}
+	pub fn put_object(&mut self, spot: LevelSpot, mut object: Object) {
+		object.set_spot(spot);
+		self.map.add_object(object.what_is, spot);
+	}
+	pub fn put_stairs(&mut self, spot: LevelSpot) {
+		self.map.put_feature_at_spot(spot, Feature::Stairs);
 	}
 }
 impl DungeonLevel {
@@ -62,34 +98,6 @@ impl DungeonLevel {
 			map: LevelMap::new(),
 			rogue_spot: LevelSpot::from_i64(0, 0),
 		}
-	}
-	pub fn object_at(&self, spot: LevelSpot) -> Option<&ObjectWhat> {
-		self.map.object_at(spot)
-	}
-	pub fn put_object(&mut self, spot: LevelSpot, mut object: Object) {
-		object.set_spot(spot);
-		self.map.add_object(object.what_is, spot);
-	}
-}
-impl DungeonLevel {
-	pub fn roll_object_spot(&self) -> LevelSpot {
-		loop {
-			let spot = self.map.roll_floor_or_tunnel_spot();
-			if self.room_or_maze_at_spot(spot).is_some() && spot != self.rogue_spot {
-				return spot;
-			}
-		}
-	}
-	fn room_or_maze_at_spot(&self, spot: LevelSpot) -> Option<&LevelRoom> {
-		for (id, room) in &self.rooms {
-			let ty = id.room_type();
-			let is_room_or_maze_space = ty == RoomType::Room || ty == RoomType::Maze;
-			let is_within_room = room.contains_spot(spot);
-			if is_room_or_maze_space && is_within_room {
-				return Some(room);
-			}
-		}
-		None
 	}
 }
 
@@ -187,7 +195,7 @@ pub mod room_id {
 mod tests {
 	use crate::resources::dungeon::stats::DungeonStats;
 	use crate::resources::level::roll_level;
-	use crate::resources::level::setup::roll_objects;
+	use crate::resources::level::setup::{roll_objects, roll_stairs};
 	use crate::resources::level::LevelType;
 
 	#[test]
@@ -195,6 +203,7 @@ mod tests {
 		let mut stats = DungeonStats { food_drops: 7 };
 		let mut level = roll_level(16, true, LevelType::Plain);
 		roll_objects(&mut level, &mut stats);
+		roll_stairs(&mut level);
 		level.map.print();
 	}
 	#[test]
@@ -202,6 +211,7 @@ mod tests {
 		let mut stats = DungeonStats { food_drops: 7 };
 		let mut level = roll_level(16, true, LevelType::PartyBig);
 		roll_objects(&mut level, &mut stats);
+		roll_stairs(&mut level);
 		level.map.print();
 	}
 }
