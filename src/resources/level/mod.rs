@@ -156,3 +156,5 @@ pub mod room;
 pub mod sector;
 pub mod setup;
 pub mod size;
+pub mod space;
+

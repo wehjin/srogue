@@ -20,7 +20,6 @@ pub fn roll_objects(level: &mut DungeonLevel, stats: &mut DungeonStats) {
 	}
 }
 
-
 fn roll_object(depth: usize, stats: &mut DungeonStats) -> Object {
 	let what = if stats.food_drops < depth / 2 {
 		stats.food_drops += 1;
