@@ -27,7 +27,7 @@ pub mod trap_kind {
 	use crate::random::get_rand;
 	use crate::trap::trap_kind::TrapKind::{BearTrap, DartTrap, NoTrap, RustTrap, SleepingGasTrap, TeleTrap, TrapDoor};
 
-	#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 	pub enum TrapKind {
 		NoTrap,
 		TrapDoor,

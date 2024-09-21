@@ -1,5 +1,7 @@
+use crate::level::constants::MAX_TRAP;
 use crate::objects::Object;
 use crate::odds::GOLD_PERCENT;
+use crate::prelude::AMULET_LEVEL;
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::level::design::roll_design;
@@ -12,6 +14,8 @@ use crate::resources::level::setup::random_what::RandomWhat;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::level::{DungeonLevel, LevelType};
 use crate::room::{RoomBounds, RoomType};
+use crate::trap::trap_kind::TrapKind;
+use crate::trap::Trap;
 use rand::prelude::SliceRandom;
 use std::collections::HashSet;
 
@@ -19,7 +23,46 @@ pub fn roll_filled_level(depth: usize, is_max: bool, party_type: LevelType, stat
 	let mut level = roll_level_with_rooms(depth, is_max, party_type);
 	roll_objects(&mut level, stats);
 	roll_stairs(&mut level);
+	roll_traps(&mut level);
 	level
+}
+
+fn roll_traps(level: &mut DungeonLevel) {
+	for i in 0..roll_traps_count(level) {
+		let trap = Trap { trap_type: TrapKind::random(), ..Trap::default() };
+		let spot = match level.party_room {
+			Some(party_room) if i == 0 => {
+				let room = level.as_room(party_room).expect("invalid party room");
+				let bounds = room.bounds.inset(1, 1);
+				let mut found = None;
+				'search: for _ in 0..15 {
+					let spot = bounds.roll_spot();
+					if level.spot_is_vacant(spot, false, true) {
+						found = Some(spot);
+						break 'search;
+					}
+				}
+				found.unwrap_or_else(|| {
+					level.roll_vacant_spot(true, true)
+				})
+			}
+			_ => level.roll_vacant_spot(true, true),
+		};
+		level.put_trap(spot, trap);
+	}
+}
+
+fn roll_traps_count(level: &DungeonLevel) -> usize {
+	const AMULET_LEVEL_AND_TWO: usize = (AMULET_LEVEL + 2) as usize;
+	match level.depth {
+		0..=2 => 0,
+		3..=7 => get_rand(0, 2),
+		8..=11 => get_rand(1, 2),
+		12..=16 => get_rand(2, 3),
+		17..=21 => get_rand(2, 4),
+		22..=AMULET_LEVEL_AND_TWO => get_rand(3, 5),
+		_ => get_rand(5, MAX_TRAP)
+	}
 }
 
 fn roll_level_with_rooms(depth: usize, is_max: bool, party_type: LevelType) -> DungeonLevel {
@@ -38,6 +81,7 @@ fn roll_level_with_rooms(depth: usize, is_max: bool, party_type: LevelType) -> D
 			rooms: vec![(RoomId::Big, room)].into_iter().collect(),
 			map: LevelMap::new().put_walls_and_floor(bounds),
 			rogue_spot: LevelSpot::from_i64(0, 0),
+			party_room: Some(RoomId::Big),
 		}
 	} else {
 		let design = roll_design();
@@ -56,12 +100,12 @@ fn roll_level_with_rooms(depth: usize, is_max: bool, party_type: LevelType) -> D
 			})
 			.collect();
 		let map = level.into_map();
-		DungeonLevel { depth, is_max, ty: party_type, rooms, map, rogue_spot: LevelSpot::from_i64(0, 0) }
+		DungeonLevel { depth, is_max, ty: party_type, rooms, map, rogue_spot: LevelSpot::from_i64(0, 0), party_room: None }
 	}
 }
 
 pub fn roll_stairs(level: &mut DungeonLevel) {
-	let spot = level.roll_required_vacant_spot();
+	let spot = level.roll_vacant_spot(false, false);
 	level.put_stairs(spot);
 }
 
@@ -71,7 +115,7 @@ pub fn roll_objects(level: &mut DungeonLevel, stats: &mut DungeonStats) {
 			roll_party(level, stats);
 		}
 		for _ in 0..roll_object_count() {
-			let spot = level.roll_required_vacant_spot();
+			let spot = level.roll_vacant_spot(false, false);
 			let object = roll_object(level.depth, stats);
 			level.put_object(spot, object);
 		}
@@ -81,7 +125,7 @@ pub fn roll_objects(level: &mut DungeonLevel, stats: &mut DungeonStats) {
 
 fn roll_party(level: &mut DungeonLevel, stats: &mut DungeonStats) {
 	let room_id = roll_vault_or_maze(level);
-
+	level.party_room = Some(room_id);
 	// Favors
 	let _objects_added = if rand_percent(99) {
 		let added = roll_party_objects(room_id, level, stats);
@@ -100,7 +144,7 @@ fn roll_party_objects(room_id: RoomId, level: &mut DungeonLevel, stats: &mut Dun
 	let room = level.as_room(room_id).expect("invalid room id");
 	let search_bounds = room.bounds.inset(1, 1);
 	let count = get_rand(5, 10) as usize;
-	let vacant_spots = roll_optional_vacant_spots(search_bounds, count, level);
+	let vacant_spots = roll_party_spots(search_bounds, count, level);
 	for spot in &vacant_spots {
 		let object = roll_object(level.depth, stats);
 		level.put_object(*spot, object);
@@ -108,12 +152,12 @@ fn roll_party_objects(room_id: RoomId, level: &mut DungeonLevel, stats: &mut Dun
 	vacant_spots.len()
 }
 
-fn roll_optional_vacant_spots(search_bounds: RoomBounds, count: usize, level: &mut DungeonLevel) -> HashSet<LevelSpot> {
+fn roll_party_spots(search_bounds: RoomBounds, count: usize, level: &mut DungeonLevel) -> HashSet<LevelSpot> {
 	let mut spots = HashSet::new();
 	for _ in 0..count.min(search_bounds.area() as usize) {
 		'search: for _ in 0..250 {
 			let spot = search_bounds.roll_spot();
-			if level.spot_is_vacant(spot) && !spots.contains(&spot) {
+			if level.spot_is_vacant(spot, false, false) && !spots.contains(&spot) {
 				spots.insert(spot);
 				break 'search;
 			}

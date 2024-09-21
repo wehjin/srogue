@@ -1,17 +1,22 @@
 use crate::level::constants::{DCOLS, DROWS};
+use crate::level::materials::Visibility;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::{HIDE_PERCENT, MIN_ROW};
 use crate::random::{get_rand, rand_percent};
-use crate::render_system::STAIRS_CHAR;
-use crate::resources::level::map::feature::Feature;
+use crate::render_system::{STAIRS_CHAR, TRAP_CHAR};
+use crate::resources::level::map::feature::{Feature, FeatureFilter};
 use crate::resources::level::maze::hide_random_tunnels;
 use crate::resources::level::plain::Axis;
 use crate::resources::level::size::LevelSpot;
 use crate::room::RoomBounds;
+use crate::trap::trap_kind::TrapKind;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
 pub mod feature {
+	use crate::level::materials::Visibility;
+	use crate::trap::trap_kind::TrapKind;
+
 	#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 	pub enum Feature {
 		None,
@@ -23,12 +28,26 @@ pub mod feature {
 		Door,
 		ConcealedDoor,
 		Stairs,
+		Trap(TrapKind, Visibility),
 	}
 	impl Feature {
 		pub fn is_any_tunnel(&self) -> bool {
 			match self {
 				Feature::Tunnel | Feature::ConcealedTunnel => true,
 				_ => false,
+			}
+		}
+	}
+
+	pub enum FeatureFilter {
+		FloorOrTunnel
+	}
+	impl FeatureFilter {
+		pub fn pass_feature(&self, feature: Feature) -> bool {
+			match self {
+				FeatureFilter::FloorOrTunnel => {
+					feature == Feature::Floor || feature.is_any_tunnel()
+				}
 			}
 		}
 	}
@@ -54,6 +73,18 @@ impl LevelMap {
 }
 
 impl LevelMap {
+	pub fn trap_at(&self, spot: LevelSpot) -> Option<TrapKind> {
+		match self.feature_at_spot(spot) {
+			Feature::Trap(kind, _) => Some(kind),
+			_ => None
+		}
+	}
+	pub fn add_trap(&mut self, trap: TrapKind, spot: LevelSpot) {
+		self.put_feature_at_spot(spot, Feature::Trap(trap, Visibility::Hidden))
+	}
+}
+
+impl LevelMap {
 	pub fn object_at(&self, spot: LevelSpot) -> Option<&ObjectWhat> {
 		self.objects.get(&spot)
 	}
@@ -69,10 +100,13 @@ impl LevelMap {
 		LevelSpot::from_i64(row, col)
 	}
 	pub fn roll_floor_or_tunnel_spot(&self) -> LevelSpot {
+		self.roll_spot_with_filter(FeatureFilter::FloorOrTunnel)
+	}
+	pub fn roll_spot_with_filter(&self, filter: FeatureFilter) -> LevelSpot {
 		loop {
 			let spot = self.roll_spot();
 			let feature = self.feature_at_spot(spot);
-			if feature == Feature::Floor || feature == Feature::Tunnel {
+			if filter.pass_feature(feature) {
 				return spot;
 			}
 		}
@@ -188,6 +222,12 @@ impl LevelMap {
 						Feature::Door => '+',
 						Feature::ConcealedDoor => '_',
 						Feature::Stairs => STAIRS_CHAR,
+						Feature::Trap(_, visibility) => {
+							match visibility {
+								Visibility::Visible => TRAP_CHAR,
+								Visibility::Hidden => 'v',
+							}
+						}
 					}
 				};
 				line.push(char);

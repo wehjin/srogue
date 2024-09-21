@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::render_system::{FLOOR_CHAR, FLOOR_WITH_HIDDEN_TRAP_CHAR, STAIRS_CHAR, TRAP_CHAR};
 use crate::room::DoorDirection;
 
-#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Visibility {
 	Visible,
 	Hidden,

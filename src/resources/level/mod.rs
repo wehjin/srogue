@@ -9,6 +9,8 @@ use crate::resources::level::room::LevelRoom;
 use crate::resources::party::PartyDepth;
 use crate::resources::rogue::depth::RogueDepth;
 use crate::room::RoomType;
+use crate::trap::trap_kind::TrapKind;
+use crate::trap::Trap;
 use std::collections::HashMap;
 
 pub struct DungeonLevel {
@@ -18,6 +20,7 @@ pub struct DungeonLevel {
 	pub rooms: HashMap<RoomId, LevelRoom>,
 	pub map: LevelMap,
 	pub rogue_spot: LevelSpot,
+	pub party_room: Option<RoomId>,
 }
 
 impl DungeonLevel {
@@ -40,11 +43,12 @@ impl DungeonLevel {
 }
 
 impl DungeonLevel {
-	pub fn spot_is_vacant(&self, spot: LevelSpot) -> bool {
+	pub fn spot_is_vacant(&self, spot: LevelSpot, allow_objects: bool, _allow_monsters: bool) -> bool {
 		let is_floor_or_tunnel = self.spot_is_floor_or_tunnel(spot);
-		let no_object = self.object_at(spot).is_none();
 		let no_rogue = self.rogue_spot != spot;
-		no_rogue && no_object && is_floor_or_tunnel
+		let no_object = allow_objects || self.object_at(spot).is_none();
+		// TODO check for no monsters
+		no_object && no_rogue && is_floor_or_tunnel
 	}
 	pub fn spot_is_floor_or_tunnel(&self, spot: LevelSpot) -> bool {
 		let feature = self.map.feature_at_spot(spot);
@@ -61,11 +65,11 @@ impl DungeonLevel {
 		}
 		false
 	}
-	pub fn roll_required_vacant_spot(&self) -> LevelSpot {
+	pub fn roll_vacant_spot(&self, allow_objects: bool, allow_monsters: bool) -> LevelSpot {
 		loop {
 			let spot = self.map.roll_floor_or_tunnel_spot();
 			let in_vault_or_maze = self.spot_in_vault_or_maze(spot);
-			let is_vacant = self.spot_is_vacant(spot);
+			let is_vacant = self.spot_is_vacant(spot, allow_objects, allow_monsters);
 			if is_vacant && in_vault_or_maze {
 				return spot;
 			}
@@ -80,6 +84,19 @@ impl DungeonLevel {
 		object.set_spot(spot);
 		self.map.add_object(object.what_is, spot);
 	}
+}
+impl DungeonLevel {
+	pub fn trap_at(&self, spot: LevelSpot) -> Option<TrapKind> {
+		self.map.trap_at(spot)
+	}
+	pub fn put_trap(&mut self, spot: LevelSpot, mut trap: Trap) {
+		let (row, col) = spot.usize();
+		trap.trap_row = row;
+		trap.trap_col = col;
+		self.map.add_trap(trap.trap_type, spot);
+	}
+}
+impl DungeonLevel {
 	pub fn put_stairs(&mut self, spot: LevelSpot) {
 		self.map.put_feature_at_spot(spot, Feature::Stairs);
 	}
@@ -93,6 +110,7 @@ impl DungeonLevel {
 			rooms: HashMap::new(),
 			map: LevelMap::new(),
 			rogue_spot: LevelSpot::from_i64(0, 0),
+			party_room: None,
 		}
 	}
 }
