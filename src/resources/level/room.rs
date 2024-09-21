@@ -12,13 +12,11 @@ pub struct LevelRoom {
 	pub bounds: RoomBounds,
 	pub exits: [RoomExit; 4],
 }
-
 impl LevelRoom {
 	pub fn contains_spot(&self, spot: LevelSpot) -> bool {
 		self.bounds.contains_spot(spot)
 	}
 }
-
 impl LevelRoom {
 	pub fn exit_at(&self, exit: ExitId) -> &RoomExit {
 		&self.exits[exit as usize]
