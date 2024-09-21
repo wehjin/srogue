@@ -7,8 +7,10 @@ use crate::resources::level::sector::{ALL_SECTORS, COL0, COL3, ROW0, ROW3};
 use crate::resources::level::size::LevelSpot;
 
 use crate::prelude::object_what::ObjectWhat;
+use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::level::map::feature::Feature;
 use crate::resources::level::room::LevelRoom;
+use crate::resources::level::setup::{roll_objects, roll_stairs};
 use crate::resources::party::PartyDepth;
 use crate::resources::rogue::depth::RogueDepth;
 use crate::room::{RoomBounds, RoomType};
@@ -101,7 +103,13 @@ impl DungeonLevel {
 	}
 }
 
-pub fn roll_level(depth: usize, is_max: bool, party_type: LevelType) -> DungeonLevel {
+pub fn roll_filled_level(depth: usize, is_max: bool, party_type: LevelType, stats: &mut DungeonStats) -> DungeonLevel {
+	let mut level = roll_level_with_rooms(depth, is_max, party_type);
+	roll_objects(&mut level, stats);
+	roll_stairs(&mut level);
+	level
+}
+fn roll_level_with_rooms(depth: usize, is_max: bool, party_type: LevelType) -> DungeonLevel {
 	if roll_big_room(party_type) {
 		let bounds = RoomBounds {
 			top: get_rand(ROW0, ROW0 + 1),
@@ -194,24 +202,19 @@ pub mod room_id {
 #[cfg(test)]
 mod tests {
 	use crate::resources::dungeon::stats::DungeonStats;
-	use crate::resources::level::roll_level;
-	use crate::resources::level::setup::{roll_objects, roll_stairs};
+	use crate::resources::level::roll_filled_level;
 	use crate::resources::level::LevelType;
 
 	#[test]
 	fn plain_level_works() {
 		let mut stats = DungeonStats { food_drops: 7 };
-		let mut level = roll_level(16, true, LevelType::Plain);
-		roll_objects(&mut level, &mut stats);
-		roll_stairs(&mut level);
+		let level = roll_filled_level(16, true, LevelType::Plain, &mut stats);
 		level.map.print();
 	}
 	#[test]
 	fn party_level_works() {
 		let mut stats = DungeonStats { food_drops: 7 };
-		let mut level = roll_level(16, true, LevelType::PartyBig);
-		roll_objects(&mut level, &mut stats);
-		roll_stairs(&mut level);
+		let level = roll_filled_level(16, true, LevelType::PartyBig, &mut stats);
 		level.map.print();
 	}
 }

@@ -1,6 +1,5 @@
 use crate::resources::dungeon::stats::DungeonStats;
-use crate::resources::level::roll_level;
-use crate::resources::level::setup::{roll_objects, roll_stairs};
+use crate::resources::level::roll_filled_level;
 use crate::resources::level::LevelType;
 use crate::resources::party::PartyDepth;
 use crate::resources::rogue::depth::RogueDepth;
@@ -14,10 +13,8 @@ pub fn run() {
 		rogue_depth = rogue_depth.descend();
 
 		// Build a level.
-		let level_type = LevelType::from_depths(&rogue_depth, &party_depth);
-		let mut level = roll_level(rogue_depth.usize(), rogue_depth.is_max(), level_type);
-		roll_objects(&mut level, &mut dungeon_stats);
-		roll_stairs(&mut level);
+		let ty = LevelType::from_depths(&rogue_depth, &party_depth);
+		let level = roll_filled_level(rogue_depth.usize(), rogue_depth.is_max(), ty, &mut dungeon_stats);
 		level.map.print();
 
 		// Recompute the party depth depending on the current level.
