@@ -1,20 +1,24 @@
 use crate::resources::dungeon::stats::DungeonStats;
-use crate::resources::level::setup::roll_complete_level;
-use crate::resources::level::LevelType;
+use crate::resources::level::setup::{roll_level, LevelKind};
+use crate::resources::level::PartyType;
 use crate::resources::party::PartyDepth;
-use crate::resources::rogue::depth::RogueDepth;
+use crate::resources::rogue::Rogue;
 
 pub fn run() {
 	let mut party_depth = PartyDepth::new();
-	let mut rogue_depth = RogueDepth::new(0);
 	let mut dungeon_stats = DungeonStats::new();
+	let mut rogue = Rogue::default();
 	for _ in 0..1 {
 		// Drop depth to next value.
-		rogue_depth = rogue_depth.descend();
-
+		rogue.descend();
 		// Build a level.
-		let ty = LevelType::from_depths(&rogue_depth, &party_depth);
-		let level = roll_complete_level(rogue_depth.usize(), rogue_depth.is_max(), ty, &mut dungeon_stats);
+		let level_kind = LevelKind {
+			depth: rogue.depth.usize(),
+			is_max: rogue.depth.is_max(),
+			post_amulet: rogue.has_amulet,
+			party_type: if rogue.depth.usize() == party_depth.usize() { PartyType::PartyRollBig } else { PartyType::NoParty },
+		};
+		let level = roll_level(&level_kind, &mut dungeon_stats);
 		level.map.print();
 
 		// Recompute the party depth depending on the current level.

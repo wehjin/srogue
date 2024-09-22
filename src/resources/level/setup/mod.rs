@@ -1,6 +1,7 @@
 use crate::level::constants::MAX_TRAP;
 use crate::objects::Object;
 use crate::odds::GOLD_PERCENT;
+use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::AMULET_LEVEL;
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::resources::dungeon::stats::DungeonStats;
@@ -13,7 +14,7 @@ use crate::resources::level::sector::{ALL_SECTORS, COL0, COL3, ROW0, ROW3};
 use crate::resources::level::setup::npc::roll_monsters;
 use crate::resources::level::setup::random_what::RandomWhat;
 use crate::resources::level::size::LevelSpot;
-use crate::resources::level::{DungeonLevel, LevelType};
+use crate::resources::level::{DungeonLevel, PartyType};
 use crate::room::{RoomBounds, RoomType};
 use crate::trap::trap_kind::TrapKind;
 use crate::trap::Trap;
@@ -22,14 +23,30 @@ use std::collections::HashSet;
 
 pub mod npc;
 
-pub fn roll_complete_level(depth: usize, is_max: bool, level_type: LevelType, stats: &mut DungeonStats) -> DungeonLevel {
-	let mut level = roll_level_with_rooms(depth, is_max, level_type);
-	// TODO place the amulet.
+#[derive(Copy, Clone)]
+pub struct LevelKind {
+	pub depth: usize,
+	pub is_max: bool,
+	pub post_amulet: bool,
+	pub party_type: PartyType,
+}
+
+pub fn roll_level(level_kind: &LevelKind, stats: &mut DungeonStats) -> DungeonLevel {
+	let mut level = roll_level_with_rooms(level_kind.depth, level_kind.is_max, level_kind.party_type);
+	roll_amulet(&level_kind, &mut level);
 	roll_objects(&mut level, stats);
 	roll_stairs(&mut level);
 	roll_traps(&mut level);
 	roll_monsters(&mut level);
 	level
+}
+
+fn roll_amulet(level_kind: &LevelKind, level: &mut DungeonLevel) {
+	if !level_kind.post_amulet && level_kind.depth >= AMULET_LEVEL as usize {
+		let amulet = Object::new(ObjectWhat::Amulet);
+		let spot = level.roll_vacant_spot(false, false, false);
+		level.put_object(spot, amulet);
+	}
 }
 
 fn roll_traps(level: &mut DungeonLevel) {
@@ -70,7 +87,7 @@ fn roll_traps_count(level: &DungeonLevel) -> usize {
 	}
 }
 
-fn roll_level_with_rooms(depth: usize, is_max: bool, party_type: LevelType) -> DungeonLevel {
+fn roll_level_with_rooms(depth: usize, is_max: bool, party_type: PartyType) -> DungeonLevel {
 	if roll_build_big_room(party_type) {
 		let bounds = RoomBounds {
 			top: get_rand(ROW0, ROW0 + 1),
@@ -224,10 +241,10 @@ fn roll_object_count() -> usize {
 
 pub mod random_what;
 
-fn roll_build_big_room(level_type: LevelType) -> bool {
+fn roll_build_big_room(level_type: PartyType) -> bool {
 	match level_type {
-		LevelType::PartyBig => true,
-		LevelType::PartyRollBig => rand_percent(1),
-		LevelType::Plain => false
+		PartyType::PartyBig => true,
+		PartyType::PartyRollBig => rand_percent(1),
+		PartyType::NoParty => false
 	}
 }

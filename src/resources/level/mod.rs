@@ -7,8 +7,6 @@ use crate::monster::Monster;
 use crate::prelude::object_what::ObjectWhat;
 use crate::resources::level::map::feature::{Feature, FeatureFilter};
 use crate::resources::level::room::LevelRoom;
-use crate::resources::party::PartyDepth;
-use crate::resources::rogue::depth::RogueDepth;
 use crate::room::RoomType;
 use crate::trap::trap_kind::TrapKind;
 use crate::trap::Trap;
@@ -17,7 +15,7 @@ use std::collections::HashMap;
 pub struct DungeonLevel {
 	pub depth: usize,
 	pub is_max: bool,
-	pub ty: LevelType,
+	pub ty: PartyType,
 	pub rooms: HashMap<RoomId, LevelRoom>,
 	pub map: LevelMap,
 	pub rogue_spot: LevelSpot,
@@ -115,7 +113,7 @@ impl DungeonLevel {
 	}
 }
 impl DungeonLevel {
-	pub fn new(depth: usize, is_max: bool, party_type: LevelType) -> Self {
+	pub fn new(depth: usize, is_max: bool, party_type: PartyType) -> Self {
 		Self {
 			depth,
 			is_max,
@@ -129,25 +127,18 @@ impl DungeonLevel {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum LevelType {
+pub enum PartyType {
 	PartyBig,
 	PartyRollBig,
-	Plain,
+	NoParty,
 }
 
-impl LevelType {
-	pub fn from_depths(rogue: &RogueDepth, party: &PartyDepth) -> Self {
-		if rogue.usize() == party.usize() {
-			Self::PartyRollBig
-		} else {
-			Self::Plain
-		}
-	}
+impl PartyType {
 	pub fn is_party(&self) -> bool {
 		match self {
-			LevelType::PartyBig => true,
-			LevelType::PartyRollBig => true,
-			LevelType::Plain => false,
+			PartyType::PartyBig => true,
+			PartyType::PartyRollBig => true,
+			PartyType::NoParty => false,
 		}
 	}
 }
@@ -174,20 +165,33 @@ pub mod room_id {
 
 #[cfg(test)]
 mod tests {
+	use crate::prelude::AMULET_LEVEL;
 	use crate::resources::dungeon::stats::DungeonStats;
-	use crate::resources::level::setup::roll_complete_level;
-	use crate::resources::level::LevelType;
+	use crate::resources::level::setup::{roll_level, LevelKind};
+	use crate::resources::level::PartyType;
 
 	#[test]
 	fn plain_level_works() {
 		let mut stats = DungeonStats { food_drops: 7 };
-		let level = roll_complete_level(16, true, LevelType::Plain, &mut stats);
+		let level_kind = LevelKind {
+			depth: 16,
+			is_max: true,
+			post_amulet: false,
+			party_type: PartyType::NoParty,
+		};
+		let level = roll_level(&level_kind, &mut stats);
 		level.map.print();
 	}
 	#[test]
 	fn party_level_works() {
-		let mut stats = DungeonStats { food_drops: 3 };
-		let level = roll_complete_level(8, true, LevelType::PartyBig, &mut stats);
+		let mut stats = DungeonStats { food_drops: (AMULET_LEVEL / 2 - 1) as usize };
+		let level_kind = LevelKind {
+			depth: AMULET_LEVEL as usize,
+			is_max: true,
+			post_amulet: false,
+			party_type: PartyType::PartyBig,
+		};
+		let level = roll_level(&level_kind, &mut stats);
 		level.map.print();
 	}
 }

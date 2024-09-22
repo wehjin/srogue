@@ -1,8 +1,8 @@
 use crate::player::LAST_DUNGEON;
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct RogueDepth {
-	current: usize,
-	max: usize,
+	pub current: usize,
+	pub max: usize,
 }
 impl RogueDepth {
 	pub fn new(start: usize) -> Self { Self { current: start, max: start } }
