@@ -22,8 +22,8 @@ fn roll_monster_count() -> usize {
 	get_rand(4, 6)
 }
 
-pub fn roll_monster(depth: usize, first_level_boost: usize) -> Monster {
-	let kind = roll_monster_kind(depth, first_level_boost);
+pub fn roll_monster(depth: usize, level_boost: usize) -> Monster {
+	let kind = roll_monster_kind(depth, level_boost);
 	let flags = kind.depth_adjusted_flags(depth);
 	let disguise = if flags.imitates { roll_disguise() } else { Disguise::None };
 	Monster {
@@ -44,10 +44,10 @@ pub fn roll_monster(depth: usize, first_level_boost: usize) -> Monster {
 	}
 }
 
-fn roll_monster_kind(depth: usize, first_level_boost: usize) -> MonsterKind {
+fn roll_monster_kind(depth: usize, level_boost: usize) -> MonsterKind {
 	loop {
 		let kind = MonsterKind::random_any();
-		let first_level = (kind.first_level() as isize - first_level_boost as isize).max(0) as usize;
+		let first_level = (kind.first_level() as isize - level_boost as isize).max(0) as usize;
 		if depth >= first_level && depth <= kind.last_level() {
 			return kind;
 		}

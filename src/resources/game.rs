@@ -1,7 +1,7 @@
 use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::level::setup::{roll_level, LevelKind};
 use crate::resources::level::PartyType;
-use crate::resources::party::PartyDepth;
+use crate::resources::level::setup::party::depth::PartyDepth;
 use crate::resources::rogue::Rogue;
 
 pub fn run() {

@@ -23,7 +23,7 @@ pub struct DungeonLevel {
 }
 
 impl DungeonLevel {
-	pub fn as_room(&self, room_id: RoomId) -> Option<&LevelRoom> {
+	pub fn room_at(&self, room_id: RoomId) -> Option<&LevelRoom> {
 		self.rooms.get(&room_id)
 	}
 	pub fn vaults_and_mazes(&self) -> Vec<RoomId> {

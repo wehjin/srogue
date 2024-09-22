@@ -19,20 +19,10 @@ use crate::room::{RoomBounds, RoomType};
 use crate::trap::trap_kind::TrapKind;
 use crate::trap::Trap;
 use rand::prelude::SliceRandom;
-use std::collections::HashSet;
-
 pub mod npc;
 
-#[derive(Copy, Clone)]
-pub struct LevelKind {
-	pub depth: usize,
-	pub is_max: bool,
-	pub post_amulet: bool,
-	pub party_type: PartyType,
-}
-
 pub fn roll_level(level_kind: &LevelKind, stats: &mut DungeonStats) -> DungeonLevel {
-	let mut level = roll_level_with_rooms(level_kind.depth, level_kind.is_max, level_kind.party_type);
+	let mut level = roll_rooms(level_kind.depth, level_kind.is_max, level_kind.party_type);
 	roll_amulet(&level_kind, &mut level);
 	roll_objects(&mut level, stats);
 	roll_stairs(&mut level);
@@ -54,7 +44,7 @@ fn roll_traps(level: &mut DungeonLevel) {
 		let trap = Trap { trap_type: TrapKind::random(), ..Trap::default() };
 		let spot = match level.party_room {
 			Some(party_room) if i == 0 => {
-				let room = level.as_room(party_room).expect("invalid party room");
+				let room = level.room_at(party_room).expect("invalid party room");
 				let bounds = room.bounds.inset(1, 1);
 				let mut found = None;
 				'search: for _ in 0..15 {
@@ -87,7 +77,7 @@ fn roll_traps_count(level: &DungeonLevel) -> usize {
 	}
 }
 
-fn roll_level_with_rooms(depth: usize, is_max: bool, party_type: PartyType) -> DungeonLevel {
+fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType) -> DungeonLevel {
 	if roll_build_big_room(party_type) {
 		let bounds = RoomBounds {
 			top: get_rand(ROW0, ROW0 + 1),
@@ -126,6 +116,14 @@ fn roll_level_with_rooms(depth: usize, is_max: bool, party_type: PartyType) -> D
 	}
 }
 
+fn roll_build_big_room(level_type: PartyType) -> bool {
+	match level_type {
+		PartyType::PartyBig => true,
+		PartyType::PartyRollBig => rand_percent(1),
+		PartyType::NoParty => false
+	}
+}
+
 pub fn roll_stairs(level: &mut DungeonLevel) {
 	let spot = level.roll_vacant_spot(false, false, false);
 	level.put_stairs(spot);
@@ -134,7 +132,7 @@ pub fn roll_stairs(level: &mut DungeonLevel) {
 pub fn roll_objects(level: &mut DungeonLevel, stats: &mut DungeonStats) {
 	if level.is_max {
 		if level.ty.is_party() {
-			roll_party(level, stats);
+			party::roll_party(level, stats);
 		}
 		for _ in 0..roll_object_count() {
 			let spot = level.roll_vacant_spot(false, false, false);
@@ -143,49 +141,6 @@ pub fn roll_objects(level: &mut DungeonLevel, stats: &mut DungeonStats) {
 		}
 		roll_gold(level);
 	}
-}
-
-fn roll_party(level: &mut DungeonLevel, stats: &mut DungeonStats) {
-	let room_id = roll_vault_or_maze(level);
-	level.party_room = Some(room_id);
-	// Favors
-	let _objects_added = if rand_percent(99) {
-		let added = roll_party_objects(room_id, level, stats);
-		Some(added)
-	} else {
-		None
-	};
-	// TODO Guests
-	// if rand_percent(99) {
-	// 	let count = objects_added.unwrap_or(11);
-	// 	roll_party_monsters(count, room_id, level, stats);
-	// }
-}
-
-fn roll_party_objects(room_id: RoomId, level: &mut DungeonLevel, stats: &mut DungeonStats) -> usize {
-	let room = level.as_room(room_id).expect("invalid room id");
-	let search_bounds = room.bounds.inset(1, 1);
-	let count = get_rand(5, 10) as usize;
-	let vacant_spots = roll_party_spots(search_bounds, count, level);
-	for spot in &vacant_spots {
-		let object = roll_object(level.depth, stats);
-		level.put_object(*spot, object);
-	}
-	vacant_spots.len()
-}
-
-fn roll_party_spots(search_bounds: RoomBounds, count: usize, level: &mut DungeonLevel) -> HashSet<LevelSpot> {
-	let mut spots = HashSet::new();
-	for _ in 0..count.min(search_bounds.area() as usize) {
-		'search: for _ in 0..250 {
-			let spot = search_bounds.roll_spot();
-			if level.spot_is_vacant(spot, false, false) && !spots.contains(&spot) {
-				spots.insert(spot);
-				break 'search;
-			}
-		}
-	}
-	spots
 }
 
 fn roll_vault_or_maze(level: &DungeonLevel) -> RoomId {
@@ -198,7 +153,7 @@ fn roll_vault_or_maze(level: &DungeonLevel) -> RoomId {
 fn roll_gold(level: &mut DungeonLevel) {
 	let rooms_and_mazes = level.vaults_and_mazes();
 	for room_id in rooms_and_mazes {
-		let room = level.as_room(room_id).expect("level should have room");
+		let room = level.room_at(room_id).expect("level should have room");
 		if room.is_maze() || rand_percent(GOLD_PERCENT) {
 			let search_bounds = room.bounds.inset(1, 1);
 			for _ in 0..50 {
@@ -239,12 +194,13 @@ fn roll_object_count() -> usize {
 	n
 }
 
-pub mod random_what;
-
-fn roll_build_big_room(level_type: PartyType) -> bool {
-	match level_type {
-		PartyType::PartyBig => true,
-		PartyType::PartyRollBig => rand_percent(1),
-		PartyType::NoParty => false
-	}
+#[derive(Copy, Clone)]
+pub struct LevelKind {
+	pub depth: usize,
+	pub is_max: bool,
+	pub post_amulet: bool,
+	pub party_type: PartyType,
 }
+
+pub mod random_what;
+pub mod party;
