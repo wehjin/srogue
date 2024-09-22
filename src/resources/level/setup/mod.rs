@@ -10,6 +10,7 @@ use crate::resources::level::plain::PlainLevel;
 use crate::resources::level::room::LevelRoom;
 use crate::resources::level::room_id::RoomId;
 use crate::resources::level::sector::{ALL_SECTORS, COL0, COL3, ROW0, ROW3};
+use crate::resources::level::setup::npc::roll_monsters;
 use crate::resources::level::setup::random_what::RandomWhat;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::level::{DungeonLevel, LevelType};
@@ -19,11 +20,14 @@ use crate::trap::Trap;
 use rand::prelude::SliceRandom;
 use std::collections::HashSet;
 
-pub fn roll_filled_level(depth: usize, is_max: bool, party_type: LevelType, stats: &mut DungeonStats) -> DungeonLevel {
+pub mod npc;
+
+pub fn roll_complete_level(depth: usize, is_max: bool, party_type: LevelType, stats: &mut DungeonStats) -> DungeonLevel {
 	let mut level = roll_level_with_rooms(depth, is_max, party_type);
 	roll_objects(&mut level, stats);
 	roll_stairs(&mut level);
 	roll_traps(&mut level);
+	roll_monsters(&mut level);
 	level
 }
 
@@ -43,10 +47,10 @@ fn roll_traps(level: &mut DungeonLevel) {
 					}
 				}
 				found.unwrap_or_else(|| {
-					level.roll_vacant_spot(true, true)
+					level.roll_vacant_spot(true, true, false)
 				})
 			}
-			_ => level.roll_vacant_spot(true, true),
+			_ => level.roll_vacant_spot(true, true, false),
 		};
 		level.put_trap(spot, trap);
 	}
@@ -105,7 +109,7 @@ fn roll_level_with_rooms(depth: usize, is_max: bool, party_type: LevelType) -> D
 }
 
 pub fn roll_stairs(level: &mut DungeonLevel) {
-	let spot = level.roll_vacant_spot(false, false);
+	let spot = level.roll_vacant_spot(false, false, false);
 	level.put_stairs(spot);
 }
 
@@ -115,7 +119,7 @@ pub fn roll_objects(level: &mut DungeonLevel, stats: &mut DungeonStats) {
 			roll_party(level, stats);
 		}
 		for _ in 0..roll_object_count() {
-			let spot = level.roll_vacant_spot(false, false);
+			let spot = level.roll_vacant_spot(false, false, false);
 			let object = roll_object(level.depth, stats);
 			level.put_object(spot, object);
 		}

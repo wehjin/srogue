@@ -2,9 +2,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::hit::DamageStat;
 use crate::monster::MonsterFlags;
+use crate::prelude::AMULET_LEVEL;
 use crate::random::get_rand;
 
-#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum MonsterKind {
 	Aquator,
 	Bat,
@@ -42,20 +43,7 @@ impl MonsterKind {
 	pub fn random_any() -> Self {
 		Self::LIST[get_rand(0, MONSTERS - 1)]
 	}
-	pub fn random(level_depth: isize, level_boost: isize) -> Self {
-		loop {
-			let mn = get_rand(0, MonsterKind::LIST.len() - 1);
-			let kind = MonsterKind::from(mn);
-			let first_level = {
-				let nominal = kind.first_level();
-				let boost = level_boost.min(nominal);
-				nominal - boost
-			};
-			if level_depth >= first_level && level_depth <= kind.last_level() {
-				return kind;
-			}
-		}
-	}
+
 	pub fn random_name() -> &'static str {
 		let random_kind = MonsterKind::LIST[get_rand(0, MonsterKind::LIST.len() - 1)];
 		random_kind.name()
@@ -127,7 +115,16 @@ impl MonsterKind {
 		MonsterKind::Snake, MonsterKind::Troll, MonsterKind::Unicorn, MonsterKind::Vampire, MonsterKind::Wraith, MonsterKind::Xeroc,
 		MonsterKind::Yeti, MonsterKind::Zombie,
 	];
-	pub fn flags(&self) -> MonsterFlags {
+
+	pub fn depth_adjusted_flags(&self, depth: usize) -> MonsterFlags {
+		let mut flags = self.flags();
+		if depth > (AMULET_LEVEL + 2) as usize {
+			flags.hasted = true;
+		}
+		flags
+	}
+
+	fn flags(&self) -> MonsterFlags {
 		match self {
 			MonsterKind::Aquator => MonsterFlags::a(),
 			MonsterKind::Bat => MonsterFlags::b(),
@@ -277,7 +274,7 @@ impl MonsterKind {
 			MonsterKind::Zombie => 8,
 		}
 	}
-	pub fn first_level(&self) -> isize {
+	pub fn first_level(&self) -> usize {
 		match self {
 			MonsterKind::Aquator => 9,
 			MonsterKind::Bat => 1,
@@ -307,7 +304,7 @@ impl MonsterKind {
 			MonsterKind::Zombie => 5,
 		}
 	}
-	pub fn last_level(&self) -> isize {
+	pub fn last_level(&self) -> usize {
 		match self {
 			MonsterKind::Aquator => 18,
 			MonsterKind::Bat => 8,

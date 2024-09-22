@@ -3,8 +3,9 @@ use crate::resources::level::map::LevelMap;
 use crate::resources::level::room_id::RoomId;
 use crate::resources::level::size::LevelSpot;
 
+use crate::monster::Monster;
 use crate::prelude::object_what::ObjectWhat;
-use crate::resources::level::map::feature::Feature;
+use crate::resources::level::map::feature::{Feature, FeatureFilter};
 use crate::resources::level::room::LevelRoom;
 use crate::resources::party::PartyDepth;
 use crate::resources::rogue::depth::RogueDepth;
@@ -65,9 +66,10 @@ impl DungeonLevel {
 		}
 		false
 	}
-	pub fn roll_vacant_spot(&self, allow_objects: bool, allow_monsters: bool) -> LevelSpot {
+	pub fn roll_vacant_spot(&self, allow_objects: bool, allow_monsters: bool, allow_stairs: bool) -> LevelSpot {
+		let feature_filter = if allow_stairs { FeatureFilter::FloorTunnelOrStair } else { FeatureFilter::FloorOrTunnel };
 		loop {
-			let spot = self.map.roll_floor_or_tunnel_spot();
+			let spot = self.map.roll_spot_with_feature_filter(feature_filter);
 			let in_vault_or_maze = self.spot_in_vault_or_maze(spot);
 			let is_vacant = self.spot_is_vacant(spot, allow_objects, allow_monsters);
 			if is_vacant && in_vault_or_maze {
@@ -76,6 +78,17 @@ impl DungeonLevel {
 		}
 	}
 }
+impl DungeonLevel {
+	pub fn monster_at(&self, spot: LevelSpot) -> Option<&Monster> {
+		self.map.monster_at(spot)
+	}
+	pub fn put_monster(&mut self, spot: LevelSpot, mut monster: Monster) {
+		let (row, col) = spot.i64();
+		monster.set_spot(row, col);
+		self.map.add_monster(monster, spot);
+	}
+}
+
 impl DungeonLevel {
 	pub fn object_at(&self, spot: LevelSpot) -> Option<&ObjectWhat> {
 		self.map.object_at(spot)
@@ -162,19 +175,19 @@ pub mod room_id {
 #[cfg(test)]
 mod tests {
 	use crate::resources::dungeon::stats::DungeonStats;
-	use crate::resources::level::setup::roll_filled_level;
+	use crate::resources::level::setup::roll_complete_level;
 	use crate::resources::level::LevelType;
 
 	#[test]
 	fn plain_level_works() {
 		let mut stats = DungeonStats { food_drops: 7 };
-		let level = roll_filled_level(16, true, LevelType::Plain, &mut stats);
+		let level = roll_complete_level(16, true, LevelType::Plain, &mut stats);
 		level.map.print();
 	}
 	#[test]
 	fn party_level_works() {
-		let mut stats = DungeonStats { food_drops: 7 };
-		let level = roll_filled_level(16, true, LevelType::PartyBig, &mut stats);
+		let mut stats = DungeonStats { food_drops: 3 };
+		let level = roll_complete_level(8, true, LevelType::PartyBig, &mut stats);
 		level.map.print();
 	}
 }

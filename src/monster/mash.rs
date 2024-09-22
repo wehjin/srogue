@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use rand::{RngCore, thread_rng};
 use serde::{Deserialize, Serialize};
 
 use crate::hit::DamageStat;
@@ -8,7 +7,7 @@ use crate::level::{DungeonCell, Level};
 use crate::monster::{MonsterFlags, MonsterKind};
 use crate::player::RoomMark;
 use crate::prelude::DungeonSpot;
-use crate::render_system::PLAYER_CHAR;
+use crate::resources::level::setup::npc::disguise::Disguise;
 
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct MonsterMash {
@@ -48,7 +47,7 @@ impl MonsterMash {
 				return Some(*id);
 			}
 		}
-		return None;
+		None
 	}
 	pub fn monster_at_spot(&self, row: i64, col: i64) -> Option<&Monster> {
 		match self.monster_id_at_spot(row, col) {
@@ -87,7 +86,7 @@ impl MonsterMash {
 	}
 }
 
-#[derive(Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct StuckCounter {
 	pub row: i64,
 	pub col: i64,
@@ -109,13 +108,13 @@ impl StuckCounter {
 	}
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Monster {
-	id: u64,
+	pub id: u64,
 	pub kind: MonsterKind,
 	pub m_flags: MonsterFlags,
 	pub spot: DungeonSpot,
-	pub disguise_char: char,
+	pub disguise: Disguise,
 	pub slowed_toggle: bool,
 	pub target_spot: Option<DungeonSpot>,
 	pub nap_length: isize,
@@ -136,27 +135,10 @@ impl Monster {
 	pub fn is_hasted(&self) -> bool { self.m_flags.hasted }
 	pub fn is_slowed(&self) -> bool { self.m_flags.slowed }
 	pub fn is_confused(&self) -> bool { self.m_flags.confused }
+	pub fn wanders(&self) -> bool { self.m_flags.wanders }
 }
 
 impl Monster {
-	pub fn create(kind: MonsterKind) -> Self {
-		Monster {
-			id: thread_rng().next_u64(),
-			kind: kind.clone(),
-			m_flags: kind.flags(),
-			spot: DungeonSpot::default(),
-			disguise_char: PLAYER_CHAR,
-			slowed_toggle: false,
-			target_spot: None,
-			nap_length: 0,
-			stuck_counter: StuckCounter::default(),
-			moves_confused: 0,
-			stationary_damage: 0,
-			hp_to_kill: kind.hp_to_kill(),
-			killed: false,
-			drop_percent: kind.drop_percent(),
-		}
-	}
 	pub fn cell_mut<'a>(&self, level: &'a mut Level) -> &'a mut DungeonCell {
 		&mut level.dungeon[self.spot.row as usize][self.spot.col as usize]
 	}

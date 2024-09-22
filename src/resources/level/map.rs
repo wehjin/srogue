@@ -1,5 +1,6 @@
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::materials::Visibility;
+use crate::monster::{Monster, MonsterKind};
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::{HIDE_PERCENT, MIN_ROW};
 use crate::random::{get_rand, rand_percent};
@@ -39,15 +40,16 @@ pub mod feature {
 		}
 	}
 
+	#[derive(Copy, Clone)]
 	pub enum FeatureFilter {
-		FloorOrTunnel
+		FloorOrTunnel,
+		FloorTunnelOrStair,
 	}
 	impl FeatureFilter {
 		pub fn pass_feature(&self, feature: Feature) -> bool {
 			match self {
-				FeatureFilter::FloorOrTunnel => {
-					feature == Feature::Floor || feature.is_any_tunnel()
-				}
+				FeatureFilter::FloorOrTunnel => feature == Feature::Floor || feature.is_any_tunnel(),
+				FeatureFilter::FloorTunnelOrStair => feature == Feature::Stairs || feature == Feature::Floor || feature.is_any_tunnel(),
 			}
 		}
 	}
@@ -59,16 +61,15 @@ pub struct LevelMap {
 	pub max_spot: LevelSpot,
 	pub rows: [[Feature; DCOLS]; DROWS],
 	pub objects: HashMap<LevelSpot, ObjectWhat>,
+	pub monsters: HashMap<LevelSpot, Monster>,
 }
 
 impl LevelMap {
-	pub fn new() -> Self {
-		Self {
-			min_spot: LevelSpot::from_i64(MIN_ROW, 0),
-			max_spot: LevelSpot::from_i64((DROWS - 2) as i64, (DCOLS - 1) as i64),
-			rows: [[Feature::None; DCOLS]; DROWS],
-			objects: Default::default(),
-		}
+	pub fn monster_at(&self, spot: LevelSpot) -> Option<&Monster> {
+		self.monsters.get(&spot)
+	}
+	pub fn add_monster(&mut self, monster: Monster, spot: LevelSpot) {
+		self.monsters.insert(spot, monster);
 	}
 }
 
@@ -99,10 +100,7 @@ impl LevelMap {
 		let col = get_rand(self.min_spot.col.i64(), self.max_spot.col.i64());
 		LevelSpot::from_i64(row, col)
 	}
-	pub fn roll_floor_or_tunnel_spot(&self) -> LevelSpot {
-		self.roll_spot_with_filter(FeatureFilter::FloorOrTunnel)
-	}
-	pub fn roll_spot_with_filter(&self, filter: FeatureFilter) -> LevelSpot {
+	pub fn roll_spot_with_feature_filter(&self, filter: FeatureFilter) -> LevelSpot {
 		loop {
 			let spot = self.roll_spot();
 			let feature = self.feature_at_spot(spot);
@@ -134,6 +132,18 @@ impl LevelMap {
 	}
 	pub fn put_feature_at_spot(&mut self, spot: LevelSpot, feature: Feature) {
 		self.rows[spot.row.usize()][spot.col.usize()] = feature;
+	}
+}
+
+impl LevelMap {
+	pub fn new() -> Self {
+		Self {
+			min_spot: LevelSpot::from_i64(MIN_ROW, 0),
+			max_spot: LevelSpot::from_i64((DROWS - 2) as i64, (DCOLS - 1) as i64),
+			rows: [[Feature::None; DCOLS]; DROWS],
+			objects: Default::default(),
+			monsters: Default::default(),
+		}
 	}
 }
 
@@ -204,35 +214,58 @@ impl LevelMap {
 		self.rows[row as usize][col as usize] = sprite;
 	}
 
+	fn to_spot_view(&self, spot: LevelSpot) -> SpotView {
+		if let Some(monster) = self.monster_at(spot) {
+			SpotView::Monster(monster.kind)
+		} else if let Some(object) = self.object_at(spot) {
+			SpotView::Object(*object)
+		} else {
+			SpotView::Feature(self.feature_at_spot(spot))
+		}
+	}
+
 	pub fn print(&self) {
 		for row in 0..self.rows.len() {
 			let mut line = String::new();
 			let features = &self.rows[row];
 			for col in 0..features.len() {
-				let char = if let Some(what) = self.object_at(LevelSpot::from_usize(row, col)) {
-					what.to_char()
-				} else {
-					match features[col] {
-						Feature::None => ' ',
-						Feature::HorizWall => '-',
-						Feature::VertWall => '|',
-						Feature::Floor => '.',
-						Feature::Tunnel => '#',
-						Feature::ConcealedTunnel => '_',
-						Feature::Door => '+',
-						Feature::ConcealedDoor => '_',
-						Feature::Stairs => STAIRS_CHAR,
-						Feature::Trap(_, visibility) => {
-							match visibility {
-								Visibility::Visible => TRAP_CHAR,
-								Visibility::Hidden => 'v',
-							}
-						}
-					}
-				};
-				line.push(char);
+				let spot = LevelSpot::from_usize(row, col);
+				let spot_view = self.to_spot_view(spot);
+				line.push(spot_view.to_char());
 			}
 			println!("{}", line);
+		}
+	}
+}
+
+enum SpotView {
+	Monster(MonsterKind),
+	Object(ObjectWhat),
+	Feature(Feature),
+}
+
+impl SpotView {
+	pub fn to_char(&self) -> char {
+		match self {
+			SpotView::Monster(kind) => kind.screen_char(),
+			SpotView::Object(what) => what.to_char(),
+			SpotView::Feature(feature) => match feature {
+				Feature::None => ' ',
+				Feature::HorizWall => '-',
+				Feature::VertWall => '|',
+				Feature::Floor => '.',
+				Feature::Tunnel => '#',
+				Feature::ConcealedTunnel => '_',
+				Feature::Door => '+',
+				Feature::ConcealedDoor => '_',
+				Feature::Stairs => STAIRS_CHAR,
+				Feature::Trap(_, visibility) => {
+					match visibility {
+						Visibility::Visible => TRAP_CHAR,
+						Visibility::Hidden => 'v',
+					}
+				}
+			},
 		}
 	}
 }

@@ -24,12 +24,11 @@ pub const MAX_ARMOR: isize = 99;
 pub const MAX_HP: isize = 800;
 pub const MAX_STRENGTH: isize = 99;
 
-#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Default, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Default, Hash)]
 pub struct DungeonSpot {
 	pub col: i64,
 	pub row: i64,
 }
-
 impl From<(usize, usize)> for DungeonSpot {
 	fn from((row, col): (usize, usize)) -> Self {
 		DungeonSpot::new(row, col)

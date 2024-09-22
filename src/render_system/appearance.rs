@@ -1,10 +1,10 @@
 use crate::init::GameState;
 use crate::level::materials::{CellMaterial, FloorFixture, TunnelFixture, Visibility};
-use crate::prelude::DungeonSpot;
 use crate::prelude::object_what::ObjectWhat;
-use crate::render_system::{EMPTY_CHAR, STAIRS_CHAR, TRAP_CHAR, TUNNEL_CHAR};
+use crate::prelude::DungeonSpot;
 use crate::render_system::appearance::player::player_sees_invisible;
 use crate::render_system::appearance::spot::{monster_at_spot, object_at_spot, spot_is_line_of_sight};
+use crate::render_system::{EMPTY_CHAR, STAIRS_CHAR, TRAP_CHAR, TUNNEL_CHAR};
 
 pub(crate) enum SpotAppearance {
 	None,
@@ -46,7 +46,7 @@ fn when_line_of_sight(spot: DungeonSpot, game: &GameState) -> SpotAppearance {
 		Some(monster) if game.level.detect_monster => SpotAppearance::Monster(monster.as_char()),
 		Some(monster) if !monster.is_invisible() || player_sees_invisible(game) => {
 			if monster.imitates() {
-				SpotAppearance::Disguise(monster.disguise_char)
+				SpotAppearance::Disguise(monster.disguise.char())
 			} else {
 				SpotAppearance::Monster(monster.as_char())
 			}
@@ -76,7 +76,7 @@ fn when_out_of_sight(spot: DungeonSpot, game: &GameState) -> SpotAppearance {
 		// Out of sight, visited
 		match monster_at_spot(spot, game) {
 			Some(monster) if game.level.detect_monster => SpotAppearance::Monster(monster.as_char()),
-			Some(monster) if monster.imitates() => SpotAppearance::Disguise(monster.disguise_char),
+			Some(monster) if monster.imitates() => SpotAppearance::Disguise(monster.disguise.char()),
 			Some(_) | None => when_out_of_sight_visited_no_mon(spot, game),
 		}
 	} else {

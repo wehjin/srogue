@@ -3,7 +3,7 @@ use wand_kind::WandKind;
 use crate::hit::rogue_hit;
 use crate::init::GameState;
 use crate::level::Level;
-use crate::monster::{gr_monster, MonsterIndex, MonsterKind, MonsterMash};
+use crate::monster::{MonsterIndex, MonsterMash};
 use crate::motion::{get_dir_or_cancel, reg_move, MoveDirection};
 use crate::pack::pack_letter;
 use crate::prelude::object_what::ObjectWhat::Wand;
@@ -11,6 +11,7 @@ use crate::prelude::object_what::PackFilter::Wands;
 use crate::r#use::relight;
 use crate::random::get_rand;
 use crate::resources::keyboard::CANCEL_CHAR;
+use crate::resources::level::setup::npc::roll_monster;
 use crate::room::gr_spot;
 use crate::spec_hit::imitating;
 
@@ -115,7 +116,7 @@ pub fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
 			if monster.m_flags.holds {
 				game.level.being_held = false;
 			}
-			let mut morph_monster = gr_monster(game.player.cur_depth, 0, Some(MonsterKind::random_any()));
+			let mut morph_monster = roll_monster(game.player.cur_depth as usize, 0);
 			morph_monster.set_spot(row, col);
 			if !morph_monster.m_flags.imitates {
 				morph_monster.wake_up();

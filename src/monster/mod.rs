@@ -15,8 +15,8 @@ use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::Scroll;
 use crate::prelude::*;
 use crate::random::{coin_toss, get_rand, get_rand_indices, rand_percent};
-use crate::render_system::hallucinate::gr_obj_char;
 use crate::render_system::RenderAction;
+use crate::resources::level::setup::npc;
 use crate::room::{dr_course, get_room_number, gr_spot};
 use crate::scrolls::ScrollKind;
 use crate::scrolls::ScrollKind::ScareMonster;
@@ -49,7 +49,7 @@ pub struct Fighter {
 
 pub fn put_mons(game: &mut GameState) {
 	for _ in 0..get_rand(4, 6) {
-		let mut monster = gr_monster(game.player.cur_depth, 0, None);
+		let mut monster = npc::roll_monster(game.player.cur_depth as usize, 0);
 		if monster.m_flags.wanders && coin_toss() {
 			monster.wake_up();
 		}
@@ -60,19 +60,6 @@ pub fn put_mons(game: &mut GameState) {
 		);
 		put_m_at(spot.row, spot.col, monster, &mut game.mash, &mut game.level);
 	}
-}
-
-pub fn gr_monster(level_depth: isize, first_level_boost: isize, kind: Option<MonsterKind>) -> Monster {
-	let kind = kind.unwrap_or_else(|| MonsterKind::random(level_depth, first_level_boost));
-	let mut monster = Monster::create(kind);
-	if monster.m_flags.imitates {
-		monster.disguise_char = gr_obj_char();
-	}
-	if level_depth > AMULET_LEVEL + 2 {
-		monster.m_flags.hasted = true;
-	}
-	monster.target_spot = None;
-	monster
 }
 
 pub fn mv_mons(game: &mut GameState) {
@@ -137,7 +124,7 @@ pub fn party_monsters(rn: usize, n: usize, level_depth: isize, mash: &mut Monste
 			}
 		}
 		if let Some((row, col)) = found {
-			let mut monster = gr_monster(level_depth, first_level_shift, None);
+			let mut monster = npc::roll_monster(level_depth as usize, first_level_shift as usize);
 			if !monster.m_flags.imitates {
 				monster.m_flags.wakens = true;
 			}
@@ -335,7 +322,7 @@ pub fn player_defeats_invisibility(player: &Player, level: &Level) -> bool {
 
 fn random_wanderer(level_depth: isize) -> Option<Monster> {
 	for _i in 0..15 {
-		let monster = gr_monster(level_depth, 0, None);
+		let monster = npc::roll_monster(level_depth as usize, 0);
 		if monster.wanders_or_wakens() {
 			return Some(monster);
 		}
@@ -401,7 +388,7 @@ fn random_spot_for_monster(start_row: i64, start_col: i64, level: &Level) -> Opt
 pub fn create_monster(game: &mut GameState) {
 	let player = &game.player;
 	if let Some(found) = random_spot_for_monster(player.rogue.row, player.rogue.col, &game.level) {
-		let monster = gr_monster(player.cur_depth, 0, None);
+		let monster = npc::roll_monster(player.cur_depth as usize, 0);
 		let level = &mut game.level;
 		put_m_at(found.row, found.col, monster, &mut game.mash, level);
 		game.render_spot(found);

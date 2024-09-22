@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Default, Serialize, Deserialize)]
+
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 pub struct MonsterFlags {
 	pub hasted: bool,
 	pub slowed: bool,
