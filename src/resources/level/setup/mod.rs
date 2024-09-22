@@ -22,8 +22,9 @@ use std::collections::HashSet;
 
 pub mod npc;
 
-pub fn roll_complete_level(depth: usize, is_max: bool, party_type: LevelType, stats: &mut DungeonStats) -> DungeonLevel {
-	let mut level = roll_level_with_rooms(depth, is_max, party_type);
+pub fn roll_complete_level(depth: usize, is_max: bool, level_type: LevelType, stats: &mut DungeonStats) -> DungeonLevel {
+	let mut level = roll_level_with_rooms(depth, is_max, level_type);
+	// TODO place the amulet.
 	roll_objects(&mut level, stats);
 	roll_stairs(&mut level);
 	roll_traps(&mut level);
