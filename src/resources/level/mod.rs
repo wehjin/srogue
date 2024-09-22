@@ -44,12 +44,12 @@ impl DungeonLevel {
 }
 
 impl DungeonLevel {
-	pub fn spot_is_vacant(&self, spot: LevelSpot, allow_objects: bool, _allow_monsters: bool) -> bool {
+	pub fn spot_is_vacant(&self, spot: LevelSpot, allow_objects: bool, allow_monsters: bool) -> bool {
 		let is_floor_or_tunnel = self.spot_is_floor_or_tunnel(spot);
 		let no_rogue = self.rogue_spot != spot;
 		let no_object = allow_objects || self.object_at(spot).is_none();
-		// TODO check for no monsters
-		no_object && no_rogue && is_floor_or_tunnel
+		let no_monsters = allow_monsters || self.monster_at(spot).is_none();
+		no_monsters && no_object && no_rogue && is_floor_or_tunnel
 	}
 	pub fn spot_is_floor_or_tunnel(&self, spot: LevelSpot) -> bool {
 		let feature = self.map.feature_at_spot(spot);
