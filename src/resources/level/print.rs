@@ -56,10 +56,10 @@ impl SpotView {
 	fn lit(spot: LevelSpot, level: &DungeonLevel) -> SpotView {
 		if level.rogue_at_spot(spot) {
 			Self::Rogue
-		} else if let Some(monster) = level.monster_at(spot) {
+		} else if let Some(monster) = level.try_monster(spot) {
 			Self::Monster(monster.kind)
-		} else if let Some(object) = level.object_at(spot) {
-			Self::Object(*object)
+		} else if let Some(object) = level.try_object(spot) {
+			Self::Object(object.what_is)
 		} else {
 			Self::Feature(level.map.feature_at_spot(spot))
 		}

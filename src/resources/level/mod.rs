@@ -4,7 +4,6 @@ use crate::resources::level::room_id::RoomId;
 use crate::resources::level::size::LevelSpot;
 
 use crate::monster::Monster;
-use crate::prelude::object_what::ObjectWhat;
 use crate::resources::game::RogueSpot;
 use crate::resources::level::map::feature::{Feature, FeatureFilter};
 use crate::resources::level::room::LevelRoom;
@@ -22,6 +21,8 @@ pub struct DungeonLevel {
 	pub rogue_spot: RogueSpot,
 	pub party_room: Option<RoomId>,
 	pub lighting_enabled: bool,
+	pub objects: HashMap<LevelSpot, Object>,
+	pub monsters: HashMap<LevelSpot, Monster>,
 }
 
 impl DungeonLevel {
@@ -34,10 +35,10 @@ impl DungeonLevel {
 }
 
 impl DungeonLevel {
-	pub fn room(&self, room_id: RoomId) -> &LevelRoom {
+	pub fn as_room(&self, room_id: RoomId) -> &LevelRoom {
 		self.rooms.get(&room_id).unwrap()
 	}
-	pub fn room_mut(&mut self, room_id: RoomId) -> &mut LevelRoom {
+	pub fn as_room_mut(&mut self, room_id: RoomId) -> &mut LevelRoom {
 		self.rooms.get_mut(&room_id).unwrap()
 	}
 }
@@ -66,7 +67,8 @@ impl DungeonLevel {
 		result
 	}
 	pub fn light_room(&mut self, room_id: RoomId) {
-		self.room_mut(room_id).lit = true;
+		let room = self.as_room_mut(room_id);
+		room.lit = true;
 	}
 	pub fn light_tunnel_spot(&mut self, _spot: LevelSpot) {
 		// TODO
@@ -77,8 +79,8 @@ impl DungeonLevel {
 	pub fn spot_is_vacant(&self, spot: LevelSpot, allow_objects: bool, allow_monsters: bool) -> bool {
 		let is_floor_or_tunnel = self.spot_is_floor_or_tunnel(spot);
 		let no_rogue = !self.rogue_spot.is_spot(spot);
-		let no_object = allow_objects || self.object_at(spot).is_none();
-		let no_monsters = allow_monsters || self.monster_at(spot).is_none();
+		let no_object = allow_objects || self.try_object(spot).is_none();
+		let no_monsters = allow_monsters || self.try_monster(spot).is_none();
 		no_monsters && no_object && no_rogue && is_floor_or_tunnel
 	}
 	pub fn spot_is_tunnel(&self, spot: LevelSpot) -> bool {
@@ -111,23 +113,23 @@ impl DungeonLevel {
 	}
 }
 impl DungeonLevel {
-	pub fn monster_at(&self, spot: LevelSpot) -> Option<&Monster> {
-		self.map.monster_at(spot)
+	pub fn try_monster(&self, spot: LevelSpot) -> Option<&Monster> {
+		self.monsters.get(&spot)
 	}
 	pub fn put_monster(&mut self, spot: LevelSpot, mut monster: Monster) {
 		let (row, col) = spot.i64();
 		monster.set_spot(row, col);
-		self.map.add_monster(monster, spot);
+		self.monsters.insert(spot, monster);
 	}
 }
 
 impl DungeonLevel {
-	pub fn object_at(&self, spot: LevelSpot) -> Option<&ObjectWhat> {
-		self.map.object_at(spot)
+	pub fn try_object(&self, spot: LevelSpot) -> Option<&Object> {
+		self.objects.get(&spot)
 	}
 	pub fn put_object(&mut self, spot: LevelSpot, mut object: Object) {
 		object.set_spot(spot);
-		self.map.add_object(object.what_is, spot);
+		self.objects.insert(spot, object);
 	}
 }
 impl DungeonLevel {
@@ -144,20 +146,6 @@ impl DungeonLevel {
 impl DungeonLevel {
 	pub fn put_stairs(&mut self, spot: LevelSpot) {
 		self.map.put_feature_at_spot(spot, Feature::Stairs);
-	}
-}
-impl DungeonLevel {
-	pub fn new(depth: usize, is_max: bool, party_type: PartyType) -> Self {
-		Self {
-			depth,
-			is_max,
-			ty: party_type,
-			rooms: HashMap::new(),
-			map: LevelMap::new(),
-			rogue_spot: RogueSpot::None,
-			party_room: None,
-			lighting_enabled: false,
-		}
 	}
 }
 

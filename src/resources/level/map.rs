@@ -1,7 +1,5 @@
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::materials::Visibility;
-use crate::monster::Monster;
-use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::{HIDE_PERCENT, MIN_ROW};
 use crate::random::{get_rand, rand_percent};
 use crate::resources::level::map::feature::{Feature, FeatureFilter};
@@ -10,7 +8,6 @@ use crate::resources::level::plain::Axis;
 use crate::resources::level::size::LevelSpot;
 use crate::room::RoomBounds;
 use crate::trap::trap_kind::TrapKind;
-use std::collections::HashMap;
 use std::fmt::Debug;
 
 pub mod feature {
@@ -59,22 +56,11 @@ pub struct LevelMap {
 	pub min_spot: LevelSpot,
 	pub max_spot: LevelSpot,
 	pub rows: [[Feature; DCOLS]; DROWS],
-	pub objects: HashMap<LevelSpot, ObjectWhat>,
-	pub monsters: HashMap<LevelSpot, Monster>,
 }
 
 impl LevelMap {
 	pub fn bounds(&self) -> RoomBounds {
 		RoomBounds { top: 0, right: (DCOLS - 1) as i64, bottom: (DROWS - 1) as i64, left: 0 }
-	}
-}
-
-impl LevelMap {
-	pub fn monster_at(&self, spot: LevelSpot) -> Option<&Monster> {
-		self.monsters.get(&spot)
-	}
-	pub fn add_monster(&mut self, monster: Monster, spot: LevelSpot) {
-		self.monsters.insert(spot, monster);
 	}
 }
 
@@ -87,15 +73,6 @@ impl LevelMap {
 	}
 	pub fn add_trap(&mut self, trap: TrapKind, spot: LevelSpot) {
 		self.put_feature_at_spot(spot, Feature::Trap(trap, Visibility::Hidden))
-	}
-}
-
-impl LevelMap {
-	pub fn object_at(&self, spot: LevelSpot) -> Option<&ObjectWhat> {
-		self.objects.get(&spot)
-	}
-	pub fn add_object(&mut self, object: ObjectWhat, spot: LevelSpot) {
-		self.objects.insert(spot, object);
 	}
 }
 
@@ -146,8 +123,6 @@ impl LevelMap {
 			min_spot: LevelSpot::from_i64(MIN_ROW, 0),
 			max_spot: LevelSpot::from_i64((DROWS - 2) as i64, (DCOLS - 1) as i64),
 			rows: [[Feature::None; DCOLS]; DROWS],
-			objects: Default::default(),
-			monsters: Default::default(),
 		}
 	}
 }

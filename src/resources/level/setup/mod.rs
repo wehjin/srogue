@@ -46,7 +46,7 @@ fn roll_traps(level: &mut DungeonLevel) {
 		let trap = Trap { trap_type: TrapKind::random(), ..Trap::default() };
 		let spot = match level.party_room {
 			Some(party_room) if i == 0 => {
-				let bounds = level.room(party_room).bounds.inset(1, 1);
+				let bounds = level.as_room(party_room).bounds.inset(1, 1);
 				let mut found = None;
 				'search: for _ in 0..15 {
 					let spot = bounds.roll_spot();
@@ -96,6 +96,8 @@ fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType) -> DungeonLevel
 			rogue_spot: RogueSpot::None,
 			party_room: Some(RoomId::Big),
 			lighting_enabled: false,
+			objects: Default::default(),
+			monsters: Default::default(),
 		}
 	} else {
 		let design = roll_design();
@@ -114,7 +116,18 @@ fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType) -> DungeonLevel
 			})
 			.collect();
 		let map = level.into_map();
-		DungeonLevel { depth, is_max, ty: party_type, rooms, map, rogue_spot: RogueSpot::None, party_room: None, lighting_enabled: false }
+		DungeonLevel {
+			depth,
+			is_max,
+			ty: party_type,
+			rooms,
+			map,
+			rogue_spot: RogueSpot::None,
+			party_room: None,
+			lighting_enabled: false,
+			objects: Default::default(),
+			monsters: Default::default(),
+		}
 	}
 }
 
@@ -155,7 +168,7 @@ fn roll_vault_or_maze(level: &DungeonLevel) -> RoomId {
 fn roll_gold(level: &mut DungeonLevel) {
 	let rooms_and_mazes = level.vault_and_maze_rooms();
 	for room_id in rooms_and_mazes {
-		let room = level.room(room_id);
+		let room = level.as_room(room_id);
 		if room.is_maze() || rand_percent(GOLD_PERCENT) {
 			let search_bounds = room.bounds.inset(1, 1);
 			for _ in 0..50 {
