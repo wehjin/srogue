@@ -57,6 +57,7 @@ impl RoomType {
 	pub fn is_room(&self) -> bool {
 		*self == RoomType::Room
 	}
+	pub fn is_vault(&self) -> bool { *self == RoomType::Room }
 	pub fn is_maze(&self) -> bool {
 		*self == RoomType::Maze
 	}

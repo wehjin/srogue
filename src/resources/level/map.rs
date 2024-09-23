@@ -1,10 +1,9 @@
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::materials::Visibility;
-use crate::monster::{Monster, MonsterKind};
+use crate::monster::Monster;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::{HIDE_PERCENT, MIN_ROW};
 use crate::random::{get_rand, rand_percent};
-use crate::render_system::{STAIRS_CHAR, TRAP_CHAR};
 use crate::resources::level::map::feature::{Feature, FeatureFilter};
 use crate::resources::level::maze::hide_random_tunnels;
 use crate::resources::level::plain::Axis;
@@ -62,6 +61,12 @@ pub struct LevelMap {
 	pub rows: [[Feature; DCOLS]; DROWS],
 	pub objects: HashMap<LevelSpot, ObjectWhat>,
 	pub monsters: HashMap<LevelSpot, Monster>,
+}
+
+impl LevelMap {
+	pub fn bounds(&self) -> RoomBounds {
+		RoomBounds { top: 0, right: (DCOLS - 1) as i64, bottom: (DROWS - 1) as i64, left: 0 }
+	}
 }
 
 impl LevelMap {
@@ -213,59 +218,5 @@ impl LevelMap {
 	fn put_sprite(&mut self, row: i64, col: i64, sprite: Feature) {
 		self.rows[row as usize][col as usize] = sprite;
 	}
-
-	fn to_spot_view(&self, spot: LevelSpot) -> SpotView {
-		if let Some(monster) = self.monster_at(spot) {
-			SpotView::Monster(monster.kind)
-		} else if let Some(object) = self.object_at(spot) {
-			SpotView::Object(*object)
-		} else {
-			SpotView::Feature(self.feature_at_spot(spot))
-		}
-	}
-
-	pub fn print(&self) {
-		for row in 0..self.rows.len() {
-			let mut line = String::new();
-			let features = &self.rows[row];
-			for col in 0..features.len() {
-				let spot = LevelSpot::from_usize(row, col);
-				let spot_view = self.to_spot_view(spot);
-				line.push(spot_view.to_char());
-			}
-			println!("{}", line);
-		}
-	}
 }
 
-enum SpotView {
-	Monster(MonsterKind),
-	Object(ObjectWhat),
-	Feature(Feature),
-}
-
-impl SpotView {
-	pub fn to_char(&self) -> char {
-		match self {
-			SpotView::Monster(kind) => kind.screen_char(),
-			SpotView::Object(what) => what.to_char(),
-			SpotView::Feature(feature) => match feature {
-				Feature::None => ' ',
-				Feature::HorizWall => '-',
-				Feature::VertWall => '|',
-				Feature::Floor => '.',
-				Feature::Tunnel => '#',
-				Feature::ConcealedTunnel => '_',
-				Feature::Door => '+',
-				Feature::ConcealedDoor => '_',
-				Feature::Stairs => STAIRS_CHAR,
-				Feature::Trap(_, visibility) => {
-					match visibility {
-						Visibility::Visible => TRAP_CHAR,
-						Visibility::Hidden => 'v',
-					}
-				}
-			},
-		}
-	}
-}

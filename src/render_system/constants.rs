@@ -1,5 +1,6 @@
 pub const AMULET_CHAR: char = ',';
 pub const ARMOR_CHAR: char = ']';
+pub const DOOR_CHAR: char = '+';
 pub const EMPTY_CHAR: char = ' ';
 pub const FLAME_CHAR: char = '~';
 pub const FLOOR_CHAR: char = '.';

@@ -28,7 +28,7 @@ pub fn roll_party(level: &mut DungeonLevel, stats: &mut DungeonStats) {
 }
 
 fn roll_party_guests(favors: usize, venue: RoomId, level: &mut DungeonLevel) {
-	let search = level.room_at(venue).expect("invalid venue").bounds.inset(1, 1);
+	let search = level.room(venue).bounds.inset(1, 1);
 	let spots = roll_party_spots(search, 2 * favors, level, true);
 	let level_boost = level.depth % 3;
 	for spot in spots {
@@ -41,8 +41,7 @@ fn roll_party_guests(favors: usize, venue: RoomId, level: &mut DungeonLevel) {
 }
 
 fn roll_party_favors(room_id: RoomId, level: &mut DungeonLevel, stats: &mut DungeonStats) -> usize {
-	let room = level.room_at(room_id).expect("invalid room id");
-	let search_bounds = room.bounds.inset(1, 1);
+	let search_bounds = level.room(room_id).bounds.inset(1, 1);
 	let count = get_rand(5, 10) as usize;
 	let vacant_spots = roll_party_spots(search_bounds, count, level, false);
 	for spot in &vacant_spots {

@@ -11,6 +11,7 @@ pub struct LevelRoom {
 	pub ty: RoomType,
 	pub bounds: RoomBounds,
 	pub exits: [RoomExit; 4],
+	pub lit: bool,
 }
 impl LevelRoom {
 	pub fn contains_spot(&self, spot: LevelSpot) -> bool {
@@ -68,7 +69,7 @@ impl LevelRoom {
 impl LevelRoom {
 	pub fn from_sector(sector: Sector) -> Self {
 		let bounds = get_random_room_bounds(&sector.bounds());
-		Self { ty: RoomType::Nothing, bounds, exits: [RoomExit::None; 4] }
+		Self { ty: RoomType::Nothing, bounds, exits: [RoomExit::None; 4], lit: false }
 	}
 	pub fn is_nothing(&self) -> bool { self.ty == RoomType::Nothing }
 	pub fn is_vault(&self) -> bool { self.ty == RoomType::Room }

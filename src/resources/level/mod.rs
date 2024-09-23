@@ -5,6 +5,7 @@ use crate::resources::level::size::LevelSpot;
 
 use crate::monster::Monster;
 use crate::prelude::object_what::ObjectWhat;
+use crate::resources::game::RogueSpot;
 use crate::resources::level::map::feature::{Feature, FeatureFilter};
 use crate::resources::level::room::LevelRoom;
 use crate::room::RoomType;
@@ -18,15 +19,40 @@ pub struct DungeonLevel {
 	pub ty: PartyType,
 	pub rooms: HashMap<RoomId, LevelRoom>,
 	pub map: LevelMap,
-	pub rogue_spot: LevelSpot,
+	pub rogue_spot: RogueSpot,
 	pub party_room: Option<RoomId>,
+	pub lighting_enabled: bool,
 }
 
 impl DungeonLevel {
-	pub fn room_at(&self, room_id: RoomId) -> Option<&LevelRoom> {
-		self.rooms.get(&room_id)
+	pub fn rogue_at_spot(&self, spot: LevelSpot) -> bool {
+		self.rogue_spot.is_spot(spot)
 	}
-	pub fn vaults_and_mazes(&self) -> Vec<RoomId> {
+	pub fn put_rogue(&mut self, spot: RogueSpot) {
+		self.rogue_spot = spot;
+	}
+}
+
+impl DungeonLevel {
+	pub fn room(&self, room_id: RoomId) -> &LevelRoom {
+		self.rooms.get(&room_id).unwrap()
+	}
+	pub fn room_mut(&mut self, room_id: RoomId) -> &mut LevelRoom {
+		self.rooms.get_mut(&room_id).unwrap()
+	}
+}
+
+impl DungeonLevel {
+	pub fn room_at_spot(&self, spot: LevelSpot) -> Option<RoomId> {
+		for (id, room) in &self.rooms {
+			let within_room = room.contains_spot(spot);
+			if within_room {
+				return Some(*id);
+			}
+		}
+		None
+	}
+	pub fn vault_and_maze_rooms(&self) -> Vec<RoomId> {
 		let result = self.rooms
 			.iter()
 			.filter_map(|(id, room)| {
@@ -39,30 +65,38 @@ impl DungeonLevel {
 			.collect();
 		result
 	}
+	pub fn light_room(&mut self, room_id: RoomId) {
+		self.room_mut(room_id).lit = true;
+	}
+	pub fn light_tunnel_spot(&mut self, _spot: LevelSpot) {
+		// TODO
+	}
 }
 
 impl DungeonLevel {
 	pub fn spot_is_vacant(&self, spot: LevelSpot, allow_objects: bool, allow_monsters: bool) -> bool {
 		let is_floor_or_tunnel = self.spot_is_floor_or_tunnel(spot);
-		let no_rogue = self.rogue_spot != spot;
+		let no_rogue = !self.rogue_spot.is_spot(spot);
 		let no_object = allow_objects || self.object_at(spot).is_none();
 		let no_monsters = allow_monsters || self.monster_at(spot).is_none();
 		no_monsters && no_object && no_rogue && is_floor_or_tunnel
+	}
+	pub fn spot_is_tunnel(&self, spot: LevelSpot) -> bool {
+		let feature = self.map.feature_at_spot(spot);
+		feature == Feature::Tunnel
 	}
 	pub fn spot_is_floor_or_tunnel(&self, spot: LevelSpot) -> bool {
 		let feature = self.map.feature_at_spot(spot);
 		feature == Feature::Floor || feature == Feature::Tunnel
 	}
 	pub fn spot_in_vault_or_maze(&self, spot: LevelSpot) -> bool {
-		for (id, room) in &self.rooms {
-			let ty = id.room_type();
-			let is_room_or_maze_space = ty == RoomType::Room || ty == RoomType::Maze;
-			let is_within_room = room.contains_spot(spot);
-			if is_room_or_maze_space && is_within_room {
-				return true;
+		match self.room_at_spot(spot) {
+			Some(id) => {
+				let ty = id.room_type();
+				ty == RoomType::Room || ty == RoomType::Maze
 			}
+			None => false,
 		}
-		false
 	}
 	pub fn roll_vacant_spot(&self, allow_objects: bool, allow_monsters: bool, allow_stairs: bool) -> LevelSpot {
 		let feature_filter = if allow_stairs { FeatureFilter::FloorTunnelOrStair } else { FeatureFilter::FloorOrTunnel };
@@ -120,8 +154,9 @@ impl DungeonLevel {
 			ty: party_type,
 			rooms: HashMap::new(),
 			map: LevelMap::new(),
-			rogue_spot: LevelSpot::from_i64(0, 0),
+			rogue_spot: RogueSpot::None,
 			party_room: None,
+			lighting_enabled: false,
 		}
 	}
 }
@@ -160,6 +195,9 @@ pub mod room_id {
 				RoomId::Little(_, ty) => *ty,
 			}
 		}
+		pub fn is_vault(&self) -> bool {
+			self.room_type().is_vault()
+		}
 	}
 }
 
@@ -171,7 +209,7 @@ mod tests {
 	use crate::resources::level::PartyType;
 
 	#[test]
-	fn plain_level_works() {
+	fn no_party_works() {
 		let mut stats = DungeonStats { food_drops: 7 };
 		let level_kind = LevelKind {
 			depth: 16,
@@ -179,11 +217,13 @@ mod tests {
 			post_amulet: false,
 			party_type: PartyType::NoParty,
 		};
-		let level = roll_level(&level_kind, &mut stats);
-		level.map.print();
+		let mut level = roll_level(&level_kind, &mut stats);
+		level.print(true);
+		level.lighting_enabled = true;
+		level.print(false);
 	}
 	#[test]
-	fn party_level_works() {
+	fn party_big_works() {
 		let mut stats = DungeonStats { food_drops: (AMULET_LEVEL / 2 - 1) as usize };
 		let level_kind = LevelKind {
 			depth: AMULET_LEVEL as usize,
@@ -191,8 +231,9 @@ mod tests {
 			post_amulet: false,
 			party_type: PartyType::PartyBig,
 		};
-		let level = roll_level(&level_kind, &mut stats);
-		level.map.print();
+		let mut level = roll_level(&level_kind, &mut stats);
+		level.lighting_enabled = true;
+		level.print(true);
 	}
 }
 
@@ -201,6 +242,7 @@ pub mod deadend;
 pub mod map;
 pub mod maze;
 pub mod plain;
+pub mod print;
 pub mod sector;
 pub mod setup;
 pub mod size;
