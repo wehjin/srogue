@@ -2,13 +2,13 @@ use crate::level::materials::Visibility;
 use crate::monster::MonsterKind;
 use crate::prelude::object_what::ObjectWhat;
 use crate::render_system::{DOOR_CHAR, EMPTY_CHAR, PLAYER_CHAR, STAIRS_CHAR, TRAP_CHAR, TUNNEL_CHAR};
-use crate::resources::level::map::feature::Feature;
+use crate::resources::level::feature_grid::feature::Feature;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::level::DungeonLevel;
 
 impl DungeonLevel {
 	pub fn print(&self, reveal_hidden: bool) {
-		let bounds = self.map.bounds();
+		let bounds = self.features.bounds();
 		for row in bounds.rows() {
 			let mut line = String::new();
 			for col in bounds.cols() {
@@ -61,7 +61,7 @@ impl SpotView {
 		} else if let Some(object) = level.try_object(spot) {
 			Self::Object(object.what_is)
 		} else {
-			Self::Feature(level.map.feature_at_spot(spot))
+			Self::Feature(level.features.feature_at(spot))
 		}
 	}
 	fn to_char(&self, reveal_hidden: bool) -> char {

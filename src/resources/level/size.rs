@@ -65,7 +65,7 @@ impl LevelSpot {
 	pub fn i64(&self) -> (i64, i64) {
 		(self.row.0 as i64, self.col.0 as i64)
 	}
-	pub fn from_i64(row: i64, col: i64) -> Self {
+	pub const fn from_i64(row: i64, col: i64) -> Self {
 		Self {
 			row: LevelSize(row as isize),
 			col: LevelSize(col as isize),

@@ -127,7 +127,6 @@ pub struct RoomBounds {
 	pub bottom: i64,
 	pub left: i64,
 }
-
 impl RoomBounds {
 	pub fn area(&self) -> i64 { self.height() * self.width() }
 	pub fn width(&self) -> i64 { self.right - self.left + 1 }

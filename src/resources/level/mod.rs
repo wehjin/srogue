@@ -1,11 +1,11 @@
 use crate::objects::Object;
-use crate::resources::level::map::LevelMap;
+use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::room_id::RoomId;
 use crate::resources::level::size::LevelSpot;
 
 use crate::monster::Monster;
 use crate::resources::game::RogueSpot;
-use crate::resources::level::map::feature::{Feature, FeatureFilter};
+use crate::resources::level::feature_grid::feature::{Feature, FeatureFilter};
 use crate::resources::level::room::LevelRoom;
 use crate::room::RoomType;
 use crate::trap::trap_kind::TrapKind;
@@ -17,7 +17,7 @@ pub struct DungeonLevel {
 	pub is_max: bool,
 	pub ty: PartyType,
 	pub rooms: HashMap<RoomId, LevelRoom>,
-	pub map: LevelMap,
+	pub features: FeatureGrid,
 	pub rogue_spot: RogueSpot,
 	pub party_room: Option<RoomId>,
 	pub lighting_enabled: bool,
@@ -84,11 +84,11 @@ impl DungeonLevel {
 		no_monsters && no_object && no_rogue && is_floor_or_tunnel
 	}
 	pub fn spot_is_tunnel(&self, spot: LevelSpot) -> bool {
-		let feature = self.map.feature_at_spot(spot);
+		let feature = self.features.feature_at(spot);
 		feature == Feature::Tunnel
 	}
 	pub fn spot_is_floor_or_tunnel(&self, spot: LevelSpot) -> bool {
-		let feature = self.map.feature_at_spot(spot);
+		let feature = self.features.feature_at(spot);
 		feature == Feature::Floor || feature == Feature::Tunnel
 	}
 	pub fn spot_in_vault_or_maze(&self, spot: LevelSpot) -> bool {
@@ -103,7 +103,7 @@ impl DungeonLevel {
 	pub fn roll_vacant_spot(&self, allow_objects: bool, allow_monsters: bool, allow_stairs: bool) -> LevelSpot {
 		let feature_filter = if allow_stairs { FeatureFilter::FloorTunnelOrStair } else { FeatureFilter::FloorOrTunnel };
 		loop {
-			let spot = self.map.roll_spot_with_feature_filter(feature_filter);
+			let spot = self.features.roll_spot(feature_filter);
 			let in_vault_or_maze = self.spot_in_vault_or_maze(spot);
 			let is_vacant = self.spot_is_vacant(spot, allow_objects, allow_monsters);
 			if is_vacant && in_vault_or_maze {
@@ -134,18 +134,18 @@ impl DungeonLevel {
 }
 impl DungeonLevel {
 	pub fn trap_at(&self, spot: LevelSpot) -> Option<TrapKind> {
-		self.map.trap_at(spot)
+		self.features.trap_at(spot)
 	}
 	pub fn put_trap(&mut self, spot: LevelSpot, mut trap: Trap) {
 		let (row, col) = spot.usize();
 		trap.trap_row = row;
 		trap.trap_col = col;
-		self.map.add_trap(trap.trap_type, spot);
+		self.features.add_trap(trap.trap_type, spot);
 	}
 }
 impl DungeonLevel {
 	pub fn put_stairs(&mut self, spot: LevelSpot) {
-		self.map.put_feature_at_spot(spot, Feature::Stairs);
+		self.features.put_feature(spot, Feature::Stairs);
 	}
 }
 
@@ -227,7 +227,8 @@ mod tests {
 
 pub mod design;
 pub mod deadend;
-pub mod map;
+pub mod feature_grid;
+pub mod grid;
 pub mod maze;
 pub mod plain;
 pub mod print;
@@ -235,3 +236,4 @@ pub mod sector;
 pub mod setup;
 pub mod size;
 pub mod room;
+

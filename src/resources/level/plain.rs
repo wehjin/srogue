@@ -1,6 +1,6 @@
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::resources::level::design::Design;
-use crate::resources::level::map::LevelMap;
+use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::maze::hide_random_tunnels;
 use crate::resources::level::room::{ExitId, LevelRoom};
 use crate::resources::level::sector::{shuffled_sectors, Sector, ALL_SECTORS};
@@ -14,7 +14,7 @@ use maze::make_maze;
 pub struct PlainLevel {
 	level: usize,
 	spaces: [LevelRoom; 9],
-	map: LevelMap,
+	map: FeatureGrid,
 }
 impl PlainLevel {
 	pub fn new(level: usize) -> Self {
@@ -29,7 +29,7 @@ impl PlainLevel {
 			LevelRoom::from_sector(Sector::BottomCenter),
 			LevelRoom::from_sector(Sector::BottomRight),
 		];
-		Self { level, spaces, map: LevelMap::new() }
+		Self { level, spaces, map: FeatureGrid::new() }
 	}
 	pub fn space_mut(&mut self, sector: Sector) -> &mut LevelRoom {
 		&mut self.spaces[sector as usize]
@@ -37,7 +37,7 @@ impl PlainLevel {
 	pub fn space(&self, sector: Sector) -> &LevelRoom {
 		&self.spaces[sector as usize]
 	}
-	pub fn into_map(self) -> LevelMap {
+	pub fn into_map(self) -> FeatureGrid {
 		self.map
 	}
 }
@@ -130,7 +130,7 @@ impl Axis {
 	}
 }
 
-fn connect_neighbors(axis: Axis, sector: Sector, current_level: usize, spaces: &mut [LevelRoom; 9], map: &mut LevelMap) {
+fn connect_neighbors(axis: Axis, sector: Sector, current_level: usize, spaces: &mut [LevelRoom; 9], map: &mut FeatureGrid) {
 	if !spaces[sector as usize].is_vault_or_maze() {
 		return;
 	}
@@ -154,7 +154,7 @@ fn connect_neighbors(axis: Axis, sector: Sector, current_level: usize, spaces: &
 	}
 }
 
-fn connect_spaces(axis: Axis, sector1: Sector, sector2: Sector, current_level: usize, spaces: &mut [LevelRoom; 9], map: &mut LevelMap) {
+fn connect_spaces(axis: Axis, sector1: Sector, sector2: Sector, current_level: usize, spaces: &mut [LevelRoom; 9], map: &mut FeatureGrid) {
 	let start: LevelSpot;
 	let end: LevelSpot;
 	match axis {

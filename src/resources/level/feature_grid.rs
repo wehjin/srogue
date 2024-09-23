@@ -1,0 +1,163 @@
+use crate::level::materials::Visibility;
+use crate::prelude::HIDE_PERCENT;
+use crate::random::{get_rand, rand_percent};
+use crate::resources::level::feature_grid::feature::{Feature, FeatureFilter};
+use crate::resources::level::grid::LevelGrid;
+use crate::resources::level::maze::hide_random_tunnels;
+use crate::resources::level::plain::Axis;
+use crate::resources::level::size::LevelSpot;
+use crate::room::RoomBounds;
+use crate::trap::trap_kind::TrapKind;
+use std::fmt::Debug;
+use std::ops::RangeInclusive;
+
+pub mod feature {
+	use crate::level::materials::Visibility;
+	use crate::trap::trap_kind::TrapKind;
+
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
+	pub enum Feature {
+		#[default]
+		None,
+		HorizWall,
+		VertWall,
+		Floor,
+		Tunnel,
+		ConcealedTunnel,
+		Door,
+		ConcealedDoor,
+		Stairs,
+		Trap(TrapKind, Visibility),
+	}
+	impl Feature {
+		pub fn is_any_tunnel(&self) -> bool {
+			match self {
+				Feature::Tunnel | Feature::ConcealedTunnel => true,
+				_ => false,
+			}
+		}
+	}
+
+	#[derive(Copy, Clone)]
+	pub enum FeatureFilter {
+		FloorOrTunnel,
+		FloorTunnelOrStair,
+	}
+	impl FeatureFilter {
+		pub fn pass_feature(&self, feature: Feature) -> bool {
+			match self {
+				FeatureFilter::FloorOrTunnel => feature == Feature::Floor || feature.is_any_tunnel(),
+				FeatureFilter::FloorTunnelOrStair => feature == Feature::Stairs || feature == Feature::Floor || feature.is_any_tunnel(),
+			}
+		}
+	}
+}
+
+#[derive(Debug, Clone)]
+pub struct FeatureGrid(LevelGrid<Feature>);
+
+impl FeatureGrid {
+	pub fn new() -> Self {
+		Self(LevelGrid::<Feature>::new())
+	}
+	pub fn bounds(&self) -> &RoomBounds {
+		self.0.bounds()
+	}
+	pub fn feature_at(&self, spot: LevelSpot) -> Feature {
+		self.0.value_at(spot)
+	}
+	pub fn put_feature(&mut self, spot: LevelSpot, feature: Feature) {
+		self.0.put_value(spot, feature);
+	}
+}
+
+impl FeatureGrid {
+	pub fn trap_at(&self, spot: LevelSpot) -> Option<TrapKind> {
+		match self.feature_at(spot) {
+			Feature::Trap(kind, _) => Some(kind),
+			_ => None
+		}
+	}
+	pub fn add_trap(&mut self, trap: TrapKind, spot: LevelSpot) {
+		self.put_feature(spot, Feature::Trap(trap, Visibility::Hidden))
+	}
+}
+
+impl FeatureGrid {
+	pub fn roll_spot(&self, filter: FeatureFilter) -> LevelSpot {
+		loop {
+			let spot = self.0.bounds().roll_spot();
+			let feature = self.feature_at(spot);
+			if filter.pass_feature(feature) {
+				return spot;
+			}
+		}
+	}
+	pub fn put_passage(&mut self, axis: Axis, spot1: LevelSpot, spot2: LevelSpot, current_level: usize) {
+		let (start, end) = axis.sort_spots(spot1, spot2);
+		struct Leg {
+			rows: RangeInclusive<i64>,
+			cols: RangeInclusive<i64>,
+		}
+		let legs = match axis {
+			Axis::Horizontal => {
+				let start_col = start.col.i64() + 1;
+				let end_col = end.col.i64() - 1;
+				let middle_col = get_rand(start_col, end_col);
+				let start_row = start.row.i64();
+				let end_row = end.row.i64();
+				let (row1, row2) = if start_row <= end_row { (start_row, end_row) } else { (end_row, start_row) };
+				[
+					Leg { rows: start_row..=start_row, cols: start_col..=middle_col },
+					Leg { rows: end_row..=end_row, cols: middle_col..=end_col },
+					Leg { rows: row1..=row2, cols: middle_col..=middle_col }
+				]
+			}
+			Axis::Vertical => {
+				let start_row = start.row.i64() + 1;
+				let end_row = end.row.i64() - 1;
+				let middle_row = get_rand(start_row, end_row);
+				let start_col = start.col.i64();
+				let end_col = end.col.i64();
+				let (col1, col2) = if start_col <= end_col { (start_col, end_col) } else { (end_col, start_col) };
+				[
+					Leg { rows: start_row..=middle_row, cols: start_col..=start_col },
+					Leg { rows: middle_row..=end_row, cols: end_col..=end_col },
+					Leg { rows: middle_row..=middle_row, cols: col1..=col2 },
+				]
+			}
+		};
+		for leg in legs {
+			for row in leg.rows {
+				for col in leg.cols.clone() {
+					let spot = LevelSpot::from_i64(row, col);
+					self.put_feature(spot, Feature::Tunnel)
+				}
+			}
+		}
+		if rand_percent(HIDE_PERCENT) {
+			let (start_row, start_col) = start.i64();
+			let (end_row, end_col) = end.i64();
+			let top = start_row.min(end_row);
+			let bottom = start_row.max(end_row);
+			let left = start_col.min(end_col);
+			let right = start_col.max(end_col);
+			let bounds = RoomBounds { top, right, bottom, left };
+			hide_random_tunnels(bounds, 1, current_level, self)
+		}
+	}
+	pub fn put_walls_and_floor(mut self, room: RoomBounds) -> Self {
+		for row in room.top..=room.bottom {
+			for col in room.left..=room.right {
+				let feature = match (row, col) {
+					(row, _) if row == room.top || row == room.bottom => Feature::HorizWall,
+					(_, col) if col == room.left || col == room.right => Feature::VertWall,
+					_ => Feature::Floor
+				};
+				self.put_feature(LevelSpot::from_i64(row, col), feature)
+			}
+		}
+		self
+	}
+}
+

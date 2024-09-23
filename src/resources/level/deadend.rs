@@ -1,23 +1,23 @@
 use crate::random::coin_toss;
-use crate::resources::level::map::feature::Feature;
-use crate::resources::level::map::LevelMap;
+use crate::resources::level::feature_grid::feature::Feature;
+use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::plain::Axis;
 use crate::resources::level::room::{ExitId, LevelRoom};
 use crate::resources::level::sector::{shuffled_sector_neighbors, Sector, SectorNeighbor};
 use crate::resources::level::size::LevelSpot;
 use crate::room::RoomType;
 
-pub fn make_deadend(sector: Sector, do_recurse: bool, current_level: usize, spaces: &mut [LevelRoom; 9], map: &mut LevelMap) -> Vec<Sector> {
+pub fn make_deadend(sector: Sector, do_recurse: bool, current_level: usize, spaces: &mut [LevelRoom; 9], features: &mut FeatureGrid) -> Vec<Sector> {
 	let bounds = spaces[sector as usize].bounds;
 	let random_spot = bounds.roll_spot();
 	let mut found = 0usize;
 	for (i, target) in get_targets(sector, spaces).iter().enumerate() {
-		let spot = if !do_recurse || found > 0 || !map.feature_at_spot(random_spot).is_any_tunnel() { bounds.to_center_level_spot() } else { random_spot };
-		let target_spot = spaces[target.sector as usize].put_exit(target.exit, sector, current_level, map);
+		let spot = if !do_recurse || found > 0 || !features.feature_at(random_spot).is_any_tunnel() { bounds.to_center_level_spot() } else { random_spot };
+		let target_spot = spaces[target.sector as usize].put_exit(target.exit, sector, current_level, features);
 		let axis = get_axis(target.exit);
-		map.put_passage(axis, spot, target_spot, current_level);
+		features.put_passage(axis, spot, target_spot, current_level);
 		spaces[sector as usize].ty = RoomType::DeadEnd;
-		map.put_feature_at_spot(spot, Feature::Tunnel);
+		features.put_feature(spot, Feature::Tunnel);
 		found += 1;
 		if found == 1 {
 			let more_targets_exist = (i + 1) < get_targets(sector, spaces).len();
@@ -26,7 +26,7 @@ pub fn make_deadend(sector: Sector, do_recurse: bool, current_level: usize, spac
 				continue;
 			} else {
 				// Try to make and to connect to another deadend.
-				return make_recursive(sector, spot, current_level, spaces, map);
+				return make_recursive(sector, spot, current_level, spaces, features);
 			}
 		}
 		break;
@@ -34,9 +34,9 @@ pub fn make_deadend(sector: Sector, do_recurse: bool, current_level: usize, spac
 	vec![]
 }
 
-fn make_recursive(sector: Sector, spot: LevelSpot, current_level: usize, spaces: &mut [LevelRoom; 9], map: &mut LevelMap) -> Vec<Sector> {
+fn make_recursive(sector: Sector, spot: LevelSpot, current_level: usize, spaces: &mut [LevelRoom; 9], features: &mut FeatureGrid) -> Vec<Sector> {
 	spaces[sector as usize].ty = RoomType::DeadEnd;
-	map.put_feature_at_spot(spot, Feature::Tunnel);
+	features.put_feature(spot, Feature::Tunnel);
 	let mut recursive_sectors = Vec::new();
 	for neighbor in shuffled_sector_neighbors() {
 		if let Some(neighbor_sector) = sector.find_neighbor(neighbor) {
@@ -47,9 +47,9 @@ fn make_recursive(sector: Sector, spot: LevelSpot, current_level: usize, spaces:
 			let neighbor_spot = neighbor_space.bounds.to_center_level_spot();
 			let neighbor_exit = get_neighbor_exit(neighbor);
 			let axis = get_axis(neighbor_exit);
-			map.put_passage(axis, spot, neighbor_spot, current_level);
+			features.put_passage(axis, spot, neighbor_spot, current_level);
 			recursive_sectors.push(neighbor_sector);
-			make_recursive(neighbor_sector, neighbor_spot, current_level, spaces, map);
+			make_recursive(neighbor_sector, neighbor_spot, current_level, spaces, features);
 		}
 	}
 	recursive_sectors

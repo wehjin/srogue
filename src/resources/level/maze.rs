@@ -1,17 +1,17 @@
 use crate::random::rand_percent;
-use crate::resources::level::map::feature::Feature;
-use crate::resources::level::map::LevelMap;
+use crate::resources::level::feature_grid::feature::Feature;
+use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::size::LevelSpot;
 use crate::room::RoomBounds;
 use rand::prelude::SliceRandom;
 
-pub fn make_maze(bounds: RoomBounds, map: &mut LevelMap) {
+pub fn make_maze(bounds: RoomBounds, map: &mut FeatureGrid) {
 	let start_spot = bounds.inset(1, 1).roll_spot();
 	make_maze_from_spot(start_spot, bounds, map);
 }
 
-fn make_maze_from_spot(spot: LevelSpot, bounds: RoomBounds, map: &mut LevelMap) {
-	map.put_feature_at_spot(spot, Feature::Tunnel);
+fn make_maze_from_spot(spot: LevelSpot, bounds: RoomBounds, map: &mut FeatureGrid) {
+	map.put_feature(spot, Feature::Tunnel);
 	let maze_steps = if rand_percent(33) {
 		let mut steps = ALL_MAZE_STEPS.to_vec();
 		steps.shuffle(&mut rand::thread_rng());
@@ -26,7 +26,7 @@ fn make_maze_from_spot(spot: LevelSpot, bounds: RoomBounds, map: &mut LevelMap) 
 	}
 }
 
-pub fn hide_random_tunnels(bounds: RoomBounds, count: usize, current_level: usize, map: &mut LevelMap) {
+pub fn hide_random_tunnels(bounds: RoomBounds, count: usize, current_level: usize, map: &mut FeatureGrid) {
 	if current_level <= 2 {
 		return;
 	}
@@ -41,8 +41,8 @@ pub fn hide_random_tunnels(bounds: RoomBounds, count: usize, current_level: usiz
 			const MAX_ATTEMPTS: usize = 10;
 			'attempts: for _ in 0..MAX_ATTEMPTS {
 				let conceal_spot = search_bounds.roll_spot();
-				if map.feature_at_spot(conceal_spot) == Feature::Tunnel {
-					map.put_feature_at_spot(conceal_spot, Feature::ConcealedTunnel);
+				if map.feature_at(conceal_spot) == Feature::Tunnel {
+					map.put_feature(conceal_spot, Feature::ConcealedTunnel);
 					break 'attempts;
 				}
 			}
@@ -54,7 +54,7 @@ const ALL_MAZE_STEPS: &[MazeStep] = &[MazeStep::Up, MazeStep::Down, MazeStep::Le
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum MazeStep { Up, Down, Left, Right }
 impl MazeStep {
-	pub fn find_new_tunnel_spot(&self, spot: LevelSpot, bounds: RoomBounds, map: &LevelMap) -> Option<LevelSpot> {
+	pub fn find_new_tunnel_spot(&self, spot: LevelSpot, bounds: RoomBounds, map: &FeatureGrid) -> Option<LevelSpot> {
 		if let Some(destination_spot) = self.find_destination_spot(spot, bounds) {
 			if count_axial_tunnels(destination_spot, map) == 1 {
 				Some(destination_spot)
@@ -77,9 +77,9 @@ impl MazeStep {
 	}
 }
 
-fn count_axial_tunnels(spot: LevelSpot, map: &LevelMap) -> usize {
+fn count_axial_tunnels(spot: LevelSpot, map: &FeatureGrid) -> usize {
 	spot.with_axial_neighbors()
 		.into_iter()
-		.filter(|spot| map.feature_at_spot(*spot) == Feature::Tunnel)
+		.filter(|spot| map.feature_at(*spot) == Feature::Tunnel)
 		.count()
 }

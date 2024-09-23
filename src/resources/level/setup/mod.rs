@@ -7,7 +7,7 @@ use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::game::RogueSpot;
 use crate::resources::level::design::roll_design;
-use crate::resources::level::map::LevelMap;
+use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::plain::PlainLevel;
 use crate::resources::level::room::LevelRoom;
 use crate::resources::level::room_id::RoomId;
@@ -92,7 +92,7 @@ fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType) -> DungeonLevel
 			is_max,
 			ty: party_type,
 			rooms: vec![(RoomId::Big, room)].into_iter().collect(),
-			map: LevelMap::new().put_walls_and_floor(bounds),
+			features: FeatureGrid::new().put_walls_and_floor(bounds),
 			rogue_spot: RogueSpot::None,
 			party_room: Some(RoomId::Big),
 			lighting_enabled: false,
@@ -121,7 +121,7 @@ fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType) -> DungeonLevel
 			is_max,
 			ty: party_type,
 			rooms,
-			map,
+			features: map,
 			rogue_spot: RogueSpot::None,
 			party_room: None,
 			lighting_enabled: false,

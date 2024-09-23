@@ -1,7 +1,7 @@
 use crate::prelude::HIDE_PERCENT;
 use crate::random::{get_rand, rand_percent};
-use crate::resources::level::map::feature::Feature;
-use crate::resources::level::map::LevelMap;
+use crate::resources::level::feature_grid::feature::Feature;
+use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::sector::{Sector, SectorBounds};
 use crate::resources::level::size::LevelSpot;
 use crate::room::{RoomBounds, RoomType};
@@ -22,47 +22,48 @@ impl LevelRoom {
 	pub fn exit_at(&self, exit: ExitId) -> &RoomExit {
 		&self.exits[exit as usize]
 	}
-	pub fn put_exit(&mut self, exit: ExitId, sector: Sector, current_level: usize, map: &mut LevelMap) -> LevelSpot {
+	pub fn put_exit(&mut self, exit: ExitId, sector: Sector, current_level: usize, map: &mut FeatureGrid) -> LevelSpot {
 		let wall_width = if self.is_maze() { 0u64 } else { 1 };
-		let row: i64;
-		let col: i64;
+		let spot: LevelSpot;
 		match exit {
 			ExitId::Top | ExitId::Bottom => {
-				row = if exit == ExitId::Top { self.bounds.top } else { self.bounds.bottom };
+				let row = if exit == ExitId::Top { self.bounds.top } else { self.bounds.bottom };
 				let search_bounds = self.bounds.inset(0, wall_width);
+				let col;
 				'init_col: loop {
 					let maybe_col = search_bounds.random_col();
-					let feature = map.feature_at(row as usize, maybe_col as usize);
+					let feature = map.feature_at(LevelSpot::from_i64(row, maybe_col));
 					if feature == Feature::HorizWall || feature == Feature::Tunnel {
 						col = maybe_col;
 						break 'init_col;
 					}
 				}
+				spot = LevelSpot::from_i64(row, col)
 			}
 			ExitId::Left | ExitId::Right => {
-				col = if exit == ExitId::Right { self.bounds.right } else { self.bounds.left };
+				let col = if exit == ExitId::Right { self.bounds.right } else { self.bounds.left };
 				let search_bounds = self.bounds.inset(wall_width, 0);
+				let row;
 				'init_row: loop {
 					let maybe_row = search_bounds.random_row();
-					let feature = map.feature_at(maybe_row as usize, col as usize);
+					let feature = map.feature_at(LevelSpot::from_i64(maybe_row, col));
 					if feature == Feature::VertWall || feature == Feature::Tunnel {
 						row = maybe_row;
 						break 'init_row;
 					}
 				}
+				spot = LevelSpot::from_i64(row, col)
 			}
 		}
-		let concealed = current_level > 2 && rand_percent(HIDE_PERCENT);
-		if self.ty == RoomType::Room {
-			let feature = if concealed { Feature::ConcealedDoor } else { Feature::Door };
-			map.put_feature(row, col, feature);
+		let conceal = current_level > 2 && rand_percent(HIDE_PERCENT);
+		let feature = if self.ty == RoomType::Room {
+			if conceal { Feature::ConcealedDoor } else { Feature::Door }
 		} else {
-			if concealed {
-				map.put_feature(row, col, Feature::ConcealedTunnel)
-			}
-		}
-		self.exits[exit as usize] = RoomExit::Passage { to: sector, row, col };
-		LevelSpot::from_i64(row, col)
+			if conceal { Feature::ConcealedTunnel } else { Feature::Tunnel }
+		};
+		map.put_feature(spot, feature);
+		self.exits[exit as usize] = RoomExit::Passage { from_spot: spot, to: sector };
+		spot
 	}
 }
 
@@ -112,7 +113,7 @@ impl ExitId {
 pub enum RoomExit {
 	#[default]
 	None,
-	Passage { to: Sector, row: i64, col: i64 },
+	Passage { from_spot: LevelSpot, to: Sector },
 }
 
 impl RoomExit {
