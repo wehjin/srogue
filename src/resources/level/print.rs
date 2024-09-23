@@ -38,14 +38,18 @@ impl SpotView {
 	}
 
 	fn with_lighting(spot: LevelSpot, level: &DungeonLevel) -> SpotView {
-		if let Some(room) = level.room_at_spot(spot) {
-			if level.rogue_spot.is_in_room(room) {
-				Self::lit(spot, level)
-			} else {
-				Self::Unlit
-			}
+		if level.rogue_at_spot(spot) {
+			SpotView::Rogue
 		} else {
-			Self::Unlit
+			if let Some(room) = level.room_at_spot(spot) {
+				if level.rogue_spot.is_in_room(room) {
+					Self::lit(spot, level)
+				} else {
+					SpotView::Unlit
+				}
+			} else {
+				SpotView::Unlit
+			}
 		}
 	}
 
