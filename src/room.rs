@@ -127,6 +127,14 @@ pub struct RoomBounds {
 	pub bottom: i64,
 	pub left: i64,
 }
+
+impl From<LevelSpot> for RoomBounds {
+	fn from(spot: LevelSpot) -> Self {
+		let (row, col) = spot.i64();
+		Self { top: row, bottom: row, left: col, right: col }
+	}
+}
+
 impl RoomBounds {
 	pub fn area(&self) -> i64 { self.height() * self.width() }
 	pub fn width(&self) -> i64 { self.right - self.left + 1 }
@@ -143,6 +151,15 @@ impl RoomBounds {
 			left: self.left + col_cut,
 		}
 	}
+	pub fn expand(&self, row_add: u64, col_add: u64) -> Self {
+		let (row_add, col_add) = (row_add as i64, col_add as i64);
+		Self {
+			top: self.top - row_add,
+			bottom: self.bottom + row_add,
+			left: self.left - col_add,
+			right: self.right + col_add,
+		}
+	}
 	pub fn to_random_row(&self) -> LevelSize {
 		LevelSize(get_rand(self.top, self.bottom) as isize)
 	}
@@ -155,6 +172,16 @@ impl RoomBounds {
 	pub fn contains_spot(&self, spot: LevelSpot) -> bool {
 		let (row, col) = spot.i64();
 		row >= self.top && row <= self.bottom && col >= self.left && col <= self.right
+	}
+	pub fn to_spots(&self) -> Vec<LevelSpot> {
+		let mut spots = Vec::new();
+		for row in self.rows() {
+			for col in self.cols() {
+				let spot = LevelSpot::from_i64(row, col);
+				spots.push(spot);
+			}
+		}
+		spots
 	}
 	pub fn roll_spot(&self) -> LevelSpot {
 		let row = self.to_random_row();

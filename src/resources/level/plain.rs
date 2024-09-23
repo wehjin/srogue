@@ -119,7 +119,7 @@ fn roll_empty_sectors(spaces: &[LevelRoom; 9], percent: usize) -> Vec<Sector> {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Axis { Horizontal, Vertical }
 impl Axis {
 	pub fn sort_spots(&self, spot1: LevelSpot, spot2: LevelSpot) -> (LevelSpot, LevelSpot) {

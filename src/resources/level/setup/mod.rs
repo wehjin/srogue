@@ -14,6 +14,7 @@ use crate::resources::level::room_id::RoomId;
 use crate::resources::level::sector::{ALL_SECTORS, COL0, COL3, ROW0, ROW3};
 use crate::resources::level::setup::npc::roll_monsters;
 use crate::resources::level::setup::random_what::RandomWhat;
+use crate::resources::level::torch_grid::TorchGrid;
 use crate::resources::level::{DungeonLevel, PartyType};
 use crate::room::{RoomBounds, RoomType};
 use crate::trap::trap_kind::TrapKind;
@@ -93,6 +94,7 @@ fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType) -> DungeonLevel
 			ty: party_type,
 			rooms: vec![(RoomId::Big, room)].into_iter().collect(),
 			features: FeatureGrid::new().put_walls_and_floor(bounds),
+			torches: TorchGrid::new(),
 			rogue_spot: RogueSpot::None,
 			party_room: Some(RoomId::Big),
 			lighting_enabled: false,
@@ -122,6 +124,7 @@ fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType) -> DungeonLevel
 			ty: party_type,
 			rooms,
 			features: map,
+			torches: TorchGrid::new(),
 			rogue_spot: RogueSpot::None,
 			party_room: None,
 			lighting_enabled: false,

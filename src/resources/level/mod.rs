@@ -7,7 +7,8 @@ use crate::monster::Monster;
 use crate::resources::game::RogueSpot;
 use crate::resources::level::feature_grid::feature::{Feature, FeatureFilter};
 use crate::resources::level::room::LevelRoom;
-use crate::room::RoomType;
+use crate::resources::level::torch_grid::TorchGrid;
+use crate::room::{RoomBounds, RoomType};
 use crate::trap::trap_kind::TrapKind;
 use crate::trap::Trap;
 use std::collections::HashMap;
@@ -18,6 +19,7 @@ pub struct DungeonLevel {
 	pub ty: PartyType,
 	pub rooms: HashMap<RoomId, LevelRoom>,
 	pub features: FeatureGrid,
+	pub torches: TorchGrid,
 	pub rogue_spot: RogueSpot,
 	pub party_room: Option<RoomId>,
 	pub lighting_enabled: bool,
@@ -66,12 +68,22 @@ impl DungeonLevel {
 			.collect();
 		result
 	}
+	pub fn is_lit_at(&self, spot: LevelSpot) -> bool {
+		self.torches.lit_at(spot)
+	}
 	pub fn light_room(&mut self, room_id: RoomId) {
 		let room = self.as_room_mut(room_id);
-		room.lit = true;
+		for spot in room.bounds.to_spots() {
+			self.torches.light(spot);
+		}
 	}
-	pub fn light_tunnel_spot(&mut self, _spot: LevelSpot) {
-		// TODO
+	pub fn light_tunnel_spot(&mut self, spot: LevelSpot) {
+		self.torches.light(spot);
+		for to in RoomBounds::from(spot).expand(1, 1).to_spots() {
+			if self.features.can_move(spot, to) {
+				self.torches.light(to);
+			}
+		}
 	}
 }
 
@@ -235,5 +247,6 @@ pub mod print;
 pub mod sector;
 pub mod setup;
 pub mod size;
+pub mod torch_grid;
 pub mod room;
 

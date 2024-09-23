@@ -13,6 +13,7 @@ use std::ops::RangeInclusive;
 
 pub mod feature {
 	use crate::level::materials::Visibility;
+	use crate::resources::level::plain::Axis;
 	use crate::trap::trap_kind::TrapKind;
 
 	#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
@@ -25,7 +26,7 @@ pub mod feature {
 		Tunnel,
 		ConcealedTunnel,
 		Door,
-		ConcealedDoor,
+		ConcealedDoor(Axis),
 		Stairs,
 		Trap(TrapKind, Visibility),
 	}
@@ -34,6 +35,12 @@ pub mod feature {
 			match self {
 				Feature::Tunnel | Feature::ConcealedTunnel => true,
 				_ => false,
+			}
+		}
+		pub fn is_any_door(&self) -> bool {
+			match self {
+				Feature::Door | Feature::ConcealedDoor(_) => true,
+				_ => false
 			}
 		}
 	}
@@ -72,18 +79,40 @@ impl FeatureGrid {
 }
 
 impl FeatureGrid {
-	pub fn trap_at(&self, spot: LevelSpot) -> Option<TrapKind> {
-		match self.feature_at(spot) {
-			Feature::Trap(kind, _) => Some(kind),
-			_ => None
+	pub fn is_passable(&self, spot: LevelSpot) -> bool {
+		let feature = self.feature_at(spot);
+		match feature {
+			Feature::None => false,
+			Feature::HorizWall => false,
+			Feature::VertWall => false,
+			Feature::Floor => true,
+			Feature::Tunnel => true,
+			Feature::ConcealedTunnel => false,
+			Feature::Door => true,
+			Feature::ConcealedDoor(_) => false,
+			Feature::Stairs => true,
+			Feature::Trap(_, _) => true,
 		}
 	}
-	pub fn add_trap(&mut self, trap: TrapKind, spot: LevelSpot) {
-		self.put_feature(spot, Feature::Trap(trap, Visibility::Hidden))
+	pub fn can_move(&self, from: LevelSpot, to: LevelSpot) -> bool {
+		if !self.is_passable(to) {
+			return false;
+		}
+		if to != from {
+			if self.feature_at(from).is_any_door() {
+				if !to.has_same_row_or_col(from) {
+					return false;
+				}
+			}
+			if self.feature_at(to).is_any_door() {
+				if !from.has_same_row_or_col(to) {
+					return false;
+				}
+			}
+		}
+		true
 	}
-}
 
-impl FeatureGrid {
 	pub fn roll_spot(&self, filter: FeatureFilter) -> LevelSpot {
 		loop {
 			let spot = self.0.bounds().roll_spot();
@@ -158,6 +187,18 @@ impl FeatureGrid {
 			}
 		}
 		self
+	}
+}
+
+impl FeatureGrid {
+	pub fn trap_at(&self, spot: LevelSpot) -> Option<TrapKind> {
+		match self.feature_at(spot) {
+			Feature::Trap(kind, _) => Some(kind),
+			_ => None
+		}
+	}
+	pub fn add_trap(&mut self, trap: TrapKind, spot: LevelSpot) {
+		self.put_feature(spot, Feature::Trap(trap, Visibility::Hidden))
 	}
 }
 

@@ -1,8 +1,9 @@
 use crate::level::materials::Visibility;
 use crate::monster::MonsterKind;
 use crate::prelude::object_what::ObjectWhat;
-use crate::render_system::{DOOR_CHAR, EMPTY_CHAR, PLAYER_CHAR, STAIRS_CHAR, TRAP_CHAR, TUNNEL_CHAR};
+use crate::render_system::{DOOR_CHAR, EMPTY_CHAR, HORIZONTAL_WALL_CHAR, PLAYER_CHAR, STAIRS_CHAR, TRAP_CHAR, TUNNEL_CHAR, VERTICAL_WALL_CHAR};
 use crate::resources::level::feature_grid::feature::Feature;
+use crate::resources::level::plain::Axis;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::level::DungeonLevel;
 
@@ -31,6 +32,7 @@ pub enum SpotView {
 
 impl SpotView {
 	pub fn new(spot: LevelSpot, level: &DungeonLevel) -> Self {
+		// TODO Deal with appearance of objects and monsters after rogues leaves a room.
 		match level.lighting_enabled {
 			true => Self::with_lighting(spot, level),
 			false => Self::lit(spot, level),
@@ -38,18 +40,10 @@ impl SpotView {
 	}
 
 	fn with_lighting(spot: LevelSpot, level: &DungeonLevel) -> SpotView {
-		if level.rogue_at_spot(spot) {
-			SpotView::Rogue
+		if level.rogue_at_spot(spot) || level.is_lit_at(spot) {
+			Self::lit(spot, level)
 		} else {
-			if let Some(room) = level.room_at_spot(spot) {
-				if level.rogue_spot.is_in_room(room) {
-					Self::lit(spot, level)
-				} else {
-					SpotView::Unlit
-				}
-			} else {
-				SpotView::Unlit
-			}
+			SpotView::Unlit
 		}
 	}
 
@@ -72,13 +66,24 @@ impl SpotView {
 			SpotView::Object(what) => what.to_char(),
 			SpotView::Feature(feature) => match feature {
 				Feature::None => ' ',
-				Feature::HorizWall => '-',
-				Feature::VertWall => '|',
+				Feature::HorizWall => HORIZONTAL_WALL_CHAR,
+				Feature::VertWall => VERTICAL_WALL_CHAR,
 				Feature::Floor => '.',
 				Feature::Tunnel => TUNNEL_CHAR,
-				Feature::ConcealedTunnel => if reveal_hidden { '_' } else { TUNNEL_CHAR },
+				Feature::ConcealedTunnel => {
+					if reveal_hidden { '_' } else { TUNNEL_CHAR }
+				}
 				Feature::Door => DOOR_CHAR,
-				Feature::ConcealedDoor => if reveal_hidden { '_' } else { DOOR_CHAR },
+				Feature::ConcealedDoor(axis) => {
+					if reveal_hidden {
+						'_'
+					} else {
+						match axis {
+							Axis::Horizontal => HORIZONTAL_WALL_CHAR,
+							Axis::Vertical => VERTICAL_WALL_CHAR,
+						}
+					}
+				}
 				Feature::Stairs => STAIRS_CHAR,
 				Feature::Trap(_, visibility) => {
 					match visibility {

@@ -59,6 +59,15 @@ impl LevelSpot {
 	pub fn new(row: LevelSize, col: LevelSize) -> Self {
 		Self { row, col }
 	}
+	pub fn has_same_row(&self, other: LevelSpot) -> bool {
+		self.row.i64() == other.row.i64()
+	}
+	pub fn has_same_col(&self, other: LevelSpot) -> bool {
+		self.col.i64() == other.col.i64()
+	}
+	pub fn has_same_row_or_col(&self, other: LevelSpot) -> bool {
+		self.has_same_row(other) || self.has_same_col(other)
+	}
 }
 
 impl LevelSpot {

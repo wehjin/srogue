@@ -2,6 +2,7 @@ use crate::prelude::HIDE_PERCENT;
 use crate::random::{get_rand, rand_percent};
 use crate::resources::level::feature_grid::feature::Feature;
 use crate::resources::level::feature_grid::FeatureGrid;
+use crate::resources::level::plain::Axis;
 use crate::resources::level::sector::{Sector, SectorBounds};
 use crate::resources::level::size::LevelSpot;
 use crate::room::{RoomBounds, RoomType};
@@ -11,7 +12,6 @@ pub struct LevelRoom {
 	pub ty: RoomType,
 	pub bounds: RoomBounds,
 	pub exits: [RoomExit; 4],
-	pub lit: bool,
 }
 impl LevelRoom {
 	pub fn contains_spot(&self, spot: LevelSpot) -> bool {
@@ -25,8 +25,10 @@ impl LevelRoom {
 	pub fn put_exit(&mut self, exit: ExitId, sector: Sector, current_level: usize, map: &mut FeatureGrid) -> LevelSpot {
 		let wall_width = if self.is_maze() { 0u64 } else { 1 };
 		let spot: LevelSpot;
+		let axis: Axis;
 		match exit {
 			ExitId::Top | ExitId::Bottom => {
+				axis = Axis::Horizontal;
 				let row = if exit == ExitId::Top { self.bounds.top } else { self.bounds.bottom };
 				let search_bounds = self.bounds.inset(0, wall_width);
 				let col;
@@ -41,6 +43,7 @@ impl LevelRoom {
 				spot = LevelSpot::from_i64(row, col)
 			}
 			ExitId::Left | ExitId::Right => {
+				axis = Axis::Vertical;
 				let col = if exit == ExitId::Right { self.bounds.right } else { self.bounds.left };
 				let search_bounds = self.bounds.inset(wall_width, 0);
 				let row;
@@ -56,8 +59,8 @@ impl LevelRoom {
 			}
 		}
 		let conceal = current_level > 2 && rand_percent(HIDE_PERCENT);
-		let feature = if self.ty == RoomType::Room {
-			if conceal { Feature::ConcealedDoor } else { Feature::Door }
+		let feature = if self.is_vault() {
+			if conceal { Feature::ConcealedDoor(axis) } else { Feature::Door }
 		} else {
 			if conceal { Feature::ConcealedTunnel } else { Feature::Tunnel }
 		};
@@ -70,7 +73,7 @@ impl LevelRoom {
 impl LevelRoom {
 	pub fn from_sector(sector: Sector) -> Self {
 		let bounds = get_random_room_bounds(&sector.bounds());
-		Self { ty: RoomType::Nothing, bounds, exits: [RoomExit::None; 4], lit: false }
+		Self { ty: RoomType::Nothing, bounds, exits: [RoomExit::None; 4] }
 	}
 	pub fn is_nothing(&self) -> bool { self.ty == RoomType::Nothing }
 	pub fn is_vault(&self) -> bool { self.ty == RoomType::Room }
