@@ -13,7 +13,7 @@ use crate::player::{Player, RoomMark};
 use crate::prelude::*;
 use crate::random::get_rand;
 use crate::render_system::RenderAction::RoomAndPlayer;
-use crate::resources::level::size::{LevelSize, LevelSpot};
+use crate::resources::level::size::LevelSpot;
 use crate::room::room_visitor::RoomVisitor;
 use crate::room::DoorDirection::{Down, Left, Right, Up};
 
@@ -160,12 +160,6 @@ impl RoomBounds {
 			right: self.right + col_add,
 		}
 	}
-	pub fn to_random_row(&self) -> LevelSize {
-		LevelSize(get_rand(self.top, self.bottom) as isize)
-	}
-	pub fn to_random_col(&self) -> LevelSize {
-		LevelSize(get_rand(self.left, self.right) as isize)
-	}
 }
 
 impl RoomBounds {
@@ -182,11 +176,6 @@ impl RoomBounds {
 			}
 		}
 		spots
-	}
-	pub fn roll_spot(&self) -> LevelSpot {
-		let row = self.to_random_row();
-		let col = self.to_random_col();
-		LevelSpot::new(row, col)
 	}
 	pub fn to_center_level_spot(&self) -> LevelSpot {
 		let row = (self.top + self.bottom) / 2;

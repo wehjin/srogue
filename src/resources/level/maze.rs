@@ -6,7 +6,7 @@ use rand::prelude::SliceRandom;
 use rand::Rng;
 
 pub fn make_maze(bounds: RoomBounds, map: &mut FeatureGrid, rng: &mut impl Rng) {
-	let start_spot = bounds.inset(1, 1).roll_spot();
+	let start_spot = bounds.inset(1, 1).roll_spot(rng);
 	make_maze_from_spot(start_spot, bounds, map, rng);
 }
 
@@ -26,7 +26,7 @@ fn make_maze_from_spot(spot: LevelSpot, bounds: RoomBounds, map: &mut FeatureGri
 	}
 }
 
-pub fn hide_random_tunnels(bounds: RoomBounds, count: usize, current_level: usize, map: &mut FeatureGrid) {
+pub fn hide_random_tunnels(bounds: RoomBounds, count: usize, current_level: usize, map: &mut FeatureGrid, rng: &mut impl Rng) {
 	if current_level <= 2 {
 		return;
 	}
@@ -40,7 +40,7 @@ pub fn hide_random_tunnels(bounds: RoomBounds, count: usize, current_level: usiz
 		for _ in 0..count {
 			const MAX_ATTEMPTS: usize = 10;
 			'attempts: for _ in 0..MAX_ATTEMPTS {
-				let conceal_spot = search_bounds.roll_spot();
+				let conceal_spot = search_bounds.roll_spot(rng);
 				if map.feature_at(conceal_spot) == Feature::Tunnel {
 					map.put_feature(conceal_spot, Feature::ConcealedTunnel);
 					break 'attempts;

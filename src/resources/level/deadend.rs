@@ -9,7 +9,7 @@ use rand::Rng;
 
 pub fn make_deadend(sector: Sector, do_recurse: bool, current_level: usize, spaces: &mut [LevelRoom; 9], features: &mut FeatureGrid, rng: &mut impl Rng) -> Vec<Sector> {
 	let bounds = spaces[sector as usize].bounds;
-	let random_spot = bounds.roll_spot();
+	let random_spot = bounds.roll_spot(rng);
 	let mut found = 0usize;
 	for (i, target) in get_targets(sector, spaces, rng).iter().enumerate() {
 		let spot = if !do_recurse || found > 0 || !features.feature_at(random_spot).is_any_tunnel() { bounds.to_center_level_spot() } else { random_spot };

@@ -113,9 +113,9 @@ impl FeatureGrid {
 		true
 	}
 
-	pub fn roll_spot(&self, filter: FeatureFilter) -> LevelSpot {
+	pub fn roll_spot(&self, filter: FeatureFilter, rng: &mut impl Rng) -> LevelSpot {
 		loop {
-			let spot = self.0.bounds().roll_spot();
+			let spot = self.0.bounds().roll_spot(rng);
 			let feature = self.feature_at(spot);
 			if filter.pass_feature(feature) {
 				return spot;
@@ -174,7 +174,7 @@ impl FeatureGrid {
 			let left = start_col.min(end_col);
 			let right = start_col.max(end_col);
 			let bounds = RoomBounds { top, right, bottom, left };
-			hide_random_tunnels(bounds, 1, current_level, self)
+			hide_random_tunnels(bounds, 1, current_level, self, rng)
 		}
 	}
 	pub fn put_walls_and_floor(mut self, room: RoomBounds) -> Self {

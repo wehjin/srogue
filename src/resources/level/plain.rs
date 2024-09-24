@@ -65,7 +65,7 @@ impl PlainLevel {
 			for sector in candidate_sectors {
 				let maze_bounds = spaces[sector as usize].bounds;
 				make_maze(maze_bounds, &mut map, rng);
-				hide_random_tunnels(maze_bounds, rng.gen_range(0..=2), self.level, &mut map);
+				hide_random_tunnels(maze_bounds, rng.gen_range(0..=2), self.level, &mut map, rng);
 				spaces[sector as usize].ty = RoomType::Maze;
 			}
 			Self { level, spaces, map }

@@ -29,7 +29,7 @@ pub fn roll_party(level: &mut DungeonLevel, stats: &mut DungeonStats, rng: &mut 
 
 fn roll_party_guests(favors: usize, venue: RoomId, level: &mut DungeonLevel, rng: &mut impl Rng) {
 	let search = level.as_room(venue).bounds.inset(1, 1);
-	let spots = roll_party_spots(search, 2 * favors, level, true);
+	let spots = roll_party_spots(search, 2 * favors, level, true, rng);
 	let level_boost = level.depth % 3;
 	for spot in spots {
 		let mut monster = npc::roll_monster(level.depth, level_boost, rng);
@@ -43,7 +43,7 @@ fn roll_party_guests(favors: usize, venue: RoomId, level: &mut DungeonLevel, rng
 fn roll_party_favors(room_id: RoomId, level: &mut DungeonLevel, stats: &mut DungeonStats, rng: &mut impl Rng) -> usize {
 	let search_bounds = level.as_room(room_id).bounds.inset(1, 1);
 	let count = rng.gen_range(5..=10);
-	let vacant_spots = roll_party_spots(search_bounds, count, level, false);
+	let vacant_spots = roll_party_spots(search_bounds, count, level, false, rng);
 	for spot in &vacant_spots {
 		let object = setup::roll_object(level.depth, &mut stats.food_drops, rng);
 		level.put_object(*spot, object);
@@ -51,11 +51,11 @@ fn roll_party_favors(room_id: RoomId, level: &mut DungeonLevel, stats: &mut Dung
 	vacant_spots.len()
 }
 
-fn roll_party_spots(search_bounds: RoomBounds, count: usize, level: &DungeonLevel, allow_objects: bool) -> HashSet<LevelSpot> {
+fn roll_party_spots(search_bounds: RoomBounds, count: usize, level: &DungeonLevel, allow_objects: bool, rng: &mut impl Rng) -> HashSet<LevelSpot> {
 	let mut spots = HashSet::new();
 	for _ in 0..count.min(search_bounds.area() as usize) {
 		'search: for _ in 0..250 {
-			let spot = search_bounds.roll_spot();
+			let spot = search_bounds.roll_spot(rng);
 			if level.spot_is_vacant(spot, allow_objects, false) && !spots.contains(&spot) {
 				spots.insert(spot);
 				break 'search;

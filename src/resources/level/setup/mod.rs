@@ -25,19 +25,19 @@ pub mod npc;
 
 pub fn roll_level(level_kind: &LevelKind, stats: &mut DungeonStats, rng: &mut impl Rng) -> DungeonLevel {
 	let mut level = roll_rooms(level_kind.depth, level_kind.is_max, level_kind.party_type, rng);
-	roll_amulet(&level_kind, &mut level);
+	roll_amulet(&level_kind, &mut level, rng);
 	roll_objects(&mut level, stats, rng);
-	roll_stairs(&mut level);
+	roll_stairs(&mut level, rng);
 	roll_traps(&mut level, rng);
 	roll_monsters(&mut level, rng);
-	rogue::roll_rogue(&mut level);
+	rogue::roll_rogue(&mut level, rng);
 	level
 }
 
-fn roll_amulet(level_kind: &LevelKind, level: &mut DungeonLevel) {
+fn roll_amulet(level_kind: &LevelKind, level: &mut DungeonLevel, rng: &mut impl Rng) {
 	if !level_kind.post_amulet && level_kind.depth >= AMULET_LEVEL as usize {
 		let amulet = Object::new(ObjectWhat::Amulet);
-		let spot = level.roll_vacant_spot(false, false, false);
+		let spot = level.roll_vacant_spot(false, false, false, rng);
 		level.put_object(spot, amulet);
 	}
 }
@@ -50,17 +50,17 @@ fn roll_traps(level: &mut DungeonLevel, rng: &mut impl Rng) {
 				let bounds = level.as_room(party_room).bounds.inset(1, 1);
 				let mut found = None;
 				'search: for _ in 0..15 {
-					let spot = bounds.roll_spot();
+					let spot = bounds.roll_spot(rng);
 					if level.spot_is_vacant(spot, false, true) {
 						found = Some(spot);
 						break 'search;
 					}
 				}
 				found.unwrap_or_else(|| {
-					level.roll_vacant_spot(true, true, false)
+					level.roll_vacant_spot(true, true, false, rng)
 				})
 			}
-			_ => level.roll_vacant_spot(true, true, false),
+			_ => level.roll_vacant_spot(true, true, false, rng),
 		};
 		level.put_trap(spot, trap);
 	}
@@ -147,8 +147,8 @@ fn roll_build_big_room(level_type: PartyType, rng: &mut impl Rng) -> bool {
 	}
 }
 
-pub fn roll_stairs(level: &mut DungeonLevel) {
-	let spot = level.roll_vacant_spot(false, false, false);
+pub fn roll_stairs(level: &mut DungeonLevel, rng: &mut impl Rng) {
+	let spot = level.roll_vacant_spot(false, false, false, rng);
 	level.put_stairs(spot);
 }
 
@@ -158,7 +158,7 @@ pub fn roll_objects(level: &mut DungeonLevel, stats: &mut DungeonStats, rng: &mu
 			party::roll_party(level, stats, rng);
 		}
 		for _ in 0..roll_object_count(rng) {
-			let spot = level.roll_vacant_spot(false, false, false);
+			let spot = level.roll_vacant_spot(false, false, false, rng);
 			let object = roll_object(level.depth, &mut stats.food_drops, rng);
 			level.put_object(spot, object);
 		}
@@ -180,7 +180,7 @@ fn roll_gold(level: &mut DungeonLevel, rng: &mut impl Rng) {
 		if room.is_maze() || rng.gen_ratio(GOLD_PERCENT as u32, 100) {
 			let search_bounds = room.bounds.inset(1, 1);
 			for _ in 0..50 {
-				let spot = search_bounds.roll_spot();
+				let spot = search_bounds.roll_spot(rng);
 				if level.spot_is_floor_or_tunnel(spot) {
 					let object = Object::roll_gold(level.depth, room.is_maze(), rng);
 					level.put_object(spot, object);

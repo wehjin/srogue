@@ -12,7 +12,7 @@ pub fn roll_monsters(level: &mut DungeonLevel, rng: &mut impl Rng) {
 		if monster.wanders() && rng.gen_bool(0.5) {
 			monster.wake_up();
 		}
-		let spot = level.roll_vacant_spot(true, false, true);
+		let spot = level.roll_vacant_spot(true, false, true, rng);
 		level.put_monster(spot, monster);
 	}
 }

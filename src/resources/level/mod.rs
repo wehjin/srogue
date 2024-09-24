@@ -11,6 +11,7 @@ use crate::resources::level::torch_grid::TorchGrid;
 use crate::room::{RoomBounds, RoomType};
 use crate::trap::trap_kind::TrapKind;
 use crate::trap::Trap;
+use rand::Rng;
 use std::collections::HashMap;
 
 pub struct DungeonLevel {
@@ -112,10 +113,10 @@ impl DungeonLevel {
 			None => false,
 		}
 	}
-	pub fn roll_vacant_spot(&self, allow_objects: bool, allow_monsters: bool, allow_stairs: bool) -> LevelSpot {
+	pub fn roll_vacant_spot(&self, allow_objects: bool, allow_monsters: bool, allow_stairs: bool, rng: &mut impl Rng) -> LevelSpot {
 		let feature_filter = if allow_stairs { FeatureFilter::FloorTunnelOrStair } else { FeatureFilter::FloorOrTunnel };
 		loop {
-			let spot = self.features.roll_spot(feature_filter);
+			let spot = self.features.roll_spot(feature_filter, rng);
 			let in_vault_or_maze = self.spot_in_vault_or_maze(spot);
 			let is_vacant = self.spot_is_vacant(spot, allow_objects, allow_monsters);
 			if is_vacant && in_vault_or_maze {
