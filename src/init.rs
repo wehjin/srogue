@@ -1,8 +1,6 @@
 use std::io;
 use std::io::Write;
 
-use libc::c_short;
-
 use crate::armors::constants::RINGMAIL;
 use crate::console;
 use crate::console::{Console, ConsoleError};
@@ -11,8 +9,8 @@ use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
 use crate::machdep::md_heed_signals;
 use crate::monster::MonsterMash;
-use crate::objects::{alloc_object, ObjectPack};
 use crate::objects::roll::get_food;
+use crate::objects::{alloc_object, ObjectPack};
 use crate::pack::{do_wear, do_wield};
 use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::{Armor, Weapon};
@@ -27,6 +25,8 @@ use crate::save::restore;
 use crate::score::put_scores;
 use crate::settings::Settings;
 use crate::weapons::constants::{ARROW, BOW, MACE};
+use libc::c_short;
+use rand::thread_rng;
 
 //pub static mut save_is_interactive: bool = true;
 //pub const ERROR_FILE: &'static str = "player.rogue.esave";
@@ -130,7 +130,7 @@ fn player_init(player: &mut Player) {
 	// Food
 	{
 		let mut obj = alloc_object();
-		get_food(&mut obj, true);
+		get_food(&mut obj, true, &mut thread_rng());
 		player.combine_or_add_item_to_pack(obj);
 	}
 	// Armor

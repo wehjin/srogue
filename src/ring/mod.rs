@@ -1,12 +1,9 @@
-use constants::RINGS;
 use ring_kind::RingKind;
 
 use crate::init::GameState;
-use crate::objects::{Object, ObjectId};
+use crate::objects::ObjectId;
 use crate::prelude::item_usage::{ON_LEFT_HAND, ON_RIGHT_HAND};
-use crate::prelude::object_what::ObjectWhat::Ring;
 use crate::r#use::relight;
-use crate::random::{coin_toss, get_rand};
 use crate::resources::diary;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 
@@ -40,32 +37,6 @@ pub fn un_put_hand(hand: PlayerHand, game: &mut GameState) -> Option<ObjectId> {
 	let un_put_id = game.player.un_put_ring(hand);
 	ring_stats(true, game);
 	un_put_id
-}
-
-pub fn gr_ring(ring: &mut Object, assign_wk: bool) {
-	ring.what_is = Ring;
-	if assign_wk {
-		ring.which_kind = get_rand(0, (RINGS - 1) as u16);
-	}
-	ring.class = 0;
-	match RingKind::from_index(ring.which_kind as usize) {
-		RingKind::RTeleport => {
-			ring.is_cursed = 1;
-		}
-		RingKind::AddStrength | RingKind::Dexterity => {
-			loop {
-				ring.class = get_rand(0, 4) - 2;
-				if ring.class != 0 {
-					break;
-				}
-			}
-			ring.is_cursed = if ring.class < 0 { 1 } else { 0 };
-		}
-		RingKind::Adornment => {
-			ring.is_cursed = if coin_toss() { 1 } else { 0 };
-		}
-		_ => ()
-	}
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]

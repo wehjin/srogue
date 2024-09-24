@@ -182,7 +182,7 @@ fn roll_gold(level: &mut DungeonLevel, rng: &mut impl Rng) {
 			for _ in 0..50 {
 				let spot = search_bounds.roll_spot();
 				if level.spot_is_floor_or_tunnel(spot) {
-					let object = Object::roll_gold(level.depth, room.is_maze());
+					let object = Object::roll_gold(level.depth, room.is_maze(), rng);
 					level.put_object(spot, object);
 					break;
 				}
@@ -199,13 +199,13 @@ pub fn roll_object(depth: usize, all_food_drops: &mut usize, rng: &mut impl Rng)
 		RandomWhat::roll(rng)
 	};
 	match what {
-		RandomWhat::Scroll => Object::roll_scroll(),
-		RandomWhat::Potion => Object::roll_potion(),
-		RandomWhat::Weapon => Object::roll_weapon(true),
-		RandomWhat::Armor => Object::roll_armor(),
-		RandomWhat::Wand => Object::roll_wand(),
-		RandomWhat::Food => Object::roll_food(false),
-		RandomWhat::Ring => Object::roll_ring(true),
+		RandomWhat::Scroll => Object::roll_scroll(rng),
+		RandomWhat::Potion => Object::roll_potion(rng),
+		RandomWhat::Weapon => Object::roll_weapon(true, rng),
+		RandomWhat::Armor => Object::roll_armor(rng),
+		RandomWhat::Wand => Object::roll_wand(rng),
+		RandomWhat::Food => Object::roll_food(false, rng),
+		RandomWhat::Ring => Object::roll_ring(true, rng),
 	}
 }
 

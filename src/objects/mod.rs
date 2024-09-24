@@ -35,7 +35,7 @@ use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::resources::level::setup::roll_object;
 use crate::resources::level::size::LevelSpot;
 use crate::ring::constants::RINGS;
-use crate::ring::gr_ring;
+use roll::gr_ring;
 use crate::ring::ring_gem::RingGem;
 use crate::room::{gr_room, gr_spot, party_objects, RoomType};
 use crate::scrolls::constants::SCROLLS;
@@ -434,6 +434,7 @@ pub fn new_object_for_wizard(game: &mut GameState) {
 	if ch == CANCEL_CHAR {
 		return;
 	}
+	let rng = &mut thread_rng();
 	let mut obj = alloc_object();
 	let max_kind = match ch {
 		'!' => {
@@ -449,19 +450,19 @@ pub fn new_object_for_wizard(game: &mut GameState) {
 			None
 		}
 		':' => {
-			roll::get_food(&mut obj, false);
+			roll::get_food(&mut obj, false, rng);
 			None
 		}
 		')' => {
-			roll::gr_weapon(&mut obj, false);
+			roll::gr_weapon(&mut obj, false, rng);
 			Some(WEAPONS - 1)
 		}
 		']' => {
-			roll::gr_armor(&mut obj);
+			roll::gr_armor(&mut obj, rng);
 			Some(ARMORS - 1)
 		}
 		'/' => {
-			roll::gr_wand(&mut obj);
+			roll::gr_wand(&mut obj, rng);
 			Some(WANDS - 1)
 		}
 		'=' => {
@@ -474,7 +475,7 @@ pub fn new_object_for_wizard(game: &mut GameState) {
 		if let Some(kind) = get_kind(max_kind, game) {
 			obj.which_kind = kind as u16;
 			if obj.what_is == Ring {
-				gr_ring(&mut obj, false);
+				gr_ring(&mut obj, false, rng);
 			}
 		} else {
 			return;
