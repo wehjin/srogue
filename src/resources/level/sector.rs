@@ -17,7 +17,7 @@ pub const ALL_SECTORS: [Sector; 9] = [
 	BottomRight,
 ];
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum Sector {
 	TopLeft = 0,
 	TopCenter = 1,

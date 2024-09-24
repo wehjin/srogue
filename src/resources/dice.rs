@@ -10,24 +10,22 @@ impl RoomBounds {
 		let col = self.to_random_col(rng);
 		LevelSpot::new(row, col)
 	}
-}
-impl RoomBounds {
 	pub fn to_random_row(&self, rng: &mut impl Rng) -> LevelSize {
 		LevelSize(self.random_row(rng) as isize)
 	}
 	pub fn to_random_col(&self, rng: &mut impl Rng) -> LevelSize {
 		LevelSize(self.random_col(rng) as isize)
 	}
-	pub fn random_col(&self, rng: &mut impl Rng) -> i64 {
-		rng.gen_range(self.left..=self.right)
-	}
-	pub fn random_row(&self, rng: &mut impl Rng) -> i64 {
-		rng.gen_range(self.top..=self.bottom)
-	}
 	pub fn to_random_spot(&self, rng: &mut impl Rng) -> DungeonSpot {
 		let row = self.random_row(rng);
 		let col = self.random_col(rng);
 		(row, col).into()
+	}
+	pub fn random_row(&self, rng: &mut impl Rng) -> i64 {
+		rng.gen_range(self.top..=self.bottom)
+	}
+	pub fn random_col(&self, rng: &mut impl Rng) -> i64 {
+		rng.gen_range(self.left..=self.right)
 	}
 }
 impl MonsterKind {

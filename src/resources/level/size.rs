@@ -49,7 +49,7 @@ impl LevelSize {
 	}
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Default)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Default, Ord, PartialOrd)]
 pub struct LevelSpot {
 	pub row: LevelSize,
 	pub col: LevelSize,

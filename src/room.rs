@@ -34,7 +34,7 @@ impl Dr {
 	}
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash, Ord, PartialOrd)]
 pub enum RoomType {
 	Nothing,
 	Room,

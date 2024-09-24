@@ -12,20 +12,20 @@ use crate::room::{RoomBounds, RoomType};
 use crate::trap::trap_kind::TrapKind;
 use crate::trap::Trap;
 use rand::Rng;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 pub struct DungeonLevel {
 	pub depth: usize,
 	pub is_max: bool,
 	pub ty: PartyType,
-	pub rooms: HashMap<RoomId, LevelRoom>,
+	pub rooms: BTreeMap<RoomId, LevelRoom>, // BTreeMap ensures consistent iteration order.
 	pub features: FeatureGrid,
 	pub torches: TorchGrid,
 	pub rogue_spot: RogueSpot,
 	pub party_room: Option<RoomId>,
 	pub lighting_enabled: bool,
-	pub objects: HashMap<LevelSpot, Object>,
-	pub monsters: HashMap<LevelSpot, Monster>,
+	pub objects: BTreeMap<LevelSpot, Object>,
+	pub monsters: BTreeMap<LevelSpot, Monster>,
 }
 
 impl DungeonLevel {
@@ -57,8 +57,7 @@ impl DungeonLevel {
 		None
 	}
 	pub fn vault_and_maze_rooms(&self) -> Vec<RoomId> {
-		let result = self.rooms
-			.iter()
+		let result = self.rooms.iter()
 			.filter_map(|(id, room)| {
 				if room.is_vault_or_maze() {
 					Some(*id)
@@ -183,7 +182,7 @@ pub mod room_id {
 	use crate::resources::level::sector::Sector;
 	use crate::room::RoomType;
 
-	#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 	pub enum RoomId {
 		Big,
 		Little(Sector, RoomType),
@@ -209,11 +208,11 @@ mod tests {
 	use crate::resources::level::setup::{roll_level, LevelKind};
 	use crate::resources::level::PartyType;
 	use rand::SeedableRng;
-	use rand_chacha::ChaChaRng;
+	use rand_chacha::{ChaCha8Rng, ChaChaRng};
 
 	#[test]
 	fn no_party_works() {
-		let rng = &mut ChaChaRng::seed_from_u64(17);
+		let rng = &mut ChaCha8Rng::seed_from_u64(17);
 		let mut stats = DungeonStats { food_drops: 7 };
 		let level_kind = LevelKind {
 			depth: 16,

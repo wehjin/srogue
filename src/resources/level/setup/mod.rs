@@ -174,17 +174,17 @@ fn roll_vault_or_maze(level: &DungeonLevel, rng: &mut impl Rng) -> RoomId {
 
 
 fn roll_gold(level: &mut DungeonLevel, rng: &mut impl Rng) {
-	let rooms_and_mazes = level.vault_and_maze_rooms();
-	for room_id in rooms_and_mazes {
+	for room_id in level.vault_and_maze_rooms() {
 		let room = level.as_room(room_id);
-		if room.is_maze() || rng.gen_ratio(GOLD_PERCENT as u32, 100) {
+		let is_maze = room.is_maze();
+		if is_maze || rng.gen_ratio(GOLD_PERCENT as u32, 100) {
 			let search_bounds = room.bounds.inset(1, 1);
-			for _ in 0..50 {
+			'search: for _ in 0..50 {
 				let spot = search_bounds.roll_spot(rng);
 				if level.spot_is_floor_or_tunnel(spot) {
-					let object = Object::roll_gold(level.depth, room.is_maze(), rng);
+					let object = Object::roll_gold(level.depth, is_maze, rng);
 					level.put_object(spot, object);
-					break;
+					break 'search;
 				}
 			}
 		}
