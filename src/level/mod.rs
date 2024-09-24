@@ -366,7 +366,7 @@ pub fn add_mazes(level_depth: isize, level: &mut Level) {
 			if level.rooms[rn].room_type.is_nothing() {
 				if rand_percent(maze_percent as usize) {
 					level.rooms[rn].room_type = RoomType::Maze;
-					let spot_in_room = level.rooms[rn].to_floor_bounds().to_random_spot();
+					let spot_in_room = level.rooms[rn].to_floor_bounds().to_random_spot(&mut thread_rng());
 					let room_bounds = level.rooms[rn].to_wall_bounds();
 					make_maze(spot_in_room, &room_bounds, level);
 					hide_boxed_passage(

@@ -33,7 +33,7 @@ impl LevelRoom {
 				let search_bounds = self.bounds.inset(0, wall_width);
 				let col;
 				'init_col: loop {
-					let maybe_col = search_bounds.random_col();
+					let maybe_col = search_bounds.random_col(rng);
 					let feature = map.feature_at(LevelSpot::from_i64(row, maybe_col));
 					if feature == Feature::HorizWall || feature == Feature::Tunnel {
 						col = maybe_col;
@@ -48,7 +48,7 @@ impl LevelRoom {
 				let search_bounds = self.bounds.inset(wall_width, 0);
 				let row;
 				'init_row: loop {
-					let maybe_row = search_bounds.random_row();
+					let maybe_row = search_bounds.random_row(rng);
 					let feature = map.feature_at(LevelSpot::from_i64(maybe_row, col));
 					if feature == Feature::VertWall || feature == Feature::Tunnel {
 						row = maybe_row;

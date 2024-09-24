@@ -1,4 +1,5 @@
 use crate::monster::{MonsterKind, MONSTERS};
+use crate::prelude::DungeonSpot;
 use crate::resources::level::size::{LevelSize, LevelSpot};
 use crate::room::RoomBounds;
 use rand::Rng;
@@ -12,17 +13,23 @@ impl RoomBounds {
 }
 impl RoomBounds {
 	pub fn to_random_row(&self, rng: &mut impl Rng) -> LevelSize {
-		let x = self.top;
-		let y = self.bottom;
-		LevelSize(rng.gen_range(x..=y) as isize)
+		LevelSize(self.random_row(rng) as isize)
 	}
 	pub fn to_random_col(&self, rng: &mut impl Rng) -> LevelSize {
-		let x = self.left;
-		let y = self.right;
-		LevelSize(rng.gen_range(x..=y) as isize)
+		LevelSize(self.random_col(rng) as isize)
+	}
+	pub fn random_col(&self, rng: &mut impl Rng) -> i64 {
+		rng.gen_range(self.left..=self.right)
+	}
+	pub fn random_row(&self, rng: &mut impl Rng) -> i64 {
+		rng.gen_range(self.top..=self.bottom)
+	}
+	pub fn to_random_spot(&self, rng: &mut impl Rng) -> DungeonSpot {
+		let row = self.random_row(rng);
+		let col = self.random_col(rng);
+		(row, col).into()
 	}
 }
-
 impl MonsterKind {
 	pub fn random_any(rng: &mut impl Rng) -> Self {
 		let y = MONSTERS - 1;

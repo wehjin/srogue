@@ -185,13 +185,6 @@ impl RoomBounds {
 }
 
 impl RoomBounds {
-	pub fn random_col(&self) -> i64 { get_rand(self.left, self.right) }
-	pub fn random_row(&self) -> i64 { get_rand(self.top, self.bottom) }
-	pub fn to_random_spot(&self) -> DungeonSpot {
-		let row = get_rand(self.top, self.bottom);
-		let col = get_rand(self.left, self.right);
-		(row, col).into()
-	}
 	pub fn cell_material_for_spot(&self, spot: &DungeonSpot) -> CellMaterial {
 		if spot.row == self.top || spot.row == self.bottom {
 			CellMaterial::HorizontalWall
