@@ -1,6 +1,5 @@
 use crate::level::materials::Visibility;
 use crate::prelude::HIDE_PERCENT;
-use crate::random::rand_percent;
 use crate::resources::level::feature_grid::feature::{Feature, FeatureFilter};
 use crate::resources::level::grid::LevelGrid;
 use crate::resources::level::maze::hide_random_tunnels;
@@ -165,7 +164,9 @@ impl FeatureGrid {
 				}
 			}
 		}
-		if rand_percent(HIDE_PERCENT) {
+
+		let hide = rng.gen_ratio(HIDE_PERCENT as u32, 100);
+		if hide {
 			let (start_row, start_col) = start.i64();
 			let (end_row, end_col) = end.i64();
 			let top = start_row.min(end_row);

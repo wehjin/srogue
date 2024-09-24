@@ -1,4 +1,3 @@
-use crate::random::rand_percent;
 use crate::resources::level::feature_grid::feature::Feature;
 use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::size::LevelSpot;
@@ -13,7 +12,7 @@ pub fn make_maze(bounds: RoomBounds, map: &mut FeatureGrid, rng: &mut impl Rng) 
 
 fn make_maze_from_spot(spot: LevelSpot, bounds: RoomBounds, map: &mut FeatureGrid, rng: &mut impl Rng) {
 	map.put_feature(spot, Feature::Tunnel);
-	let maze_steps = if rand_percent(33) {
+	let maze_steps = if rng.gen_ratio(33, 100) {
 		let mut steps = ALL_MAZE_STEPS.to_vec();
 		steps.shuffle(rng);
 		steps

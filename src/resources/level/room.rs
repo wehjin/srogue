@@ -1,5 +1,4 @@
 use crate::prelude::HIDE_PERCENT;
-use crate::random::rand_percent;
 use crate::resources::level::feature_grid::feature::Feature;
 use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::plain::Axis;
@@ -23,7 +22,7 @@ impl LevelRoom {
 	pub fn exit_at(&self, exit: ExitId) -> &RoomExit {
 		&self.exits[exit as usize]
 	}
-	pub fn put_exit(&mut self, exit: ExitId, sector: Sector, current_level: usize, map: &mut FeatureGrid) -> LevelSpot {
+	pub fn put_exit(&mut self, exit: ExitId, sector: Sector, current_level: usize, map: &mut FeatureGrid, rng: &mut impl Rng) -> LevelSpot {
 		let wall_width = if self.is_maze() { 0u64 } else { 1 };
 		let spot: LevelSpot;
 		let axis: Axis;
@@ -59,7 +58,7 @@ impl LevelRoom {
 				spot = LevelSpot::from_i64(row, col)
 			}
 		}
-		let conceal = current_level > 2 && rand_percent(HIDE_PERCENT);
+		let conceal = current_level > 2 && rng.gen_ratio(HIDE_PERCENT as u32, 100);
 		let feature = if self.is_vault() {
 			if conceal { Feature::ConcealedDoor(axis) } else { Feature::Door }
 		} else {

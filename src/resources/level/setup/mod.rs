@@ -3,7 +3,7 @@ use crate::objects::Object;
 use crate::odds::GOLD_PERCENT;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::AMULET_LEVEL;
-use crate::random::{coin_toss, rand_percent};
+use crate::random::coin_toss;
 use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::game::RogueSpot;
 use crate::resources::level::design::roll_design;
@@ -81,7 +81,7 @@ fn roll_traps_count(level: &DungeonLevel, rng: &mut impl Rng) -> usize {
 }
 
 fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType, rng: &mut impl Rng) -> DungeonLevel {
-	if roll_build_big_room(party_type) {
+	if roll_build_big_room(party_type, rng) {
 		let y = ROW0 + 1;
 		let x = ROW3 - 6;
 		let y1 = ROW3 - 1;
@@ -110,7 +110,7 @@ fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType, rng: &mut impl 
 	} else {
 		let design = roll_design(rng);
 		let level = PlainLevel::new(depth, rng)
-			.add_rooms(design)
+			.add_rooms(design, rng)
 			.add_mazes(rng)
 			.connect_spaces(rng)
 			.add_deadends(rng)
@@ -140,10 +140,10 @@ fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType, rng: &mut impl 
 	}
 }
 
-fn roll_build_big_room(level_type: PartyType) -> bool {
+fn roll_build_big_room(level_type: PartyType, rng: &mut impl Rng) -> bool {
 	match level_type {
 		PartyType::PartyBig => true,
-		PartyType::PartyRollBig => rand_percent(1),
+		PartyType::PartyRollBig => rng.gen_ratio(1, 100),
 		PartyType::NoParty => false
 	}
 }
@@ -163,7 +163,7 @@ pub fn roll_objects(level: &mut DungeonLevel, stats: &mut DungeonStats, rng: &mu
 			let object = roll_object(level.depth, stats, rng);
 			level.put_object(spot, object);
 		}
-		roll_gold(level);
+		roll_gold(level, rng);
 	}
 }
 
@@ -174,11 +174,11 @@ fn roll_vault_or_maze(level: &DungeonLevel, rng: &mut impl Rng) -> RoomId {
 }
 
 
-fn roll_gold(level: &mut DungeonLevel) {
+fn roll_gold(level: &mut DungeonLevel, rng: &mut impl Rng) {
 	let rooms_and_mazes = level.vault_and_maze_rooms();
 	for room_id in rooms_and_mazes {
 		let room = level.as_room(room_id);
-		if room.is_maze() || rand_percent(GOLD_PERCENT) {
+		if room.is_maze() || rng.gen_ratio(GOLD_PERCENT as u32, 100) {
 			let search_bounds = room.bounds.inset(1, 1);
 			for _ in 0..50 {
 				let spot = search_bounds.roll_spot();
@@ -212,7 +212,7 @@ fn roll_object(depth: usize, stats: &mut DungeonStats, rng: &mut impl Rng) -> Ob
 
 fn roll_object_count(rng: &mut impl Rng) -> usize {
 	let mut n = if coin_toss() { rng.gen_range(2..=4) } else { rng.gen_range(3..=5) };
-	while rand_percent(33) {
+	while rng.gen_ratio(33, 100) {
 		n += 1;
 	}
 	n

@@ -1,4 +1,3 @@
-use crate::random::rand_percent;
 use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::level::room_id::RoomId;
 use crate::resources::level::setup::npc;
@@ -15,14 +14,14 @@ pub fn roll_party(level: &mut DungeonLevel, stats: &mut DungeonStats, rng: &mut 
 	let party_room = setup::roll_vault_or_maze(level, rng);
 	level.party_room = Some(party_room);
 	// Favors
-	let favors = if rand_percent(99) {
+	let favors = if rng.gen_ratio(99, 100) {
 		let favors = roll_party_favors(party_room, level, stats, rng);
 		Some(favors)
 	} else {
 		None
 	};
 	// Guests
-	if rand_percent(99) {
+	if rng.gen_ratio(99, 100) {
 		let count = favors.unwrap_or(11);
 		roll_party_guests(count, party_room, level, rng);
 	}

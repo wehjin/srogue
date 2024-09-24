@@ -14,7 +14,7 @@ pub fn make_deadend(sector: Sector, do_recurse: bool, current_level: usize, spac
 	let mut found = 0usize;
 	for (i, target) in get_targets(sector, spaces, rng).iter().enumerate() {
 		let spot = if !do_recurse || found > 0 || !features.feature_at(random_spot).is_any_tunnel() { bounds.to_center_level_spot() } else { random_spot };
-		let target_spot = spaces[target.sector as usize].put_exit(target.exit, sector, current_level, features);
+		let target_spot = spaces[target.sector as usize].put_exit(target.exit, sector, current_level, features, rng);
 		let axis = get_axis(target.exit);
 		features.put_passage(axis, spot, target_spot, current_level, rng);
 		spaces[sector as usize].ty = RoomType::DeadEnd;

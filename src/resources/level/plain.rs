@@ -1,4 +1,4 @@
-use crate::random::{coin_toss, rand_percent};
+use crate::random::coin_toss;
 use crate::resources::level::design::Design;
 use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::maze::hide_random_tunnels;
@@ -45,10 +45,10 @@ impl PlainLevel {
 
 
 impl PlainLevel {
-	pub fn add_rooms(self, design: Design) -> Self {
+	pub fn add_rooms(self, design: Design, rng: &mut impl Rng) -> Self {
 		let PlainLevel { level, mut spaces, mut map, } = self;
 		for sector in ALL_SECTORS {
-			if !design.requires_room_in_sector(sector) && rand_percent(40) {
+			if !design.requires_room_in_sector(sector) && rng.gen_ratio(40, 100) {
 				continue;
 			} else {
 				let space = &mut spaces[sector as usize];
@@ -62,7 +62,7 @@ impl PlainLevel {
 		if self.level > 1 {
 			let Self { level, mut spaces, mut map, } = self;
 			let maze_percent = (self.level * 5) / 4 + if self.level > 15 { self.level } else { 0 };
-			let candidate_sectors = roll_empty_sectors(&spaces, maze_percent);
+			let candidate_sectors = roll_empty_sectors(&spaces, maze_percent, rng);
 			for sector in candidate_sectors {
 				let maze_bounds = spaces[sector as usize].bounds;
 				make_maze(maze_bounds, &mut map, rng);
@@ -109,10 +109,10 @@ impl PlainLevel {
 	}
 }
 
-fn roll_empty_sectors(spaces: &[LevelRoom; 9], percent: usize) -> Vec<Sector> {
+fn roll_empty_sectors(spaces: &[LevelRoom; 9], percent: usize, rng: &mut impl Rng) -> Vec<Sector> {
 	let mut empty_sectors = Vec::new();
 	for sector in ALL_SECTORS {
-		if spaces[sector as usize].is_nothing() && rand_percent(percent) {
+		if spaces[sector as usize].is_nothing() && rng.gen_ratio(percent as u32, 100) {
 			empty_sectors.push(sector);
 		}
 	}
@@ -160,12 +160,12 @@ fn connect_spaces(axis: Axis, sector1: Sector, sector2: Sector, current_level: u
 	let end: LevelSpot;
 	match axis {
 		Axis::Horizontal => {
-			start = spaces[sector1 as usize].put_exit(ExitId::Right, sector2, current_level, map);
-			end = spaces[sector2 as usize].put_exit(ExitId::Left, sector1, current_level, map);
+			start = spaces[sector1 as usize].put_exit(ExitId::Right, sector2, current_level, map, rng);
+			end = spaces[sector2 as usize].put_exit(ExitId::Left, sector1, current_level, map, rng);
 		}
 		Axis::Vertical => {
-			start = spaces[sector1 as usize].put_exit(ExitId::Bottom, sector2, current_level, map);
-			end = spaces[sector2 as usize].put_exit(ExitId::Top, sector1, current_level, map);
+			start = spaces[sector1 as usize].put_exit(ExitId::Bottom, sector2, current_level, map, rng);
+			end = spaces[sector2 as usize].put_exit(ExitId::Top, sector1, current_level, map, rng);
 		}
 	}
 	map.put_passage(axis, start, end, current_level, rng);
