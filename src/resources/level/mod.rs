@@ -14,6 +14,7 @@ use crate::trap::Trap;
 use rand::Rng;
 use std::collections::BTreeMap;
 
+#[derive(Debug, Eq, PartialEq, Hash)]
 pub struct DungeonLevel {
 	pub depth: usize,
 	pub is_max: bool,
@@ -161,7 +162,7 @@ impl DungeonLevel {
 	}
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum PartyType {
 	PartyBig,
 	PartyRollBig,
@@ -206,21 +207,42 @@ mod tests {
 	use crate::prelude::AMULET_LEVEL;
 	use crate::resources::dungeon::stats::DungeonStats;
 	use crate::resources::level::setup::{roll_level, LevelKind};
-	use crate::resources::level::PartyType;
+	use crate::resources::level::{DungeonLevel, PartyType};
 	use rand::SeedableRng;
-	use rand_chacha::{ChaCha8Rng, ChaChaRng};
+	use rand_chacha::ChaChaRng;
+	use std::collections::HashSet;
+
+	#[test]
+	fn same_rng_builds_same_level() {
+		fn build_level() -> DungeonLevel {
+			let rng = &mut ChaChaRng::seed_from_u64(17);
+			let stats = &mut DungeonStats { food_drops: 7 };
+			let level_kind = LevelKind {
+				depth: 16,
+				is_max: true,
+				post_amulet: false,
+				party_type: PartyType::NoParty,
+			};
+			roll_level(&level_kind, stats, rng)
+		}
+		let mut set = HashSet::new();
+		for _ in 0..10 {
+			set.insert(build_level());
+		}
+		assert_eq!(1, set.len());
+	}
 
 	#[test]
 	fn no_party_works() {
-		let rng = &mut ChaCha8Rng::seed_from_u64(17);
-		let mut stats = DungeonStats { food_drops: 7 };
+		let rng = &mut ChaChaRng::seed_from_u64(17);
+		let stats = &mut DungeonStats { food_drops: 7 };
 		let level_kind = LevelKind {
 			depth: 16,
 			is_max: true,
 			post_amulet: false,
 			party_type: PartyType::NoParty,
 		};
-		let mut level = roll_level(&level_kind, &mut stats, rng);
+		let mut level = roll_level(&level_kind, stats, rng);
 		level.print(true);
 		level.lighting_enabled = true;
 		level.print(false);
@@ -228,14 +250,14 @@ mod tests {
 	#[test]
 	fn party_big_works() {
 		let rng = &mut ChaChaRng::seed_from_u64(17);
-		let mut stats = DungeonStats { food_drops: (AMULET_LEVEL / 2 - 1) as usize };
+		let stats = &mut DungeonStats { food_drops: (AMULET_LEVEL / 2 - 1) as usize };
 		let level_kind = LevelKind {
 			depth: AMULET_LEVEL as usize,
 			is_max: true,
 			post_amulet: false,
 			party_type: PartyType::PartyBig,
 		};
-		let mut level = roll_level(&level_kind, &mut stats, rng);
+		let mut level = roll_level(&level_kind, stats, rng);
 		level.lighting_enabled = true;
 		level.print(true);
 	}

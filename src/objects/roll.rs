@@ -15,42 +15,42 @@ use rand::Rng;
 
 impl Object {
 	pub fn roll_scroll(rng: &mut impl Rng) -> Object {
-		let mut object = Object::new(Scroll);
+		let mut object = Object::new(Scroll, rng);
 		gr_scroll(&mut object, rng);
 		object
 	}
 	pub fn roll_potion(rng: &mut impl Rng) -> Object {
-		let mut object = Object::new(Potion);
+		let mut object = Object::new(Potion, rng);
 		gr_potion(&mut object, rng);
 		object
 	}
 	pub fn roll_weapon(assign_kind: bool, rng: &mut impl Rng) -> Object {
-		let mut object = Object::new(Weapon);
+		let mut object = Object::new(Weapon, rng);
 		gr_weapon(&mut object, assign_kind, rng);
 		object
 	}
 	pub fn roll_armor(rng: &mut impl Rng) -> Object {
-		let mut object = Object::new(Armor);
+		let mut object = Object::new(Armor, rng);
 		gr_armor(&mut object, rng);
 		object
 	}
 	pub fn roll_wand(rng: &mut impl Rng) -> Object {
-		let mut object = Object::new(Wand);
+		let mut object = Object::new(Wand, rng);
 		gr_wand(&mut object, rng);
 		object
 	}
 	pub fn roll_food(force_ration: bool, rng: &mut impl Rng) -> Object {
-		let mut object = Object::new(Food);
+		let mut object = Object::new(Food, rng);
 		get_food(&mut object, force_ration, rng);
 		object
 	}
 	pub fn roll_ring(assign_kind: bool, rng: &mut impl Rng) -> Object {
-		let mut object = Object::new(Ring);
+		let mut object = Object::new(Ring, rng);
 		gr_ring(&mut object, assign_kind, rng);
 		object
 	}
 	pub fn roll_gold(depth: usize, boosted: bool, rng: &mut impl Rng) -> Object {
-		let mut object = Object::new(Gold);
+		let mut object = Object::new(Gold, rng);
 		let low = 2 * depth;
 		let high = 16 * depth;
 		let boost = if boosted { 1.5 } else { 1.0 };

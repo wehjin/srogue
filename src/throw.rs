@@ -235,7 +235,7 @@ fn flop_object_from_spot(obj_id: ObjectId, spot: DungeonSpot, game: &mut GameSta
 	if found_good_spot || walk.steps_taken == 0 {
 		let mut new_obj = {
 			let obj = game.player.object(obj_id).expect("obj in pack");
-			obj.clone_with_new_id()
+			obj.clone_with_new_id(&mut thread_rng())
 		};
 		{
 			new_obj.in_use_flags = NOT_USED;

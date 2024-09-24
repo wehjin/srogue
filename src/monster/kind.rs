@@ -5,7 +5,7 @@ use crate::monster::MonsterFlags;
 use crate::prelude::AMULET_LEVEL;
 use crate::random::get_rand;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub enum MonsterKind {
 	Aquator,
 	Bat,

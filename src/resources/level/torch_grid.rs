@@ -1,7 +1,7 @@
 use crate::resources::level::grid::LevelGrid;
 use crate::resources::level::size::LevelSpot;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct TorchGrid(LevelGrid<bool>);
 
 impl TorchGrid {

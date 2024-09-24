@@ -120,7 +120,7 @@ impl DoorDirection {
 	}
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default, Hash)]
 pub struct RoomBounds {
 	pub top: i64,
 	pub right: i64,

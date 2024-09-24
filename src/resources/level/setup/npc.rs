@@ -58,7 +58,7 @@ pub mod disguise {
 	use rand::Rng;
 	use serde::{Deserialize, Serialize};
 
-	#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
 	pub enum Disguise {
 		None,
 		Stairs,

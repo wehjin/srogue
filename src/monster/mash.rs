@@ -86,7 +86,7 @@ impl MonsterMash {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash)]
 pub struct StuckCounter {
 	pub row: i64,
 	pub col: i64,
@@ -108,7 +108,7 @@ impl StuckCounter {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Monster {
 	pub id: u64,
 	pub kind: MonsterKind,

@@ -1,4 +1,4 @@
-use rand::thread_rng;
+use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::clone::Clone;
 use std::string::ToString;
@@ -35,7 +35,6 @@ use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::resources::level::setup::roll_object;
 use crate::resources::level::size::LevelSpot;
 use crate::ring::constants::RINGS;
-use roll::gr_ring;
 use crate::ring::ring_gem::RingGem;
 use crate::room::{gr_room, gr_spot, party_objects, RoomType};
 use crate::scrolls::constants::SCROLLS;
@@ -43,6 +42,7 @@ use crate::weapons::constants::{ARROW, DAGGER, DART, SHURIKEN, WEAPONS};
 use crate::weapons::kind::WeaponKind;
 use crate::zap::constants::WANDS;
 use crate::zap::wand_materials::WandMaterial;
+use roll::gr_ring;
 
 mod armors;
 mod kinds;
@@ -110,7 +110,7 @@ impl Default for NoteStatus {
 }
 
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct
 Object {
 	id: ObjectId,
@@ -131,8 +131,8 @@ Object {
 }
 
 impl Object {
-	pub fn new(what: ObjectWhat) -> Self {
-		let mut obj = empty_obj();
+	pub fn new(what: ObjectWhat, rng: &mut impl Rng) -> Self {
+		let mut obj = empty_obj(rng);
 		obj.what_is = what;
 		obj.quantity = 1;
 		obj.ichar = 'L';
@@ -148,9 +148,9 @@ impl Object {
 	}
 }
 
-pub fn empty_obj() -> Object {
+pub fn empty_obj(rng: &mut impl Rng) -> Object {
 	Object {
-		id: ObjectId::random(),
+		id: ObjectId::random(rng),
 		quantity: 0,
 		ichar: '\x00',
 		is_protected: 0,
@@ -169,9 +169,9 @@ pub fn empty_obj() -> Object {
 }
 
 impl Object {
-	pub fn clone_with_new_id(&self) -> Self {
+	pub fn clone_with_new_id(&self, rng: &mut impl Rng) -> Self {
 		let mut new = self.clone();
-		new.id = ObjectId::random();
+		new.id = ObjectId::random(rng);
 		new
 	}
 	pub fn to_name_with_new_quantity(&self, quantity: i16, fruit: String, notes: &NoteTables) -> String {
@@ -263,7 +263,7 @@ pub fn put_gold(level_depth: isize, level: &mut Level, ground: &mut ObjectPack) 
 }
 
 pub fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: isize, level: &mut Level, ground: &mut ObjectPack) {
-	let mut obj = alloc_object();
+	let mut obj = alloc_object(&mut thread_rng());
 	obj.spot.set(row, col);
 	obj.what_is = Gold;
 	obj.quantity = get_rand((2 * cur_level) as i16, (16 * cur_level) as i16);
@@ -358,8 +358,8 @@ pub fn get_armor_class(obj: Option<&Object>) -> isize {
 	} else { 0 }
 }
 
-pub fn alloc_object() -> Object {
-	let mut obj = empty_obj();
+pub fn alloc_object(rng: &mut impl Rng) -> Object {
+	let mut obj = empty_obj(rng);
 	obj.quantity = 1;
 	obj.ichar = 'L';
 	obj.is_cursed = 0;
@@ -399,7 +399,7 @@ pub fn show_objects(game: &mut GameState) {
 }
 
 pub fn put_amulet(game: &mut GameState) {
-	let mut obj = alloc_object();
+	let mut obj = alloc_object(&mut thread_rng());
 	obj.what_is = Amulet;
 	rand_place(obj, game);
 }
@@ -435,7 +435,7 @@ pub fn new_object_for_wizard(game: &mut GameState) {
 		return;
 	}
 	let rng = &mut thread_rng();
-	let mut obj = alloc_object();
+	let mut obj = alloc_object(rng);
 	let max_kind = match ch {
 		'!' => {
 			obj.what_is = Potion;

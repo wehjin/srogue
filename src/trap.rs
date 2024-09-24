@@ -1,3 +1,4 @@
+use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 
 use TrapKind::NoTrap;
@@ -24,10 +25,9 @@ use crate::trap::trap_kind::TrapKind::{BearTrap, DartTrap, RustTrap, SleepingGas
 pub mod trap_kind {
 	use serde::{Deserialize, Serialize};
 
-	use crate::random::get_rand;
 	use crate::trap::trap_kind::TrapKind::{BearTrap, DartTrap, NoTrap, RustTrap, SleepingGasTrap, TeleTrap, TrapDoor};
 
-	#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
 	pub enum TrapKind {
 		NoTrap,
 		TrapDoor,
@@ -55,10 +55,6 @@ pub mod trap_kind {
 			}
 		}
 		pub const ALL_KINDS: [TrapKind; 6] = [TrapDoor, BearTrap, TeleTrap, DartTrap, SleepingGasTrap, RustTrap];
-		pub fn random() -> Self {
-			let index = get_rand(0, 5) as usize;
-			Self::ALL_KINDS[index]
-		}
 	}
 }
 
@@ -178,7 +174,7 @@ pub fn add_traps(player: &Player, level: &mut Level) {
 		n = get_rand(5, MAX_TRAP);
 	}
 	for i in 0..n {
-		level.traps[i].trap_type = TrapKind::random();
+		level.traps[i].trap_type = TrapKind::random(&mut thread_rng());
 		let (row, col) = if i == 0 && level.party_room.is_some() {
 			let cur_party_room = level.party_room.expect("some party room");
 			let mut row: usize;

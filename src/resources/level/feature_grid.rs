@@ -16,7 +16,7 @@ pub mod feature {
 	use crate::resources::level::plain::Axis;
 	use crate::trap::trap_kind::TrapKind;
 
-	#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Default, Hash)]
 	pub enum Feature {
 		#[default]
 		None,
@@ -60,7 +60,7 @@ pub mod feature {
 	}
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct FeatureGrid(LevelGrid<Feature>);
 
 impl FeatureGrid {

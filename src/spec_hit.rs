@@ -1,3 +1,4 @@
+use rand::thread_rng;
 use crate::armors::ArmorKind;
 use crate::hit::mon_hit;
 use crate::init::GameState;
@@ -162,7 +163,7 @@ pub fn cough_up(mon_id: u64, game: &mut GameState) {
 		return;
 	}
 	let obj = if game.mash.monster_flags(mon_id).steals_gold {
-		let mut obj = alloc_object();
+		let mut obj = alloc_object(&mut thread_rng());
 		obj.what_is = Gold;
 		obj.quantity = get_rand((game.player.cur_depth * 15) as i16, (game.player.cur_depth * 30) as i16);
 		obj

@@ -36,7 +36,7 @@ pub fn roll_level(level_kind: &LevelKind, stats: &mut DungeonStats, rng: &mut im
 
 fn roll_amulet(level_kind: &LevelKind, level: &mut DungeonLevel, rng: &mut impl Rng) {
 	if !level_kind.post_amulet && level_kind.depth >= AMULET_LEVEL as usize {
-		let amulet = Object::new(ObjectWhat::Amulet);
+		let amulet = Object::new(ObjectWhat::Amulet, rng);
 		let spot = level.roll_vacant_spot(false, false, false, rng);
 		level.put_object(spot, amulet);
 	}
@@ -44,7 +44,7 @@ fn roll_amulet(level_kind: &LevelKind, level: &mut DungeonLevel, rng: &mut impl 
 
 fn roll_traps(level: &mut DungeonLevel, rng: &mut impl Rng) {
 	for i in 0..roll_traps_count(level, rng) {
-		let trap = Trap { trap_type: TrapKind::random(), ..Trap::default() };
+		let trap = Trap { trap_type: TrapKind::random(rng), ..Trap::default() };
 		let spot = match level.party_room {
 			Some(party_room) if i == 0 => {
 				let bounds = level.as_room(party_room).bounds.inset(1, 1);

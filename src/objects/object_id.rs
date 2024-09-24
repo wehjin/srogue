@@ -1,11 +1,11 @@
-use rand::{RngCore, thread_rng};
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Hash)]
 pub struct ObjectId(u64);
 
 impl ObjectId {
-	pub fn random() -> Self {
-		ObjectId(thread_rng().next_u64())
+	pub fn new(id: u64) -> Self {
+		Self(id)
 	}
 }
+

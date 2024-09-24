@@ -7,7 +7,7 @@ use crate::resources::level::size::LevelSpot;
 use crate::room::{RoomBounds, RoomType};
 use rand::Rng;
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq, Hash)]
 pub struct LevelRoom {
 	pub ty: RoomType,
 	pub bounds: RoomBounds,
@@ -112,7 +112,7 @@ impl ExitId {
 	}
 }
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq, Hash)]
 pub enum RoomExit {
 	#[default]
 	None,

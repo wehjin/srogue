@@ -10,8 +10,8 @@ use rand_chacha::ChaChaRng;
 
 pub fn run() {
 	let rng = &mut ChaChaRng::from_entropy();
+	let stats = &mut DungeonStats::new();
 	let mut party_depth = PartyDepth::new(rng);
-	let mut dungeon_stats = DungeonStats::new();
 	let mut rogue = Rogue::default();
 	for _ in 0..1 {
 		// Drop depth to next value.
@@ -23,7 +23,7 @@ pub fn run() {
 			post_amulet: rogue.has_amulet,
 			party_type: if rogue.depth.usize() == party_depth.usize() { PartyType::PartyRollBig } else { PartyType::NoParty },
 		};
-		let mut level = roll_level(&level_kind, &mut dungeon_stats, rng);
+		let mut level = roll_level(&level_kind, stats, rng);
 		level.lighting_enabled = true;
 		level.print(false);
 
@@ -32,7 +32,7 @@ pub fn run() {
 	}
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default, Hash)]
 pub enum RogueSpot {
 	#[default]
 	None,

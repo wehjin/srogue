@@ -1,7 +1,9 @@
 use crate::monster::{MonsterKind, MONSTERS};
+use crate::objects::ObjectId;
 use crate::prelude::DungeonSpot;
 use crate::resources::level::size::{LevelSize, LevelSpot};
 use crate::room::RoomBounds;
+use crate::trap::trap_kind::TrapKind;
 use rand::Rng;
 
 impl RoomBounds {
@@ -32,5 +34,18 @@ impl MonsterKind {
 	pub fn random_any(rng: &mut impl Rng) -> Self {
 		let y = MONSTERS - 1;
 		Self::LIST[rng.gen_range(0..=y)]
+	}
+}
+
+impl TrapKind {
+	pub fn random(rng: &mut impl Rng) -> Self {
+		let index = rng.gen_range(0..=5) as usize;
+		Self::ALL_KINDS[index]
+	}
+}
+
+impl ObjectId {
+	pub fn random(rng: &mut impl Rng) -> Self {
+		ObjectId::new(rng.next_u64())
 	}
 }

@@ -127,15 +127,16 @@ impl GameState {
 
 fn player_init(player: &mut Player) {
 	player.rogue.pack.clear();
+	let rng = &mut thread_rng();
 	// Food
 	{
-		let mut obj = alloc_object();
-		get_food(&mut obj, true, &mut thread_rng());
+		let mut obj = alloc_object(rng);
+		get_food(&mut obj, true, rng);
 		player.combine_or_add_item_to_pack(obj);
 	}
 	// Armor
 	{
-		let mut obj = alloc_object();
+		let mut obj = alloc_object(rng);
 		obj.what_is = Armor;
 		obj.which_kind = RINGMAIL;
 		obj.class = RINGMAIL as isize + 2;
@@ -146,7 +147,7 @@ fn player_init(player: &mut Player) {
 	}
 	// Mace
 	{
-		let mut obj = alloc_object();
+		let mut obj = alloc_object(rng);
 		obj.what_is = Weapon;
 		obj.which_kind = MACE;
 		obj.hit_enchant = 1;
@@ -157,7 +158,7 @@ fn player_init(player: &mut Player) {
 	}
 	// Bow
 	{
-		let mut obj = alloc_object();
+		let mut obj = alloc_object(rng);
 		obj.what_is = Weapon;
 		obj.which_kind = BOW;
 		obj.hit_enchant = 1;
@@ -167,7 +168,7 @@ fn player_init(player: &mut Player) {
 	}
 	// Arrows
 	{
-		let mut obj = alloc_object();
+		let mut obj = alloc_object(rng);
 		obj.what_is = Weapon;
 		obj.which_kind = ARROW;
 		obj.quantity = get_rand(25, 35) as c_short;

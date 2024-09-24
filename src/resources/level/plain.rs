@@ -119,7 +119,7 @@ fn roll_empty_sectors(spaces: &[LevelRoom; 9], percent: usize, rng: &mut impl Rn
 }
 
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum Axis { Horizontal, Vertical }
 impl Axis {
 	pub fn sort_spots(&self, spot1: LevelSpot, spot2: LevelSpot) -> (LevelSpot, LevelSpot) {

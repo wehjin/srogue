@@ -11,6 +11,7 @@ use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::un_put_hand;
 use crate::systems::play_level::LevelResult;
 use crate::{motion, pack};
+use rand::thread_rng;
 
 pub struct KickIntoPack;
 
@@ -72,7 +73,7 @@ fn drop_item(game: &mut GameState) {
 			}
 			let place_obj = if let Some(obj) = game.player.pack_mut().object_if_mut(obj_id, |obj| obj.quantity > 1 && obj.what_is != Weapon) {
 				obj.quantity -= 1;
-				let mut new = obj.clone_with_new_id();
+				let mut new = obj.clone_with_new_id(&mut thread_rng());
 				new.quantity = 1;
 				new
 			} else {
