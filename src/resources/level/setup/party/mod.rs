@@ -45,7 +45,7 @@ fn roll_party_favors(room_id: RoomId, level: &mut DungeonLevel, stats: &mut Dung
 	let count = rng.gen_range(5..=10);
 	let vacant_spots = roll_party_spots(search_bounds, count, level, false);
 	for spot in &vacant_spots {
-		let object = setup::roll_object(level.depth, stats, rng);
+		let object = setup::roll_object(level.depth, &mut stats.food_drops, rng);
 		level.put_object(*spot, object);
 	}
 	vacant_spots.len()

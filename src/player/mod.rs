@@ -99,7 +99,7 @@ pub struct Player {
 	pub interrupted: bool,
 	pub fight_monster: Option<u64>,
 	pub hunger: HungerLevel,
-	pub foods: isize,
+	pub foods: usize,
 	pub wizard: bool,
 	pub cur_room: RoomMark,
 	pub notes: NoteTables,

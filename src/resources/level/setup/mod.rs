@@ -159,7 +159,7 @@ pub fn roll_objects(level: &mut DungeonLevel, stats: &mut DungeonStats, rng: &mu
 		}
 		for _ in 0..roll_object_count(rng) {
 			let spot = level.roll_vacant_spot(false, false, false);
-			let object = roll_object(level.depth, stats, rng);
+			let object = roll_object(level.depth, &mut stats.food_drops, rng);
 			level.put_object(spot, object);
 		}
 		roll_gold(level, rng);
@@ -191,9 +191,9 @@ fn roll_gold(level: &mut DungeonLevel, rng: &mut impl Rng) {
 	}
 }
 
-fn roll_object(depth: usize, stats: &mut DungeonStats, rng: &mut impl Rng) -> Object {
-	let what = if stats.food_drops < depth / 2 {
-		stats.food_drops += 1;
+pub fn roll_object(depth: usize, all_food_drops: &mut usize, rng: &mut impl Rng) -> Object {
+	let what = if *all_food_drops < depth / 2 {
+		*all_food_drops += 1;
 		RandomWhat::Food
 	} else {
 		RandomWhat::roll(rng)

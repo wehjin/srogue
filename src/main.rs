@@ -19,7 +19,7 @@ mod init;
 mod inventory;
 mod machdep;
 mod motion;
-mod objects;
+pub mod objects;
 mod pack;
 mod potions;
 mod player;
