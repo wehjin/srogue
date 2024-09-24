@@ -1,3 +1,4 @@
+use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
 pub use flags::MonsterFlags;
@@ -49,7 +50,7 @@ pub struct Fighter {
 
 pub fn put_mons(game: &mut GameState) {
 	for _ in 0..get_rand(4, 6) {
-		let mut monster = npc::roll_monster(game.player.cur_depth as usize, 0);
+		let mut monster = npc::roll_monster(game.player.cur_depth as usize, 0, &mut thread_rng());
 		if monster.m_flags.wanders && coin_toss() {
 			monster.wake_up();
 		}
@@ -106,7 +107,7 @@ pub fn mv_mons(game: &mut GameState) {
 	}
 }
 
-pub fn party_monsters(rn: usize, n: usize, level_depth: isize, mash: &mut MonsterMash, level: &mut Level) {
+pub fn party_monsters(rn: usize, n: usize, level_depth: isize, mash: &mut MonsterMash, level: &mut Level, rng: &mut impl Rng) {
 	let first_level_shift = level_depth % 3;
 	let n = n + n;
 	for _i in 0..n {
@@ -124,7 +125,7 @@ pub fn party_monsters(rn: usize, n: usize, level_depth: isize, mash: &mut Monste
 			}
 		}
 		if let Some((row, col)) = found {
-			let mut monster = npc::roll_monster(level_depth as usize, first_level_shift as usize);
+			let mut monster = npc::roll_monster(level_depth as usize, first_level_shift as usize, rng);
 			if !monster.m_flags.imitates {
 				monster.m_flags.wakens = true;
 			}
@@ -322,7 +323,7 @@ pub fn player_defeats_invisibility(player: &Player, level: &Level) -> bool {
 
 fn random_wanderer(level_depth: isize) -> Option<Monster> {
 	for _i in 0..15 {
-		let monster = npc::roll_monster(level_depth as usize, 0);
+		let monster = npc::roll_monster(level_depth as usize, 0, &mut thread_rng());
 		if monster.wanders_or_wakens() {
 			return Some(monster);
 		}
@@ -388,7 +389,7 @@ fn random_spot_for_monster(start_row: i64, start_col: i64, level: &Level) -> Opt
 pub fn create_monster(game: &mut GameState) {
 	let player = &game.player;
 	if let Some(found) = random_spot_for_monster(player.rogue.row, player.rogue.col, &game.level) {
-		let monster = npc::roll_monster(player.cur_depth as usize, 0);
+		let monster = npc::roll_monster(player.cur_depth as usize, 0, &mut thread_rng());
 		let level = &mut game.level;
 		put_m_at(found.row, found.col, monster, &mut game.mash, level);
 		game.render_spot(found);

@@ -1,8 +1,8 @@
-use crate::random::get_rand;
 use crate::resources::level::sector::Sector;
+use rand::Rng;
 
-pub fn roll_design() -> Design {
-	SECTOR_DESIGNS[get_rand(0usize, 5)]
+pub fn roll_design(rng: &mut impl Rng) -> Design {
+	SECTOR_DESIGNS[rng.gen_range(0usize..=5)]
 }
 
 pub const SECTOR_DESIGNS: [Design; 6] = [

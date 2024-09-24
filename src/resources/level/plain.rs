@@ -1,4 +1,4 @@
-use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::random::{coin_toss, rand_percent};
 use crate::resources::level::design::Design;
 use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::maze::hide_random_tunnels;
@@ -9,6 +9,7 @@ use crate::resources::level::{deadend, maze};
 use crate::room::RoomType;
 use deadend::make_deadend;
 use maze::make_maze;
+use rand::Rng;
 
 #[derive(Debug, Clone)]
 pub struct PlainLevel {
@@ -17,17 +18,17 @@ pub struct PlainLevel {
 	map: FeatureGrid,
 }
 impl PlainLevel {
-	pub fn new(level: usize) -> Self {
+	pub fn new(level: usize, rng: &mut impl Rng) -> Self {
 		let spaces = [
-			LevelRoom::from_sector(Sector::TopLeft),
-			LevelRoom::from_sector(Sector::TopCenter),
-			LevelRoom::from_sector(Sector::TopRight),
-			LevelRoom::from_sector(Sector::MiddleLeft),
-			LevelRoom::from_sector(Sector::MiddleCenter),
-			LevelRoom::from_sector(Sector::MiddleRight),
-			LevelRoom::from_sector(Sector::BottomLeft),
-			LevelRoom::from_sector(Sector::BottomCenter),
-			LevelRoom::from_sector(Sector::BottomRight),
+			LevelRoom::from_sector(Sector::TopLeft, rng),
+			LevelRoom::from_sector(Sector::TopCenter, rng),
+			LevelRoom::from_sector(Sector::TopRight, rng),
+			LevelRoom::from_sector(Sector::MiddleLeft, rng),
+			LevelRoom::from_sector(Sector::MiddleCenter, rng),
+			LevelRoom::from_sector(Sector::MiddleRight, rng),
+			LevelRoom::from_sector(Sector::BottomLeft, rng),
+			LevelRoom::from_sector(Sector::BottomCenter, rng),
+			LevelRoom::from_sector(Sector::BottomRight, rng),
 		];
 		Self { level, spaces, map: FeatureGrid::new() }
 	}
@@ -57,7 +58,7 @@ impl PlainLevel {
 		}
 		Self { level, spaces, map }
 	}
-	pub fn add_mazes(self) -> Self {
+	pub fn add_mazes(self, rng: &mut impl Rng) -> Self {
 		if self.level > 1 {
 			let Self { level, mut spaces, mut map, } = self;
 			let maze_percent = (self.level * 5) / 4 + if self.level > 15 { self.level } else { 0 };
@@ -65,7 +66,7 @@ impl PlainLevel {
 			for sector in candidate_sectors {
 				let maze_bounds = spaces[sector as usize].bounds;
 				make_maze(maze_bounds, &mut map);
-				hide_random_tunnels(maze_bounds, get_rand(0, 2), self.level, &mut map);
+				hide_random_tunnels(maze_bounds, rng.gen_range(0..=2), self.level, &mut map);
 				spaces[sector as usize].ty = RoomType::Maze;
 			}
 			Self { level, spaces, map }
@@ -74,7 +75,7 @@ impl PlainLevel {
 		}
 	}
 
-	pub fn add_deadends(self) -> Self {
+	pub fn add_deadends(self, rng: &mut impl Rng) -> Self {
 		let PlainLevel { level, mut spaces, mut map, } = self;
 		let mut recursed_sectors = Vec::new();
 		let candidate_sectors = shuffled_sectors()
@@ -88,21 +89,21 @@ impl PlainLevel {
 			})
 			.collect::<Vec<_>>();
 		for sector in candidate_sectors {
-			let new_recursed = make_deadend(sector, true, level, &mut spaces, &mut map);
+			let new_recursed = make_deadend(sector, true, level, &mut spaces, &mut map, rng);
 			recursed_sectors.extend(new_recursed);
 		}
 		// Make sure the last recursed deadend connects to a room or maze.
 		if let Some(&recursed_sector) = recursed_sectors.last() {
-			make_deadend(recursed_sector, false, level, &mut spaces, &mut map);
+			make_deadend(recursed_sector, false, level, &mut spaces, &mut map, rng);
 		}
 		Self { level, spaces, map }
 	}
 
-	pub fn connect_spaces(self) -> Self {
+	pub fn connect_spaces(self, rng: &mut impl Rng) -> Self {
 		let Self { level, mut spaces, mut map, } = self;
 		for sector in shuffled_sectors() {
-			connect_neighbors(Axis::Horizontal, sector, level, &mut spaces, &mut map);
-			connect_neighbors(Axis::Vertical, sector, level, &mut spaces, &mut map);
+			connect_neighbors(Axis::Horizontal, sector, level, &mut spaces, &mut map, rng);
+			connect_neighbors(Axis::Vertical, sector, level, &mut spaces, &mut map, rng);
 		}
 		Self { level, spaces, map }
 	}
@@ -130,7 +131,7 @@ impl Axis {
 	}
 }
 
-fn connect_neighbors(axis: Axis, sector: Sector, current_level: usize, spaces: &mut [LevelRoom; 9], map: &mut FeatureGrid) {
+fn connect_neighbors(axis: Axis, sector: Sector, current_level: usize, spaces: &mut [LevelRoom; 9], map: &mut FeatureGrid, rng: &mut impl Rng) {
 	if !spaces[sector as usize].is_vault_or_maze() {
 		return;
 	}
@@ -141,11 +142,11 @@ fn connect_neighbors(axis: Axis, sector: Sector, current_level: usize, spaces: &
 	if let Some(near_sector) = find_neighbor(&sector) {
 		match spaces[near_sector as usize].ty {
 			RoomType::Room | RoomType::Maze => {
-				connect_spaces(axis, sector, near_sector, current_level, spaces, map);
+				connect_spaces(axis, sector, near_sector, current_level, spaces, map, rng);
 			}
 			RoomType::Nothing => if let Some(far_sector) = find_neighbor(&near_sector) {
 				if spaces[far_sector as usize].is_vault_or_maze() {
-					connect_spaces(axis, sector, far_sector, current_level, spaces, map);
+					connect_spaces(axis, sector, far_sector, current_level, spaces, map, rng);
 					spaces[near_sector as usize].ty = RoomType::Cross;
 				}
 			},
@@ -154,7 +155,7 @@ fn connect_neighbors(axis: Axis, sector: Sector, current_level: usize, spaces: &
 	}
 }
 
-fn connect_spaces(axis: Axis, sector1: Sector, sector2: Sector, current_level: usize, spaces: &mut [LevelRoom; 9], map: &mut FeatureGrid) {
+fn connect_spaces(axis: Axis, sector1: Sector, sector2: Sector, current_level: usize, spaces: &mut [LevelRoom; 9], map: &mut FeatureGrid, rng: &mut impl Rng) {
 	let start: LevelSpot;
 	let end: LevelSpot;
 	match axis {
@@ -167,6 +168,6 @@ fn connect_spaces(axis: Axis, sector1: Sector, sector2: Sector, current_level: u
 			end = spaces[sector2 as usize].put_exit(ExitId::Top, sector1, current_level, map);
 		}
 	}
-	map.put_passage(axis, start, end, current_level);
+	map.put_passage(axis, start, end, current_level, rng);
 }
 

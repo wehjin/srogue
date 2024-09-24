@@ -1,3 +1,4 @@
+use rand::thread_rng;
 use wand_kind::WandKind;
 
 use crate::hit::rogue_hit;
@@ -116,7 +117,7 @@ pub fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
 			if monster.m_flags.holds {
 				game.level.being_held = false;
 			}
-			let mut morph_monster = roll_monster(game.player.cur_depth as usize, 0);
+			let mut morph_monster = roll_monster(game.player.cur_depth as usize, 0, &mut thread_rng());
 			morph_monster.set_spot(row, col);
 			if !morph_monster.m_flags.imitates {
 				morph_monster.wake_up();

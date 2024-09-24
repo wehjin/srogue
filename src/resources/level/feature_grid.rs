@@ -1,6 +1,6 @@
 use crate::level::materials::Visibility;
 use crate::prelude::HIDE_PERCENT;
-use crate::random::{get_rand, rand_percent};
+use crate::random::rand_percent;
 use crate::resources::level::feature_grid::feature::{Feature, FeatureFilter};
 use crate::resources::level::grid::LevelGrid;
 use crate::resources::level::maze::hide_random_tunnels;
@@ -8,6 +8,7 @@ use crate::resources::level::plain::Axis;
 use crate::resources::level::size::LevelSpot;
 use crate::room::RoomBounds;
 use crate::trap::trap_kind::TrapKind;
+use rand::Rng;
 use std::fmt::Debug;
 use std::ops::RangeInclusive;
 
@@ -122,7 +123,7 @@ impl FeatureGrid {
 			}
 		}
 	}
-	pub fn put_passage(&mut self, axis: Axis, spot1: LevelSpot, spot2: LevelSpot, current_level: usize) {
+	pub fn put_passage(&mut self, axis: Axis, spot1: LevelSpot, spot2: LevelSpot, current_level: usize, rng: &mut impl Rng) {
 		let (start, end) = axis.sort_spots(spot1, spot2);
 		struct Leg {
 			rows: RangeInclusive<i64>,
@@ -132,7 +133,7 @@ impl FeatureGrid {
 			Axis::Horizontal => {
 				let start_col = start.col.i64() + 1;
 				let end_col = end.col.i64() - 1;
-				let middle_col = get_rand(start_col, end_col);
+				let middle_col = rng.gen_range(start_col..=end_col);
 				let start_row = start.row.i64();
 				let end_row = end.row.i64();
 				let (row1, row2) = if start_row <= end_row { (start_row, end_row) } else { (end_row, start_row) };
@@ -145,7 +146,7 @@ impl FeatureGrid {
 			Axis::Vertical => {
 				let start_row = start.row.i64() + 1;
 				let end_row = end.row.i64() - 1;
-				let middle_row = get_rand(start_row, end_row);
+				let middle_row = rng.gen_range(start_row..=end_row);
 				let start_col = start.col.i64();
 				let end_col = end.col.i64();
 				let (col1, col2) = if start_col <= end_col { (start_col, end_col) } else { (end_col, start_col) };

@@ -5,9 +5,12 @@ use crate::resources::level::setup::{roll_level, LevelKind};
 use crate::resources::level::size::LevelSpot;
 use crate::resources::level::PartyType;
 use crate::resources::rogue::Rogue;
+use rand::SeedableRng;
+use rand_chacha::ChaChaRng;
 
 pub fn run() {
-	let mut party_depth = PartyDepth::new();
+	let rng = &mut ChaChaRng::from_entropy();
+	let mut party_depth = PartyDepth::new(rng);
 	let mut dungeon_stats = DungeonStats::new();
 	let mut rogue = Rogue::default();
 	for _ in 0..1 {
@@ -20,12 +23,12 @@ pub fn run() {
 			post_amulet: rogue.has_amulet,
 			party_type: if rogue.depth.usize() == party_depth.usize() { PartyType::PartyRollBig } else { PartyType::NoParty },
 		};
-		let mut level = roll_level(&level_kind, &mut dungeon_stats);
+		let mut level = roll_level(&level_kind, &mut dungeon_stats, rng);
 		level.lighting_enabled = true;
 		level.print(false);
 
 		// Recompute the party depth depending on the current level.
-		party_depth = party_depth.recompute(level.depth);
+		party_depth = party_depth.recompute(level.depth, rng);
 	}
 }
 

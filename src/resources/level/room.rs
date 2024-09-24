@@ -1,11 +1,12 @@
 use crate::prelude::HIDE_PERCENT;
-use crate::random::{get_rand, rand_percent};
+use crate::random::rand_percent;
 use crate::resources::level::feature_grid::feature::Feature;
 use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::plain::Axis;
 use crate::resources::level::sector::{Sector, SectorBounds};
 use crate::resources::level::size::LevelSpot;
 use crate::room::{RoomBounds, RoomType};
+use rand::Rng;
 
 #[derive(Debug, Copy, Clone, Default)]
 pub struct LevelRoom {
@@ -71,8 +72,8 @@ impl LevelRoom {
 }
 
 impl LevelRoom {
-	pub fn from_sector(sector: Sector) -> Self {
-		let bounds = get_random_room_bounds(&sector.bounds());
+	pub fn from_sector(sector: Sector, rng: &mut impl Rng) -> Self {
+		let bounds = get_random_room_bounds(&sector.bounds(), rng);
 		Self { ty: RoomType::Nothing, bounds, exits: [RoomExit::None; 4] }
 	}
 	pub fn is_nothing(&self) -> bool { self.ty == RoomType::Nothing }
@@ -81,11 +82,11 @@ impl LevelRoom {
 	pub fn is_vault_or_maze(&self) -> bool { self.ty == RoomType::Room || self.ty == RoomType::Maze }
 }
 
-fn get_random_room_bounds(sector_bounds: &SectorBounds) -> RoomBounds {
-	let height = get_rand(4, sector_bounds.height());
-	let width = get_rand(7, sector_bounds.width() - 3);
-	let row_offset = get_rand(0, sector_bounds.height() - height);
-	let col_offset = get_rand(0, sector_bounds.width() - width);
+fn get_random_room_bounds(sector_bounds: &SectorBounds, rng: &mut impl Rng) -> RoomBounds {
+	let height = rng.gen_range(4..=sector_bounds.height());
+	let width = rng.gen_range(7..=sector_bounds.width() - 3);
+	let row_offset = rng.gen_range(0..=sector_bounds.height() - height);
+	let col_offset = rng.gen_range(0..=sector_bounds.width() - width);
 
 	let top = sector_bounds.top + row_offset;
 	let bottom = top + height - 1;

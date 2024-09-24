@@ -1,15 +1,15 @@
 use crate::monster::{Monster, MonsterKind, StuckCounter};
 use crate::prelude::DungeonSpot;
-use crate::random::{coin_toss, get_rand};
+use crate::random::coin_toss;
 use crate::resources::level::setup::npc::disguise::{roll_disguise, Disguise};
 use crate::resources::level::DungeonLevel;
-use rand::{thread_rng, RngCore};
+use rand::{thread_rng, Rng, RngCore};
 
-pub fn roll_monsters(level: &mut DungeonLevel) {
+pub fn roll_monsters(level: &mut DungeonLevel, rng: &mut impl Rng) {
 	let depth = level.depth;
-	let count = roll_monster_count();
+	let count = roll_monster_count(rng);
 	for _ in 0..count {
-		let mut monster = roll_monster(depth, 0);
+		let mut monster = roll_monster(depth, 0, rng);
 		if monster.wanders() && coin_toss() {
 			monster.wake_up();
 		}
@@ -18,14 +18,14 @@ pub fn roll_monsters(level: &mut DungeonLevel) {
 	}
 }
 
-fn roll_monster_count() -> usize {
-	get_rand(4, 6)
+fn roll_monster_count(rng: &mut impl Rng) -> usize {
+	rng.gen_range(4..=6)
 }
 
-pub fn roll_monster(depth: usize, level_boost: usize) -> Monster {
+pub fn roll_monster(depth: usize, level_boost: usize, rng: &mut impl Rng) -> Monster {
 	let kind = roll_monster_kind(depth, level_boost);
 	let flags = kind.depth_adjusted_flags(depth);
-	let disguise = if flags.imitates { roll_disguise() } else { Disguise::None };
+	let disguise = if flags.imitates { roll_disguise(rng) } else { Disguise::None };
 	Monster {
 		id: thread_rng().next_u64(),
 		kind: kind.clone(),
@@ -55,8 +55,8 @@ fn roll_monster_kind(depth: usize, level_boost: usize) -> MonsterKind {
 }
 
 pub mod disguise {
-	use crate::random::get_rand;
 	use crate::render_system::{ARMOR_CHAR, FOOD_CHAR, GOLD_CHAR, NOT_CHAR, POTION_CHAR, RING_CHAR, SCROLL_CHAR, STAIRS_CHAR, WAND_CHAR, WEAPON_CHAR};
+	use rand::Rng;
 	use serde::{Deserialize, Serialize};
 
 	#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -90,8 +90,8 @@ pub mod disguise {
 		}
 	}
 
-	pub fn roll_disguise() -> Disguise {
-		let index = get_rand(1, 9);
+	pub fn roll_disguise(rng: &mut impl Rng) -> Disguise {
+		let index = rng.gen_range(1..=9);
 		ALL_DISGUISE[index as usize]
 	}
 	const ALL_DISGUISE: [Disguise; 10] = [

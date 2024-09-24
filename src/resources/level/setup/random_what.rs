@@ -1,4 +1,4 @@
-use crate::random::get_rand;
+use rand::Rng;
 
 pub enum RandomWhat {
 	Scroll,
@@ -10,21 +10,16 @@ pub enum RandomWhat {
 	Ring,
 }
 impl RandomWhat {
-	pub fn roll() -> Self {
-		if get_rand(1, 91) <= 30 {
-			Self::Scroll
-		} else if get_rand(1, 91) <= 60 {
-			Self::Potion
-		} else if get_rand(1, 91) <= 64 {
-			Self::Wand
-		} else if get_rand(1, 91) <= 74 {
-			Self::Weapon
-		} else if get_rand(1, 91) <= 83 {
-			Self::Armor
-		} else if get_rand(1, 91) <= 88 {
-			Self::Food
-		} else {
-			Self::Ring
+	pub fn roll(rng: &mut impl Rng) -> Self {
+		let roll = rng.gen_range(1usize..=91);
+		match roll {
+			1..=30 => Self::Scroll,
+			31..=60 => Self::Potion,
+			61..=64 => Self::Wand,
+			65..=74 => Self::Weapon,
+			75..=83 => Self::Armor,
+			84..=88 => Self::Food,
+			_ => Self::Ring,
 		}
 	}
 }

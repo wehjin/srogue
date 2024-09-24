@@ -348,6 +348,7 @@ dependencies = [
  "log-panics",
  "ncurses",
  "rand",
+ "rand_chacha",
  "serde",
  "serde_json",
  "signal-hook",

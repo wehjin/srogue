@@ -207,9 +207,12 @@ mod tests {
 	use crate::resources::dungeon::stats::DungeonStats;
 	use crate::resources::level::setup::{roll_level, LevelKind};
 	use crate::resources::level::PartyType;
+	use rand::SeedableRng;
+	use rand_chacha::ChaChaRng;
 
 	#[test]
 	fn no_party_works() {
+		let rng = &mut ChaChaRng::seed_from_u64(17);
 		let mut stats = DungeonStats { food_drops: 7 };
 		let level_kind = LevelKind {
 			depth: 16,
@@ -217,13 +220,14 @@ mod tests {
 			post_amulet: false,
 			party_type: PartyType::NoParty,
 		};
-		let mut level = roll_level(&level_kind, &mut stats);
+		let mut level = roll_level(&level_kind, &mut stats, rng);
 		level.print(true);
 		level.lighting_enabled = true;
 		level.print(false);
 	}
 	#[test]
 	fn party_big_works() {
+		let rng = &mut ChaChaRng::seed_from_u64(17);
 		let mut stats = DungeonStats { food_drops: (AMULET_LEVEL / 2 - 1) as usize };
 		let level_kind = LevelKind {
 			depth: AMULET_LEVEL as usize,
@@ -231,7 +235,7 @@ mod tests {
 			post_amulet: false,
 			party_type: PartyType::PartyBig,
 		};
-		let mut level = roll_level(&level_kind, &mut stats);
+		let mut level = roll_level(&level_kind, &mut stats, rng);
 		level.lighting_enabled = true;
 		level.print(true);
 	}

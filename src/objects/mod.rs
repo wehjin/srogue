@@ -1,7 +1,7 @@
+use rand::thread_rng;
+use serde::{Deserialize, Serialize};
 use std::clone::Clone;
 use std::string::ToString;
-
-use serde::{Deserialize, Serialize};
 
 pub use object_id::*;
 pub use object_pack::*;
@@ -618,7 +618,7 @@ pub fn make_party(level_depth: isize, game: &mut GameState) {
 	game.level.party_room = Some(party_room);
 	let n = if rand_percent(99) { party_objects(party_room, game) } else { 11 };
 	if rand_percent(99) {
-		party_monsters(party_room, n, level_depth, &mut game.mash, &mut game.level);
+		party_monsters(party_room, n, level_depth, &mut game.mash, &mut game.level, &mut thread_rng());
 	}
 }
 

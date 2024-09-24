@@ -3,7 +3,7 @@ use crate::objects::Object;
 use crate::odds::GOLD_PERCENT;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::AMULET_LEVEL;
-use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::random::{coin_toss, rand_percent};
 use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::game::RogueSpot;
 use crate::resources::level::design::roll_design;
@@ -20,16 +20,17 @@ use crate::room::{RoomBounds, RoomType};
 use crate::trap::trap_kind::TrapKind;
 use crate::trap::Trap;
 use rand::prelude::SliceRandom;
+use rand::Rng;
 
 pub mod npc;
 
-pub fn roll_level(level_kind: &LevelKind, stats: &mut DungeonStats) -> DungeonLevel {
-	let mut level = roll_rooms(level_kind.depth, level_kind.is_max, level_kind.party_type);
+pub fn roll_level(level_kind: &LevelKind, stats: &mut DungeonStats, rng: &mut impl Rng) -> DungeonLevel {
+	let mut level = roll_rooms(level_kind.depth, level_kind.is_max, level_kind.party_type, rng);
 	roll_amulet(&level_kind, &mut level);
-	roll_objects(&mut level, stats);
+	roll_objects(&mut level, stats, rng);
 	roll_stairs(&mut level);
-	roll_traps(&mut level);
-	roll_monsters(&mut level);
+	roll_traps(&mut level, rng);
+	roll_monsters(&mut level, rng);
 	rogue::roll_rogue(&mut level);
 	level
 }
@@ -42,8 +43,8 @@ fn roll_amulet(level_kind: &LevelKind, level: &mut DungeonLevel) {
 	}
 }
 
-fn roll_traps(level: &mut DungeonLevel) {
-	for i in 0..roll_traps_count(level) {
+fn roll_traps(level: &mut DungeonLevel, rng: &mut impl Rng) {
+	for i in 0..roll_traps_count(level, rng) {
 		let trap = Trap { trap_type: TrapKind::random(), ..Trap::default() };
 		let spot = match level.party_room {
 			Some(party_room) if i == 0 => {
@@ -66,26 +67,31 @@ fn roll_traps(level: &mut DungeonLevel) {
 	}
 }
 
-fn roll_traps_count(level: &DungeonLevel) -> usize {
+fn roll_traps_count(level: &DungeonLevel, rng: &mut impl Rng) -> usize {
 	const AMULET_LEVEL_AND_TWO: usize = (AMULET_LEVEL + 2) as usize;
 	match level.depth {
 		0..=2 => 0,
-		3..=7 => get_rand(0, 2),
-		8..=11 => get_rand(1, 2),
-		12..=16 => get_rand(2, 3),
-		17..=21 => get_rand(2, 4),
-		22..=AMULET_LEVEL_AND_TWO => get_rand(3, 5),
-		_ => get_rand(5, MAX_TRAP)
+		3..=7 => rng.gen_range(0..=2),
+		8..=11 => rng.gen_range(1..=2),
+		12..=16 => rng.gen_range(2..=3),
+		17..=21 => rng.gen_range(2..=4),
+		22..=AMULET_LEVEL_AND_TWO => rng.gen_range(3..=5),
+		_ => rng.gen_range(5..=MAX_TRAP)
 	}
 }
 
-fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType) -> DungeonLevel {
+fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType, rng: &mut impl Rng) -> DungeonLevel {
 	if roll_build_big_room(party_type) {
+		let y = ROW0 + 1;
+		let x = ROW3 - 6;
+		let y1 = ROW3 - 1;
+		let x1 = COL3 - 11;
+		let y2 = COL3 - 1;
 		let bounds = RoomBounds {
-			top: get_rand(ROW0, ROW0 + 1),
-			bottom: get_rand(ROW3 - 6, ROW3 - 1),
-			left: get_rand(COL0, 10),
-			right: get_rand(COL3 - 11, COL3 - 1),
+			top: rng.gen_range(ROW0..=y),
+			bottom: rng.gen_range(x..=y1),
+			left: rng.gen_range(COL0..=10),
+			right: rng.gen_range(x1..=y2),
 		};
 		let room = LevelRoom { ty: RoomType::Room, bounds, ..LevelRoom::default() };
 		DungeonLevel {
@@ -102,12 +108,12 @@ fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType) -> DungeonLevel
 			monsters: Default::default(),
 		}
 	} else {
-		let design = roll_design();
-		let level = PlainLevel::new(depth)
+		let design = roll_design(rng);
+		let level = PlainLevel::new(depth, rng)
 			.add_rooms(design)
-			.add_mazes()
-			.connect_spaces()
-			.add_deadends()
+			.add_mazes(rng)
+			.connect_spaces(rng)
+			.add_deadends(rng)
 			;
 		let rooms = ALL_SECTORS
 			.into_iter()
@@ -147,14 +153,14 @@ pub fn roll_stairs(level: &mut DungeonLevel) {
 	level.put_stairs(spot);
 }
 
-pub fn roll_objects(level: &mut DungeonLevel, stats: &mut DungeonStats) {
+pub fn roll_objects(level: &mut DungeonLevel, stats: &mut DungeonStats, rng: &mut impl Rng) {
 	if level.is_max {
 		if level.ty.is_party() {
-			party::roll_party(level, stats);
+			party::roll_party(level, stats, rng);
 		}
-		for _ in 0..roll_object_count() {
+		for _ in 0..roll_object_count(rng) {
 			let spot = level.roll_vacant_spot(false, false, false);
-			let object = roll_object(level.depth, stats);
+			let object = roll_object(level.depth, stats, rng);
 			level.put_object(spot, object);
 		}
 		roll_gold(level);
@@ -186,12 +192,12 @@ fn roll_gold(level: &mut DungeonLevel) {
 	}
 }
 
-fn roll_object(depth: usize, stats: &mut DungeonStats) -> Object {
+fn roll_object(depth: usize, stats: &mut DungeonStats, rng: &mut impl Rng) -> Object {
 	let what = if stats.food_drops < depth / 2 {
 		stats.food_drops += 1;
 		RandomWhat::Food
 	} else {
-		RandomWhat::roll()
+		RandomWhat::roll(rng)
 	};
 	match what {
 		RandomWhat::Scroll => Object::roll_scroll(),
@@ -204,8 +210,8 @@ fn roll_object(depth: usize, stats: &mut DungeonStats) -> Object {
 	}
 }
 
-fn roll_object_count() -> usize {
-	let mut n = if coin_toss() { get_rand(2, 4) } else { get_rand(3, 5) };
+fn roll_object_count(rng: &mut impl Rng) -> usize {
+	let mut n = if coin_toss() { rng.gen_range(2..=4) } else { rng.gen_range(3..=5) };
 	while rand_percent(33) {
 		n += 1;
 	}
