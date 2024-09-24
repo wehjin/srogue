@@ -72,7 +72,7 @@ impl LevelRoom {
 
 impl LevelRoom {
 	pub fn from_sector(sector: Sector, rng: &mut impl Rng) -> Self {
-		let bounds = get_random_room_bounds(&sector.bounds(), rng);
+		let bounds = roll_room_bounds(&sector.bounds(), rng);
 		Self { ty: RoomType::Nothing, bounds, exits: [RoomExit::None; 4] }
 	}
 	pub fn is_nothing(&self) -> bool { self.ty == RoomType::Nothing }
@@ -81,7 +81,7 @@ impl LevelRoom {
 	pub fn is_vault_or_maze(&self) -> bool { self.ty == RoomType::Room || self.ty == RoomType::Maze }
 }
 
-fn get_random_room_bounds(sector_bounds: &SectorBounds, rng: &mut impl Rng) -> RoomBounds {
+fn roll_room_bounds(sector_bounds: &SectorBounds, rng: &mut impl Rng) -> RoomBounds {
 	let height = rng.gen_range(4..=sector_bounds.height());
 	let width = rng.gen_range(7..=sector_bounds.width() - 3);
 	let row_offset = rng.gen_range(0..=sector_bounds.height() - height);

@@ -40,10 +40,6 @@ impl From<usize> for MonsterKind {
 }
 
 impl MonsterKind {
-	pub fn random_any() -> Self {
-		Self::LIST[get_rand(0, MONSTERS - 1)]
-	}
-
 	pub fn random_name() -> &'static str {
 		let random_kind = MonsterKind::LIST[get_rand(0, MonsterKind::LIST.len() - 1)];
 		random_kind.name()

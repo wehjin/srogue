@@ -1,3 +1,4 @@
+use crate::monster::{MonsterKind, MONSTERS};
 use crate::resources::level::size::{LevelSize, LevelSpot};
 use crate::room::RoomBounds;
 use rand::Rng;
@@ -19,5 +20,12 @@ impl RoomBounds {
 		let x = self.left;
 		let y = self.right;
 		LevelSize(rng.gen_range(x..=y) as isize)
+	}
+}
+
+impl MonsterKind {
+	pub fn random_any(rng: &mut impl Rng) -> Self {
+		let y = MONSTERS - 1;
+		Self::LIST[rng.gen_range(0..=y)]
 	}
 }
