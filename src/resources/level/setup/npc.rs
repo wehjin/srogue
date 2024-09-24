@@ -3,7 +3,7 @@ use crate::prelude::DungeonSpot;
 use crate::random::coin_toss;
 use crate::resources::level::setup::npc::disguise::{roll_disguise, Disguise};
 use crate::resources::level::DungeonLevel;
-use rand::{thread_rng, Rng, RngCore};
+use rand::Rng;
 
 pub fn roll_monsters(level: &mut DungeonLevel, rng: &mut impl Rng) {
 	let depth = level.depth;
@@ -27,7 +27,7 @@ pub fn roll_monster(depth: usize, level_boost: usize, rng: &mut impl Rng) -> Mon
 	let flags = kind.depth_adjusted_flags(depth);
 	let disguise = if flags.imitates { roll_disguise(rng) } else { Disguise::None };
 	Monster {
-		id: thread_rng().next_u64(),
+		id: rng.next_u64(),
 		kind: kind.clone(),
 		m_flags: flags,
 		spot: DungeonSpot::default(),

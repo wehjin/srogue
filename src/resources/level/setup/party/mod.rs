@@ -12,7 +12,7 @@ pub mod depth;
 
 pub fn roll_party(level: &mut DungeonLevel, stats: &mut DungeonStats, rng: &mut impl Rng) {
 	// Venue
-	let party_room = setup::roll_vault_or_maze(level);
+	let party_room = setup::roll_vault_or_maze(level, rng);
 	level.party_room = Some(party_room);
 	// Favors
 	let favors = if rand_percent(99) {

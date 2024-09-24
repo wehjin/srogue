@@ -12,7 +12,7 @@ pub fn make_deadend(sector: Sector, do_recurse: bool, current_level: usize, spac
 	let bounds = spaces[sector as usize].bounds;
 	let random_spot = bounds.roll_spot();
 	let mut found = 0usize;
-	for (i, target) in get_targets(sector, spaces).iter().enumerate() {
+	for (i, target) in get_targets(sector, spaces, rng).iter().enumerate() {
 		let spot = if !do_recurse || found > 0 || !features.feature_at(random_spot).is_any_tunnel() { bounds.to_center_level_spot() } else { random_spot };
 		let target_spot = spaces[target.sector as usize].put_exit(target.exit, sector, current_level, features);
 		let axis = get_axis(target.exit);
@@ -21,7 +21,7 @@ pub fn make_deadend(sector: Sector, do_recurse: bool, current_level: usize, spac
 		features.put_feature(spot, Feature::Tunnel);
 		found += 1;
 		if found == 1 {
-			let more_targets_exist = (i + 1) < get_targets(sector, spaces).len();
+			let more_targets_exist = (i + 1) < get_targets(sector, spaces, rng).len();
 			if more_targets_exist && coin_toss() {
 				// Try to connect to another room/maze.
 				continue;
@@ -39,7 +39,7 @@ fn make_recursive(sector: Sector, spot: LevelSpot, current_level: usize, spaces:
 	spaces[sector as usize].ty = RoomType::DeadEnd;
 	features.put_feature(spot, Feature::Tunnel);
 	let mut recursive_sectors = Vec::new();
-	for neighbor in shuffled_sector_neighbors() {
+	for neighbor in shuffled_sector_neighbors(rng) {
 		if let Some(neighbor_sector) = sector.find_neighbor(neighbor) {
 			let neighbor_space = &spaces[neighbor_sector as usize];
 			if !neighbor_space.is_nothing() {
@@ -56,8 +56,8 @@ fn make_recursive(sector: Sector, spot: LevelSpot, current_level: usize, spaces:
 	recursive_sectors
 }
 
-fn get_targets(sector: Sector, spaces: &[LevelRoom; 9]) -> Vec<Target> {
-	let targets = shuffled_sector_neighbors()
+fn get_targets(sector: Sector, spaces: &[LevelRoom; 9], rng: &mut impl Rng) -> Vec<Target> {
+	let targets = shuffled_sector_neighbors(rng)
 		.into_iter()
 		.filter_map(|neighbor| {
 			sector.find_neighbor(neighbor)

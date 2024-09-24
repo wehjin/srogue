@@ -65,7 +65,7 @@ impl PlainLevel {
 			let candidate_sectors = roll_empty_sectors(&spaces, maze_percent);
 			for sector in candidate_sectors {
 				let maze_bounds = spaces[sector as usize].bounds;
-				make_maze(maze_bounds, &mut map);
+				make_maze(maze_bounds, &mut map, rng);
 				hide_random_tunnels(maze_bounds, rng.gen_range(0..=2), self.level, &mut map);
 				spaces[sector as usize].ty = RoomType::Maze;
 			}
@@ -78,7 +78,7 @@ impl PlainLevel {
 	pub fn add_deadends(self, rng: &mut impl Rng) -> Self {
 		let PlainLevel { level, mut spaces, mut map, } = self;
 		let mut recursed_sectors = Vec::new();
-		let candidate_sectors = shuffled_sectors()
+		let candidate_sectors = shuffled_sectors(rng)
 			.into_iter()
 			.filter(|sector| {
 				match spaces[*sector as usize].ty {
@@ -101,7 +101,7 @@ impl PlainLevel {
 
 	pub fn connect_spaces(self, rng: &mut impl Rng) -> Self {
 		let Self { level, mut spaces, mut map, } = self;
-		for sector in shuffled_sectors() {
+		for sector in shuffled_sectors(rng) {
 			connect_neighbors(Axis::Horizontal, sector, level, &mut spaces, &mut map, rng);
 			connect_neighbors(Axis::Vertical, sector, level, &mut spaces, &mut map, rng);
 		}

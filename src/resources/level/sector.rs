@@ -2,6 +2,7 @@ use crate::level::constants::{DCOLS, DROWS};
 use crate::prelude::{COL1, COL2, MIN_ROW, ROW1, ROW2};
 use crate::room::RoomBounds;
 use rand::seq::SliceRandom;
+use rand::Rng;
 use Sector::{BottomCenter, BottomLeft, BottomRight, MiddleCenter, MiddleLeft, MiddleRight, TopCenter, TopLeft, TopRight};
 
 pub const ALL_SECTORS: [Sector; 9] = [
@@ -29,9 +30,9 @@ pub enum Sector {
 	BottomRight = 8,
 }
 
-pub fn shuffled_sectors() -> Vec<Sector> {
+pub fn shuffled_sectors(rng: &mut impl Rng) -> Vec<Sector> {
 	let mut sectors = ALL_SECTORS.to_vec();
-	sectors.shuffle(&mut rand::thread_rng());
+	sectors.shuffle(rng);
 	sectors
 }
 
@@ -130,9 +131,9 @@ const SECTOR_BOUNDS: [SectorBounds; 9] = [
 ];
 
 
-pub fn shuffled_sector_neighbors() -> Vec<SectorNeighbor> {
+pub fn shuffled_sector_neighbors(rng: &mut impl Rng) -> Vec<SectorNeighbor> {
 	let mut neighbors = SECTOR_NEIGHBORS.to_vec();
-	neighbors.shuffle(&mut rand::thread_rng());
+	neighbors.shuffle(rng);
 	neighbors
 }
 

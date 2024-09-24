@@ -4,24 +4,25 @@ use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::size::LevelSpot;
 use crate::room::RoomBounds;
 use rand::prelude::SliceRandom;
+use rand::Rng;
 
-pub fn make_maze(bounds: RoomBounds, map: &mut FeatureGrid) {
+pub fn make_maze(bounds: RoomBounds, map: &mut FeatureGrid, rng: &mut impl Rng) {
 	let start_spot = bounds.inset(1, 1).roll_spot();
-	make_maze_from_spot(start_spot, bounds, map);
+	make_maze_from_spot(start_spot, bounds, map, rng);
 }
 
-fn make_maze_from_spot(spot: LevelSpot, bounds: RoomBounds, map: &mut FeatureGrid) {
+fn make_maze_from_spot(spot: LevelSpot, bounds: RoomBounds, map: &mut FeatureGrid, rng: &mut impl Rng) {
 	map.put_feature(spot, Feature::Tunnel);
 	let maze_steps = if rand_percent(33) {
 		let mut steps = ALL_MAZE_STEPS.to_vec();
-		steps.shuffle(&mut rand::thread_rng());
+		steps.shuffle(rng);
 		steps
 	} else {
 		ALL_MAZE_STEPS.to_vec()
 	};
 	for maze_step in maze_steps {
 		if let Some(new_tunnel_spot) = maze_step.find_new_tunnel_spot(spot, bounds, map) {
-			make_maze_from_spot(new_tunnel_spot, bounds, map);
+			make_maze_from_spot(new_tunnel_spot, bounds, map, rng);
 		}
 	}
 }

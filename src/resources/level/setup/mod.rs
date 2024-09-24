@@ -167,9 +167,9 @@ pub fn roll_objects(level: &mut DungeonLevel, stats: &mut DungeonStats, rng: &mu
 	}
 }
 
-fn roll_vault_or_maze(level: &DungeonLevel) -> RoomId {
+fn roll_vault_or_maze(level: &DungeonLevel, rng: &mut impl Rng) -> RoomId {
 	let mut rooms = level.vault_and_maze_rooms();
-	rooms.shuffle(&mut rand::thread_rng());
+	rooms.shuffle(rng);
 	*rooms.first().expect("no vault or maze in level")
 }
 
