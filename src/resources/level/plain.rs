@@ -1,4 +1,3 @@
-use crate::random::coin_toss;
 use crate::resources::level::design::Design;
 use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::maze::hide_random_tunnels;
@@ -83,7 +82,7 @@ impl PlainLevel {
 			.filter(|sector| {
 				match spaces[*sector as usize].ty {
 					RoomType::Nothing => true,
-					RoomType::Cross if coin_toss() => true,
+					RoomType::Cross if rng.gen_bool(0.5) => true,
 					_ => false,
 				}
 			})

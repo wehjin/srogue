@@ -1,6 +1,5 @@
 use crate::monster::{Monster, MonsterKind, StuckCounter};
 use crate::prelude::DungeonSpot;
-use crate::random::coin_toss;
 use crate::resources::level::setup::npc::disguise::{roll_disguise, Disguise};
 use crate::resources::level::DungeonLevel;
 use rand::Rng;
@@ -10,7 +9,7 @@ pub fn roll_monsters(level: &mut DungeonLevel, rng: &mut impl Rng) {
 	let count = roll_monster_count(rng);
 	for _ in 0..count {
 		let mut monster = roll_monster(depth, 0, rng);
-		if monster.wanders() && coin_toss() {
+		if monster.wanders() && rng.gen_bool(0.5) {
 			monster.wake_up();
 		}
 		let spot = level.roll_vacant_spot(true, false, true);

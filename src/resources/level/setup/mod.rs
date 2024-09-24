@@ -3,7 +3,6 @@ use crate::objects::Object;
 use crate::odds::GOLD_PERCENT;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::AMULET_LEVEL;
-use crate::random::coin_toss;
 use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::game::RogueSpot;
 use crate::resources::level::design::roll_design;
@@ -211,7 +210,7 @@ fn roll_object(depth: usize, stats: &mut DungeonStats, rng: &mut impl Rng) -> Ob
 }
 
 fn roll_object_count(rng: &mut impl Rng) -> usize {
-	let mut n = if coin_toss() { rng.gen_range(2..=4) } else { rng.gen_range(3..=5) };
+	let mut n = if rng.gen_bool(0.5) { rng.gen_range(2..=4) } else { rng.gen_range(3..=5) };
 	while rng.gen_ratio(33, 100) {
 		n += 1;
 	}

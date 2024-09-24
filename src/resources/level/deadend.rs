@@ -1,4 +1,3 @@
-use crate::random::coin_toss;
 use crate::resources::level::feature_grid::feature::Feature;
 use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::plain::Axis;
@@ -22,7 +21,7 @@ pub fn make_deadend(sector: Sector, do_recurse: bool, current_level: usize, spac
 		found += 1;
 		if found == 1 {
 			let more_targets_exist = (i + 1) < get_targets(sector, spaces, rng).len();
-			if more_targets_exist && coin_toss() {
+			if more_targets_exist && rng.gen_bool(0.5) {
 				// Try to connect to another room/maze.
 				continue;
 			} else {
