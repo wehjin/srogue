@@ -8,7 +8,8 @@ use crate::resources::level::size::LevelSpot;
 use crate::resources::level::DungeonLevel;
 
 impl DungeonLevel {
-	pub fn print(&self, reveal_hidden: bool) {
+	pub fn format(&self, reveal_hidden: bool) -> Vec<String> {
+		let mut lines = Vec::new();
 		let bounds = self.features.bounds();
 		for row in bounds.rows() {
 			let mut line = String::new();
@@ -17,6 +18,12 @@ impl DungeonLevel {
 				let spot_view = SpotView::new(spot, &self);
 				line.push(spot_view.to_char(reveal_hidden));
 			}
+			lines.push(line);
+		}
+		lines
+	}
+	pub fn print(&self, reveal_hidden: bool) {
+		for line in self.format(reveal_hidden) {
 			println!("{}", line);
 		}
 	}

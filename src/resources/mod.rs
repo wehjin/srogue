@@ -1,7 +1,6 @@
 pub mod diary;
 pub mod dice;
 pub mod dungeon;
-pub mod game;
 pub mod healer;
 pub mod input_line;
 pub mod keyboard;

@@ -1,4 +1,4 @@
-use crate::resources::game::RogueSpot;
+use crate::resources::dungeon::RogueSpot;
 use crate::resources::rogue::depth::RogueDepth;
 use crate::ring::effects::RingEffects;
 

@@ -4,7 +4,7 @@ use crate::resources::level::room_id::RoomId;
 use crate::resources::level::size::LevelSpot;
 
 use crate::monster::Monster;
-use crate::resources::game::RogueSpot;
+use crate::resources::dungeon::RogueSpot;
 use crate::resources::level::feature_grid::feature::{Feature, FeatureFilter};
 use crate::resources::level::room::LevelRoom;
 use crate::resources::level::torch_grid::TorchGrid;
@@ -220,6 +220,7 @@ pub mod room_id {
 mod tests {
 	use crate::prelude::AMULET_LEVEL;
 	use crate::resources::dungeon::stats::DungeonStats;
+	use crate::resources::level::setup::party::depth::PartyDepth;
 	use crate::resources::level::setup::roll_level;
 	use crate::resources::level::{DungeonLevel, PartyType};
 	use crate::resources::rogue::Rogue;
@@ -231,10 +232,8 @@ mod tests {
 	fn same_rng_builds_same_level() {
 		fn build_level() -> DungeonLevel {
 			let rng = &mut ChaChaRng::seed_from_u64(17);
-			let stats = &mut DungeonStats { food_drops: 7 };
-			let rogue = Rogue::new(16);
-			let party_type = PartyType::NoParty;
-			roll_level(party_type, rogue, stats, rng)
+			let stats = &mut DungeonStats { party_depth: PartyDepth::new(99), food_drops: 7 };
+			roll_level(PartyType::NoParty, Rogue::new(16), stats, rng)
 		}
 		let mut set = HashSet::new();
 		for _ in 0..10 {
@@ -246,10 +245,8 @@ mod tests {
 	#[test]
 	fn no_party_works() {
 		let rng = &mut ChaChaRng::seed_from_u64(17);
-		let stats = &mut DungeonStats { food_drops: 7 };
-		let rogue = Rogue::new(16);
-		let party_type = PartyType::NoParty;
-		let mut level = roll_level(party_type, rogue, stats, rng);
+		let stats = &mut DungeonStats { party_depth: PartyDepth::new(99), food_drops: 7 };
+		let mut level = roll_level(PartyType::NoParty, Rogue::new(16), stats, rng);
 		level.print(true);
 		level.lighting_enabled = true;
 		level.print(false);
@@ -257,10 +254,8 @@ mod tests {
 	#[test]
 	fn party_big_works() {
 		let rng = &mut ChaChaRng::seed_from_u64(17);
-		let stats = &mut DungeonStats { food_drops: (AMULET_LEVEL / 2 - 1) as usize };
-		let rogue = Rogue::new(AMULET_LEVEL as usize);
-		let party_type = PartyType::PartyBig;
-		let mut level = roll_level(party_type, rogue, stats, rng);
+		let stats = &mut DungeonStats { party_depth: PartyDepth::roll(rng), food_drops: (AMULET_LEVEL / 2 - 1) as usize };
+		let mut level = roll_level(PartyType::PartyBig, Rogue::new(AMULET_LEVEL as usize), stats, rng);
 		level.lighting_enabled = true;
 		level.print(true);
 	}

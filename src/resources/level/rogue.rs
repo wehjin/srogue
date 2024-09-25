@@ -1,4 +1,4 @@
-use crate::resources::game::RogueSpot;
+use crate::resources::dungeon::RogueSpot;
 use crate::resources::level::room_id::RoomId;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::level::wake::{wake_room, WakeType};
@@ -14,8 +14,6 @@ pub fn put_player(level: &mut DungeonLevel, rng: &mut impl Rng) {
 		RogueSpot::Passage(spot) => level.light_tunnel_spot(spot),
 	};
 	wake_room(WakeType::DropIn(rogue_spot.try_room(level)), level, rng);
-	// TODO Write new-level message.
-	// TODO Update screen.
 }
 
 fn roll_rogue_spot(level: &DungeonLevel, avoid_room: Option<RoomId>, rng: &mut impl Rng) -> RogueSpot {

@@ -1,17 +1,21 @@
+use crate::resources::rogue::depth::RogueDepth;
 use rand::Rng;
 
+#[derive(Debug, Copy, Clone)]
 pub struct PartyDepth(usize);
 
 impl PartyDepth {
-	pub fn new(rng: &mut impl Rng) -> Self {
+	pub fn new(depth: usize) -> Self { Self(depth) }
+	pub fn roll(rng: &mut impl Rng) -> Self {
 		let depth = roll_next_depth(0, rng);
-		Self(depth)
+		Self::new(depth)
 	}
 	pub fn usize(&self) -> usize {
 		self.0
 	}
-	pub fn recompute(self, level_depth: usize, rng: &mut impl Rng) -> Self {
-		if level_depth == self.0 {
+
+	pub fn roll_next(self, rogue_depth: &RogueDepth, rng: &mut impl Rng) -> Self {
+		if rogue_depth.usize() == self.0 {
 			Self(roll_next_depth(self.0, rng))
 		} else {
 			self
