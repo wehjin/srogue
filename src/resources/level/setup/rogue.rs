@@ -13,7 +13,9 @@ pub fn roll_rogue(level: &mut DungeonLevel, rng: &mut impl Rng) {
 		RogueSpot::Passage(spot) => level.light_tunnel_spot(spot),
 	}
 
-	// TODO Wake the room. Write new-level message. Update screen.
+	// TODO Wake the room
+	// TODO Write new-level message.
+	// TODO Update screen.
 }
 
 fn roll_rogue_spot(level: &DungeonLevel, avoid_room: Option<RoomId>, rng: &mut impl Rng) -> RogueSpot {

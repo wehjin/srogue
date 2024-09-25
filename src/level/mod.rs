@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM, MAX_TRAP};
 use crate::level::materials::TunnelFixture;
-use crate::monster::wake_room;
+use crate::resources::level::wake::wake_room;
 use crate::objects::put_amulet;
 use crate::pack::has_amulet;
 use crate::player::constants::INIT_HP;

@@ -8,6 +8,7 @@ use crate::resources::game::RogueSpot;
 use crate::resources::level::feature_grid::feature::{Feature, FeatureFilter};
 use crate::resources::level::room::LevelRoom;
 use crate::resources::level::torch_grid::TorchGrid;
+use crate::resources::rogue::Rogue;
 use crate::room::{RoomBounds, RoomType};
 use crate::trap::trap_kind::TrapKind;
 use crate::trap::Trap;
@@ -22,19 +23,19 @@ pub struct DungeonLevel {
 	pub rooms: BTreeMap<RoomId, LevelRoom>, // BTreeMap ensures consistent iteration order.
 	pub features: FeatureGrid,
 	pub torches: TorchGrid,
-	pub rogue_spot: RogueSpot,
 	pub party_room: Option<RoomId>,
 	pub lighting_enabled: bool,
 	pub objects: BTreeMap<LevelSpot, Object>,
 	pub monsters: BTreeMap<LevelSpot, Monster>,
+	pub rogue: Rogue,
 }
 
 impl DungeonLevel {
 	pub fn rogue_at_spot(&self, spot: LevelSpot) -> bool {
-		self.rogue_spot.is_spot(spot)
+		self.rogue.spot.is_spot(spot)
 	}
 	pub fn put_rogue(&mut self, spot: RogueSpot) {
-		self.rogue_spot = spot;
+		self.rogue.spot = spot;
 	}
 }
 
@@ -91,7 +92,7 @@ impl DungeonLevel {
 impl DungeonLevel {
 	pub fn spot_is_vacant(&self, spot: LevelSpot, allow_objects: bool, allow_monsters: bool) -> bool {
 		let is_floor_or_tunnel = self.spot_is_floor_or_tunnel(spot);
-		let no_rogue = !self.rogue_spot.is_spot(spot);
+		let no_rogue = !self.rogue.spot.is_spot(spot);
 		let no_object = allow_objects || self.try_object(spot).is_none();
 		let no_monsters = allow_monsters || self.try_monster(spot).is_none();
 		no_monsters && no_object && no_rogue && is_floor_or_tunnel
@@ -206,8 +207,9 @@ pub mod room_id {
 mod tests {
 	use crate::prelude::AMULET_LEVEL;
 	use crate::resources::dungeon::stats::DungeonStats;
-	use crate::resources::level::setup::{roll_level, LevelKind};
+	use crate::resources::level::setup::roll_level;
 	use crate::resources::level::{DungeonLevel, PartyType};
+	use crate::resources::rogue::Rogue;
 	use rand::SeedableRng;
 	use rand_chacha::ChaChaRng;
 	use std::collections::HashSet;
@@ -217,13 +219,9 @@ mod tests {
 		fn build_level() -> DungeonLevel {
 			let rng = &mut ChaChaRng::seed_from_u64(17);
 			let stats = &mut DungeonStats { food_drops: 7 };
-			let level_kind = LevelKind {
-				depth: 16,
-				is_max: true,
-				post_amulet: false,
-				party_type: PartyType::NoParty,
-			};
-			roll_level(&level_kind, stats, rng)
+			let rogue = Rogue::new(16);
+			let party_type = PartyType::NoParty;
+			roll_level(party_type, rogue, stats, rng)
 		}
 		let mut set = HashSet::new();
 		for _ in 0..10 {
@@ -236,13 +234,9 @@ mod tests {
 	fn no_party_works() {
 		let rng = &mut ChaChaRng::seed_from_u64(17);
 		let stats = &mut DungeonStats { food_drops: 7 };
-		let level_kind = LevelKind {
-			depth: 16,
-			is_max: true,
-			post_amulet: false,
-			party_type: PartyType::NoParty,
-		};
-		let mut level = roll_level(&level_kind, stats, rng);
+		let rogue = Rogue::new(16);
+		let party_type = PartyType::NoParty;
+		let mut level = roll_level(party_type, rogue, stats, rng);
 		level.print(true);
 		level.lighting_enabled = true;
 		level.print(false);
@@ -251,13 +245,9 @@ mod tests {
 	fn party_big_works() {
 		let rng = &mut ChaChaRng::seed_from_u64(17);
 		let stats = &mut DungeonStats { food_drops: (AMULET_LEVEL / 2 - 1) as usize };
-		let level_kind = LevelKind {
-			depth: AMULET_LEVEL as usize,
-			is_max: true,
-			post_amulet: false,
-			party_type: PartyType::PartyBig,
-		};
-		let mut level = roll_level(&level_kind, stats, rng);
+		let rogue = Rogue::new(AMULET_LEVEL as usize);
+		let party_type = PartyType::PartyBig;
+		let mut level = roll_level(party_type, rogue, stats, rng);
 		level.lighting_enabled = true;
 		level.print(true);
 	}
@@ -275,4 +265,5 @@ pub mod setup;
 pub mod size;
 pub mod torch_grid;
 pub mod room;
+pub mod wake;
 

@@ -286,26 +286,6 @@ pub fn mon_can_go(monster: &Monster, row: i64, col: i64, player: &Player, level:
 	true
 }
 
-pub fn wake_room(rn: usize, entering: bool, row: i64, col: i64, game: &mut GameState) {
-	let normal_chance = game.level.room_wake_percent(rn);
-	let buffed_chance = game.player.ring_effects.apply_stealthy(normal_chance);
-	for mon_id in game.mash.monster_ids() {
-		let monster = game.mash.monster_mut(mon_id);
-		if monster.in_room(rn, &game.level) {
-			if entering {
-				monster.clear_target_spot();
-			} else {
-				monster.set_target_spot(row, col);
-			}
-			if monster.m_flags.wakens {
-				if rand_percent(buffed_chance) {
-					monster.wake_up();
-				}
-			}
-		}
-	}
-}
-
 pub fn mon_name(monster: &Monster, player: &Player, level: &Level) -> &'static str {
 	if player.blind.is_active()
 		|| (monster.m_flags.invisible && !player_defeats_invisibility(player, level)) {

@@ -4,7 +4,6 @@ use crate::odds::GOLD_PERCENT;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::AMULET_LEVEL;
 use crate::resources::dungeon::stats::DungeonStats;
-use crate::resources::game::RogueSpot;
 use crate::resources::level::design::roll_design;
 use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::plain::PlainLevel;
@@ -15,6 +14,7 @@ use crate::resources::level::setup::npc::roll_monsters;
 use crate::resources::level::setup::random_what::RandomWhat;
 use crate::resources::level::torch_grid::TorchGrid;
 use crate::resources::level::{DungeonLevel, PartyType};
+use crate::resources::rogue::Rogue;
 use crate::room::{RoomBounds, RoomType};
 use crate::trap::trap_kind::TrapKind;
 use crate::trap::Trap;
@@ -23,9 +23,9 @@ use rand::Rng;
 
 pub mod npc;
 
-pub fn roll_level(level_kind: &LevelKind, stats: &mut DungeonStats, rng: &mut impl Rng) -> DungeonLevel {
-	let mut level = roll_rooms(level_kind.depth, level_kind.is_max, level_kind.party_type, rng);
-	roll_amulet(&level_kind, &mut level, rng);
+pub fn roll_level(party_type: PartyType, rogue: Rogue, stats: &mut DungeonStats, rng: &mut impl Rng) -> DungeonLevel {
+	let mut level = roll_rooms(rogue, party_type, rng);
+	roll_amulet(&mut level, rng);
 	roll_objects(&mut level, stats, rng);
 	roll_stairs(&mut level, rng);
 	roll_traps(&mut level, rng);
@@ -34,8 +34,8 @@ pub fn roll_level(level_kind: &LevelKind, stats: &mut DungeonStats, rng: &mut im
 	level
 }
 
-fn roll_amulet(level_kind: &LevelKind, level: &mut DungeonLevel, rng: &mut impl Rng) {
-	if !level_kind.post_amulet && level_kind.depth >= AMULET_LEVEL as usize {
+fn roll_amulet(level: &mut DungeonLevel, rng: &mut impl Rng) {
+	if !level.rogue.has_amulet && level.depth >= AMULET_LEVEL as usize {
 		let amulet = Object::new(ObjectWhat::Amulet, rng);
 		let spot = level.roll_vacant_spot(false, false, false, rng);
 		level.put_object(spot, amulet);
@@ -79,7 +79,9 @@ fn roll_traps_count(level: &DungeonLevel, rng: &mut impl Rng) -> usize {
 	}
 }
 
-fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType, rng: &mut impl Rng) -> DungeonLevel {
+fn roll_rooms(rogue: Rogue, party_type: PartyType, rng: &mut impl Rng) -> DungeonLevel {
+	let depth = rogue.depth.usize();
+	let is_max = depth == rogue.depth.max();
 	if roll_build_big_room(party_type, rng) {
 		let y = ROW0 + 1;
 		let x = ROW3 - 6;
@@ -100,11 +102,11 @@ fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType, rng: &mut impl 
 			rooms: vec![(RoomId::Big, room)].into_iter().collect(),
 			features: FeatureGrid::new().put_walls_and_floor(bounds),
 			torches: TorchGrid::new(),
-			rogue_spot: RogueSpot::None,
 			party_room: Some(RoomId::Big),
 			lighting_enabled: false,
 			objects: Default::default(),
 			monsters: Default::default(),
+			rogue,
 		}
 	} else {
 		let design = roll_design(rng);
@@ -130,11 +132,11 @@ fn roll_rooms(depth: usize, is_max: bool, party_type: PartyType, rng: &mut impl 
 			rooms,
 			features: map,
 			torches: TorchGrid::new(),
-			rogue_spot: RogueSpot::None,
 			party_room: None,
 			lighting_enabled: false,
 			objects: Default::default(),
 			monsters: Default::default(),
+			rogue,
 		}
 	}
 }
@@ -215,14 +217,6 @@ fn roll_object_count(rng: &mut impl Rng) -> usize {
 		n += 1;
 	}
 	n
-}
-
-#[derive(Copy, Clone)]
-pub struct LevelKind {
-	pub depth: usize,
-	pub is_max: bool,
-	pub post_amulet: bool,
-	pub party_type: PartyType,
 }
 
 pub mod party;
