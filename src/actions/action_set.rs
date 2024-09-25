@@ -7,7 +7,6 @@ use crate::actions::eat::Eat;
 use crate::actions::fight::{FightHeavy, FightLight, Throw, Zap};
 use crate::actions::ground::MoveOnto;
 use crate::actions::ground::{DropItem, KickIntoPack};
-use crate::actions::instruct::Instruct;
 use crate::actions::inventory::{Inventory, InventoryArmor, InventoryGround, InventoryOne, InventoryRings, InventoryWeapons};
 use crate::actions::motion::{Ascend, Descend};
 use crate::actions::put_on_ring::PutOnRing;
@@ -29,7 +28,7 @@ use crate::resources::keyboard::{CTRL_A, CTRL_C, CTRL_I, CTRL_M, CTRL_O, CTRL_S,
 use crate::systems::play_level::{LevelResult, UNKNOWN_COMMAND};
 use keyboard::{CTRL_B, CTRL_H, CTRL_J, CTRL_K, CTRL_L, CTRL_N, CTRL_P, CTRL_U, CTRL_Y};
 
-const ROGUE_ACTIONS: [(&[char], UpdateGameFn); 40] = [
+const ROGUE_ACTIONS: [(&[char], UpdateGameFn); 39] = [
 	(&['<'], Ascend::update),
 	(&['c'], CallIt::update),
 	(&['>'], Descend::update),
@@ -40,7 +39,6 @@ const ROGUE_ACTIONS: [(&[char], UpdateGameFn); 40] = [
 	(&['f'], FightLight::update),
 	(&['^'], IdentifyTrap::update),
 	(&[' '], Ignore::update),
-	(&['?'], Instruct::update),
 	(&['i'], Inventory::update),
 	(&[']'], InventoryArmor::update),
 	(&[CTRL_I], InventoryGround::update),

@@ -1,18 +1,20 @@
+use crate::actions::instruct::instruction_lines;
 use crate::console::ConsoleError;
 use crate::init::{init, InitError, InitResult};
 use crate::level::{make_level, put_player_legacy};
 use crate::monster::put_mons;
 use crate::objects::{put_objects, put_stairs};
 use crate::resources::dungeon;
-use crate::resources::dungeon::PlayerInput;
-use crate::resources::level::DungeonLevel;
+use crate::resources::dungeon::{DungeonState, DungeonVisor};
+use crate::resources::player::{InputMode, PlayerInput};
 use crate::settings::SettingsError;
 use crate::systems::play_level::{play_level, LevelResult};
 use crate::trap::add_traps;
 use crossterm::event;
-use crossterm::event::Event;
+use crossterm::event::{Event, KeyCode};
 use ratatui::prelude::Rect;
 use ratatui::widgets::Paragraph;
+use ratatui::DefaultTerminal;
 
 pub mod components;
 pub mod resources;
@@ -56,34 +58,57 @@ pub mod actions;
 pub fn main() -> anyhow::Result<()> {
 	let mut terminal = ratatui::init();
 	terminal.clear().expect("failed to clear");
-	fn get_input() -> PlayerInput {
-		loop {
-			let event = event::read().unwrap();
-			match event {
-				Event::FocusGained => {}
-				Event::FocusLost => {}
-				Event::Key(key) => return key.code,
-				Event::Mouse(_) => {}
-				Event::Paste(_) => {}
-				Event::Resize(_, _) => {}
-			};
-		}
-	}
-	let draw_level = move |level: &DungeonLevel| {
-		let lines = level.format(true);
-		terminal.draw(|frame| {
-			let frame_area = frame.area();
-			for row in 0..lines.len() {
-				let paragraph = Paragraph::new(lines[row].as_str());
-				let line_area = Rect::new(frame_area.x, frame_area.y + 1 + row as u16, frame_area.width, 1);
-				frame.render_widget(paragraph, line_area);
-			}
-		}).expect("failed to draw");
-	};
-	dungeon::run(get_input, draw_level);
+	dungeon::run(get_input, |state: &DungeonState| draw_state(state, &mut terminal));
 	ratatui::restore();
 	Ok(())
 }
+
+fn draw_state(state: &DungeonState, terminal: &mut DefaultTerminal) {
+	let lines = match state.visor {
+		DungeonVisor::Map => {
+			let mut lines = state.level.format(true);
+			lines.insert(0, "".to_string());
+			lines.push("".to_string());
+			lines
+		}
+		DungeonVisor::Help => instruction_lines(),
+	};
+	terminal.draw(|frame| {
+		let frame_area = frame.area();
+		for row in 0..lines.len() {
+			let paragraph = Paragraph::new(lines[row].as_str());
+			let line_area = Rect::new(frame_area.x, frame_area.y + row as u16, frame_area.width, 1);
+			frame.render_widget(paragraph, line_area);
+		}
+	}).expect("failed to draw");
+}
+
+fn get_input(filter: InputMode) -> PlayerInput {
+	loop {
+		let event = event::read().unwrap();
+		match event {
+			Event::FocusGained => {}
+			Event::FocusLost => {}
+			Event::Key(key) => {
+				let input = match filter {
+					InputMode::Any => match key.code {
+						KeyCode::Char(char) => match char {
+							'?' => PlayerInput::Help,
+							_ => PlayerInput::Close,
+						},
+						_ => PlayerInput::Close,
+					},
+					InputMode::Alert => PlayerInput::Close,
+				};
+				return input;
+			}
+			Event::Mouse(_) => {}
+			Event::Paste(_) => {}
+			Event::Resize(_, _) => {}
+		};
+	}
+}
+
 
 pub fn main_legacy() -> anyhow::Result<()> {
 	fern::Dispatch::new()
