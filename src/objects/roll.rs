@@ -5,6 +5,7 @@ use crate::potions::kind::PotionKind::{Blindness, Confusion, DetectMonster, Dete
 use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::object_what::ObjectWhat::{Armor, Food, Gold, Potion, Ring, Scroll, Wand, Weapon};
 use crate::random::coin_toss;
+use crate::resources::dice::roll_chance;
 use crate::ring::constants::RINGS;
 use crate::ring::ring_kind::RingKind;
 use crate::scrolls::ScrollKind;
@@ -204,7 +205,7 @@ pub fn gr_wand(obj: &mut Object, rng: &mut impl Rng) {
 
 pub fn get_food(obj: &mut Object, force_ration: bool, rng: &mut impl Rng) {
 	obj.what_is = Food;
-	if force_ration || rng.gen_ratio(80, 100) {
+	if force_ration || roll_chance(80, rng) {
 		obj.which_kind = RATION;
 	} else {
 		obj.which_kind = FRUIT;

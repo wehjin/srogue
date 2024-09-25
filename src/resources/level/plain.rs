@@ -1,3 +1,4 @@
+use crate::resources::dice::roll_chance;
 use crate::resources::level::design::Design;
 use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::maze::hide_random_tunnels;
@@ -47,7 +48,7 @@ impl PlainLevel {
 	pub fn add_rooms(self, design: Design, rng: &mut impl Rng) -> Self {
 		let PlainLevel { level, mut spaces, mut map, } = self;
 		for sector in ALL_SECTORS {
-			if !design.requires_room_in_sector(sector) && rng.gen_ratio(40, 100) {
+			if !design.requires_room_in_sector(sector) && roll_chance(40, rng) {
 				continue;
 			} else {
 				let space = &mut spaces[sector as usize];
@@ -111,7 +112,7 @@ impl PlainLevel {
 fn roll_empty_sectors(spaces: &[LevelRoom; 9], percent: usize, rng: &mut impl Rng) -> Vec<Sector> {
 	let mut empty_sectors = Vec::new();
 	for sector in ALL_SECTORS {
-		if spaces[sector as usize].is_nothing() && rng.gen_ratio(percent as u32, 100) {
+		if spaces[sector as usize].is_nothing() && roll_chance(percent, rng) {
 			empty_sectors.push(sector);
 		}
 	}

@@ -3,6 +3,7 @@ use crate::objects::Object;
 use crate::odds::GOLD_PERCENT;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::AMULET_LEVEL;
+use crate::resources::dice::roll_chance;
 use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::level::design::roll_design;
 use crate::resources::level::feature_grid::FeatureGrid;
@@ -144,7 +145,7 @@ fn roll_rooms(rogue: Rogue, party_type: PartyType, rng: &mut impl Rng) -> Dungeo
 fn roll_build_big_room(level_type: PartyType, rng: &mut impl Rng) -> bool {
 	match level_type {
 		PartyType::PartyBig => true,
-		PartyType::PartyRollBig => rng.gen_ratio(1, 100),
+		PartyType::PartyRollBig => roll_chance(1, rng),
 		PartyType::NoParty => false
 	}
 }
@@ -179,7 +180,7 @@ fn roll_gold(level: &mut DungeonLevel, rng: &mut impl Rng) {
 	for room_id in level.vault_and_maze_rooms() {
 		let room = level.as_room(room_id);
 		let is_maze = room.is_maze();
-		if is_maze || rng.gen_ratio(GOLD_PERCENT as u32, 100) {
+		if is_maze || roll_chance(GOLD_PERCENT, rng) {
 			let search_bounds = room.bounds.inset(1, 1);
 			'search: for _ in 0..50 {
 				let spot = search_bounds.roll_spot(rng);
@@ -213,7 +214,7 @@ pub fn roll_object(depth: usize, all_food_drops: &mut usize, rng: &mut impl Rng)
 
 fn roll_object_count(rng: &mut impl Rng) -> usize {
 	let mut n = if rng.gen_bool(0.5) { rng.gen_range(2..=4) } else { rng.gen_range(3..=5) };
-	while rng.gen_ratio(33, 100) {
+	while roll_chance(33, rng) {
 		n += 1;
 	}
 	n

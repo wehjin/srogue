@@ -1,4 +1,5 @@
 use crate::prelude::HIDE_PERCENT;
+use crate::resources::dice::roll_chance;
 use crate::resources::level::feature_grid::feature::Feature;
 use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::plain::Axis;
@@ -58,7 +59,7 @@ impl LevelRoom {
 				spot = LevelSpot::from_i64(row, col)
 			}
 		}
-		let conceal = current_level > 2 && rng.gen_ratio(HIDE_PERCENT as u32, 100);
+		let conceal = current_level > 2 && roll_chance(HIDE_PERCENT, rng);
 		let feature = if self.is_vault() {
 			if conceal { Feature::ConcealedDoor(axis) } else { Feature::Door }
 		} else {

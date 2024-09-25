@@ -4,6 +4,7 @@ use crate::resources::level::size::LevelSpot;
 use crate::room::RoomBounds;
 use rand::prelude::SliceRandom;
 use rand::Rng;
+use crate::resources::dice::roll_chance;
 
 pub fn make_maze(bounds: RoomBounds, map: &mut FeatureGrid, rng: &mut impl Rng) {
 	let start_spot = bounds.inset(1, 1).roll_spot(rng);
@@ -12,7 +13,7 @@ pub fn make_maze(bounds: RoomBounds, map: &mut FeatureGrid, rng: &mut impl Rng) 
 
 fn make_maze_from_spot(spot: LevelSpot, bounds: RoomBounds, map: &mut FeatureGrid, rng: &mut impl Rng) {
 	map.put_feature(spot, Feature::Tunnel);
-	let maze_steps = if rng.gen_ratio(33, 100) {
+	let maze_steps = if roll_chance(33, rng) {
 		let mut steps = ALL_MAZE_STEPS.to_vec();
 		steps.shuffle(rng);
 		steps
