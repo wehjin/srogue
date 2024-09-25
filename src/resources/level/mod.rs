@@ -4,10 +4,10 @@ use crate::resources::level::room_id::RoomId;
 use crate::resources::level::size::LevelSpot;
 
 use crate::monster::Monster;
-use crate::resources::dungeon::RogueSpot;
 use crate::resources::level::feature_grid::feature::{Feature, FeatureFilter};
 use crate::resources::level::room::LevelRoom;
 use crate::resources::level::torch_grid::TorchGrid;
+use crate::resources::rogue::spot::RogueSpot;
 use crate::resources::rogue::Rogue;
 use crate::room::{RoomBounds, RoomType};
 use crate::trap::trap_kind::TrapKind;

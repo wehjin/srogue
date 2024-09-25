@@ -1,9 +1,9 @@
-use crate::resources::dungeon::RogueSpot;
 use crate::resources::rogue::depth::RogueDepth;
 use crate::ring::effects::RingEffects;
+use spot::RogueSpot;
 
 pub mod depth;
-
+pub mod spot;
 
 #[derive(Debug, Copy, Clone, Default, Eq, Hash, PartialEq)]
 pub struct Rogue {

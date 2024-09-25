@@ -1,4 +1,4 @@
-use crate::resources::dungeon::RogueSpot;
+use crate::resources::rogue::spot::RogueSpot;
 use crate::resources::level::room_id::RoomId;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::level::wake::{wake_room, WakeType};
