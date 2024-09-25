@@ -1,6 +1,6 @@
 use crate::console::ConsoleError;
 use crate::init::{init, InitError, InitResult};
-use crate::level::{make_level, put_player};
+use crate::level::{make_level, put_player_legacy};
 use crate::monster::put_mons;
 use crate::objects::{put_objects, put_stairs};
 use crate::settings::SettingsError;
@@ -99,7 +99,7 @@ pub fn main() -> anyhow::Result<()> {
 			put_stairs(&mut game.player, &mut game.level);
 			add_traps(&game.player, &mut game.level);
 			put_mons(&mut game);
-			put_player(game.level.party_room.into(), &mut game);
+			put_player_legacy(game.level.party_room.into(), &mut game);
 			game.stats_changed = true;
 		}
 		restored = false;

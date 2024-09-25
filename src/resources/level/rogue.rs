@@ -5,7 +5,7 @@ use crate::resources::level::wake::{wake_room, WakeType};
 use crate::resources::level::DungeonLevel;
 use rand::Rng;
 
-pub fn roll_rogue(level: &mut DungeonLevel, rng: &mut impl Rng) {
+pub fn put_player(level: &mut DungeonLevel, rng: &mut impl Rng) {
 	let rogue_spot = roll_rogue_spot(level, level.party_room, rng);
 	level.put_rogue(rogue_spot);
 	match rogue_spot {

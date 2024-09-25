@@ -279,4 +279,5 @@ pub mod size;
 pub mod torch_grid;
 pub mod room;
 pub mod wake;
+pub mod rogue;
 

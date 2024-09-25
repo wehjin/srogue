@@ -14,7 +14,7 @@ use crate::resources::level::sector::{ALL_SECTORS, COL0, COL3, ROW0, ROW3};
 use crate::resources::level::setup::npc::roll_monsters;
 use crate::resources::level::setup::random_what::RandomWhat;
 use crate::resources::level::torch_grid::TorchGrid;
-use crate::resources::level::{DungeonLevel, PartyType};
+use crate::resources::level::{rogue, DungeonLevel, PartyType};
 use crate::resources::rogue::Rogue;
 use crate::room::{RoomBounds, RoomType};
 use crate::trap::trap_kind::TrapKind;
@@ -31,7 +31,7 @@ pub fn roll_level(party_type: PartyType, rogue: Rogue, stats: &mut DungeonStats,
 	roll_stairs(&mut level, rng);
 	roll_traps(&mut level, rng);
 	roll_monsters(&mut level, rng);
-	rogue::roll_rogue(&mut level, rng);
+	rogue::put_player(&mut level, rng);
 	level
 }
 
@@ -222,5 +222,4 @@ fn roll_object_count(rng: &mut impl Rng) -> usize {
 
 pub mod party;
 pub mod random_what;
-pub mod rogue;
 

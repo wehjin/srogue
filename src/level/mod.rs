@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM, MAX_TRAP};
 use crate::level::materials::TunnelFixture;
-use crate::resources::level::wake::wake_room_legacy;
 use crate::objects::put_amulet;
 use crate::pack::has_amulet;
 use crate::player::constants::INIT_HP;
@@ -13,6 +12,7 @@ use crate::player::{Player, RoomMark};
 use crate::prelude::*;
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system::backend;
+use crate::resources::level::wake::wake_room_legacy;
 use crate::room::RoomType::Nothing;
 use crate::room::{gr_spot, is_all_connected, visit_room, visit_spot_area, DoorDirection, Room, RoomBounds, RoomType};
 use crate::trap::Trap;
@@ -546,7 +546,7 @@ fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: i64, level_
 	}
 }
 
-pub fn put_player(avoid_room: RoomMark, game: &mut GameState) {
+pub fn put_player_legacy(avoid_room: RoomMark, game: &mut GameState) {
 	{
 		let mut spot = DungeonSpot::default();
 		let mut to_room = avoid_room;

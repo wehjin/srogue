@@ -1,5 +1,5 @@
 use crate::init::GameState;
-use crate::level::put_player;
+use crate::level::put_player_legacy;
 use crate::monster::{mv_mons, show_monsters};
 use crate::motion::{reg_move, YOU_CAN_MOVE_AGAIN};
 use crate::objects::ObjectId;
@@ -40,7 +40,7 @@ pub fn tele(game: &mut GameState) {
 	let exit_spot = game.player.to_spot();
 	render_system::show_darkened_room_after_player_exit(exit_spot, game);
 	let avoid_room = game.player.cur_room;
-	put_player(avoid_room, game);
+	put_player_legacy(avoid_room, game);
 	game.level.being_held = false;
 	game.level.bear_trap = 0;
 }
