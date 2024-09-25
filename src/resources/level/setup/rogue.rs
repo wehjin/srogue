@@ -1,6 +1,7 @@
 use crate::resources::game::RogueSpot;
 use crate::resources::level::room_id::RoomId;
 use crate::resources::level::size::LevelSpot;
+use crate::resources::level::wake::{wake_room, WakeType};
 use crate::resources::level::DungeonLevel;
 use rand::Rng;
 
@@ -11,9 +12,8 @@ pub fn roll_rogue(level: &mut DungeonLevel, rng: &mut impl Rng) {
 		RogueSpot::None => {}
 		RogueSpot::Vault(_, room) => level.light_room(room),
 		RogueSpot::Passage(spot) => level.light_tunnel_spot(spot),
-	}
-
-	// TODO Wake the room
+	};
+	wake_room(WakeType::DropIn(rogue_spot.try_room(level)), level, rng);
 	// TODO Write new-level message.
 	// TODO Update screen.
 }

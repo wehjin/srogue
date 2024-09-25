@@ -28,7 +28,7 @@ pub fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, game: &mut GameSta
 			game.player.fight_monster = None;
 		}
 	}
-	game.mash.monster_mut(mon_id).clear_target_spot();
+	game.mash.monster_mut(mon_id).clear_target();
 	let mut hit_chance: usize = if game.player.cur_depth >= (AMULET_LEVEL * 2) {
 		100
 	} else {

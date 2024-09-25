@@ -49,3 +49,7 @@ impl ObjectId {
 		ObjectId::new(rng.next_u64())
 	}
 }
+
+pub fn roll_chance(chance: usize, rng: &mut impl Rng) -> bool {
+	rng.gen_ratio((chance as u32).min(100), 100)
+}

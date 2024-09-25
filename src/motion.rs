@@ -22,7 +22,7 @@ use crate::render_system::darken_room;
 use crate::render_system::hallucinate::show_hallucination;
 use crate::resources::diary;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
-use crate::resources::level::wake::wake_room;
+use crate::resources::level::wake::wake_room_legacy;
 use crate::room::{visit_room, visit_spot_area};
 use crate::score::killed_by;
 use crate::throw::Motion;
@@ -79,7 +79,7 @@ pub fn one_move_rogue(direction: MoveDirection, pickup: bool, game: &mut GameSta
 				game.player.cur_room = game.level.room(row, col);
 				let cur_rn = game.player.cur_room.rn().expect("current room should be the room at rol,col");
 				visit_room(cur_rn, game);
-				wake_room(cur_rn, true, row, col, game);
+				wake_room_legacy(cur_rn, true, row, col, game);
 			}
 			RoomMark::Cavern(_) => {
 				// room to door
@@ -90,7 +90,7 @@ pub fn one_move_rogue(direction: MoveDirection, pickup: bool, game: &mut GameSta
 		// door to tunnel
 		visit_spot_area(row, col, game);
 		let rn = game.player.cur_room.rn().expect("player room not an area moving from door to passage");
-		wake_room(rn, false, game.player.rogue.row, game.player.rogue.col, game);
+		wake_room_legacy(rn, false, game.player.rogue.row, game.player.rogue.col, game);
 		darken_room(rn, game);
 		game.player.cur_room = RoomMark::Passage;
 	} else if to_cell.is_any_tunnel() {

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM, MAX_TRAP};
 use crate::level::materials::TunnelFixture;
-use crate::resources::level::wake::wake_room;
+use crate::resources::level::wake::wake_room_legacy;
 use crate::objects::put_amulet;
 use crate::pack::has_amulet;
 use crate::player::constants::INIT_HP;
@@ -576,7 +576,7 @@ pub fn put_player(avoid_room: RoomMark, game: &mut GameState) {
 		}
 		RoomMark::Cavern(cur_room) => {
 			visit_room(cur_room, game);
-			wake_room(cur_room, true, game.player.rogue.row, game.player.rogue.col, game);
+			wake_room_legacy(cur_room, true, game.player.rogue.row, game.player.rogue.col, game);
 		}
 	}
 	if let Some(msg) = &game.level.new_level_message {

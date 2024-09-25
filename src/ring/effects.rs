@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
 use crate::odds;
+use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Default, Debug, Hash)]
 pub struct RingEffects {
 	stealthy: usize,
 	r_teleport: bool,

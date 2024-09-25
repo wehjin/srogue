@@ -1,5 +1,6 @@
 use crate::resources::game::RogueSpot;
 use crate::resources::rogue::depth::RogueDepth;
+use crate::ring::effects::RingEffects;
 
 pub mod depth;
 
@@ -9,6 +10,7 @@ pub struct Rogue {
 	pub has_amulet: bool,
 	pub depth: RogueDepth,
 	pub spot: RogueSpot,
+	pub ring_effects: RingEffects,
 }
 
 impl Rogue {
@@ -17,6 +19,7 @@ impl Rogue {
 			has_amulet: false,
 			depth: RogueDepth::new(depth),
 			spot: RogueSpot::None,
+			ring_effects: Default::default(),
 		}
 	}
 	pub fn descend(&mut self) {

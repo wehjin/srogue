@@ -8,6 +8,7 @@ use crate::monster::{MonsterFlags, MonsterKind};
 use crate::player::RoomMark;
 use crate::prelude::DungeonSpot;
 use crate::resources::level::setup::npc::disguise::Disguise;
+use crate::resources::level::size::LevelSpot;
 
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct MonsterMash {
@@ -156,7 +157,11 @@ impl Monster {
 	pub fn set_target_spot(&mut self, row: i64, col: i64) {
 		self.target_spot = Some(DungeonSpot { row, col })
 	}
-	pub fn clear_target_spot(&mut self) {
+	pub fn set_target(&mut self, spot: LevelSpot) {
+		let (row, col) = spot.i64();
+		self.target_spot = Some(DungeonSpot { row, col })
+	}
+	pub fn clear_target(&mut self) {
 		self.target_spot = None;
 		self.stuck_counter.reset();
 	}
@@ -191,6 +196,7 @@ impl Monster {
 	pub fn m_damage(&self) -> &'static [DamageStat] {
 		self.kind.damage()
 	}
+	pub fn wakens(&self) -> bool { self.m_flags.wakens }
 	pub fn wanders_or_wakens(&self) -> bool { self.m_flags.wakens || self.m_flags.wanders }
 	pub fn name(&self) -> &'static str { self.kind.name() }
 	pub fn in_room(&self, rn: usize, level: &Level) -> bool {

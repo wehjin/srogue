@@ -126,14 +126,27 @@ impl DungeonLevel {
 		}
 	}
 }
+
 impl DungeonLevel {
 	pub fn try_monster(&self, spot: LevelSpot) -> Option<&Monster> {
 		self.monsters.get(&spot)
+	}
+	pub fn as_monster_mut(&mut self, spot: LevelSpot) -> &mut Monster {
+		self.monsters.get_mut(&spot).expect("invalid monster spot")
 	}
 	pub fn put_monster(&mut self, spot: LevelSpot, mut monster: Monster) {
 		let (row, col) = spot.i64();
 		monster.set_spot(row, col);
 		self.monsters.insert(spot, monster);
+	}
+	pub fn monster_spots_in(&self, room: RoomId) -> Vec<LevelSpot> {
+		let room = self.rooms.get(&room).expect("invalid {room}");
+		self.monsters.iter().filter_map(|(spot, _)| {
+			match room.contains_spot(*spot) {
+				true => Some(*spot),
+				false => None
+			}
+		}).collect()
 	}
 }
 

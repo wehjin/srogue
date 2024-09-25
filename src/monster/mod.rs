@@ -217,7 +217,7 @@ pub fn mv_monster(mon_id: u64, row: i64, col: i64, game: &mut GameState) {
 				get_rand(0, (DCOLS - 1) as i64),
 			);
 		} else {
-			monster.clear_target_spot();
+			monster.clear_target();
 		}
 	}
 }

@@ -464,7 +464,7 @@ pub fn dr_course(monster: &mut Monster, is_entering: bool, row: i64, col: i64, p
 	monster.spot.row = row;
 	monster.spot.col = col;
 	if monster.sees(player.rogue.row, player.rogue.col, level) {
-		monster.clear_target_spot();
+		monster.clear_target();
 		return;
 	}
 	let mon_room = monster.cur_room(level);
@@ -526,18 +526,18 @@ pub fn dr_course(monster: &mut Monster, is_entering: bool, row: i64, col: i64, p
 			}
 		}
 		/* no place to send monster */
-		monster.clear_target_spot();
+		monster.clear_target();
 	} else {
 		/* exiting room */
 		match mon_room.rn() {
 			None => {
-				monster.clear_target_spot();
+				monster.clear_target();
 			}
 			Some(mon_rn) => {
 				if let Some((other_row, other_col)) = get_other_room(mon_rn, row, col, level) {
 					monster.set_target_spot(other_row, other_col);
 				} else {
-					monster.clear_target_spot();
+					monster.clear_target();
 				}
 			}
 		}
