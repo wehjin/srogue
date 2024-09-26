@@ -1,13 +1,9 @@
-use crate::actions::instruct::instruction_lines;
 use crate::console::ConsoleError;
 use crate::init::{init, InitError, InitResult};
-use crate::inventory::inventory;
 use crate::level::{make_level, put_player_legacy};
 use crate::monster::put_mons;
 use crate::objects::{put_objects, put_stairs};
-use crate::prelude::object_what::PackFilter;
-use crate::resources::play;
-use crate::resources::play::{PlayState, DungeonVisor};
+use crate::resources::play::{run, TextConsole};
 use crate::resources::player::{InputMode, PlayerInput};
 use crate::settings::SettingsError;
 use crate::systems::play_level::{play_level, LevelResult};
@@ -60,63 +56,52 @@ pub mod actions;
 pub fn main() -> anyhow::Result<()> {
 	let mut terminal = ratatui::init();
 	terminal.clear().expect("failed to clear");
-	play::run(get_input, |state: &PlayState| draw_state(state, &mut terminal));
+
+	let console = TerminalConsole(terminal);
+	run(console);
+
 	ratatui::restore();
 	Ok(())
 }
 
-fn draw_state(state: &PlayState, terminal: &mut DefaultTerminal) {
-	let lines = match state.visor {
-		DungeonVisor::Map => {
-			let mut lines = state.level.format(true);
-			lines.insert(0, "".to_string());
-			lines.push("".to_string());
-			lines
-		}
-		DungeonVisor::Help => instruction_lines(),
-		DungeonVisor::Inventory => {
-			let pack = state.level.rogue.as_pack();
-			let stats = &state.stats;
-			inventory(pack, PackFilter::AllObjects, stats.fruit.as_str(), &stats.notes, stats.wizard)
-		}
-	};
-	terminal.draw(|frame| {
-		let frame_area = frame.area();
-		for row in 0..lines.len() {
-			let paragraph = Paragraph::new(lines[row].as_str());
-			let line_area = Rect::new(frame_area.x, frame_area.y + row as u16, frame_area.width, 1);
-			frame.render_widget(paragraph, line_area);
-		}
-	}).expect("failed to draw");
-}
-
-fn get_input(filter: InputMode) -> PlayerInput {
-	loop {
-		let event = event::read().unwrap();
-		match event {
-			Event::FocusGained => {}
-			Event::FocusLost => {}
-			Event::Key(key) => {
-				let input = match filter {
-					InputMode::Any => match key.code {
-						KeyCode::Char(char) => match char {
-							'?' => PlayerInput::Help,
-							'i' => PlayerInput::Menu,
+struct TerminalConsole(DefaultTerminal);
+impl TextConsole for TerminalConsole {
+	fn get_input(&self, mode: InputMode) -> PlayerInput {
+		loop {
+			match event::read().unwrap() {
+				Event::FocusGained => {}
+				Event::FocusLost => {}
+				Event::Key(key) => {
+					let input = match mode {
+						InputMode::Any => match key.code {
+							KeyCode::Char(char) => match char {
+								'?' => PlayerInput::Help,
+								'i' => PlayerInput::Menu,
+								_ => PlayerInput::Close,
+							},
 							_ => PlayerInput::Close,
 						},
-						_ => PlayerInput::Close,
-					},
-					InputMode::Alert => PlayerInput::Close,
-				};
-				return input;
+						InputMode::Alert => PlayerInput::Close,
+					};
+					return input;
+				}
+				Event::Mouse(_) => {}
+				Event::Paste(_) => {}
+				Event::Resize(_, _) => {}
+			};
+		}
+	}
+	fn draw(&mut self, lines: Vec<String>) {
+		self.0.draw(|frame| {
+			let frame_area = frame.area();
+			for row in 0..lines.len() {
+				let paragraph = Paragraph::new(lines[row].as_str());
+				let line_area = Rect::new(frame_area.x, frame_area.y + row as u16, frame_area.width, 1);
+				frame.render_widget(paragraph, line_area);
 			}
-			Event::Mouse(_) => {}
-			Event::Paste(_) => {}
-			Event::Resize(_, _) => {}
-		};
+		}).expect("failed to draw lines");
 	}
 }
-
 
 pub fn main_legacy() -> anyhow::Result<()> {
 	fern::Dispatch::new()
