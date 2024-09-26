@@ -1,5 +1,4 @@
 use rand::{thread_rng, Rng};
-use serde::{Deserialize, Serialize};
 
 pub use flags::MonsterFlags;
 pub use kind::*;
@@ -10,7 +9,7 @@ use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
 use crate::motion::is_passable;
-use crate::objects::{ObjectId, ObjectPack};
+use crate::objects::ObjectPack;
 use crate::odds;
 use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::Scroll;
@@ -27,26 +26,6 @@ use crate::throw::RandomWalk;
 pub mod flags;
 mod kind;
 mod mash;
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Fighter {
-	pub armor: Option<ObjectId>,
-	pub weapon: Option<ObjectId>,
-	pub left_ring: Option<ObjectId>,
-	pub right_ring: Option<ObjectId>,
-	pub hp_current: isize,
-	pub hp_max: isize,
-	pub str_current: isize,
-	pub str_max: isize,
-	pub pack: ObjectPack,
-	pub gold: usize,
-	pub exp: isize,
-	pub exp_points: isize,
-	pub row: i64,
-	pub col: i64,
-	pub moves_left: isize,
-}
-
 
 pub fn put_mons(game: &mut GameState) {
 	for _ in 0..get_rand(4, 6) {

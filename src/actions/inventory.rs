@@ -1,6 +1,6 @@
 use crate::actions::GameUpdater;
 use crate::init::GameState;
-use crate::inventory::{inventory, single_inv, ObjectSource};
+use crate::inventory::{inventory_legacy, single_inv, ObjectSource};
 use crate::player::rings::HandUsage;
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::ring::PlayerHand;
@@ -11,7 +11,7 @@ pub struct InventoryGround;
 impl GameUpdater for InventoryGround {
 	fn update(game: &mut GameState) -> Option<LevelResult> {
 		if game.player.wizard {
-			inventory(AllObjects, ObjectSource::Ground, game);
+			inventory_legacy(AllObjects, ObjectSource::Ground, game);
 		} else {
 			game.diary.add_entry(UNKNOWN_COMMAND);
 		}
@@ -24,15 +24,6 @@ pub struct InventoryOne;
 impl GameUpdater for InventoryOne {
 	fn update(game: &mut GameState) -> Option<LevelResult> {
 		single_inv(None, game);
-		None
-	}
-}
-
-pub struct Inventory;
-
-impl GameUpdater for Inventory {
-	fn update(game: &mut GameState) -> Option<LevelResult> {
-		inventory(AllObjects, ObjectSource::Player, game);
 		None
 	}
 }

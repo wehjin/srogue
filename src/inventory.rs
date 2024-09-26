@@ -1,7 +1,7 @@
 use crate::init::GameState;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::objects::note_tables::NoteTables;
-use crate::objects::{get_armor_class, name_of, NoteStatus, Object, ObjectId};
+use crate::objects::{get_armor_class, name_of, NoteStatus, Object, ObjectId, ObjectPack};
 use crate::pack::{pack_letter, wait_for_ack};
 use crate::player::Player;
 use crate::potions::kind::PotionKind;
@@ -11,18 +11,92 @@ use crate::prelude::object_what::ObjectWhat::{Amulet, Armor, Food, Gold, Potion,
 use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::render_system::backend;
+use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::ring_kind::RingKind;
 use crate::score::is_vowel;
 use crate::scrolls::ScrollKind;
 use crate::zap::wand_kind::WandKind;
 
+pub fn inventory(pack: &ObjectPack, filter: PackFilter, fruit: &str, notes: &NoteTables, wizard: bool) -> Vec<String> {
+	if pack.is_empty() {
+		vec!["your pack is empty".to_string()]
+	} else {
+		let mut item_lines = Vec::new();
+		for obj in pack.objects() {
+			let what = obj.what_is;
+			if filter.includes(what) {
+				let close_char = if what == Armor && obj.is_protected != 0 { '}' } else { ')' };
+				let obj_ichar = obj.ichar;
+				let obj_desc = obj.to_description(fruit, notes, wizard);
+				let line = format!("{obj_ichar}{close_char} {obj_desc}");
+				item_lines.push(line);
+			}
+		}
+		item_lines.push("--press space to continue--".to_string());
+		item_lines
+	}
+}
+
 pub enum ObjectSource {
 	Player,
 	Ground,
 }
 
-pub fn inventory(filter: PackFilter, source: ObjectSource, game: &mut GameState) {
+impl ObjectPack {
+	fn to_pickup_line_maybe(&self, obj_id: ObjectId, stats: &DungeonStats) -> String {
+		let obj = self.as_object(obj_id);
+		let obj_ichar = obj.ichar;
+		let obj_desc = obj.to_description(&stats.fruit, &stats.notes, stats.wizard);
+		format!("{}({})", obj_desc, obj_ichar)
+	}
+}
+
+impl Object {
+	fn to_description(&self, fruit: &str, notes: &NoteTables, wizard: bool) -> String {
+		let what = self.what_is;
+		if what == Amulet {
+			return "the amulet of Yendor ".to_string();
+		}
+		if what == Gold {
+			return format!("{} pieces of gold", self.quantity);
+		}
+		let desc = if what == Food {
+			let quantity = if self.which_kind == RATION {
+				if self.quantity > 1 {
+					format!("{} rations of ", self.quantity)
+				} else {
+					"some ".to_string()
+				}
+			} else {
+				"a ".to_string()
+			};
+			format!("{}{}", quantity, name_of(self, fruit.to_string(), notes))
+		} else {
+			if wizard {
+				get_identified(self, fruit.to_string(), notes, wizard)
+			} else {
+				match what {
+					Weapon | Armor | Wand | Ring => get_unidentified(self, fruit.to_string(), notes, wizard),
+					_ => match notes.status(what, self.which_kind as usize) {
+						NoteStatus::Unidentified => get_unidentified(self, fruit.to_string(), notes, wizard),
+						NoteStatus::Identified => get_identified(self, fruit.to_string(), notes, wizard),
+						NoteStatus::Called => get_called(self, fruit.to_string(), notes),
+					},
+				}
+			}
+		};
+		let desc = if desc.starts_with("a ")
+			&& is_vowel(desc.chars().nth(2).expect("char at 2")) {
+			format!("an {}", &desc[2..])
+		} else {
+			desc
+		};
+		format!("{}{}", desc, get_in_use_description(self))
+	}
+}
+
+pub fn inventory_legacy(filter: PackFilter, source: ObjectSource, game: &mut GameState) {
 	let pack = match source {
 		ObjectSource::Player => game.player.pack(),
 		ObjectSource::Ground => &game.ground,
@@ -31,24 +105,7 @@ pub fn inventory(filter: PackFilter, source: ObjectSource, game: &mut GameState)
 		game.diary.add_entry("your pack is empty");
 		return;
 	}
-	let item_lines = {
-		let mut item_lines = Vec::new();
-		for obj in pack.objects() {
-			let what = obj.what_is;
-			if filter.includes(what) {
-				let close_char = if what == Armor && obj.is_protected != 0 { '}' } else { ')' };
-				let obj_ichar = obj.ichar;
-				let obj_desc = get_obj_desc(obj, game.player.settings.fruit.to_string(), &game.player);
-				let line = format!(" {}{} {}", obj_ichar, close_char, obj_desc);
-				item_lines.push(line);
-			}
-		}
-		{
-			let prompt_line = " --press space to continue--";
-			item_lines.push(prompt_line.to_string());
-		}
-		item_lines
-	};
+	let item_lines = inventory(pack, filter, game.player.settings.fruit.as_str(), &game.player.notes, game.player.wizard);
 	let item_lines_max_len = item_lines.iter().map(|it| it.chars().count()).max().expect("max length");
 
 	let mut old_lines = Vec::new();
@@ -99,32 +156,32 @@ fn get_id_real(obj: &Object) -> &'static str {
 	}
 }
 
-fn get_identified(obj: &Object, fruit: String, player: &Player) -> String {
+fn get_identified(obj: &Object, fruit: String, notes: &NoteTables, wizard: bool) -> String {
 	let what = obj.what_is;
 	match what {
 		Scroll | Potion => {
 			let quantity = get_quantity(obj);
-			let name = name_of(obj, fruit, &player.notes);
+			let name = name_of(obj, fruit, notes);
 			let real_name = get_id_real(obj);
 			format!("{}{}{}", quantity, name, real_name)
 		}
 		Ring => {
 			let more_info =
-				if (player.wizard || obj.identified)
+				if (wizard || obj.identified)
 					&& (obj.which_kind == RingKind::Dexterity.to_index() as u16 || obj.which_kind == RingKind::AddStrength.to_index() as u16) {
 					format!("{}{} ", if obj.class > 0 { "+" } else { "" }, obj.class)
 				} else {
 					"".to_string()
 				};
-			let name = name_of(obj, fruit, &player.notes);
+			let name = name_of(obj, fruit, notes);
 			let real_name = get_id_real(obj);
 			format!("{}{}{}{}", get_quantity(obj), more_info, name, real_name)
 		}
 		Wand => format!("{}{}{}{}",
 		                get_quantity(obj),
-		                name_of(obj, fruit, &player.notes),
+		                name_of(obj, fruit, notes),
 		                get_id_real(obj),
-		                if player.wizard || obj.identified {
+		                if wizard || obj.identified {
 			                format!("[{}]", obj.class)
 		                } else {
 			                "".to_string()
@@ -133,14 +190,14 @@ fn get_identified(obj: &Object, fruit: String, player: &Player) -> String {
 			let armor_class = get_armor_class(Some(obj));
 			let enchantment = obj.d_enchant;
 			let plus_or_none = if enchantment >= 0 { "+" } else { "" };
-			let title = player.notes.title(what, obj.which_kind as usize);
+			let title = notes.title(what, obj.which_kind as usize);
 			format!("{}{} {}[{}] ", plus_or_none, enchantment, title.as_str(), armor_class)
 		}
 		Weapon => format!("{}{}{},{}{} {}",
 		                  get_quantity(obj),
 		                  if obj.hit_enchant >= 0 { "+" } else { "" }, obj.hit_enchant,
 		                  if obj.d_enchant >= 0 { "+" } else { "" }, obj.d_enchant,
-		                  name_of(obj, fruit, &player.notes)
+		                  name_of(obj, fruit, notes)
 		),
 		_ => panic!("invalid identified object")
 	}
@@ -158,37 +215,37 @@ fn get_called(obj: &Object, fruit: String, notes: &NoteTables) -> String {
 	}
 }
 
-fn get_unidentified(obj: &Object, fruit: String, player: &Player) -> String {
+fn get_unidentified(obj: &Object, fruit: String, notes: &NoteTables, wizard: bool) -> String {
 	let what = obj.what_is;
 	let kind = obj.which_kind as usize;
 	match what {
 		Scroll => {
-			let title = player.notes.title(what, kind);
-			format!("{}{}entitled: {}", get_quantity(obj), name_of(obj, fruit, &player.notes), title.as_str())
+			let title = notes.title(what, kind);
+			format!("{}{}entitled: {}", get_quantity(obj), name_of(obj, fruit, notes), title.as_str())
 		}
 		Potion => {
-			let title = player.notes.title(what, kind);
-			format!("{}{}{}", get_quantity(obj), title.as_str(), name_of(obj, fruit, &player.notes))
+			let title = notes.title(what, kind);
+			format!("{}{}{}", get_quantity(obj), title.as_str(), name_of(obj, fruit, notes))
 		}
 		Wand | Ring => {
-			if obj.identified || player.notes.status(what, kind) == NoteStatus::Identified {
-				get_identified(obj, fruit, player)
-			} else if player.notes.status(what, kind) == NoteStatus::Called {
-				get_called(obj, fruit, &player.notes)
+			if obj.identified || notes.status(what, kind) == NoteStatus::Identified {
+				get_identified(obj, fruit, notes, wizard)
+			} else if notes.status(what, kind) == NoteStatus::Called {
+				get_called(obj, fruit, notes)
 			} else {
-				let title = player.notes.title(what, kind);
-				format!("{}{}{}", get_quantity(obj), title.as_str(), name_of(obj, fruit, &player.notes))
+				let title = notes.title(what, kind);
+				format!("{}{}{}", get_quantity(obj), title.as_str(), name_of(obj, fruit, notes))
 			}
 		}
 		Armor => if obj.identified {
-			get_identified(obj, fruit, player)
+			get_identified(obj, fruit, notes, wizard)
 		} else {
-			player.notes.title(what, kind).to_string()
+			notes.title(what, kind).to_string()
 		},
 		Weapon => if obj.identified {
-			get_identified(obj, fruit, player)
+			get_identified(obj, fruit, notes, wizard)
 		} else {
-			name_of(obj, fruit, &player.notes)
+			name_of(obj, fruit, notes)
 		},
 		_ => panic!("invalid unidentified object")
 	}
@@ -226,16 +283,16 @@ pub fn get_obj_desc(obj: &Object, fruit: String, player: &Player) -> String {
 		format!("{}{}", quantity, name_of(obj, fruit, &player.notes))
 	} else {
 		if player.wizard {
-			get_identified(obj, fruit, player)
+			get_identified(obj, fruit, &player.notes, player.wizard)
 		} else {
 			match what {
 				Weapon | Armor | Wand | Ring => {
-					get_unidentified(obj, fruit, player)
+					get_unidentified(obj, fruit, &player.notes, player.wizard)
 				}
 				_ => {
 					match player.notes.status(what, obj.which_kind as usize) {
-						NoteStatus::Unidentified => get_unidentified(obj, fruit, player),
-						NoteStatus::Identified => get_identified(obj, fruit, player),
+						NoteStatus::Unidentified => get_unidentified(obj, fruit, &player.notes, player.wizard),
+						NoteStatus::Identified => get_identified(obj, fruit, &player.notes, player.wizard),
 						NoteStatus::Called => get_called(obj, fruit, &player.notes),
 					}
 				}

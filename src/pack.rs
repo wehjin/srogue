@@ -1,13 +1,12 @@
 use crate::init::GameState;
-use crate::inventory::{get_obj_desc, inventory, ObjectSource};
+use crate::inventory::{get_obj_desc, inventory_legacy, ObjectSource};
 use crate::message::sound_bell;
 use crate::motion::reg_move;
 use crate::objects::NoteStatus::{Identified, Unidentified};
 use crate::objects::{Object, ObjectId, ObjectPack};
 use crate::player::Player;
-use crate::prelude::food_kind::FRUIT;
-use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
-use crate::prelude::object_what::ObjectWhat::{Food, Potion, Scroll, Weapon};
+
+use crate::prelude::object_what::ObjectWhat::Scroll;
 use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::PackFilter::{Amulets, Armors, Foods, Potions, Rings, Scrolls, Wands, Weapons};
 use crate::resources::diary;
@@ -72,35 +71,6 @@ impl Object {
 	}
 }
 
-pub fn check_duplicate(obj: &Object, pack: &mut ObjectPack) -> Option<ObjectId> {
-	let combinable = match obj.what_is {
-		Weapon | Food | Scroll | Potion => true,
-		_ => false,
-	};
-	if !combinable {
-		return None;
-	}
-	if obj.what_is == Food && obj.which_kind == FRUIT {
-		return None;
-	}
-	if let Some(found) = pack.find_object_mut(|pack_obj| obj.can_join_existing_pack_object(pack_obj)) {
-		found.quantity += obj.quantity;
-		Some(found.id())
-	} else {
-		None
-	}
-}
-
-pub fn next_avail_ichar(player: &Player) -> char {
-	let mut used = [false; 26];
-	for obj in player.rogue.pack.objects() {
-		let letter_index = (obj.ichar as u8 - 'a' as u8) as usize;
-		used[letter_index] = true;
-	}
-	if let Some(unused) = used.into_iter().position(|used| used == false) {
-		(unused as u8 + 'a' as u8) as char
-	} else { '?' }
-}
 
 pub fn wait_for_ack() {
 	// TODO: Slurp and defer interrupts like in original message function.
@@ -134,7 +104,7 @@ pub fn pack_letter(prompt: &str, filter: PackFilter, game: &mut GameState) -> ch
 		};
 		match pack_op {
 			PackOp::List(filter) => {
-				inventory(filter, ObjectSource::Player, game);
+				inventory_legacy(filter, ObjectSource::Player, game);
 			}
 			PackOp::Cancel => {
 				return CANCEL_CHAR;
@@ -148,10 +118,7 @@ pub fn pack_letter(prompt: &str, filter: PackFilter, game: &mut GameState) -> ch
 
 
 pub fn do_wear(obj_id: ObjectId, player: &mut Player) {
-	player.rogue.armor = Some(obj_id);
-	let obj = player.object_mut(obj_id).expect("wear obj in pack");
-	obj.in_use_flags |= BEING_WORN;
-	obj.identified = true;
+	player.rogue.do_wear(obj_id);
 }
 
 pub fn unwear(player: &mut Player) -> Option<&Object> {
@@ -160,9 +127,7 @@ pub fn unwear(player: &mut Player) -> Option<&Object> {
 
 
 pub fn do_wield(obj_id: ObjectId, player: &mut Player) {
-	player.rogue.weapon = Some(obj_id);
-	let obj = player.object_mut(obj_id).expect("wield obj in pack");
-	obj.in_use_flags |= BEING_WIELDED;
+	player.rogue.do_wield(obj_id);
 }
 
 pub fn unwield(player: &mut Player) {

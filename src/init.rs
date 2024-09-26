@@ -1,7 +1,6 @@
 use std::io;
 use std::io::Write;
 
-use crate::armors::constants::RINGMAIL;
 use crate::console;
 use crate::console::{Console, ConsoleError};
 use crate::init::InitError::NoConsole;
@@ -9,11 +8,8 @@ use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
 use crate::machdep::md_heed_signals;
 use crate::monster::MonsterMash;
-use crate::objects::roll::get_food;
-use crate::objects::{alloc_object, ObjectPack};
-use crate::pack::{do_wear, do_wield};
+use crate::objects::ObjectPack;
 use crate::player::Player;
-use crate::prelude::object_what::ObjectWhat::{Armor, Weapon};
 use crate::prelude::DungeonSpot;
 use crate::random::get_rand;
 use crate::render_system::RenderAction;
@@ -24,8 +20,6 @@ use crate::room::RoomBounds;
 use crate::save::restore;
 use crate::score::put_scores;
 use crate::settings::Settings;
-use crate::weapons::constants::{ARROW, BOW, MACE};
-use libc::c_short;
 use rand::thread_rng;
 
 //pub static mut save_is_interactive: bool = true;
@@ -128,55 +122,7 @@ impl GameState {
 fn player_init(player: &mut Player) {
 	player.rogue.pack.clear();
 	let rng = &mut thread_rng();
-	// Food
-	{
-		let mut obj = alloc_object(rng);
-		get_food(&mut obj, true, rng);
-		player.combine_or_add_item_to_pack(obj);
-	}
-	// Armor
-	{
-		let mut obj = alloc_object(rng);
-		obj.what_is = Armor;
-		obj.which_kind = RINGMAIL;
-		obj.class = RINGMAIL as isize + 2;
-		obj.is_protected = 0;
-		obj.d_enchant = 1;
-		let added = player.combine_or_add_item_to_pack(obj);
-		do_wear(added, player);
-	}
-	// Mace
-	{
-		let mut obj = alloc_object(rng);
-		obj.what_is = Weapon;
-		obj.which_kind = MACE;
-		obj.hit_enchant = 1;
-		obj.d_enchant = 1;
-		obj.identified = true;
-		let added = player.combine_or_add_item_to_pack(obj);
-		do_wield(added, player);
-	}
-	// Bow
-	{
-		let mut obj = alloc_object(rng);
-		obj.what_is = Weapon;
-		obj.which_kind = BOW;
-		obj.hit_enchant = 1;
-		obj.d_enchant = 0;
-		obj.identified = true;
-		player.combine_or_add_item_to_pack(obj);
-	}
-	// Arrows
-	{
-		let mut obj = alloc_object(rng);
-		obj.what_is = Weapon;
-		obj.which_kind = ARROW;
-		obj.quantity = get_rand(25, 35) as c_short;
-		obj.hit_enchant = 0;
-		obj.d_enchant = 0;
-		obj.identified = true;
-		player.combine_or_add_item_to_pack(obj);
-	}
+	player.rogue.provision(rng);
 	player.party_counter = get_rand(1, 10);
 }
 

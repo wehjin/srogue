@@ -1,9 +1,11 @@
 use crate::actions::instruct::instruction_lines;
 use crate::console::ConsoleError;
 use crate::init::{init, InitError, InitResult};
+use crate::inventory::inventory;
 use crate::level::{make_level, put_player_legacy};
 use crate::monster::put_mons;
 use crate::objects::{put_objects, put_stairs};
+use crate::prelude::object_what::PackFilter;
 use crate::resources::dungeon;
 use crate::resources::dungeon::{DungeonState, DungeonVisor};
 use crate::resources::player::{InputMode, PlayerInput};
@@ -72,6 +74,11 @@ fn draw_state(state: &DungeonState, terminal: &mut DefaultTerminal) {
 			lines
 		}
 		DungeonVisor::Help => instruction_lines(),
+		DungeonVisor::Inventory => {
+			let pack = state.level.rogue.as_pack();
+			let stats = &state.stats;
+			inventory(pack, PackFilter::AllObjects, stats.fruit.as_str(), &stats.notes, stats.wizard)
+		}
 	};
 	terminal.draw(|frame| {
 		let frame_area = frame.area();
@@ -94,6 +101,7 @@ fn get_input(filter: InputMode) -> PlayerInput {
 					InputMode::Any => match key.code {
 						KeyCode::Char(char) => match char {
 							'?' => PlayerInput::Help,
+							'i' => PlayerInput::Menu,
 							_ => PlayerInput::Close,
 						},
 						_ => PlayerInput::Close,

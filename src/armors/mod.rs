@@ -3,7 +3,7 @@ use crate::armors::constants::ARMOR_NAMES;
 
 pub(crate) mod constants;
 
-#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Debug)]
 pub enum ArmorKind {
 	Leather,
 	Ringmail,

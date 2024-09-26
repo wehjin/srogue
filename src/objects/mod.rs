@@ -55,7 +55,7 @@ mod weapons;
 
 pub(crate) mod note_tables;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Title {
 	None,
 	WeaponName(WeaponKind),
@@ -91,14 +91,14 @@ impl Default for Title {
 	}
 }
 
-#[derive(Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Note {
 	pub title: Title,
 	pub status: NoteStatus,
 	pub is_wood: bool,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Debug)]
 pub enum NoteStatus {
 	Unidentified,
 	Identified,
@@ -110,9 +110,8 @@ impl Default for NoteStatus {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct
-Object {
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub struct Object {
 	id: ObjectId,
 	pub what_is: ObjectWhat,
 	pub which_kind: u16,

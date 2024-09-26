@@ -3,8 +3,8 @@ use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 
 use crate::armors::constants::ARMORS;
-use crate::objects::{Note, NoteStatus, Title};
 use crate::objects::NoteStatus::{Called, Identified};
+use crate::objects::{Note, NoteStatus, Title};
 use crate::potions::kind::POTIONS;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::{Armor, Potion, Ring, Scroll, Wand, Weapon};
@@ -134,7 +134,7 @@ impl NoteTables {
 	}
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct NoteTables {
 	pub potions: [Note; POTIONS],
 	pub scrolls: [Note; SCROLLS],
@@ -145,10 +145,10 @@ pub struct NoteTables {
 }
 
 mod constants {
-	use crate::armors::ArmorKind;
 	use crate::armors::constants::ARMORS;
-	use crate::objects::Note;
+	use crate::armors::ArmorKind;
 	use crate::objects::note_tables::NoteTables;
+	use crate::objects::Note;
 	use crate::potions::colors::PotionColor;
 	use crate::potions::kind::POTIONS;
 	use crate::ring::constants::RINGS;

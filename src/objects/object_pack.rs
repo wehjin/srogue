@@ -1,9 +1,50 @@
-use serde::{Deserialize, Serialize};
 use crate::objects::{Object, ObjectId};
+use crate::prelude::food_kind::FRUIT;
 use crate::prelude::object_what::ObjectWhat;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug, Eq, Hash, PartialEq)]
 pub struct ObjectPack(Vec<Object>);
+
+impl ObjectPack {
+	pub fn combine_or_add_item(&mut self, mut obj: Object) -> ObjectId {
+		if let Some(id) = self.try_combine(&obj) {
+			return id;
+		}
+		let obj_id = obj.id();
+		obj.ichar = self.next_pack_ichar();
+		self.add(obj);
+		obj_id
+	}
+	fn next_pack_ichar(&self) -> char {
+		let mut used = [false; 26];
+		for obj in self.objects() {
+			let letter_index = (obj.ichar as u8 - 'a' as u8) as usize;
+			used[letter_index] = true;
+		}
+		if let Some(unused) = used.into_iter().position(|used| used == false) {
+			(unused as u8 + 'a' as u8) as char
+		} else { '?' }
+	}
+	fn try_combine(&mut self, obj: &Object) -> Option<ObjectId> {
+		let combinable = match obj.what_is {
+			ObjectWhat::Weapon | ObjectWhat::Food | ObjectWhat::Scroll | ObjectWhat::Potion => true,
+			_ => false,
+		};
+		if !combinable {
+			return None;
+		}
+		if obj.what_is == ObjectWhat::Food && obj.which_kind == FRUIT {
+			return None;
+		}
+		if let Some(found) = self.find_object_mut(|pack_obj| obj.can_join_existing_pack_object(pack_obj)) {
+			found.quantity += obj.quantity;
+			Some(found.id())
+		} else {
+			None
+		}
+	}
+}
 
 impl ObjectPack {
 	pub const fn new() -> Self {
@@ -71,6 +112,10 @@ impl ObjectPack {
 		} else {
 			None
 		}
+	}
+
+	pub fn as_object(&self, obj_id: ObjectId) -> &Object {
+		self.object(obj_id).unwrap()
 	}
 	pub fn object(&self, obj_id: ObjectId) -> Option<&Object> {
 		if let Some(position) = self.obj_position(obj_id) {

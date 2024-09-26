@@ -13,19 +13,22 @@ pub fn run(get_input: impl Fn(InputMode) -> PlayerInput, mut draw_state: impl Fn
 	while let Some(event) = next_event.take() {
 		let Step { state, effect } = match event {
 			DungeonEvent::Init => {
-				let state = DungeonState::roll(rng);
-				Step { state, effect: Effect::AwaitPlayerMove }
+				Step { state: DungeonState::roll(rng), effect: Effect::AwaitPlayerMove }
 			}
 			DungeonEvent::PlayerQuit(state) => {
 				Step { state, effect: Effect::Exit }
 			}
-			DungeonEvent::OpenInstructions(mut state) => {
-				state.visor = DungeonVisor::Help;
-				Step { state, effect: Effect::AwaitCloseInstructions }
-			}
-			DungeonEvent::CloseInstructions(mut state) => {
+			DungeonEvent::PlayerCloseDialog(mut state) => {
 				state.visor = DungeonVisor::Map;
 				Step { state, effect: Effect::AwaitPlayerMove }
+			}
+			DungeonEvent::OpenInstructions(mut state) => {
+				state.visor = DungeonVisor::Help;
+				Step { state, effect: Effect::AwaitCloseDialog }
+			}
+			DungeonEvent::OpenInventory(mut state) => {
+				state.visor = DungeonVisor::Inventory;
+				Step { state, effect: Effect::AwaitCloseDialog }
 			}
 		};
 		draw_state(&state);
@@ -34,10 +37,11 @@ pub fn run(get_input: impl Fn(InputMode) -> PlayerInput, mut draw_state: impl Fn
 			Effect::AwaitPlayerMove => match get_input(InputMode::Any) {
 				PlayerInput::Close => DungeonEvent::PlayerQuit(state),
 				PlayerInput::Help => DungeonEvent::OpenInstructions(state),
+				PlayerInput::Menu => DungeonEvent::OpenInventory(state),
 			},
-			Effect::AwaitCloseInstructions => {
+			Effect::AwaitCloseDialog => {
 				let _input = get_input(InputMode::Alert);
-				DungeonEvent::CloseInstructions(state)
+				DungeonEvent::PlayerCloseDialog(state)
 			}
 		};
 		next_event = Some(new_event);
@@ -47,7 +51,7 @@ pub fn run(get_input: impl Fn(InputMode) -> PlayerInput, mut draw_state: impl Fn
 pub enum Effect {
 	Exit,
 	AwaitPlayerMove,
-	AwaitCloseInstructions,
+	AwaitCloseDialog,
 }
 
 pub struct Step {
@@ -58,8 +62,9 @@ pub struct Step {
 pub enum DungeonEvent {
 	Init,
 	PlayerQuit(DungeonState),
+	PlayerCloseDialog(DungeonState),
 	OpenInstructions(DungeonState),
-	CloseInstructions(DungeonState),
+	OpenInventory(DungeonState),
 }
 
 fn _descend(state: DungeonState, rng: &mut impl Rng) -> Step {
@@ -84,7 +89,9 @@ pub struct DungeonState {
 impl DungeonState {
 	pub fn roll(rng: &mut impl Rng) -> Self {
 		let mut stats = DungeonStats::new(rng);
-		let mut level = roll_level(PartyType::NoParty, Rogue::new(1), &mut stats, rng);
+		let rogue = Rogue::new(1).outfit(rng);
+		let party_type = PartyType::NoParty;
+		let mut level = roll_level(party_type, rogue, &mut stats, rng);
 		level.lighting_enabled = true;
 		Self { stats, level, visor: DungeonVisor::Map }
 	}
@@ -93,4 +100,5 @@ impl DungeonState {
 pub enum DungeonVisor {
 	Map,
 	Help,
+	Inventory,
 }

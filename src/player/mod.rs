@@ -4,14 +4,13 @@ use crate::armors::ArmorKind;
 use crate::components::hunger::HungerLevel;
 use crate::level::{DungeonCell, Level};
 use crate::machdep::md_slurp;
-use crate::monster::Fighter;
 use crate::objects::note_tables::NoteTables;
 use crate::objects::{Object, ObjectId, ObjectPack};
-use crate::pack::{check_duplicate, next_avail_ichar};
 use crate::player::effects::TimeEffect;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::{DungeonSpot, MAX_GOLD, MAX_HP, MAX_STRENGTH};
+use crate::resources::rogue::fighter::Fighter;
 use crate::ring::effects::RingEffects;
 use crate::room::RoomType;
 use crate::room::RoomType::Maze;
@@ -175,14 +174,8 @@ impl Player {
 
 	pub fn pack_mut(&mut self) -> &mut ObjectPack { &mut self.rogue.pack }
 
-	pub fn combine_or_add_item_to_pack(&mut self, mut obj: Object) -> ObjectId {
-		if let Some(id) = check_duplicate(&obj, &mut self.rogue.pack) {
-			return id;
-		}
-		obj.ichar = next_avail_ichar(self);
-		let obj_id = obj.id();
-		self.rogue.pack.add(obj);
-		return obj_id;
+	pub fn combine_or_add_item_to_pack(&mut self, obj: Object) -> ObjectId {
+		self.rogue.pack.combine_or_add_item(obj)
 	}
 }
 
@@ -265,7 +258,6 @@ impl Player {
 	}
 	pub fn gold(&self) -> usize { self.rogue.gold }
 	pub fn new(settings: Settings) -> Self {
-		const INIT_HP: isize = 12;
 		Player {
 			reg_search_count: 0,
 			hit_message: "".to_string(),
@@ -280,23 +272,7 @@ impl Player {
 			cleaned_up: None,
 			cur_depth: 0,
 			max_depth: 1,
-			rogue: Fighter {
-				armor: None,
-				weapon: None,
-				left_ring: None,
-				right_ring: None,
-				hp_current: INIT_HP,
-				hp_max: INIT_HP,
-				str_current: 16,
-				str_max: 16,
-				pack: ObjectPack::new(),
-				gold: 0,
-				exp: 1,
-				exp_points: 0,
-				row: 0,
-				col: 0,
-				moves_left: 1250,
-			},
+			rogue: Fighter::default(),
 			party_counter: 0,
 			ring_effects: Default::default(),
 			halluc: Default::default(),
