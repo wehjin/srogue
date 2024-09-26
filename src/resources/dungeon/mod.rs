@@ -7,11 +7,11 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaChaRng;
 
 pub mod stats;
-pub fn run(get_input: impl Fn(InputMode) -> PlayerInput, mut draw_state: impl FnMut(&DungeonState)) {
+pub fn run(get_input: impl Fn(InputMode) -> PlayerInput, mut draw_state: impl FnMut(&PlayState)) {
 	let rng = &mut ChaChaRng::from_entropy();
 	let mut next_event = Some(DungeonEvent::Init);
 	while let Some(event) = next_event.take() {
-		let Step { state, effect } = handle_event(event, rng);
+		let Step { state, effect } = step(event, rng);
 		draw_state(&state);
 		next_event = Some(match effect {
 			Effect::Exit => break,
@@ -31,10 +31,10 @@ pub fn run(get_input: impl Fn(InputMode) -> PlayerInput, mut draw_state: impl Fn
 	}
 }
 
-fn handle_event(event: DungeonEvent, rng: &mut impl Rng) -> Step {
+fn step(event: DungeonEvent, rng: &mut impl Rng) -> Step {
 	let step = match event {
 		DungeonEvent::Init => {
-			Step { state: DungeonState::roll(rng), effect: Effect::AwaitPlayerMove }
+			Step { state: PlayState::roll(rng), effect: Effect::AwaitPlayerMove }
 		}
 		DungeonEvent::PlayerQuit(state) => {
 			Step { state, effect: Effect::Exit }
@@ -62,20 +62,20 @@ pub enum Effect {
 }
 
 pub struct Step {
-	pub state: DungeonState,
+	pub state: PlayState,
 	pub effect: Effect,
 }
 
 pub enum DungeonEvent {
 	Init,
-	PlayerQuit(DungeonState),
-	PlayerCloseDialog(DungeonState),
-	PlayerOpenHelp(DungeonState),
-	PlayerOpenInventory(DungeonState),
+	PlayerQuit(PlayState),
+	PlayerCloseDialog(PlayState),
+	PlayerOpenHelp(PlayState),
+	PlayerOpenInventory(PlayState),
 }
 
-fn _descend(state: DungeonState, rng: &mut impl Rng) -> Step {
-	let DungeonState { mut stats, level, visor } = state;
+fn _descend(state: PlayState, rng: &mut impl Rng) -> Step {
+	let PlayState { mut stats, level, visor } = state;
 	let party_type = if stats.is_party_depth(&level.rogue.depth) {
 		stats.party_depth = stats.party_depth.roll_next(&level.rogue.depth, rng);
 		PartyType::PartyRollBig
@@ -83,17 +83,17 @@ fn _descend(state: DungeonState, rng: &mut impl Rng) -> Step {
 		PartyType::NoParty
 	};
 	let level = roll_level(party_type, level.rogue, &mut stats, rng);
-	let state = DungeonState { stats, level, visor };
+	let state = PlayState { stats, level, visor };
 	Step { state, effect: Effect::Exit }
 }
 
-pub struct DungeonState {
+pub struct PlayState {
 	pub stats: DungeonStats,
 	pub level: DungeonLevel,
 	pub visor: DungeonVisor,
 }
 
-impl DungeonState {
+impl PlayState {
 	pub fn roll(rng: &mut impl Rng) -> Self {
 		let mut stats = DungeonStats::new(rng);
 		let rogue = Rogue::new(1).outfit(rng);

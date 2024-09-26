@@ -7,7 +7,7 @@ use crate::monster::put_mons;
 use crate::objects::{put_objects, put_stairs};
 use crate::prelude::object_what::PackFilter;
 use crate::resources::dungeon;
-use crate::resources::dungeon::{DungeonState, DungeonVisor};
+use crate::resources::dungeon::{PlayState, DungeonVisor};
 use crate::resources::player::{InputMode, PlayerInput};
 use crate::settings::SettingsError;
 use crate::systems::play_level::{play_level, LevelResult};
@@ -60,12 +60,12 @@ pub mod actions;
 pub fn main() -> anyhow::Result<()> {
 	let mut terminal = ratatui::init();
 	terminal.clear().expect("failed to clear");
-	dungeon::run(get_input, |state: &DungeonState| draw_state(state, &mut terminal));
+	dungeon::run(get_input, |state: &PlayState| draw_state(state, &mut terminal));
 	ratatui::restore();
 	Ok(())
 }
 
-fn draw_state(state: &DungeonState, terminal: &mut DefaultTerminal) {
+fn draw_state(state: &PlayState, terminal: &mut DefaultTerminal) {
 	let lines = match state.visor {
 		DungeonVisor::Map => {
 			let mut lines = state.level.format(true);
