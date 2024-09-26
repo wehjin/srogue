@@ -12,12 +12,14 @@ pub struct DungeonStats {
 	pub wizard: bool,
 }
 
+pub const DEFAULT_FRUIT: &str = "slime-mold";
+
 impl DungeonStats {
 	pub fn new(rng: &mut impl Rng) -> Self {
 		Self {
 			party_depth: PartyDepth::roll(rng),
 			food_drops: 0,
-			fruit: "slime-mold".to_string(),
+			fruit: DEFAULT_FRUIT.to_string(),
 			notes: NoteTables::new(),
 			wizard: false,
 		}

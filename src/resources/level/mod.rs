@@ -218,8 +218,9 @@ pub mod room_id {
 
 #[cfg(test)]
 mod tests {
+	use crate::objects::note_tables::NoteTables;
 	use crate::prelude::AMULET_LEVEL;
-	use crate::resources::dungeon::stats::DungeonStats;
+	use crate::resources::dungeon::stats::{DungeonStats, DEFAULT_FRUIT};
 	use crate::resources::level::setup::party::depth::PartyDepth;
 	use crate::resources::level::setup::roll_level;
 	use crate::resources::level::{DungeonLevel, PartyType};
@@ -232,7 +233,13 @@ mod tests {
 	fn same_rng_builds_same_level() {
 		fn build_level() -> DungeonLevel {
 			let rng = &mut ChaChaRng::seed_from_u64(17);
-			let stats = &mut DungeonStats { party_depth: PartyDepth::new(99), food_drops: 7 };
+			let stats = &mut DungeonStats {
+				party_depth: PartyDepth::new(99),
+				food_drops: 7,
+				fruit: DEFAULT_FRUIT.to_string(),
+				notes: NoteTables::new(),
+				wizard: false,
+			};
 			roll_level(PartyType::NoParty, Rogue::new(16), stats, rng)
 		}
 		let mut set = HashSet::new();
@@ -245,7 +252,13 @@ mod tests {
 	#[test]
 	fn no_party_works() {
 		let rng = &mut ChaChaRng::seed_from_u64(17);
-		let stats = &mut DungeonStats { party_depth: PartyDepth::new(99), food_drops: 7 };
+		let stats = &mut DungeonStats {
+			party_depth: PartyDepth::new(99),
+			food_drops: 7,
+			fruit: DEFAULT_FRUIT.to_string(),
+			notes: NoteTables::new(),
+			wizard: false,
+		};
 		let mut level = roll_level(PartyType::NoParty, Rogue::new(16), stats, rng);
 		level.print(true);
 		level.lighting_enabled = true;
@@ -254,7 +267,13 @@ mod tests {
 	#[test]
 	fn party_big_works() {
 		let rng = &mut ChaChaRng::seed_from_u64(17);
-		let stats = &mut DungeonStats { party_depth: PartyDepth::roll(rng), food_drops: (AMULET_LEVEL / 2 - 1) as usize };
+		let stats = &mut DungeonStats {
+			party_depth: PartyDepth::roll(rng),
+			food_drops: (AMULET_LEVEL / 2 - 1) as usize,
+			fruit: DEFAULT_FRUIT.to_string(),
+			notes: NoteTables::new(),
+			wizard: false,
+		};
 		let mut level = roll_level(PartyType::PartyBig, Rogue::new(AMULET_LEVEL as usize), stats, rng);
 		level.lighting_enabled = true;
 		level.print(true);
