@@ -128,6 +128,14 @@ impl DungeonLevel {
 }
 
 impl DungeonLevel {
+	pub fn find_monster(&self, mon_id: u64) -> Option<LevelSpot> {
+		for (spot, monster) in &self.monsters {
+			if monster.id == mon_id {
+				return Some(*spot);
+			}
+		}
+		None
+	}
 	pub fn try_monster(&self, spot: LevelSpot) -> Option<&Monster> {
 		self.monsters.get(&spot)
 	}
@@ -239,6 +247,7 @@ mod tests {
 				fruit: DEFAULT_FRUIT.to_string(),
 				notes: NoteTables::new(),
 				wizard: false,
+				m_moves: 0,
 			};
 			roll_level(PartyType::NoParty, Rogue::new(16), stats, rng)
 		}
@@ -258,6 +267,7 @@ mod tests {
 			fruit: DEFAULT_FRUIT.to_string(),
 			notes: NoteTables::new(),
 			wizard: false,
+			m_moves: 0,
 		};
 		let mut level = roll_level(PartyType::NoParty, Rogue::new(16), stats, rng);
 		level.print(true);
@@ -273,6 +283,7 @@ mod tests {
 			fruit: DEFAULT_FRUIT.to_string(),
 			notes: NoteTables::new(),
 			wizard: false,
+			m_moves: 0,
 		};
 		let mut level = roll_level(PartyType::PartyBig, Rogue::new(AMULET_LEVEL as usize), stats, rng);
 		level.lighting_enabled = true;

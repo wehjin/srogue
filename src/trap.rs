@@ -9,7 +9,7 @@ use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
 use crate::level::Level;
 use crate::message::sound_bell;
 use crate::motion::{is_direction, MoveDirection};
-use crate::player::Player;
+use crate::player::{Avatar, Player};
 use crate::prelude::ending::Ending;
 use crate::prelude::*;
 use crate::r#use::{take_a_nap, tele};
@@ -120,7 +120,8 @@ pub fn trap_player(row: usize, col: usize, game: &mut GameState) {
 		BearTrap => {
 			game.player.interrupt_and_slurp();
 			game.diary.add_entry(trap_message(t));
-			game.level.bear_trap = get_rand(4, 7);
+			let health = game.as_health_mut();
+			health.bear_trap = get_rand(4, 7);
 		}
 		TeleTrap => {
 			game.render_spot(game.player.to_spot());

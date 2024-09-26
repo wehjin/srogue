@@ -6,7 +6,7 @@ use crate::init::{clean_up, GameState, BYEBYE_STRING};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::machdep::{md_heed_signals, md_ignore_signals};
 use crate::pack::{has_amulet, unwear, unwield, wait_for_ack};
-use crate::player::Player;
+use crate::player::{Avatar, Player};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::*;
@@ -101,8 +101,8 @@ pub fn ask_quit(from_intrpt: bool, game: &mut GameState) -> bool {
 	let mut ocol = 0;
 	let mut buf = ['\x00'; 128];
 	if from_intrpt {
-		orow = game.player.rogue.row;
-		ocol = game.player.rogue.col;
+		orow = game.rogue_row();
+		ocol = game.rogue_col();
 		for i in 0..DCOLS {
 			buf[i] = backend::get_char((0, i).into());
 		}

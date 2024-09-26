@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct TimeEffect(usize);
 
 impl TimeEffect {

@@ -1,4 +1,5 @@
 use crate::objects::ObjectPack;
+use crate::player::RogueHealth;
 use crate::resources::rogue::depth::RogueDepth;
 use crate::ring::effects::RingEffects;
 use fighter::Fighter;
@@ -16,6 +17,7 @@ pub struct Rogue {
 	pub spot: RogueSpot,
 	pub ring_effects: RingEffects,
 	pub fighter: Fighter,
+	pub health: RogueHealth,
 }
 
 impl Rogue {
@@ -32,6 +34,7 @@ impl Rogue {
 			spot: RogueSpot::None,
 			ring_effects: Default::default(),
 			fighter: Default::default(),
+			health: Default::default(),
 		}
 	}
 	pub fn outfit(mut self, rng: &mut impl Rng) -> Self {

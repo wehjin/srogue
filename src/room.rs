@@ -266,7 +266,7 @@ impl Room {
 }
 
 pub fn visit_spot_area(row: i64, col: i64, game: &mut GameState) {
-	if game.player.blind.is_active() {
+	if game.player.health.blind.is_active() {
 		return;
 	}
 	for i in (row - 1)..=(row + 1) {
@@ -284,7 +284,7 @@ pub fn visit_spot_area(row: i64, col: i64, game: &mut GameState) {
 }
 
 pub fn visit_room(rn: usize, game: &mut GameState) {
-	if game.player.blind.is_active() {
+	if game.player.health.blind.is_active() {
 		return;
 	}
 	let wall_bounds = game.level.rooms[rn].to_wall_bounds();

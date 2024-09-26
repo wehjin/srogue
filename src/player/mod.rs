@@ -76,7 +76,7 @@ impl Player {
 		self.can_see(spot.row, spot.col, level)
 	}
 	pub fn can_see(&self, row: i64, col: i64, level: &Level) -> bool {
-		if self.blind.is_active() {
+		if self.health.blind.is_active() {
 			false
 		} else {
 			if self.cur_room.is_room(level.room(row, col)) && !self.cur_room.is_maze(level) {
@@ -109,17 +109,50 @@ pub struct Player {
 	pub rogue: Fighter,
 	pub party_counter: isize,
 	pub ring_effects: RingEffects,
+	pub health: RogueHealth,
+	pub extra_hp: isize,
+	pub less_hp: isize,
+}
+
+impl Avatar for Player {
+	fn as_health(&self) -> &RogueHealth { &self.health }
+	fn as_health_mut(&mut self) -> &mut RogueHealth { &mut self.health }
+	fn rogue_row(&self) -> i64 { self.rogue.row }
+	fn rogue_col(&self) -> i64 { self.rogue.col }
+	fn set_rogue_row_col(&mut self, row: i64, col: i64) {
+		self.rogue.row = row;
+		self.rogue.col = col;
+	}
+}
+
+pub trait Avatar {
+	fn as_health(&self) -> &RogueHealth;
+	fn as_health_mut(&mut self) -> &mut RogueHealth;
+	fn rogue_row(&self) -> i64;
+	fn rogue_col(&self) -> i64;
+	fn set_rogue_row_col(&mut self, row: i64, col: i64);
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default, Serialize, Deserialize, Hash)]
+pub struct RogueHealth {
 	pub halluc: TimeEffect,
 	pub blind: TimeEffect,
 	pub levitate: TimeEffect,
 	pub haste_self: TimeEffect,
 	pub confused: TimeEffect,
-	pub extra_hp: isize,
-	pub less_hp: isize,
+	pub bear_trap: usize,
+	pub being_held: bool,
+}
+
+impl RogueHealth {
+	pub fn reset_for_new_level(&mut self) {
+		self.bear_trap = 0;
+		self.being_held = false;
+	}
 }
 
 impl Player {
-	pub fn is_blind(&self) -> bool { self.blind.is_active() }
+	pub fn is_blind(&self) -> bool { self.health.blind.is_active() }
 	pub fn buffed_strength(&self) -> isize {
 		self.ring_effects.apply_add_strength(self.cur_strength())
 	}
@@ -252,7 +285,9 @@ impl Player {
 	pub fn ascend(&mut self) {
 		self.cur_depth -= 2;
 	}
-	pub fn reset_spot(&mut self) {
+
+	pub fn reset_for_new_level(&mut self) {
+		self.health.reset_for_new_level();
 		self.rogue.col = -1;
 		self.rogue.row = -1;
 	}
@@ -275,11 +310,7 @@ impl Player {
 			rogue: Fighter::default(),
 			party_counter: 0,
 			ring_effects: Default::default(),
-			halluc: Default::default(),
-			blind: Default::default(),
-			levitate: Default::default(),
-			haste_self: Default::default(),
-			confused: Default::default(),
+			health: RogueHealth::default(),
 			extra_hp: 0,
 			less_hp: 0,
 		}

@@ -1,3 +1,4 @@
+use rand::thread_rng;
 use OnceResult::Idle;
 
 use crate::actions::action_set::PlayerEvent;
@@ -47,11 +48,12 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> OnceResult {
 }
 
 fn dispatch_player_event(game: &mut GameState, player_event: PlayerEvent) -> Option<LevelResult> {
+	let rng = &mut thread_rng();
 	match player_event {
 		PlayerEvent::MoveRogue(direction, until) => {
 			match until {
 				Some(until) => { multiple_move_rogue(direction, until, game); }
-				None => { one_move_rogue(direction, true, game); }
+				None => { one_move_rogue(direction, true, game, rng); }
 			}
 			None
 		}

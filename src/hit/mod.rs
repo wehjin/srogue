@@ -1,4 +1,5 @@
 pub use damage_stat::*;
+use rand::thread_rng;
 
 use crate::init::GameState;
 use crate::level::add_exp;
@@ -6,7 +7,7 @@ use crate::message::sound_bell;
 use crate::monster::{mon_name, Monster};
 use crate::motion::{can_move, is_direction, one_move_rogue, MoveDirection};
 use crate::objects::{get_armor_class, Object};
-use crate::player::Player;
+use crate::player::{Avatar, Player};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::AMULET_LEVEL;
@@ -207,7 +208,8 @@ pub fn mon_damage(mon_id: u64, damage: isize, game: &mut GameState) -> MonDamage
 		}
 		add_exp(game.mash.monster(mon_id).kill_exp(), true, game);
 		if game.mash.monster_flags(mon_id).holds {
-			game.level.being_held = false;
+			let health = game.as_health_mut();
+			health.being_held = false;
 		}
 		let removed = game.mash.remove_monster(game.mash.monster(mon_id).id());
 		return MonDamageEffect::MonsterDies(removed);
@@ -263,7 +265,7 @@ pub fn fight(to_the_death: bool, game: &mut GameState) {
 	};
 	while game.player.fight_monster.is_some() {
 		let direction = MoveDirection::from(motion.to_char());
-		one_move_rogue(direction, false, game);
+		one_move_rogue(direction, false, game, &mut thread_rng());
 		if (!to_the_death && game.player.rogue.hp_current <= possible_damage)
 			|| game.player.interrupted
 			|| game.player.cleaned_up.is_some()

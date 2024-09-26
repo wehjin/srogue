@@ -3,6 +3,7 @@ use crate::init::GameState;
 use crate::level::{add_exp, LEVEL_POINTS};
 use crate::monster::show_monsters;
 use crate::objects::show_objects;
+use crate::player::Avatar;
 use crate::potions::kind::PotionKind;
 use crate::random::get_rand;
 use crate::render_system::RenderAction::MonstersFloorAndPlayer;
@@ -33,7 +34,7 @@ pub fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
 				}
 			}
 			game.diary.add_entry("you feel very sick now");
-			if game.player.halluc.is_active() {
+			if game.player.health.halluc.is_active() {
 				crate::r#use::unhallucinate(game);
 			}
 		}
@@ -42,16 +43,16 @@ pub fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
 			add_exp(1, true, game);
 		}
 		PotionKind::Blindness => {
-			if game.player.blind.is_inactive() {
+			if game.player.health.blind.is_inactive() {
 				game.diary.add_entry("a cloak of darkness falls around you");
 			}
-			game.player.blind.extend(get_rand(500, 800));
+			game.player.health.blind.extend(get_rand(500, 800));
 			show_blind(game);
 		}
 		PotionKind::Hallucination => {
 			game.diary.add_entry("oh wow, everything seems so cosmic");
 			let amount = get_rand(500, 800);
-			game.player.halluc.extend(amount);
+			game.player.health.halluc.extend(amount);
 		}
 		PotionKind::DetectMonster => {
 			show_monsters(game);
@@ -63,13 +64,13 @@ pub fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
 			if game.ground.is_empty() {
 				game.diary.add_entry(STRANGE_FEELING);
 			} else {
-				if game.player.blind.is_inactive() {
+				if game.player.health.blind.is_inactive() {
 					show_objects(game);
 				}
 			}
 		}
 		PotionKind::Confusion => {
-			let msg = if game.player.halluc.is_active() {
+			let msg = if game.player.health.halluc.is_active() {
 				"what a trippy feeling"
 			} else {
 				"you feel confused"
@@ -79,18 +80,19 @@ pub fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
 		}
 		PotionKind::Levitation => {
 			game.diary.add_entry("you start to float in the air");
-			game.player.levitate.extend(get_rand(15, 30));
-			game.level.bear_trap = 0;
-			game.level.being_held = false;
+			game.player.health.levitate.extend(get_rand(15, 30));
+			let health = game.as_health_mut();
+			health.bear_trap = 0;
+			health.being_held = false;
 		}
 		PotionKind::HasteSelf => {
 			game.diary.add_entry("you feel yourself moving much faster");
-			game.player.haste_self.extend(get_rand(11, 21));
-			game.player.haste_self.ensure_half_active();
+			game.player.health.haste_self.extend(get_rand(11, 21));
+			game.player.health.haste_self.ensure_half_active();
 		}
 		PotionKind::SeeInvisible => {
 			game.diary.add_entry(&format!("hmm, this potion tastes like {} juice", game.player.settings.fruit.trim()));
-			if game.player.blind.is_active() {
+			if game.player.health.blind.is_active() {
 				crate::r#use::unblind(game);
 			}
 			game.level.see_invisible = true;
@@ -122,21 +124,21 @@ fn potion_heal(extra: bool, game: &mut GameState) {
 		game.player.rogue.hp_current += restore as isize;
 		game.player.rogue.hp_current = game.player.rogue.hp_current.min(game.player.rogue.hp_max);
 	}
-	if game.player.blind.is_active() {
+	if game.player.health.blind.is_active() {
 		crate::r#use::unblind(game);
 	}
-	if game.player.confused.is_active() {
+	if game.player.health.confused.is_active() {
 		if extra {
 			crate::r#use::unconfuse(game);
 		} else {
-			game.player.confused.halve();
+			game.player.health.confused.halve();
 		}
 	}
-	if game.player.halluc.is_active() {
+	if game.player.health.halluc.is_active() {
 		if extra {
 			crate::r#use::unhallucinate(game);
 		} else {
-			game.player.halluc.halve();
+			game.player.health.halluc.halve();
 		}
 	}
 }

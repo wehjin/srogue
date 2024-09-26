@@ -34,7 +34,7 @@ fn drop_check(game: &mut GameState) -> bool {
 		return true;
 	}
 	if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_stairs() {
-		if game.player.levitate.is_active() {
+		if game.player.health.levitate.is_active() {
 			game.diary.add_entry("you're floating in the air!");
 			return false;
 		}

@@ -88,8 +88,6 @@ pub struct Level {
 	pub dungeon: [DungeonRow; DROWS],
 	pub see_invisible: bool,
 	pub detect_monster: bool,
-	pub bear_trap: usize,
-	pub being_held: bool,
 	pub party_room: Option<usize>,
 	pub new_level_message: Option<String>,
 	pub trap_door: bool,
@@ -105,8 +103,6 @@ impl Level {
 			dungeon: [DungeonRow::default(); DROWS],
 			see_invisible: false,
 			detect_monster: false,
-			bear_trap: 0,
-			being_held: false,
 			party_room: None,
 			new_level_message: None,
 			trap_door: false,
@@ -126,8 +122,6 @@ impl Level {
 		}
 		self.see_invisible = false;
 		self.detect_monster = false;
-		self.bear_trap = 0;
-		self.being_held = false;
 		self.party_room = None;
 	}
 }
@@ -260,7 +254,7 @@ pub fn connect_rooms(room1: usize, room2: usize, level_depth: isize, level: &mut
 impl GameState {
 	pub fn clear_level(&mut self) {
 		self.level.clear();
-		self.player.reset_spot();
+		self.player.reset_for_new_level();
 		self.player.cleaned_up = None;
 		self.mash.clear();
 		self.ground.clear();

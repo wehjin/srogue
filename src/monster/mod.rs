@@ -43,7 +43,7 @@ pub fn put_mons(game: &mut GameState) {
 }
 
 pub fn mv_mons(game: &mut GameState) {
-	if game.player.haste_self.is_half_active() {
+	if game.player.health.haste_self.is_half_active() {
 		return;
 	}
 
@@ -130,7 +130,8 @@ pub fn mv_monster(mon_id: u64, row: i64, col: i64, game: &mut GameState) {
 		}
 		return;
 	} else if game.mash.monster_flags(mon_id).already_moved {
-		game.mash.monster_flags_mut(mon_id).already_moved = false;
+		let flags = game.mash.monster_flags_mut(mon_id);
+		flags.already_moved = false;
 		return;
 	}
 	if game.mash.monster_flags(mon_id).flits && flit(mon_id, game) {
@@ -220,7 +221,8 @@ pub fn move_mon_to(mon_id: MonsterIndex, row: i64, col: i64, game: &mut GameStat
 		let entering = game.cell_at(from_spot).is_any_tunnel();
 		dr_course(game.mash.monster_mut(mon_id), entering, row, col, &game.player, &game.level);
 	} else {
-		game.mash.monster_mut(mon_id).spot = to_spot;
+		let monster = game.mash.monster_mut(mon_id);
+		monster.spot = to_spot;
 	}
 }
 
@@ -266,10 +268,10 @@ pub fn mon_can_go(monster: &Monster, row: i64, col: i64, player: &Player, level:
 }
 
 pub fn mon_name(monster: &Monster, player: &Player, level: &Level) -> &'static str {
-	if player.blind.is_active()
+	if player.health.blind.is_active()
 		|| (monster.m_flags.invisible && !player_defeats_invisibility(player, level)) {
 		"something"
-	} else if player.halluc.is_active() {
+	} else if player.health.halluc.is_active() {
 		MonsterKind::random_name()
 	} else {
 		monster.name()
@@ -315,7 +317,7 @@ pub fn put_wanderer(game: &mut GameState) {
 
 pub fn show_monsters(game: &mut GameState) {
 	game.level.detect_monster = true;
-	if game.player.blind.is_active() {
+	if game.player.health.blind.is_active() {
 		return;
 	}
 	for mon_id in game.mash.monster_ids() {
@@ -467,7 +469,8 @@ pub fn mv_aquatars(game: &mut GameState) {
 		if monster.kind == MonsterKind::Aquator
 			&& mon_can_go(monster, game.player.rogue.row, game.player.rogue.col, &game.player, &game.level, &game.ground) {
 			mv_monster(mon_id, game.player.rogue.row, game.player.rogue.col, game);
-			game.mash.monster_flags_mut(mon_id).already_moved = true;
+			let monster = game.mash.monster_flags_mut(mon_id);
+			monster.already_moved = true;
 		}
 	}
 }

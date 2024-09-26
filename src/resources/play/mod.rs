@@ -19,12 +19,12 @@ pub fn run(mut console: impl TextConsole) {
 }
 
 fn render_perform_await(state: RunState, effect: RunEffect, console: &mut impl TextConsole) -> Option<RunEvent> {
-	console.draw(state.to_lines());
+	console.draw_lines(state.to_lines());
 	let next_event = effect.perform_await(state, console);
 	next_event
 }
 
 pub trait TextConsole {
 	fn get_input(&self, mode: InputMode) -> PlayerInput;
-	fn draw(&mut self, lines: Vec<String>);
+	fn draw_lines(&mut self, lines: Vec<String>);
 }

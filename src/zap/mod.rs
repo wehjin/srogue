@@ -2,11 +2,12 @@ use rand::thread_rng;
 use wand_kind::WandKind;
 
 use crate::hit::rogue_hit;
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::level::Level;
 use crate::monster::{MonsterIndex, MonsterMash};
 use crate::motion::{get_dir_or_cancel, reg_move, MoveDirection};
 use crate::pack::pack_letter;
+use crate::player::Avatar;
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Wands;
 use crate::r#use::relight;
@@ -80,9 +81,13 @@ pub fn get_zapped_monster(dir: char, row: &mut i64, col: &mut i64, mash: &mut Mo
 }
 
 pub fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
-	let monster = game.mash.monster(mon_id);
-	let row = monster.spot.row;
-	let col = monster.spot.col;
+	let row;
+	let col;
+	{
+		let monster = game.mash.monster(mon_id);
+		row = monster.spot.row;
+		col = monster.spot.col;
+	}
 	match WandKind::from_index(which_kind as usize) {
 		WandKind::SlowMonster => {
 			let monster = game.mash.monster_mut(mon_id);
@@ -114,8 +119,9 @@ pub fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
 			monster.m_flags.invisible = true;
 		}
 		WandKind::Polymorph => {
-			if monster.m_flags.holds {
-				game.level.being_held = false;
+			if game.mash.monster(mon_id).m_flags.holds {
+				let health = game.as_health_mut();
+				health.being_held = false;
 			}
 			let mut morph_monster = roll_monster(game.player.cur_depth as usize, 0, &mut thread_rng());
 			morph_monster.set_spot(row, col);
@@ -123,11 +129,11 @@ pub fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
 				morph_monster.wake_up();
 			}
 			if let Some(fight_id) = game.player.fight_monster {
-				if fight_id == monster.id() {
+				if fight_id == game.mash.monster(mon_id).id() {
 					game.player.fight_monster = Some(morph_monster.id());
 				}
 			}
-			game.mash.remove_monster(monster.id());
+			game.mash.remove_monster(game.mash.monster(mon_id).id());
 			game.mash.add_monster(morph_monster);
 		}
 		WandKind::PutToSleep => {
@@ -140,10 +146,11 @@ pub fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
 			rogue_hit(mon_id, true, game);
 		}
 		WandKind::Cancellation => {
-			if monster.m_flags.holds {
-				game.level.being_held = false;
+			if game.mash.monster(mon_id).m_flags.holds {
+				let health = game.as_health_mut();
+				health.being_held = false;
 			}
-			if monster.m_flags.steals_item {
+			if game.mash.monster(mon_id).m_flags.steals_item {
 				let monster = game.mash.monster_mut(mon_id);
 				monster.drop_percent = 0;
 			}
@@ -166,7 +173,8 @@ pub fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
 
 fn tele_away(mon_id: MonsterIndex, game: &mut GameState) {
 	if game.mash.monster_flags(mon_id).holds {
-		game.level.being_held = false;
+		let health = game.as_health_mut();
+		health.being_held = false;
 	}
 	let tele_from = game.mash.monster(mon_id).spot;
 	let tele_to =
@@ -176,7 +184,8 @@ fn tele_away(mon_id: MonsterIndex, game: &mut GameState) {
 			&game.level,
 		);
 	game.level.cell_mut(tele_from).set_monster(false);
-	game.mash.monster_mut(mon_id).spot = tele_to;
+	let monster = game.as_monster_mut(mon_id);
+	monster.spot = tele_to;
 	game.level.cell_mut(tele_to).set_monster(true);
 	game.render_spot(tele_from);
 	game.render_spot(tele_to);

@@ -1,5 +1,5 @@
 use rand::prelude::SliceRandom;
-use rand::thread_rng;
+use rand::{thread_rng, Rng};
 
 use crate::hit::{get_hit_chance, get_weapon_damage, mon_damage};
 use crate::init::GameState;
@@ -14,7 +14,7 @@ use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Weapons;
 use crate::prelude::*;
 use crate::r#use::vanish;
-use crate::random::{get_rand, rand_percent};
+use crate::random::rand_percent;
 use crate::render_system::animation;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::un_put_hand;
@@ -295,8 +295,8 @@ impl Motion {
 			Left => (0, -1),
 		}
 	}
-	pub fn random8() -> Self {
-		match get_rand(1, 8) {
+	pub fn random8(rng: &mut impl Rng) -> Self {
+		match rng.gen_range(1..=8) {
 			1 => Up,
 			2 => Down,
 			3 => Right,

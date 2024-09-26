@@ -1,4 +1,3 @@
-use rand::thread_rng;
 use crate::armors::ArmorKind;
 use crate::hit::mon_hit;
 use crate::init::GameState;
@@ -8,6 +7,7 @@ use crate::level::{add_exp, hp_raise, Level, LEVEL_POINTS};
 use crate::monster::{mon_can_go, mon_name, move_mon_to, mv_mons, mv_monster, MonsterMash};
 use crate::motion::YOU_CAN_MOVE_AGAIN;
 use crate::objects::{alloc_object, get_armor_class, gr_object, place_at, Object, ObjectPack};
+use crate::player::Avatar;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
 use crate::prelude::*;
@@ -16,6 +16,7 @@ use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system::animation::animate_flame_broil;
 use crate::room::get_room_number;
 use crate::score::killed_by;
+use rand::thread_rng;
 
 pub const FLAME_NAME: &'static str = "flame";
 
@@ -26,8 +27,9 @@ pub fn special_hit(mon_id: u64, game: &mut GameState) {
 	if game.mash.monster_flags(mon_id).rusts {
 		rust(Some(mon_id), game);
 	}
-	if game.mash.monster_flags(mon_id).holds && game.player.levitate.is_inactive() {
-		game.level.being_held = true;
+	if game.mash.monster_flags(mon_id).holds && game.player.health.levitate.is_inactive() {
+		let health = game.as_health_mut();
+		health.being_held = true;
 	}
 	if game.mash.monster_flags(mon_id).freezes {
 		freeze(mon_id, game);
@@ -263,7 +265,7 @@ pub fn check_imitator(mon_id: u64, game: &mut GameState) -> bool {
 	if game.mash.monster(mon_id).imitates() {
 		game.mash.monster_mut(mon_id).wake_up();
 
-		if game.player.blind.is_inactive() {
+		if game.player.health.blind.is_inactive() {
 			let monster = game.mash.monster(mon_id);
 			let mon_name = mon_name(monster, &game.player, &game.level);
 			let mon_spot = monster.spot;

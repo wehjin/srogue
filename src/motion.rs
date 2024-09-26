@@ -1,9 +1,10 @@
+use rand::{thread_rng, Rng};
 use MoveResult::MoveFailed;
 
 use crate::actions::search::{search, SearchKind};
 use crate::components::hunger::{HungerLevel, FAINT_MOVES_LEFT, HUNGRY_MOVES_LEFT, STARVE_MOVES_LEFT, WEAK_MOVES_LEFT};
 use crate::hit::rogue_hit;
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::inventory::get_obj_desc;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
@@ -12,7 +13,7 @@ use crate::monster::{mv_mons, put_wanderer};
 use crate::motion::MoveResult::{Moved, StoppedOnSomething};
 use crate::odds::R_TELE_PERCENT;
 use crate::pack::{pick_up, PickUpResult};
-use crate::player::{Player, RoomMark};
+use crate::player::{Avatar, Player, RoomMark};
 use crate::prelude::ending::Ending;
 use crate::prelude::{DungeonSpot, MIN_ROW};
 use crate::r#use::{tele, unblind, unconfuse, unhallucinate};
@@ -21,6 +22,7 @@ use crate::render_system;
 use crate::render_system::darken_room;
 use crate::render_system::hallucinate::show_hallucination;
 use crate::resources::diary;
+use crate::resources::dice::roll_chance;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::resources::level::wake::wake_room_legacy;
 use crate::room::{visit_room, visit_spot_area};
@@ -37,83 +39,144 @@ pub enum MoveResult {
 	StoppedOnSomething,
 }
 
-pub fn one_move_rogue(direction: MoveDirection, pickup: bool, game: &mut GameState) -> MoveResult {
-	let real_direction = if game.player.confused.is_active() {
-		MoveDirection::random()
-	} else {
-		direction
-	};
-	let (row, col) = real_direction.apply(game.player.rogue.row, game.player.rogue.col);
-	if !can_move(game.player.rogue.row, game.player.rogue.col, row, col, &game.level) {
-		return MoveFailed;
-	}
-	if game.level.being_held || game.level.bear_trap > 0 {
-		if !game.level.dungeon[row as usize][col as usize].has_monster() {
-			if game.level.being_held {
-				game.player.interrupt_and_slurp();
-				game.diary.add_entry("you are being held");
+pub enum MoveEvent {
+	Start { direction: MoveDirection, pickup: bool },
+	Continue { row: i64, col: i64, rogue_row: i64, rogue_col: i64 },
+}
+pub enum MoveEffect {
+	Fail { consume_time: bool },
+	Teleport,
+	Fight { row: i64, col: i64 },
+	PrepToDoor { row: i64, col: i64, rogue_row: i64, rogue_col: i64 },
+	PrepDoorToTunnel { row: i64, col: i64, rogue_row: i64, rogue_col: i64 },
+	PrepTunnelToTunnel { row: i64, col: i64, rogue_row: i64, rogue_col: i64 },
+	PrepWithinRoom { row: i64, col: i64, rogue_row: i64, rogue_col: i64 },
+	Done { row: i64, col: i64, rogue_row: i64, rogue_col: i64 },
+}
+pub fn dispatch_move_event(event: MoveEvent, dungeon: &mut impl Dungeon, rng: &mut impl Rng) -> MoveEffect {
+	match event {
+		MoveEvent::Start { direction, pickup: _pickup } => {
+			let confused_direction = if dungeon.as_health().confused.is_active() { MoveDirection::random(rng) } else { direction };
+			let rogue_row = dungeon.rogue_row();
+			let rogue_col = dungeon.rogue_col();
+			let (row, col) = confused_direction.apply(rogue_row, rogue_col);
+			if !dungeon.rogue_can_move(row, col) {
+				return MoveEffect::Fail { consume_time: false };
+			}
+			let rogue_stuck = dungeon.as_health().being_held || dungeon.as_health().bear_trap > 0;
+			if rogue_stuck && !dungeon.has_monster(row, col) {
+				if dungeon.as_health().being_held {
+					dungeon.interrupt_and_slurp();
+					dungeon.as_diary_mut().add_entry("you are being held");
+					return MoveEffect::Fail { consume_time: false };
+				} else {
+					dungeon.as_diary_mut().add_entry("you are still stuck in the bear trap");
+					return MoveEffect::Fail { consume_time: true };
+				}
+			}
+			if dungeon.as_ring_effects().has_teleport() && roll_chance(R_TELE_PERCENT, rng) {
+				return MoveEffect::Teleport;
+			}
+			if dungeon.has_monster(row, col) {
+				return MoveEffect::Fight { row, col };
+			}
+			if dungeon.is_any_door_at(row, col) {
+				return MoveEffect::PrepToDoor { row, col, rogue_row, rogue_col };
+			} else if dungeon.is_any_tunnel_at(row, col) {
+				if dungeon.is_any_door_at(rogue_row, rogue_col) {
+					return MoveEffect::PrepDoorToTunnel { row, col, rogue_row, rogue_col };
+				} else {
+					return MoveEffect::PrepTunnelToTunnel { row, col, rogue_row, rogue_col };
+				}
 			} else {
-				game.diary.add_entry("you are still stuck in the bear trap");
-				reg_move(game);
+				// room to room, door to room
+				return MoveEffect::PrepWithinRoom { row, col, rogue_row, rogue_col };
 			}
-			return MoveFailed;
+		}
+		MoveEvent::Continue { row, col, rogue_row, rogue_col } => {
+			dungeon.set_rogue_row_col(row, col);
+			MoveEffect::Done { row, col, rogue_row, rogue_col }
 		}
 	}
-	if game.player.ring_effects.has_teleport() && rand_percent(R_TELE_PERCENT) {
-		tele(game);
-		return StoppedOnSomething;
-	}
-	if game.level.dungeon[row as usize][col as usize].has_monster() {
-		let mon_id = game.mash.monster_id_at_spot(row, col).expect("monster in mash at monster spot one_move_rogue");
-		rogue_hit(mon_id, false, game);
-		reg_move(game);
-		return MoveFailed;
-	}
+}
 
-	let to_cell = game.level.cell(DungeonSpot { row, col });
-	if to_cell.is_any_door() {
-		match game.player.cur_room {
-			RoomMark::None => {}
-			RoomMark::Passage => {
-				// tunnel to door
-				game.player.cur_room = game.level.room(row, col);
-				let cur_rn = game.player.cur_room.rn().expect("current room should be the room at rol,col");
-				visit_room(cur_rn, game);
-				wake_room_legacy(cur_rn, true, row, col, game);
+pub fn one_move_rogue(direction: MoveDirection, pickup: bool, game: &mut GameState, rng: &mut impl Rng) -> MoveResult {
+	let mut next_event = Some(MoveEvent::Start { direction, pickup });
+	while let Some(event) = next_event.take() {
+		match dispatch_move_event(event, game, rng) {
+			MoveEffect::Fail { consume_time } => {
+				// TODO Call to reg_move into dispatch_move_event.
+				if consume_time {
+					reg_move(game);
+				}
+				return MoveFailed;
 			}
-			RoomMark::Cavern(_) => {
-				// room to door
+			MoveEffect::Teleport => {
+				// TODO Call to reg_move into dispatch_move_event.
+				tele(game);
+				return StoppedOnSomething;
+			}
+			MoveEffect::Fight { row, col } => {
+				// TODO Call to reg_move into dispatch_move_event.
+				let mon_id = game.mash.monster_id_at_spot(row, col).expect("monster in mash at monster spot one_move_rogue");
+				rogue_hit(mon_id, false, game);
+				reg_move(game);
+				return MoveFailed;
+			}
+			MoveEffect::PrepToDoor { row, col, rogue_row, rogue_col } => {
+				// TODO Call to reg_move into dispatch_move_event.
+				match game.player.cur_room {
+					RoomMark::None => {}
+					RoomMark::Passage => {
+						// tunnel to door
+						game.player.cur_room = game.level.room(row, col);
+						let cur_rn = game.player.cur_room.rn().expect("current room should be the room at rol,col");
+						visit_room(cur_rn, game);
+						wake_room_legacy(cur_rn, true, row, col, game);
+					}
+					RoomMark::Cavern(_) => {
+						// room to door
+						visit_spot_area(row, col, game);
+					}
+				}
+				next_event = Some(MoveEvent::Continue { row, col, rogue_row, rogue_col })
+			}
+			MoveEffect::PrepDoorToTunnel { row, col, rogue_row, rogue_col } => {
+				// door to tunnel
 				visit_spot_area(row, col, game);
+				let rn = game.player.cur_room.rn().expect("player room not an area moving from door to passage");
+				wake_room_legacy(rn, false, rogue_row, rogue_col, game);
+				darken_room(rn, game);
+				game.player.cur_room = RoomMark::Passage;
+				next_event = Some(MoveEvent::Continue { row, col, rogue_row, rogue_col })
+			}
+			MoveEffect::PrepTunnelToTunnel { row, col, rogue_row, rogue_col } => {
+				visit_spot_area(row, col, game);
+				next_event = Some(MoveEvent::Continue { row, col, rogue_row, rogue_col })
+			}
+			MoveEffect::PrepWithinRoom { row, col, rogue_row, rogue_col } => {
+				next_event = Some(MoveEvent::Continue { row, col, rogue_row, rogue_col })
+			}
+			MoveEffect::Done { row, col, rogue_row, rogue_col } => {
+				let vacated = DungeonSpot { row: rogue_row, col: rogue_col };
+				let occupied = DungeonSpot { row, col };
+				game.render_spot(vacated);
+				game.render_spot(occupied);
+				if !game.player.settings.jump {
+					render_system::refresh(game);
+				}
 			}
 		}
-	} else if game.player.cur_cell(&game.level).is_any_door() && to_cell.is_any_tunnel() {
-		// door to tunnel
-		visit_spot_area(row, col, game);
-		let rn = game.player.cur_room.rn().expect("player room not an area moving from door to passage");
-		wake_room_legacy(rn, false, game.player.rogue.row, game.player.rogue.col, game);
-		darken_room(rn, game);
-		game.player.cur_room = RoomMark::Passage;
-	} else if to_cell.is_any_tunnel() {
-		// tunnel to tunnel.
-		visit_spot_area(row, col, game);
-	} else {
-		// room to room, door to room
 	}
-	let vacated_spot = game.player.to_spot();
-	game.render_spot(vacated_spot);
-	game.player.rogue.row = row;
-	game.player.rogue.col = col;
-	let occupied_post = game.player.to_spot();
-	game.render_spot(occupied_post);
-	if !game.player.settings.jump {
-		render_system::refresh(game);
-	}
+	// TODO Move this portion into dispatch_move_event.
+	let row = game.rogue_row();
+	let col = game.rogue_col();
 	let player_cell = game.level.dungeon[row as usize][col as usize];
 	if player_cell.has_object() {
 		if !pickup {
 			stopped_on_something_with_moved_onto_message(row, col, game)
 		} else {
-			if game.player.levitate.is_active() {
+			if game.as_health().levitate.is_active() {
 				StoppedOnSomething
 			} else {
 				match pick_up(row, col, game) {
@@ -135,7 +198,7 @@ pub fn one_move_rogue(direction: MoveDirection, pickup: bool, game: &mut GameSta
 			}
 		}
 	} else if player_cell.is_any_door() || player_cell.is_stairs() || player_cell.is_any_trap() {
-		if game.player.levitate.is_inactive() && player_cell.is_any_trap() {
+		if game.as_health().levitate.is_inactive() && player_cell.is_any_trap() {
 			trap_player(row as usize, col as usize, game);
 		}
 		reg_move(game);
@@ -164,7 +227,7 @@ fn moved_unless_hungry_or_confused(game: &mut GameState) -> MoveResult {
 		/* fainted from hunger */
 		StoppedOnSomething
 	} else {
-		if game.player.confused.is_active() {
+		if game.player.health.confused.is_active() {
 			StoppedOnSomething
 		} else {
 			Moved
@@ -174,13 +237,14 @@ fn moved_unless_hungry_or_confused(game: &mut GameState) -> MoveResult {
 
 
 pub fn multiple_move_rogue(direction: MoveDirection, until: MoveUntil, game: &mut GameState) {
+	let rng = &mut thread_rng();
 	match until {
 		MoveUntil::Obstacle => {
 			loop {
 				if game.player.interrupted {
 					break;
 				}
-				if one_move_rogue(direction, true, game) != Moved {
+				if one_move_rogue(direction, true, game, rng) != Moved {
 					break;
 				}
 				render_system::refresh(game);
@@ -190,7 +254,7 @@ pub fn multiple_move_rogue(direction: MoveDirection, until: MoveUntil, game: &mu
 			loop {
 				let row = game.player.rogue.row;
 				let col = game.player.rogue.col;
-				let result = one_move_rogue(direction, true, game);
+				let result = one_move_rogue(direction, true, game, rng);
 				if result == MoveFailed || result == StoppedOnSomething || game.player.interrupted {
 					break;
 				}
@@ -217,10 +281,10 @@ pub fn is_passable(row: i64, col: i64, level: &Level) -> bool {
 }
 
 pub fn next_to_something(drow: i64, dcol: i64, player: &Player, level: &Level) -> bool {
-	if player.confused.is_active() {
+	if player.health.confused.is_active() {
 		return true;
 	}
-	if player.blind.is_active() {
+	if player.health.blind.is_active() {
 		return false;
 	}
 	let mut row;
@@ -394,7 +458,7 @@ fn random_faint(game: &mut GameState) -> bool {
 }
 
 pub fn reg_move(game: &mut GameState) -> bool {
-	let hunger_check = if game.player.rogue.moves_left <= HUNGRY_MOVES_LEFT || game.player.cur_depth >= game.player.max_depth {
+	let hunger_check = if game.as_fighter().moves_left <= HUNGRY_MOVES_LEFT || game.is_max_depth() {
 		check_hunger(game)
 	} else {
 		HungerCheckResult::StillWalking
@@ -403,48 +467,50 @@ pub fn reg_move(game: &mut GameState) -> bool {
 		return true;
 	}
 	mv_mons(game);
-	game.mash.m_moves += 1;
-	if game.mash.m_moves >= 120 {
-		game.mash.m_moves = 0;
+	let next_m_move = game.m_moves() + 1;
+	if next_m_move >= 120 {
+		*game.m_moves_mut() = 0;
 		put_wanderer(game);
+	} else {
+		*game.m_moves_mut() = next_m_move;
 	}
-	if game.player.halluc.is_active() {
-		game.player.halluc.decr();
-		if game.player.halluc.is_active() {
+	if game.as_health().halluc.is_active() {
+		game.as_health_mut().halluc.decr();
+		if game.as_health().halluc.is_active() {
 			show_hallucination(game);
 		} else {
 			unhallucinate(game);
 		}
 	}
-	if game.player.blind.is_active() {
-		game.player.blind.decr();
-		if game.player.blind.is_inactive() {
+	if game.as_health().blind.is_active() {
+		game.as_health_mut().blind.decr();
+		if game.as_health().blind.is_inactive() {
 			unblind(game);
 		}
 	}
-	if game.player.confused.is_active() {
-		game.player.confused.decr();
-		if game.player.confused.is_inactive() {
+	if game.as_health().confused.is_active() {
+		game.as_health_mut().confused.decr();
+		if game.as_health().confused.is_inactive() {
 			unconfuse(game);
 		}
 	}
-	if game.level.bear_trap > 0 {
-		game.level.bear_trap -= 1;
+	if game.as_health().bear_trap > 0 {
+		game.as_health_mut().bear_trap -= 1;
 	}
-	if game.player.levitate.is_active() {
-		game.player.levitate.decr();
-		if game.player.levitate.is_inactive() {
-			game.player.interrupt_and_slurp();
-			game.diary.add_entry("you float gently to the ground");
+	if game.as_health().levitate.is_active() {
+		game.as_health_mut().levitate.decr();
+		if game.as_health().levitate.is_inactive() {
+			game.interrupt_and_slurp();
+			game.as_diary_mut().add_entry("you float gently to the ground");
 			if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_any_trap() {
 				trap_player(game.player.rogue.row as usize, game.player.rogue.col as usize, game);
 			}
 		}
 	}
-	if game.player.haste_self.is_active() {
-		game.player.haste_self.decr();
-		if game.player.haste_self.is_inactive() {
-			game.diary.add_entry("you feel yourself slowing down");
+	if game.as_health().haste_self.is_active() {
+		game.as_health_mut().haste_self.decr();
+		if game.as_health().haste_self.is_inactive() {
+			game.as_diary_mut().add_entry("you feel yourself slowing down");
 		}
 	}
 	game.heal_player();
@@ -496,8 +562,8 @@ impl From<char> for MoveDirection {
 }
 
 impl MoveDirection {
-	pub fn random() -> Self {
-		MoveDirection::from(Motion::random8().to_char())
+	pub fn random(rng: &mut impl Rng) -> Self {
+		MoveDirection::from(Motion::random8(rng).to_char())
 	}
 	pub fn apply_confined(&self, row: i64, col: i64) -> (usize, usize) {
 		let (free_row, free_col) = self.apply(row, col);

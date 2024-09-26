@@ -2,6 +2,7 @@ use crate::console::ConsoleError;
 use crate::init::{init, InitError, InitResult};
 use crate::level::{make_level, put_player_legacy};
 use crate::monster::put_mons;
+use crate::motion::MoveDirection;
 use crate::objects::{put_objects, put_stairs};
 use crate::resources::play::{run, TextConsole};
 use crate::resources::player::{InputMode, PlayerInput};
@@ -76,7 +77,15 @@ impl TextConsole for TerminalConsole {
 						InputMode::Any => match key.code {
 							KeyCode::Char(char) => match char {
 								'?' => PlayerInput::Help,
+								'b' => PlayerInput::Arrow(MoveDirection::DownLeft),
+								'h' => PlayerInput::Arrow(MoveDirection::Left),
 								'i' => PlayerInput::Menu,
+								'j' => PlayerInput::Arrow(MoveDirection::Down),
+								'k' => PlayerInput::Arrow(MoveDirection::Up),
+								'l' => PlayerInput::Arrow(MoveDirection::Right),
+								'n' => PlayerInput::Arrow(MoveDirection::DownRight),
+								'u' => PlayerInput::Arrow(MoveDirection::UpRight),
+								'y' => PlayerInput::Arrow(MoveDirection::UpLeft),
 								_ => PlayerInput::Close,
 							},
 							_ => PlayerInput::Close,
@@ -91,7 +100,7 @@ impl TextConsole for TerminalConsole {
 			};
 		}
 	}
-	fn draw(&mut self, lines: Vec<String>) {
+	fn draw_lines(&mut self, lines: Vec<String>) {
 		self.0.draw(|frame| {
 			let frame_area = frame.area();
 			for row in 0..lines.len() {

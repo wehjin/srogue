@@ -29,5 +29,6 @@ fn await_player_move(state: RunState, console: &impl TextConsole) -> RunEvent {
 		PlayerInput::Close => RunEvent::PlayerQuit(state),
 		PlayerInput::Help => RunEvent::PlayerOpenHelp(state),
 		PlayerInput::Menu => RunEvent::PlayerOpenInventory(state),
+		PlayerInput::Arrow(direction) => RunEvent::PlayerMove(state, direction),
 	}
 }

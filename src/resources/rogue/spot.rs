@@ -1,6 +1,6 @@
-use crate::resources::level::DungeonLevel;
 use crate::resources::level::room_id::RoomId;
 use crate::resources::level::size::LevelSpot;
+use crate::resources::level::DungeonLevel;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Default, Hash)]
 pub enum RogueSpot {
@@ -11,6 +11,14 @@ pub enum RogueSpot {
 }
 
 impl RogueSpot {
+	pub fn from_spot(spot: LevelSpot, level: &DungeonLevel) -> Self {
+		if let Some(room) = level.room_at_spot(spot) {
+			if room.is_vault() {
+				return RogueSpot::Vault(spot, room);
+			}
+		}
+		RogueSpot::Passage(spot)
+	}
 	pub fn is_spot(&self, spot: LevelSpot) -> bool {
 		self.try_spot() == Some(&spot)
 	}

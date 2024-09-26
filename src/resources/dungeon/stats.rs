@@ -10,6 +10,7 @@ pub struct DungeonStats {
 	pub fruit: String,
 	pub notes: NoteTables,
 	pub wizard: bool,
+	pub m_moves: usize,
 }
 
 pub const DEFAULT_FRUIT: &str = "slime-mold";
@@ -22,6 +23,7 @@ impl DungeonStats {
 			fruit: DEFAULT_FRUIT.to_string(),
 			notes: NoteTables::new(),
 			wizard: false,
+			m_moves: 0,
 		}
 	}
 	pub fn is_party_depth(&self, rogue_depth: &RogueDepth) -> bool {

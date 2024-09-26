@@ -7,14 +7,17 @@ use crate::init::InitError::NoConsole;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
 use crate::machdep::md_heed_signals;
-use crate::monster::MonsterMash;
+use crate::monster::{Monster, MonsterMash};
+use crate::motion::can_move;
 use crate::objects::ObjectPack;
-use crate::player::Player;
+use crate::player::{Avatar, Player, RogueHealth};
 use crate::prelude::DungeonSpot;
 use crate::random::get_rand;
 use crate::render_system::RenderAction;
 use crate::resources::diary::Diary;
 use crate::resources::healer::Healer;
+use crate::resources::rogue::fighter::Fighter;
+use crate::ring::effects::RingEffects;
 use crate::ring::ring_stats;
 use crate::room::RoomBounds;
 use crate::save::restore;
@@ -94,6 +97,44 @@ pub struct GameState {
 	pub turn: GameTurn,
 	pub render_queue: Vec<RenderAction>,
 	pub stats_changed: bool,
+}
+
+pub trait Dungeon: Avatar {
+	fn rogue_can_move(&self, row: i64, col: i64) -> bool;
+	fn has_monster(&self, row: i64, col: i64) -> bool;
+	fn as_monster_mut(&mut self, mon_id: u64) -> &mut Monster;
+	fn interrupt_and_slurp(&mut self);
+	fn as_diary_mut(&mut self) -> &mut Diary;
+	fn as_fighter(&self) -> &Fighter;
+	fn is_max_depth(&self) -> bool;
+	fn m_moves(&self) -> usize;
+	fn m_moves_mut(&mut self) -> &mut usize;
+	fn as_ring_effects(&self) -> &RingEffects;
+	fn is_any_door_at(&self, row: i64, col: i64) -> bool;
+	fn is_any_tunnel_at(&self, row: i64, col: i64) -> bool;
+}
+
+impl Dungeon for GameState {
+	fn rogue_can_move(&self, row: i64, col: i64) -> bool { can_move(self.rogue_row(), self.rogue_col(), row, col, &self.level) }
+	fn has_monster(&self, row: i64, col: i64) -> bool { self.level.dungeon[row as usize][col as usize].has_monster() }
+	fn as_monster_mut(&mut self, mon_id: u64) -> &mut Monster { self.mash.monster_mut(mon_id) }
+	fn interrupt_and_slurp(&mut self) { self.player.interrupt_and_slurp(); }
+	fn as_diary_mut(&mut self) -> &mut Diary { &mut self.diary }
+	fn as_fighter(&self) -> &Fighter { &self.player.rogue }
+	fn is_max_depth(&self) -> bool { self.player.cur_depth >= self.player.max_depth }
+	fn m_moves(&self) -> usize { self.mash.m_moves }
+	fn m_moves_mut(&mut self) -> &mut usize { &mut self.mash.m_moves }
+	fn as_ring_effects(&self) -> &RingEffects { &self.player.ring_effects }
+	fn is_any_door_at(&self, row: i64, col: i64) -> bool { self.level.cell(DungeonSpot { row, col }).is_any_door() }
+	fn is_any_tunnel_at(&self, row: i64, col: i64) -> bool { self.level.cell(DungeonSpot { row, col }).is_any_tunnel() }
+}
+
+impl Avatar for GameState {
+	fn as_health(&self) -> &RogueHealth { self.player.as_health() }
+	fn as_health_mut(&mut self) -> &mut RogueHealth { self.player.as_health_mut() }
+	fn rogue_row(&self) -> i64 { self.player.rogue_row() }
+	fn rogue_col(&self) -> i64 { self.player.rogue_col() }
+	fn set_rogue_row_col(&mut self, row: i64, col: i64) { self.player.set_rogue_row_col(row, col) }
 }
 
 impl GameState {

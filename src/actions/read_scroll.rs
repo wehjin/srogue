@@ -24,7 +24,7 @@ impl GameUpdater for ReadScroll {
 }
 
 fn read_scroll(game: &mut GameState) {
-	if game.player.blind.is_active() {
+	if game.player.health.blind.is_active() {
 		game.diary.add_entry("You can't see to read the scroll.");
 		return;
 	}
@@ -106,7 +106,7 @@ fn read_scroll(game: &mut GameState) {
 							}
 						}
 						ScrollKind::RemoveCurse => {
-							let msg = if game.player.halluc.is_active() {
+							let msg = if game.player.health.halluc.is_active() {
 								"you feel in touch with the universal oneness"
 							} else {
 								"you feel as though someone is watching over you"

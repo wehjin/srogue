@@ -4,7 +4,7 @@ use crate::monster::{mv_mons, show_monsters};
 use crate::motion::{reg_move, YOU_CAN_MOVE_AGAIN};
 use crate::objects::ObjectId;
 use crate::pack::{take_from_pack, unwear, unwield};
-use crate::player::{Player, RoomMark};
+use crate::player::{Avatar, Player, RoomMark};
 use crate::potions::colors::ALL_POTION_COLORS;
 use crate::potions::kind::POTIONS;
 use crate::random::get_rand;
@@ -41,24 +41,25 @@ pub fn tele(game: &mut GameState) {
 	render_system::show_darkened_room_after_player_exit(exit_spot, game);
 	let avoid_room = game.player.cur_room;
 	put_player_legacy(avoid_room, game);
-	game.level.being_held = false;
-	game.level.bear_trap = 0;
+	let health = game.as_health_mut();
+	health.being_held = false;
+	health.bear_trap = 0;
 }
 
 
 pub fn unhallucinate(game: &mut GameState) {
-	game.player.halluc.clear();
+	game.player.health.halluc.clear();
 	relight(game);
 	game.player.interrupt_and_slurp();
 	game.diary.add_entry("everything looks SO boring now");
 }
 
 pub fn unblind(game: &mut GameState) {
-	game.player.blind.clear();
+	game.player.health.blind.clear();
 	game.player.interrupt_and_slurp();
 	game.diary.add_entry("the veil of darkness lifts");
 	relight(game);
-	if game.player.halluc.is_active() {
+	if game.player.health.halluc.is_active() {
 		show_hallucination(game);
 	}
 	if game.level.detect_monster {
@@ -91,7 +92,7 @@ pub fn take_a_nap(game: &mut GameState) {
 }
 
 pub fn get_ench_color(player: &Player) -> &'static str {
-	if player.halluc.is_active() {
+	if player.health.halluc.is_active() {
 		ALL_POTION_COLORS[get_rand(0, POTIONS - 1)].name()
 	} else {
 		"blue "
@@ -100,12 +101,12 @@ pub fn get_ench_color(player: &Player) -> &'static str {
 
 pub fn confuse(player: &mut Player) {
 	let amount = get_rand(12, 22);
-	player.confused.extend(amount);
+	player.health.confused.extend(amount);
 }
 
 pub fn unconfuse(game: &mut GameState) {
-	game.player.confused.clear();
-	let feeling = if game.player.halluc.is_active() { "trippy" } else { "confused" };
+	game.player.health.confused.clear();
+	let feeling = if game.player.health.halluc.is_active() { "trippy" } else { "confused" };
 	let msg = format!("you feel less {} now", feeling);
 	game.player.interrupt_and_slurp();
 	game.diary.add_entry(&msg);
