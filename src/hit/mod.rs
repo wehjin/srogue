@@ -5,7 +5,7 @@ use crate::init::{Dungeon, GameState};
 use crate::level::add_exp;
 use crate::message::sound_bell;
 use crate::monster::{mon_name, Monster};
-use crate::motion::{can_move, is_direction, one_move_rogue, MoveDirection};
+use crate::motion::{can_move, is_direction, one_move_rogue_legacy, MoveDirection};
 use crate::objects::{get_armor_class, Object};
 use crate::player::Player;
 use crate::prelude::ending::Ending;
@@ -270,7 +270,7 @@ pub fn fight(to_the_death: bool, game: &mut GameState) {
 	};
 	while game.player.fight_monster.is_some() {
 		let direction = MoveDirection::from(motion.to_char());
-		one_move_rogue(direction, false, game, &mut thread_rng());
+		one_move_rogue_legacy(direction, false, game, &mut thread_rng());
 		if (!to_the_death && game.player.rogue.hp_current <= possible_damage)
 			|| game.player.interrupted
 			|| game.diary.cleaned_up.is_some()

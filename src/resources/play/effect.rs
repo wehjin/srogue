@@ -1,24 +1,32 @@
+use crate::resources::play::event::message::MessageEvent;
 use crate::resources::play::event::RunEvent;
 use crate::resources::play::state::RunState;
 use crate::resources::play::TextConsole;
 use crate::resources::player::{InputMode, PlayerInput};
 
+#[derive(Debug)]
 pub enum RunEffect {
-	Exit,
 	AwaitPlayerMove,
 	AwaitModalClose,
+	AwaitMessageAck,
 }
 
 impl RunEffect {
-	pub fn perform_await(&self, state: RunState, console: &impl TextConsole) -> Option<RunEvent> {
-		let next_event = match self {
-			RunEffect::Exit => return None,
+	pub fn perform_and_await(self, state: RunState, console: &mut impl TextConsole) -> RunEvent {
+		match self {
 			RunEffect::AwaitPlayerMove => await_player_move(state, console),
 			RunEffect::AwaitModalClose => await_modal_close(state, console),
-		};
-		Some(next_event)
+			RunEffect::AwaitMessageAck => await_message_ack(state, console),
+		}
 	}
 }
+
+fn await_message_ack(state: RunState, console: &impl TextConsole) -> RunEvent {
+	let _input = console.get_input(InputMode::Alert);
+	let message_event = MessageEvent::PostAck(state);
+	RunEvent::Message(message_event)
+}
+
 fn await_modal_close(state: RunState, console: &impl TextConsole) -> RunEvent {
 	let _input = console.get_input(InputMode::Alert);
 	RunEvent::PlayerCloseModal(state)
@@ -26,7 +34,7 @@ fn await_modal_close(state: RunState, console: &impl TextConsole) -> RunEvent {
 
 fn await_player_move(state: RunState, console: &impl TextConsole) -> RunEvent {
 	match console.get_input(InputMode::Any) {
-		PlayerInput::Close => RunEvent::PlayerQuit(state),
+		PlayerInput::Close | PlayerInput::Space => RunEvent::PlayerQuit(state),
 		PlayerInput::Help => RunEvent::PlayerOpenHelp(state),
 		PlayerInput::Menu => RunEvent::PlayerOpenInventory(state),
 		PlayerInput::Arrow(direction) => RunEvent::PlayerMove(state, direction),

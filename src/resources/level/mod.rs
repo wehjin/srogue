@@ -17,7 +17,7 @@ use rand::Rng;
 use std::collections::BTreeMap;
 use std::ops::Index;
 
-#[derive(Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct DungeonLevel {
 	pub depth: usize,
 	pub is_max: bool,

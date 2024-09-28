@@ -1,7 +1,10 @@
 use crate::pack::wait_for_ack;
 use crate::render_system::backend;
 
+#[derive(Debug, Clone)]
 pub struct Diary {
+	pub message_line: Option<String>,
+	pub next_message_line: Option<String>,
 	pub current_page: Vec<String>,
 	pub previous_page: Vec<String>,
 	pub rewound: bool,
@@ -13,6 +16,8 @@ pub struct Diary {
 impl Default for Diary {
 	fn default() -> Self {
 		Self {
+			message_line: None,
+			next_message_line: None,
 			current_page: vec![],
 			previous_page: vec![],
 			rewound: false,

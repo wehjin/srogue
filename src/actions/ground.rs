@@ -102,6 +102,6 @@ impl GameUpdater for MoveOnto {
 pub fn move_onto(game: &mut GameState) {
 	let ch = motion::get_dir_or_cancel(game);
 	if ch != CANCEL_CHAR {
-		motion::one_move_rogue(MoveDirection::from(ch), false, game, &mut thread_rng());
+		motion::one_move_rogue_legacy(MoveDirection::from(ch), false, game, &mut thread_rng());
 	}
 }

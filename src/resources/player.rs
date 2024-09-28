@@ -5,6 +5,7 @@ pub enum PlayerInput {
 	Help,
 	Menu,
 	Arrow(MoveDirection),
+	Space,
 }
 
 pub enum InputMode {

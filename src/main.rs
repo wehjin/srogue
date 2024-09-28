@@ -77,6 +77,7 @@ impl TextConsole for TerminalConsole {
 						InputMode::Any => match key.code {
 							KeyCode::Char(char) => match char {
 								'?' => PlayerInput::Help,
+								' ' => PlayerInput::Space,
 								'b' => PlayerInput::Arrow(MoveDirection::DownLeft),
 								'h' => PlayerInput::Arrow(MoveDirection::Left),
 								'i' => PlayerInput::Menu,

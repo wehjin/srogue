@@ -25,6 +25,9 @@ use crate::resources::diary;
 use crate::resources::dice::roll_chance;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::resources::level::wake::wake_room_legacy;
+use crate::resources::play::context::RunContext;
+use crate::resources::play::event::RunStep;
+use crate::resources::play::state::RunState;
 use crate::room::{visit_room, visit_spot_area};
 use crate::score::killed_by;
 use crate::throw::Motion;
@@ -53,6 +56,7 @@ pub enum MoveEffect {
 	PrepWithinRoom { row: i64, col: i64, rogue_row: i64, rogue_col: i64 },
 	Done { row: i64, col: i64, rogue_row: i64, rogue_col: i64 },
 }
+
 pub fn dispatch_move_event(event: MoveEvent, dungeon: &mut impl Dungeon, rng: &mut impl Rng) -> MoveEffect {
 	match event {
 		MoveEvent::Start { direction, pickup: _pickup } => {
@@ -100,7 +104,59 @@ pub fn dispatch_move_event(event: MoveEvent, dungeon: &mut impl Dungeon, rng: &m
 	}
 }
 
-pub fn one_move_rogue(direction: MoveDirection, pickup: bool, game: &mut GameState, rng: &mut impl Rng) -> MoveResult {
+pub fn one_move_rogue<R: Rng>(direction: MoveDirection, mut game: RunState, ctx: &mut RunContext<R>) -> RunStep {
+	// 	let rogue_row = game.rogue_row();
+	// 	let rogue_col = game.rogue_col();
+	// 	let confused_direction = if game.as_health().confused.is_active() {
+	// 		MoveDirection::random(ctx.rng())
+	// 	} else {
+	// 		direction
+	// 	};
+	// 	let (spot_row, spot_col) = confused_direction.apply(rogue_row, rogue_col);
+	// 	let rogue_can_move_to_spot = game.rogue_can_move(spot_row, spot_col);
+	// 	if !rogue_can_move_to_spot {
+	// 		return RunStep { state: game, effect: RunEffect::AwaitPlayerMove };
+	// 	}
+	// 	let monster_in_spot = game.has_monster(spot_row, spot_col);
+	//
+	// 	let rogue_is_held = game.as_health().being_held;
+	// 	let rogue_in_bear_trap = game.as_health().bear_trap > 0;
+	// 	if rogue_is_held || rogue_in_bear_trap {
+	// 		if !monster_in_spot {
+	// 			if rogue_is_held {
+	// 				game.interrupt_and_slurp();
+	// 				game.as_diary_mut().add_entry("you are being held");
+	// 				return MoveEffect::Fail { consume_time: false };
+	// 			} else {
+	// 				game.as_diary_mut().add_entry("you are still stuck in the bear trap");
+	// 				return MoveEffect::Fail { consume_time: true };
+	// 			}
+	// 		}
+	// 	}
+	// 	if (rogue_is_held || rogue_in_bear_trap) && !monster_in_spot {}
+	// 	if game.as_ring_effects().has_teleport() && roll_chance(R_TELE_PERCENT, rng) {
+	// 		return MoveEffect::Teleport;
+	// 	}
+	// 	if monster_in_spot {
+	// 		return MoveEffect::Fight { row: spot_row, col: spot_col };
+	// 	}
+	// 	if game.is_any_door_at(spot_row, spot_col) {
+	// 		return MoveEffect::PrepToDoor { row: spot_row, col: spot_col, rogue_row, rogue_col };
+	// 	} else if game.is_any_tunnel_at(spot_row, spot_col) {
+	// 		if game.is_any_door_at(rogue_row, rogue_col) {
+	// 			return MoveEffect::PrepDoorToTunnel { row: spot_row, col: spot_col, rogue_row, rogue_col };
+	// 		} else {
+	// 			return MoveEffect::PrepTunnelToTunnel { row: spot_row, col: spot_col, rogue_row, rogue_col };
+	// 		}
+	// 	} else {
+	// 		// room to room, door to room
+	// 		return MoveEffect::PrepWithinRoom { row: spot_row, col: spot_col, rogue_row, rogue_col };
+	// 	}
+	//
+	RunStep::Exit(game)
+}
+
+pub fn one_move_rogue_legacy(direction: MoveDirection, pickup: bool, game: &mut GameState, rng: &mut impl Rng) -> MoveResult {
 	let mut next_event = Some(MoveEvent::Start { direction, pickup });
 	while let Some(event) = next_event.take() {
 		match dispatch_move_event(event, game, rng) {
@@ -244,7 +300,7 @@ pub fn multiple_move_rogue(direction: MoveDirection, until: MoveUntil, game: &mu
 				if game.player.interrupted {
 					break;
 				}
-				if one_move_rogue(direction, true, game, rng) != Moved {
+				if one_move_rogue_legacy(direction, true, game, rng) != Moved {
 					break;
 				}
 				render_system::refresh(game);
@@ -254,7 +310,7 @@ pub fn multiple_move_rogue(direction: MoveDirection, until: MoveUntil, game: &mu
 			loop {
 				let row = game.player.rogue.row;
 				let col = game.player.rogue.col;
-				let result = one_move_rogue(direction, true, game, rng);
+				let result = one_move_rogue_legacy(direction, true, game, rng);
 				if result == MoveFailed || result == StoppedOnSomething || game.player.interrupted {
 					break;
 				}
@@ -536,7 +592,7 @@ pub enum MoveUntil {
 	NearSomething,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum MoveDirection {
 	Left,
 	Right,

@@ -3,7 +3,7 @@ use OnceResult::Idle;
 
 use crate::actions::action_set::PlayerEvent;
 use crate::init::{Dungeon, GameState, GameTurn};
-use crate::motion::{multiple_move_rogue, one_move_rogue, reg_move};
+use crate::motion::{multiple_move_rogue, one_move_rogue_legacy, reg_move};
 use crate::render_system;
 use crate::resources::diary;
 use crate::resources::keyboard::rgetchar;
@@ -53,7 +53,7 @@ fn dispatch_player_event(game: &mut GameState, player_event: PlayerEvent) -> Opt
 		PlayerEvent::MoveRogue(direction, until) => {
 			match until {
 				Some(until) => { multiple_move_rogue(direction, until, game); }
-				None => { one_move_rogue(direction, true, game, rng); }
+				None => { one_move_rogue_legacy(direction, true, game, rng); }
 			}
 			None
 		}

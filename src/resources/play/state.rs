@@ -20,6 +20,7 @@ use crate::resources::course::dr_course;
 use crate::settings::Settings;
 use rand::Rng;
 
+#[derive(Debug, Clone)]
 pub struct RunState {
 	pub settings: Settings,
 	pub stats: DungeonStats,
@@ -27,6 +28,7 @@ pub struct RunState {
 	pub visor: DungeonVisor,
 	pub diary: Diary,
 }
+
 impl RunState {
 	pub fn init(rng: &mut impl Rng) -> Self {
 		let mut stats = DungeonStats::new(rng);
