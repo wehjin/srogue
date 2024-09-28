@@ -1,12 +1,16 @@
+pub mod arena;
+pub mod avatar;
+pub mod course;
 pub mod diary;
 pub mod dice;
 pub mod dungeon;
 pub mod healer;
+pub mod infra;
 pub mod input_line;
 pub mod keyboard;
 pub mod level;
+pub mod physics;
 pub mod play;
 pub mod player;
 pub mod rogue;
 pub mod roll;
-

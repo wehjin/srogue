@@ -4,16 +4,18 @@ use crate::resources::level::room_id::RoomId;
 use crate::resources::level::size::LevelSpot;
 
 use crate::monster::Monster;
+use crate::resources::course::DoorId;
 use crate::resources::level::feature_grid::feature::{Feature, FeatureFilter};
-use crate::resources::level::room::LevelRoom;
+use crate::resources::level::room::{LevelRoom, RoomExit, ALL_EXIT_SIDES};
 use crate::resources::level::torch_grid::TorchGrid;
 use crate::resources::rogue::spot::RogueSpot;
 use crate::resources::rogue::Rogue;
-use crate::room::{RoomBounds, RoomType};
+use crate::room::RoomBounds;
 use crate::trap::trap_kind::TrapKind;
 use crate::trap::Trap;
 use rand::Rng;
 use std::collections::BTreeMap;
+use std::ops::Index;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct DungeonLevel {
@@ -28,6 +30,8 @@ pub struct DungeonLevel {
 	pub objects: BTreeMap<LevelSpot, Object>,
 	pub monsters: BTreeMap<LevelSpot, Monster>,
 	pub rogue: Rogue,
+	pub see_invisible: bool,
+	pub detect_monster: bool,
 }
 
 impl DungeonLevel {
@@ -39,12 +43,50 @@ impl DungeonLevel {
 	}
 }
 
+impl Index<RoomId> for DungeonLevel {
+	type Output = LevelRoom;
+	fn index(&self, index: RoomId) -> &Self::Output {
+		self.as_room(index)
+	}
+}
+impl Index<DoorId> for DungeonLevel {
+	type Output = RoomExit;
+	fn index(&self, index: DoorId) -> &Self::Output {
+		self.as_room_exit(index)
+	}
+}
 impl DungeonLevel {
-	pub fn as_room(&self, room_id: RoomId) -> &LevelRoom {
-		self.rooms.get(&room_id).unwrap()
+	pub fn as_room_exit(&self, index: DoorId) -> &RoomExit {
+		let DoorId { room_id, exit_side } = index;
+		let out = &self.as_room(room_id)[exit_side];
+		out
+	}
+}
+impl DungeonLevel {
+	pub fn get_door_at(&self, spot: LevelSpot) -> Option<DoorId> {
+		for room_id in self.all_room_ids() {
+			let room = &self[room_id];
+			for exit_side in ALL_EXIT_SIDES {
+				let exit = &room[exit_side];
+				let near_spot = exit.get_near_spot().cloned();
+				if Some(spot) == near_spot {
+					return Some(DoorId { room_id, exit_side });
+				}
+			}
+		}
+		None
+	}
+}
+
+impl DungeonLevel {
+	pub fn as_room(&self, index: RoomId) -> &LevelRoom {
+		self.rooms.get(&index).unwrap()
 	}
 	pub fn as_room_mut(&mut self, room_id: RoomId) -> &mut LevelRoom {
 		self.rooms.get_mut(&room_id).unwrap()
+	}
+	pub fn all_room_ids(&self) -> Vec<RoomId> {
+		self.rooms.keys().cloned().collect()
 	}
 }
 
@@ -107,10 +149,7 @@ impl DungeonLevel {
 	}
 	pub fn spot_in_vault_or_maze(&self, spot: LevelSpot) -> bool {
 		match self.room_at_spot(spot) {
-			Some(id) => {
-				let ty = id.room_type();
-				ty == RoomType::Room || ty == RoomType::Maze
-			}
+			Some(id) => id.is_maze_or_vault(),
 			None => false,
 		}
 	}
@@ -136,8 +175,14 @@ impl DungeonLevel {
 		}
 		None
 	}
+	pub fn monster_ids(&self) -> Vec<u64> {
+		self.monsters.iter().map(|(_, monster)| monster.id).collect()
+	}
 	pub fn try_monster(&self, spot: LevelSpot) -> Option<&Monster> {
 		self.monsters.get(&spot)
+	}
+	pub fn as_monster(&self, spot: LevelSpot) -> &Monster {
+		self.monsters.get(&spot).expect("invalid monster spot")
 	}
 	pub fn as_monster_mut(&mut self, spot: LevelSpot) -> &mut Monster {
 		self.monsters.get_mut(&spot).expect("invalid monster spot")
@@ -146,6 +191,9 @@ impl DungeonLevel {
 		let (row, col) = spot.i64();
 		monster.set_spot(row, col);
 		self.monsters.insert(spot, monster);
+	}
+	pub fn take_monster(&mut self, spot: LevelSpot) -> Option<Monster> {
+		self.monsters.remove(&spot)
 	}
 	pub fn monster_spots_in(&self, room: RoomId) -> Vec<LevelSpot> {
 		let room = self.rooms.get(&room).expect("invalid {room}");
@@ -212,14 +260,32 @@ pub mod room_id {
 	}
 
 	impl RoomId {
-		pub fn room_type(&self) -> RoomType {
+		pub fn as_sector(&self) -> Option<&Sector> {
 			match self {
-				RoomId::Big => RoomType::Room,
-				RoomId::Little(_, ty) => *ty,
+				RoomId::Big => None,
+				RoomId::Little(sector, _) => Some(sector),
+			}
+		}
+		pub fn as_type(&self) -> &RoomType {
+			match self {
+				RoomId::Big => &RoomType::Room,
+				RoomId::Little(_, ty) => ty,
 			}
 		}
 		pub fn is_vault(&self) -> bool {
-			self.room_type().is_vault()
+			self.as_type().is_vault()
+		}
+		pub fn is_maze(&self) -> bool {
+			self.as_type().is_maze()
+		}
+		pub fn is_maze_or_vault(&self) -> bool {
+			self.as_type().is_maze_or_vault()
+		}
+		pub fn same_room(self, other: RoomId) -> Option<RoomId> {
+			match self == other {
+				true => Some(self),
+				false => None
+			}
 		}
 	}
 }
@@ -279,13 +345,13 @@ mod tests {
 		let rng = &mut ChaChaRng::seed_from_u64(17);
 		let stats = &mut DungeonStats {
 			party_depth: PartyDepth::roll(rng),
-			food_drops: (AMULET_LEVEL / 2 - 1) as usize,
+			food_drops: AMULET_LEVEL / 2 - 1,
 			fruit: DEFAULT_FRUIT.to_string(),
 			notes: NoteTables::new(),
 			wizard: false,
 			m_moves: 0,
 		};
-		let mut level = roll_level(PartyType::PartyBig, Rogue::new(AMULET_LEVEL as usize), stats, rng);
+		let mut level = roll_level(PartyType::PartyBig, Rogue::new(AMULET_LEVEL), stats, rng);
 		level.lighting_enabled = true;
 		level.print(true);
 	}

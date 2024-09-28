@@ -16,7 +16,7 @@ pub const COL2: i64 = 52;
 pub const ROW1: i64 = 7;
 pub const ROW2: i64 = 15;
 pub const HIDE_PERCENT: usize = 12;
-pub const AMULET_LEVEL: isize = 26;
+pub const AMULET_LEVEL: usize = 26;
 pub const MAX_EXP_LEVEL: usize = 21;
 pub const MAX_EXP: isize = 10000000;
 pub const MAX_GOLD: usize = 900000;
@@ -28,6 +28,11 @@ pub const MAX_STRENGTH: isize = 99;
 pub struct DungeonSpot {
 	pub col: i64,
 	pub row: i64,
+}
+impl Into<(i64, i64)> for DungeonSpot {
+	fn into(self) -> (i64, i64) {
+		(self.row, self.col)
+	}
 }
 impl From<(usize, usize)> for DungeonSpot {
 	fn from((row, col): (usize, usize)) -> Self {

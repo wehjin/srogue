@@ -1,11 +1,27 @@
 use crate::pack::wait_for_ack;
 use crate::render_system::backend;
 
-#[derive(Default)]
 pub struct Diary {
 	pub current_page: Vec<String>,
 	pub previous_page: Vec<String>,
 	pub rewound: bool,
+	pub stats_changed: bool,
+	pub cleaned_up: Option<String>,
+	pub interrupted: bool,
+	pub hit_message: String,
+}
+impl Default for Diary {
+	fn default() -> Self {
+		Self {
+			current_page: vec![],
+			previous_page: vec![],
+			rewound: false,
+			stats_changed: true,
+			cleaned_up: None,
+			interrupted: false,
+			hit_message: "".to_string(),
+		}
+	}
 }
 
 impl Diary {
@@ -27,6 +43,10 @@ impl Diary {
 		}
 		self.current_page.clear();
 		self.rewound = false;
+	}
+
+	pub fn set_stats_changed(&mut self, value: bool) {
+		self.stats_changed = value;
 	}
 }
 

@@ -1,7 +1,6 @@
 use rand::{thread_rng, Rng};
 use MoveResult::MoveFailed;
 
-use crate::actions::search::{search, SearchKind};
 use crate::components::hunger::{HungerLevel, FAINT_MOVES_LEFT, HUNGRY_MOVES_LEFT, STARVE_MOVES_LEFT, WEAK_MOVES_LEFT};
 use crate::hit::rogue_hit;
 use crate::init::{Dungeon, GameState};
@@ -13,14 +12,15 @@ use crate::monster::{mv_mons, put_wanderer};
 use crate::motion::MoveResult::{Moved, StoppedOnSomething};
 use crate::odds::R_TELE_PERCENT;
 use crate::pack::{pick_up, PickUpResult};
-use crate::player::{Avatar, Player, RoomMark};
+use crate::player::{Player, RoomMark};
 use crate::prelude::ending::Ending;
 use crate::prelude::{DungeonSpot, MIN_ROW};
-use crate::r#use::{tele, unblind, unconfuse, unhallucinate};
+use crate::r#use::tele;
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
 use crate::render_system::darken_room;
-use crate::render_system::hallucinate::show_hallucination;
+use crate::resources::arena::Arena;
+use crate::resources::avatar::Avatar;
 use crate::resources::diary;
 use crate::resources::dice::roll_chance;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
@@ -407,57 +407,61 @@ fn get_hunger_transition_with_burn_count(moves_left: isize, moves_burned: isize)
 	}
 }
 
-pub fn check_hunger(game: &mut GameState) -> HungerCheckResult {
-	let moves_to_burn = match game.player.ring_effects.calorie_burn() {
+pub fn check_hunger(game: &mut impl Dungeon) -> HungerCheckResult {
+	let moves_to_burn = match game.as_ring_effects().calorie_burn() {
 		-2 => 0,
-		-1 => game.player.rogue.moves_left % 2,
+		-1 => game.as_fighter().moves_left % 2,
 		0 => 1,
-		1 => 1 + (game.player.rogue.moves_left % 2),
+		1 => 1 + (game.as_fighter().moves_left % 2),
 		2 => 2,
 		_ => panic!("invalid calorie burn")
 	};
 	if moves_to_burn == 0 {
 		return HungerCheckResult::StillWalking;
 	}
-	game.player.rogue.moves_left -= moves_to_burn;
-	if let Some(next_hunger) = get_hunger_transition_with_burn_count(game.player.rogue.moves_left, moves_to_burn) {
-		game.player.hunger = next_hunger;
-		game.diary.add_entry(&game.player.hunger.as_str());
-		game.stats_changed = true;
+	game.as_fighter_mut().moves_left -= moves_to_burn;
+	if let Some(next_hunger) = get_hunger_transition_with_burn_count(game.as_fighter().moves_left, moves_to_burn) {
+		let health = game.as_health_mut();
+		health.hunger = next_hunger;
+
+		let diary = game.as_diary_mut();
+		diary.add_entry(next_hunger.as_str());
+		diary.stats_changed = true;
 	}
 
-	if game.player.hunger == HungerLevel::Starved {
+	let hunger = game.as_health().hunger;
+	if hunger == HungerLevel::Starved {
 		killed_by(Ending::Starvation, game);
 		return HungerCheckResult::DidStarve;
 	}
-	if game.player.hunger == HungerLevel::Faint && random_faint(game) {
+	if hunger == HungerLevel::Faint && random_faint(game) {
 		return HungerCheckResult::DidFaint;
 	}
 	HungerCheckResult::StillWalking
 }
 
-fn random_faint(game: &mut GameState) -> bool {
-	let n = get_rand(0, FAINT_MOVES_LEFT - game.player.rogue.moves_left);
+fn random_faint(game: &mut impl Dungeon) -> bool {
+	let n = get_rand(0, FAINT_MOVES_LEFT - game.as_fighter().moves_left);
 	if n > 0 {
 		if rand_percent(40) {
-			game.player.rogue.moves_left += 1;
+			game.as_fighter_mut().moves_left += 1;
 		}
-		game.player.interrupt_and_slurp();
-		game.diary.add_entry("you faint");
+		game.interrupt_and_slurp();
+		game.as_diary_mut().add_entry("you faint");
 		for _ in 0..n {
 			if coin_toss() {
 				mv_mons(game);
 			}
 		}
-		game.player.interrupt_and_slurp();
-		game.diary.add_entry(YOU_CAN_MOVE_AGAIN);
+		game.interrupt_and_slurp();
+		game.as_diary_mut().add_entry(YOU_CAN_MOVE_AGAIN);
 		true
 	} else {
 		false
 	}
 }
 
-pub fn reg_move(game: &mut GameState) -> bool {
+pub fn reg_move(game: &mut impl Dungeon) -> bool {
 	let hunger_check = if game.as_fighter().moves_left <= HUNGRY_MOVES_LEFT || game.is_max_depth() {
 		check_hunger(game)
 	} else {
@@ -477,21 +481,21 @@ pub fn reg_move(game: &mut GameState) -> bool {
 	if game.as_health().halluc.is_active() {
 		game.as_health_mut().halluc.decr();
 		if game.as_health().halluc.is_active() {
-			show_hallucination(game);
+			// TODO show_hallucination(game);
 		} else {
-			unhallucinate(game);
+			// TODO unhallucinate(game);
 		}
 	}
 	if game.as_health().blind.is_active() {
 		game.as_health_mut().blind.decr();
 		if game.as_health().blind.is_inactive() {
-			unblind(game);
+			//TODO unblind(game);
 		}
 	}
 	if game.as_health().confused.is_active() {
 		game.as_health_mut().confused.decr();
 		if game.as_health().confused.is_inactive() {
-			unconfuse(game);
+			// TODO unconfuse(game);
 		}
 	}
 	if game.as_health().bear_trap > 0 {
@@ -502,8 +506,10 @@ pub fn reg_move(game: &mut GameState) -> bool {
 		if game.as_health().levitate.is_inactive() {
 			game.interrupt_and_slurp();
 			game.as_diary_mut().add_entry("you float gently to the ground");
-			if game.level.dungeon[game.player.rogue.row as usize][game.player.rogue.col as usize].is_any_trap() {
-				trap_player(game.player.rogue.row as usize, game.player.rogue.col as usize, game);
+			let rogue_row = game.rogue_row();
+			let rogue_col = game.rogue_col();
+			if game.is_any_tunnel_at(rogue_row, rogue_col) {
+				// TODO trap_player(rogue_row as usize, rogue_col as usize, game);
 			}
 		}
 	}
@@ -513,11 +519,11 @@ pub fn reg_move(game: &mut GameState) -> bool {
 			game.as_diary_mut().add_entry("you feel yourself slowing down");
 		}
 	}
-	game.heal_player();
+	//TODO game.heal_player();
 	{
-		let auto_search = game.player.ring_effects.auto_search();
+		let auto_search = game.as_ring_effects().auto_search();
 		if auto_search > 0 {
-			search(SearchKind::Auto { n: auto_search as usize }, game);
+			// TODO search(SearchKind::Auto { n: auto_search as usize }, game);
 		}
 	}
 	hunger_check == HungerCheckResult::DidFaint

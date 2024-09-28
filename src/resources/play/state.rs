@@ -2,7 +2,7 @@ use crate::actions::instruct::instruction_lines;
 use crate::init::Dungeon;
 use crate::inventory::inventory;
 use crate::monster::Monster;
-use crate::player::{Avatar, RogueHealth};
+use crate::objects::Object;
 use crate::prelude::object_what::PackFilter;
 use crate::resources::diary::Diary;
 use crate::resources::dungeon::stats::DungeonStats;
@@ -10,13 +10,18 @@ use crate::resources::dungeon::DungeonVisor;
 use crate::resources::level::setup::roll_level;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::level::{DungeonLevel, PartyType};
-use crate::resources::rogue::fighter::Fighter;
-use crate::resources::rogue::spot::RogueSpot;
+use crate::resources::physics::rogue_sees_spot;
 use crate::resources::rogue::Rogue;
-use crate::ring::effects::RingEffects;
+
+use crate::prelude::DungeonSpot;
+use crate::resources::arena::Arena;
+use crate::resources::avatar::Avatar;
+use crate::resources::course::dr_course;
+use crate::settings::Settings;
 use rand::Rng;
 
 pub struct RunState {
+	pub settings: Settings,
 	pub stats: DungeonStats,
 	pub level: DungeonLevel,
 	pub visor: DungeonVisor,
@@ -29,7 +34,7 @@ impl RunState {
 		let party_type = PartyType::NoParty;
 		let mut level = roll_level(party_type, rogue, &mut stats, rng);
 		level.lighting_enabled = true;
-		Self { stats, level, visor: DungeonVisor::Map, diary: Diary::default() }
+		Self { stats, level, visor: DungeonVisor::Map, diary: Diary::default(), settings: Settings::default() }
 	}
 	pub fn to_lines(&self) -> Vec<String> {
 		match self.visor {
@@ -41,7 +46,7 @@ impl RunState {
 			}
 			DungeonVisor::Help => instruction_lines(),
 			DungeonVisor::Inventory => {
-				let pack = self.level.rogue.as_pack();
+				let pack = self.as_rogue_pack();
 				let stats = &self.stats;
 				inventory(pack, PackFilter::AllObjects, stats.fruit.as_str(), &stats.notes, stats.wizard)
 			}
@@ -49,30 +54,27 @@ impl RunState {
 	}
 }
 
-impl Avatar for RunState {
-	fn as_health(&self) -> &RogueHealth {
-		&self.level.rogue.health
-	}
-
-	fn as_health_mut(&mut self) -> &mut RogueHealth {
-		&mut self.level.rogue.health
-	}
-
-	fn rogue_row(&self) -> i64 {
-		self.level.rogue.spot.as_spot().row.i64()
-	}
-
-	fn rogue_col(&self) -> i64 {
-		self.level.rogue.spot.as_spot().col.i64()
-	}
-
-	fn set_rogue_row_col(&mut self, row: i64, col: i64) {
-		let spot = LevelSpot::from_i64(row, col);
-		self.level.rogue.spot = RogueSpot::from_spot(spot, &self.level);
-	}
-}
-
 impl Dungeon for RunState {
+	fn move_mon_to(&mut self, mon_id: u64, row: i64, col: i64) {
+		let to_spot = DungeonSpot { row, col };
+		let from_spot = self.as_monster(mon_id).spot;
+		{
+			let monster = self.level.take_monster(LevelSpot::from(from_spot)).unwrap();
+			self.level.put_monster(LevelSpot::from(to_spot), monster);
+		}
+		if self.is_any_door_at(to_spot.row, to_spot.col) {
+			let entering = self.is_any_tunnel_at(from_spot.row, from_spot.col);
+			dr_course(mon_id, entering, row, col, self);
+		} else {
+			let monster = self.as_monster_mut(mon_id);
+			monster.spot = to_spot;
+		}
+	}
+
+	fn set_interrupted(&mut self, value: bool) {
+		self.diary.interrupted = value;
+	}
+
 	fn rogue_can_move(&self, row: i64, col: i64) -> bool {
 		let from = self.level.rogue.spot.as_spot();
 		self.level.features.can_move(*from, LevelSpot::from_i64(row, col))
@@ -82,21 +84,23 @@ impl Dungeon for RunState {
 		self.level.try_monster(LevelSpot::from_i64(row, col)).is_some()
 	}
 
-	fn as_monster_mut(&mut self, mon_id: u64) -> &mut Monster {
-		let spot = self.level.find_monster(mon_id).unwrap();
-		self.level.as_monster_mut(spot)
+	fn try_monster(&self, mon_id: u64) -> Option<&Monster> {
+		match self.level.find_monster(mon_id) {
+			None => None,
+			Some(spot) => self.level.try_monster(spot)
+		}
 	}
 
 	fn interrupt_and_slurp(&mut self) {
 		todo!()
 	}
 
-	fn as_diary_mut(&mut self) -> &mut Diary {
-		&mut self.diary
+	fn as_diary(&self) -> &Diary {
+		&self.diary
 	}
 
-	fn as_fighter(&self) -> &Fighter {
-		&self.level.rogue.fighter
+	fn as_diary_mut(&mut self) -> &mut Diary {
+		&mut self.diary
 	}
 
 	fn is_max_depth(&self) -> bool {
@@ -111,15 +115,65 @@ impl Dungeon for RunState {
 		&mut self.stats.m_moves
 	}
 
-	fn as_ring_effects(&self) -> &RingEffects {
-		&self.level.rogue.ring_effects
-	}
-
 	fn is_any_door_at(&self, row: i64, col: i64) -> bool {
 		self.level.features.feature_at(LevelSpot::from_i64(row, col)).is_any_door()
 	}
 
 	fn is_any_tunnel_at(&self, row: i64, col: i64) -> bool {
 		self.level.features.feature_at(LevelSpot::from_i64(row, col)).is_any_tunnel()
+	}
+
+	fn is_any_trap_at(&self, row: i64, col: i64) -> bool {
+		self.level.features.feature_at(LevelSpot::from_i64(row, col)).is_any_trap()
+	}
+
+	fn is_no_feature_at(&self, row: i64, col: i64) -> bool {
+		self.level.features.feature_at(LevelSpot::from_i64(row, col)).is_nothing()
+	}
+
+	fn is_passable_at(&self, row: i64, col: i64) -> bool {
+		self.level.features.is_passable(LevelSpot::from_i64(row, col))
+	}
+
+	fn has_object_at(&self, row: i64, col: i64) -> bool {
+		self.level.try_object(LevelSpot::from_i64(row, col)).is_some()
+	}
+
+	fn try_object_at(&self, row: i64, col: i64) -> Option<&Object> {
+		self.level.try_object(LevelSpot::from_i64(row, col))
+	}
+
+	fn shows_skull(&self) -> bool {
+		true
+	}
+
+	fn player_name(&self) -> String {
+		whoami::username()
+	}
+
+	fn monster_ids(&self) -> Vec<u64> {
+		self.level.monster_ids()
+	}
+
+	fn cleaned_up(&self) -> Option<String> {
+		self.diary.cleaned_up.clone()
+	}
+
+	fn roll_wanderer_spot(&self, rng: &mut impl Rng) -> Option<LevelSpot> {
+		for _ in 0..25 {
+			let spot = self.level.roll_vacant_spot(true, false, true, rng);
+			let rogue_can_see = rogue_sees_spot(spot, self, self, self);
+			let out_of_sight = !rogue_can_see;
+			if out_of_sight {
+				return Some(spot.into());
+			}
+		}
+		None
+	}
+
+	fn airdrop_monster_at(&mut self, row: i64, col: i64, monster: Monster) {
+		let spot = LevelSpot::from_i64(row, col);
+		self.level.put_monster(spot, monster);
+		// TODO Call aim_monster(monster, &self.level);
 	}
 }

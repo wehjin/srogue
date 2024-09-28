@@ -57,7 +57,7 @@ fn save_into_file(save_path: &str, game: &mut GameState) -> bool {
 		delete_file(&save_path);
 		false
 	} else {
-		clean_up("", &mut game.player);
+		clean_up("", game);
 		true
 	}
 }
@@ -80,48 +80,48 @@ pub fn restore(file_path: &str, game: &mut GameState) -> bool {
 	let new_file_id = match new_file_id {
 		Ok(id) => id,
 		Err(_) => {
-			clean_up("cannot open file", &mut game.player);
+			clean_up("cannot open file", game);
 			return false;
 		}
 	};
 	match md_link_count(file_path) {
 		Ok(count) if count == 1 => (),
 		_ => {
-			clean_up("file has link", &mut game.player);
+			clean_up("file has link", game);
 			return false;
 		}
 	}
 	let save_data = match data::from_file(file_path) {
 		Ok(result) => result,
 		Err(e) => {
-			clean_up(&format!("read failed: {}", e), &mut game.player);
+			clean_up(&format!("read failed: {}", e), game);
 			return false;
 		}
 	};
 	if save_data.player.settings.login_name != cur_login_name {
-		clean_up("you're not the original player", &mut game.player);
+		clean_up("you're not the original player", game);
 		return false;
 	}
 	if new_file_id != save_data.file_id {
-		clean_up("sorry, saved game is not in the same file", &mut game.player);
+		clean_up("sorry, saved game is not in the same file", game);
 		return false;
 	}
 	match get_file_modification_time(file_path) {
 		Ok(mod_time) => {
 			if has_been_touched(&save_data.saved_time, &mod_time) {
-				clean_up("sorry, file has been touched", &mut game.player);
+				clean_up("sorry, file has been touched", game);
 				return false;
 			}
 		}
 		Err(_) => {
-			clean_up("sorry, no modification time", &mut game.player);
+			clean_up("sorry, no modification time", game);
 			return false;
 		}
 	}
 	save_data.write_to_statics(game);
 
 	if !game.player.wizard && !delete_file(file_path) {
-		clean_up("cannot delete file", &mut game.player);
+		clean_up("cannot delete file", game);
 		return false;
 	}
 

@@ -38,6 +38,7 @@ fn roll_party_guests(favors: usize, venue: RoomId, level: &mut DungeonLevel, rng
 			monster.m_flags.wakens = true;
 		}
 		level.put_monster(spot, monster);
+		// TODO Use Dungeon::insert_monster instead of put_monster.
 	}
 }
 

@@ -2,16 +2,17 @@ use rand::thread_rng;
 use wand_kind::WandKind;
 
 use crate::hit::rogue_hit;
-use crate::init::{Dungeon, GameState};
+use crate::init::GameState;
 use crate::level::Level;
 use crate::monster::{MonsterIndex, MonsterMash};
 use crate::motion::{get_dir_or_cancel, reg_move, MoveDirection};
 use crate::pack::pack_letter;
-use crate::player::Avatar;
+use crate::resources::avatar::Avatar;
 use crate::prelude::object_what::ObjectWhat::Wand;
 use crate::prelude::object_what::PackFilter::Wands;
 use crate::r#use::relight;
 use crate::random::get_rand;
+use crate::resources::arena::Arena;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::resources::level::setup::npc::roll_monster;
 use crate::room::gr_spot;
@@ -172,17 +173,16 @@ pub fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
 }
 
 fn tele_away(mon_id: MonsterIndex, game: &mut GameState) {
-	if game.mash.monster_flags(mon_id).holds {
+	if game.as_monster_flags(mon_id).holds {
 		let health = game.as_health_mut();
 		health.being_held = false;
 	}
-	let tele_from = game.mash.monster(mon_id).spot;
-	let tele_to =
-		gr_spot(
-			|cell| cell.is_any_floor() || cell.is_any_tunnel() || cell.is_stairs() || cell.has_object(),
-			&game.player,
-			&game.level,
-		);
+	let tele_from = game.as_monster(mon_id).spot;
+	let tele_to = gr_spot(
+		|cell| cell.is_any_floor() || cell.is_any_tunnel() || cell.is_stairs() || cell.has_object(),
+		&game.player,
+		&game.level,
+	);
 	game.level.cell_mut(tele_from).set_monster(false);
 	let monster = game.as_monster_mut(mon_id);
 	monster.spot = tele_to;

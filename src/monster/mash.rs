@@ -79,6 +79,9 @@ impl MonsterMash {
 	pub fn monster_to_spot(&self, id: MonsterIndex) -> DungeonSpot {
 		self.monster(id).spot
 	}
+	pub fn try_monster(&self, id: MonsterIndex) -> Option<&Monster> {
+		self.monsters.get(&id)
+	}
 	pub fn monster(&self, id: MonsterIndex) -> &Monster {
 		&self.monsters[&id]
 	}
@@ -161,7 +164,7 @@ impl Monster {
 		let (row, col) = spot.i64();
 		self.target_spot = Some(DungeonSpot { row, col })
 	}
-	pub fn clear_target(&mut self) {
+	pub fn clear_target_reset_stuck(&mut self) {
 		self.target_spot = None;
 		self.stuck_counter.reset();
 	}
@@ -179,19 +182,8 @@ impl Monster {
 	pub fn cur_room(&self, level: &Level) -> RoomMark {
 		level.room(self.spot.row, self.spot.col)
 	}
-	pub fn sees(&self, row: i64, col: i64, level: &Level) -> bool {
-		let spot_room = level.room(row, col);
-		if spot_room == self.cur_room(level)
-			&& spot_room.is_cavern()
-			&& !spot_room.is_maze(level) {
-			return true;
-		}
-		let row_diff = row - self.spot.row;
-		let col_diff = col - self.spot.col;
-		row_diff >= -1 && row_diff <= 1 && col_diff >= -1 && col_diff <= 1
-	}
 	pub fn id(&self) -> u64 { self.id }
-	pub fn kill_exp(&self) -> isize { self.kind.kill_exp() }
+	pub fn kill_exp(&self) -> usize { self.kind.kill_exp() }
 	pub fn m_hit_chance(&self) -> usize { self.kind.m_hit_chance() }
 	pub fn m_damage(&self) -> &'static [DamageStat] {
 		self.kind.damage()
@@ -226,7 +218,7 @@ impl Monster {
 			self.slowed_toggle = true;
 		}
 	}
-	pub fn slowed_toggle(&self) -> bool {
+	pub fn is_slowed_toggle(&self) -> bool {
 		self.slowed_toggle
 	}
 	pub fn wake_up(&mut self) {

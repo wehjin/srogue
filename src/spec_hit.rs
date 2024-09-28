@@ -1,52 +1,53 @@
 use crate::armors::ArmorKind;
 use crate::hit::mon_hit;
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::inventory::get_obj_desc;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::{add_exp, hp_raise, Level, LEVEL_POINTS};
-use crate::monster::{mon_can_go, mon_name, move_mon_to, mv_mons, mv_monster, MonsterMash};
+use crate::monster::{mon_can_go_and_reach, mon_name, mv_mons, mv_monster, MonsterMash};
 use crate::motion::YOU_CAN_MOVE_AGAIN;
-use crate::objects::{alloc_object, get_armor_class, gr_object, place_at, Object, ObjectPack};
-use crate::player::Avatar;
+use crate::objects::{alloc_object, get_armor_class, gr_object, place_at, Object};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
 use crate::prelude::*;
 use crate::r#use::{confuse, vanish};
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system::animation::animate_flame_broil;
-use crate::room::get_room_number;
+use crate::resources::arena::Arena;
+use crate::resources::avatar::Avatar;
+use crate::resources::dice::roll_chance;
 use crate::score::killed_by;
-use rand::thread_rng;
+use rand::{thread_rng, Rng};
 
 pub const FLAME_NAME: &'static str = "flame";
 
-pub fn special_hit(mon_id: u64, game: &mut GameState) {
-	if game.mash.monster_flags(mon_id).confused && rand_percent(66) {
+pub fn special_hit(mon_id: u64, game: &mut impl Dungeon) {
+	if game.as_monster_flags(mon_id).confused && rand_percent(66) {
 		return;
 	}
-	if game.mash.monster_flags(mon_id).rusts {
-		rust(Some(mon_id), game);
+	if game.as_monster_flags(mon_id).rusts {
+		// TODO rust(Some(mon_id), game);
 	}
-	if game.mash.monster_flags(mon_id).holds && game.player.health.levitate.is_inactive() {
+	if game.as_monster_flags(mon_id).holds && game.as_health().levitate.is_inactive() {
 		let health = game.as_health_mut();
 		health.being_held = true;
 	}
-	if game.mash.monster_flags(mon_id).freezes {
-		freeze(mon_id, game);
+	if game.as_monster_flags(mon_id).freezes {
+		// TODO freeze(mon_id, game);
 	}
-	if game.mash.monster_flags(mon_id).stings {
-		sting(mon_id, game);
+	if game.as_monster_flags(mon_id).stings {
+		// TODO sting(mon_id, game);
 	}
-	if game.mash.monster_flags(mon_id).drains_life {
-		drain_life(game);
+	if game.as_monster_flags(mon_id).drains_life {
+		// TODO drain_life(game);
 	}
-	if game.mash.monster_flags(mon_id).drops_level {
-		drop_level(game);
+	if game.as_monster_flags(mon_id).drops_level {
+		// TODO drop_level(game);
 	}
-	if game.mash.monster_flags(mon_id).steals_gold {
-		steal_gold(mon_id, game);
-	} else if game.mash.monster_flags(mon_id).steals_item {
-		steal_item(mon_id, game);
+	if game.as_monster_flags(mon_id).steals_gold {
+		// TODO steal_gold(mon_id, game);
+	} else if game.as_monster_flags(mon_id).steals_item {
+		// TODO steal_item(mon_id, game);
 	}
 }
 
@@ -64,13 +65,14 @@ pub fn rust(mon_id: Option<u64>, game: &mut GameState) {
 		if let Some(mon_id) = mon_id {
 			if !game.mash.monster_flags(mon_id).rust_vanished {
 				game.diary.add_entry("the rust vanishes instantly");
-				game.mash.monster_flags_mut(mon_id).rust_vanished = true;
+				let flags = game.mash.monster_flags_mut(mon_id);
+				flags.rust_vanished = true;
 			}
 		}
 	} else {
 		armor.d_enchant -= 1;
 		game.diary.add_entry("your armor weakens");
-		game.stats_changed = true;
+		game.as_diary_mut().set_stats_changed(true);
 	}
 }
 
@@ -84,7 +86,8 @@ fn freeze(mon_id: u64, game: &mut GameState) {
 	freeze_percent -= get_armor_class(game.player.armor()) * 5;
 	freeze_percent -= game.player.rogue.hp_max / 3;
 	if freeze_percent > 10 {
-		game.mash.monster_flags_mut(mon_id).freezing_rogue = true;
+		let flags = game.mash.monster_flags_mut(mon_id);
+		flags.freezing_rogue = true;
 		game.player.interrupt_and_slurp();
 		game.diary.add_entry("you are frozen");
 
@@ -100,7 +103,8 @@ fn freeze(mon_id: u64, game: &mut GameState) {
 		}
 		game.player.interrupt_and_slurp();
 		game.diary.add_entry(YOU_CAN_MOVE_AGAIN);
-		game.mash.monster_flags_mut(mon_id).freezing_rogue = false;
+		let flags = game.mash.monster_flags_mut(mon_id);
+		flags.freezing_rogue = false;
 	}
 }
 
@@ -109,11 +113,11 @@ fn steal_gold(mon_id: u64, game: &mut GameState) {
 		return;
 	}
 
-	let cur_depth = game.player.cur_depth as usize;
+	let cur_depth = game.player.cur_depth;
 	let amount = get_rand(cur_depth * 10, cur_depth * 30).min(game.player.rogue.gold);
 	game.player.rogue.gold -= amount;
 	game.diary.add_entry("your purse feels lighter");
-	game.stats_changed = true;
+	game.as_diary_mut().set_stats_changed(true);
 	disappear(mon_id, game);
 }
 
@@ -121,7 +125,7 @@ fn steal_item(mon_id: u64, game: &mut GameState) {
 	if rand_percent(15) {
 		return;
 	}
-	if game.player.pack().len() == 0 {
+	if game.as_rogue_pack().len() == 0 {
 		disappear(mon_id, game);
 		return;
 	}
@@ -137,11 +141,12 @@ fn steal_item(mon_id: u64, game: &mut GameState) {
 					if temp_obj.what_is != Weapon {
 						temp_obj.quantity = 1;
 					}
-					get_obj_desc(&temp_obj, game.player.settings.fruit.to_string(), &game.player)
+					get_obj_desc(&temp_obj, game.as_settings().fruit.to_string(), &game.player)
 				};
 				format!("she stole {}", obj_desc)
 			};
-			game.diary.add_entry(&msg);
+			let diary = game.as_diary_mut();
+			diary.add_entry(&msg);
 			vanish(obj_id, false, game);
 			disappear(mon_id, game);
 		}
@@ -214,61 +219,60 @@ fn try_to_cough(row: i64, col: i64, obj: &Object, game: &mut GameState) -> bool 
 	false
 }
 
-pub fn seek_gold(mon_id: u64, game: &mut GameState) -> bool {
-	let rn = {
-		let monster = game.mash.monster(mon_id);
-		get_room_number(monster.spot.row, monster.spot.col, &game.level)
+pub fn seek_gold(mon_id: u64, game: &mut impl Dungeon) -> bool {
+	let room = {
+		let monster = game.as_monster(mon_id);
+		let monster_row = monster.spot.row;
+		let monster_col = monster.spot.col;
+		game.get_room_at(monster_row, monster_col)
 	};
-	if rn < 0 {
+	if room.is_none() {
 		return false;
 	}
-
-	let rn = rn as usize;
-	for i in (game.level.rooms[rn].top_row + 1)..game.level.rooms[rn].bottom_row {
-		for j in (game.level.rooms[rn].left_col + 1)..game.level.rooms[rn].right_col {
-			if gold_at(i, j, &game.level, &game.ground) && !game.level.dungeon[i as usize][j as usize].has_monster() {
-				game.mash.monster_flags_mut(mon_id).can_flit = true;
-				let can_go_if_while_can_flit = mon_can_go(game.mash.monster(mon_id), i, j, &game.player, &game.level, &game.ground);
-				game.mash.monster_flags_mut(mon_id).can_flit = false;
-				if can_go_if_while_can_flit {
-					move_mon_to(mon_id, i, j, game);
-					let monster = game.mash.monster_mut(mon_id);
-					monster.m_flags.asleep = true;
-					monster.m_flags.wakens = false;
-					monster.m_flags.seeks_gold = false;
-					return true;
-				}
-				game.mash.monster_flags_mut(mon_id).seeks_gold = false;
-				game.mash.monster_flags_mut(mon_id).can_flit = true;
-				mv_monster(mon_id, i, j, game);
-				game.mash.monster_flags_mut(mon_id).can_flit = false;
-				game.mash.monster_flags_mut(mon_id).seeks_gold = true;
+	let room = room.unwrap();
+	let bounds = game.room_bounds(room).inset(1, 1);
+	for spot in bounds.to_spots() {
+		let (row, col) = spot.i64();
+		if gold_at(row, col, game) && !game.has_monster(row, col) {
+			if mon_can_go_and_reach(mon_id, row, col, true, game) {
+				game.move_mon_to(mon_id, row, col);
+				let flags = game.as_monster_flags_mut(mon_id);
+				flags.asleep = true;
+				flags.wakens = false;
+				flags.seeks_gold = false;
 				return true;
 			}
+			{
+				let flags = game.as_monster_flags_mut(mon_id);
+				flags.seeks_gold = false;
+			}
+			mv_monster(mon_id, row, col, true, game, &mut thread_rng());
+			{
+				let flags = game.as_monster_flags_mut(mon_id);
+				flags.seeks_gold = true;
+			}
+			return true;
 		}
 	}
 	false
 }
 
-fn gold_at(row: i64, col: i64, level: &Level, ground: &ObjectPack) -> bool {
-	if level.dungeon[row as usize][col as usize].has_object() {
-		if let Some(obj) = ground.find_object_at(row, col) {
-			if obj.what_is == Gold {
-				return true;
-			}
+fn gold_at(row: i64, col: i64, game: &impl Dungeon) -> bool {
+	if let Some(obj) = game.try_object_at(row, col) {
+		if obj.what_is == Gold {
+			return true;
 		}
 	}
 	false
 }
 
 pub fn check_imitator(mon_id: u64, game: &mut GameState) -> bool {
-	if game.mash.monster(mon_id).imitates() {
-		game.mash.monster_mut(mon_id).wake_up();
+	if game.as_monster(mon_id).imitates() {
+		game.as_monster_mut(mon_id).wake_up();
 
 		if game.player.health.blind.is_inactive() {
-			let monster = game.mash.monster(mon_id);
-			let mon_name = mon_name(monster, &game.player, &game.level);
-			let mon_spot = monster.spot;
+			let mon_name = mon_name(mon_id, game);
+			let mon_spot = game.as_monster(mon_id).spot;
 			game.render_spot(mon_spot);
 			game.player.interrupt_and_slurp();
 			game.diary.add_entry(&format!("wait, that's a {mon_name}!"));
@@ -302,22 +306,23 @@ fn sting(mon_id: u64, game: &mut GameState) {
 		sting_chance -= 6 * (buffed_exp - 8);
 	}
 	if rand_percent(sting_chance as usize) {
-		let name = mon_name(game.mash.monster(mon_id), &game.player, &game.level);
+		let name = mon_name(mon_id, game);
 		game.diary.add_entry(&format!("the {}'s bite has weakened you", name));
 		game.player.rogue.str_current -= 1;
-		game.stats_changed = true;
+		game.as_diary_mut().set_stats_changed(true);
 	}
 }
 
 fn drop_level(game: &mut GameState) {
-	if rand_percent(80) || game.player.rogue.exp <= 5 {
+	let rng = &mut thread_rng();
+	if roll_chance(80, rng) || game.player.rogue.exp.level <= 5 {
 		return;
 	}
 
-	game.player.rogue.exp_points = LEVEL_POINTS[game.player.rogue.exp as usize - 2] - get_rand(9, 29);
-	game.player.rogue.exp -= 2;
+	game.player.rogue.exp.points = LEVEL_POINTS[game.player.rogue.exp.level - 2] - rng.gen_range(9..=29);
+	game.player.rogue.exp.level -= 2;
 
-	let hp = hp_raise(&game.player);
+	let hp = hp_raise(game.player.wizard, rng);
 	game.player.rogue.hp_current -= hp;
 	if game.player.rogue.hp_current <= 0 {
 		game.player.rogue.hp_current = 1;
@@ -326,7 +331,7 @@ fn drop_level(game: &mut GameState) {
 	if game.player.rogue.hp_max <= 0 {
 		game.player.rogue.hp_max = 1;
 	}
-	add_exp(1, false, game);
+	add_exp(1, false, game, rng);
 }
 
 fn drain_life(game: &mut GameState) {
@@ -352,43 +357,47 @@ fn drain_life(game: &mut GameState) {
 			}
 		}
 	}
-	game.stats_changed = true;
+	game.as_diary_mut().set_stats_changed(true);
 }
 
-pub fn m_confuse(mon_id: u64, game: &mut GameState) -> bool {
-	let monster = game.mash.monster(mon_id);
+pub fn m_confuse(mon_id: u64, game: &mut impl Dungeon) -> bool {
+	let monster = game.as_monster(mon_id);
 	let row = monster.spot.row;
 	let col = monster.spot.col;
-	if !game.player.can_see(row, col, &game.level) {
+
+	if !game.rogue_can_see(row, col) {
 		return false;
 	}
-	let monster = game.mash.monster_mut(mon_id);
 	if rand_percent(45) {
 		/* will not confuse the rogue */
+		let monster = game.as_monster_mut(mon_id);
 		monster.m_flags.confuses = false;
 		return false;
 	}
 	if rand_percent(55) {
+		let monster = game.as_monster_mut(mon_id);
 		monster.m_flags.confuses = false;
-		let msg = format!("the gaze of the {} has confused you", mon_name(monster, &game.player, &game.level));
-		game.player.interrupt_and_slurp();
-		game.diary.add_entry(&msg);
-		confuse(&mut game.player);
+		let msg = format!("the gaze of the {} has confused you", mon_name(mon_id, game));
+		game.interrupt_and_slurp();
+		game.as_diary_mut().add_entry(&msg);
+		confuse(game);
 		return true;
 	}
 	false
 }
 
-pub fn flame_broil(mon_id: u64, game: &mut GameState) -> bool {
-	if !game.mash.monster(mon_id).sees(game.player.rogue.row, game.player.rogue.col, &game.level) || coin_toss() {
+pub fn flame_broil(mon_id: u64, game: &mut impl Dungeon) -> bool {
+	let cant_see_rogue = !game.monster_sees_rogue(mon_id);
+	if cant_see_rogue || coin_toss() {
 		return false;
 	}
-	let mon_spot = game.mash.monster_to_spot(mon_id);
-	let player_spot = game.player.to_spot();
+
+	let mon_spot = game.as_monster(mon_id).spot;
+	let player_spot = DungeonSpot { row: game.rogue_row(), col: game.rogue_col() };
 	if !mon_spot.has_attack_vector_to(player_spot) || player_spot.distance_from(mon_spot) > 7 {
 		return false;
 	}
-	if !game.player.is_blind() && !player_spot.is_near(mon_spot) {
+	if !game.as_health().is_blind() && !player_spot.is_near(mon_spot) {
 		let path = mon_spot.path_to(player_spot);
 		animate_flame_broil(&path);
 	}

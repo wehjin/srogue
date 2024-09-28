@@ -1,16 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Debug, Hash, Default)]
 pub enum HungerLevel {
+	#[default]
 	Normal,
 	Hungry,
 	Weak,
 	Faint,
 	Starved,
-}
-
-impl Default for HungerLevel {
-	fn default() -> Self { Self::Normal }
 }
 
 impl HungerLevel {

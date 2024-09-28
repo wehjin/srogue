@@ -1,9 +1,10 @@
 use ring_kind::RingKind;
 
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::objects::ObjectId;
 use crate::prelude::item_usage::{ON_LEFT_HAND, ON_RIGHT_HAND};
 use crate::r#use::relight;
+use crate::resources::avatar::Avatar;
 use crate::resources::diary;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 
@@ -74,7 +75,7 @@ pub fn ring_stats(print: bool, game: &mut GameState) {
 	game.player.ring_effects.clear_auto_search();
 
 	for ring_hand in PlayerHand::ALL_HANDS {
-		match game.player.ring_id(ring_hand) {
+		match game.ring_id(ring_hand) {
 			None => {
 				continue;
 			}
@@ -121,7 +122,7 @@ pub fn ring_stats(print: bool, game: &mut GameState) {
 		}
 	}
 	if print {
-		game.stats_changed = true;
+		game.as_diary_mut().set_stats_changed(true);
 		relight(game);
 	}
 }

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
+use crate::resources::avatar::Avatar;
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
 pub struct Healer {
@@ -23,13 +24,13 @@ impl Default for Healer {
 
 impl GameState {
 	pub fn heal_player(&mut self) {
-		let player = &mut self.player;
-		if player.rogue.hp_current == player.rogue.hp_max {
+		if self.player.rogue.hp_current == self.player.rogue.hp_max {
 			self.healer.regen_clock = 0;
 			return;
 		}
-		if player.rogue.exp != self.healer.heal_level {
-			self.healer.heal_level = player.rogue.exp;
+		let fighter_exp_level = self.as_fighter().exp.level as isize;
+		if fighter_exp_level != self.healer.heal_level {
+			self.healer.heal_level = fighter_exp_level;
 			self.healer.time_between_heals = match self.healer.heal_level {
 				1 => 20,
 				2 => 18,
@@ -50,15 +51,17 @@ impl GameState {
 			self.healer.regen_clock = 0;
 			self.healer.double_healing_toggle = !self.healer.double_healing_toggle;
 
-			player.rogue.hp_current += 1;
+			self.player.rogue.hp_current += 1;
 			if self.healer.double_healing_toggle {
-				player.rogue.hp_current += 1;
+				self.player.rogue.hp_current += 1;
 			}
-			player.rogue.hp_current += player.ring_effects.regeneration();
-			if player.rogue.hp_current > player.rogue.hp_max {
-				player.rogue.hp_current = player.rogue.hp_max;
+			self.player.rogue.hp_current += self.player.ring_effects.regeneration();
+			if self.player.rogue.hp_current > self.player.rogue.hp_max {
+				self.player.rogue.hp_current = self.player.rogue.hp_max;
 			}
-			self.stats_changed = true;
+
+			let diary = self.as_diary_mut();
+			diary.stats_changed = true;
 		}
 	}
 }

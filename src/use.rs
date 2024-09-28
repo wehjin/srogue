@@ -1,16 +1,17 @@
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::level::put_player_legacy;
 use crate::monster::{mv_mons, show_monsters};
 use crate::motion::{reg_move, YOU_CAN_MOVE_AGAIN};
 use crate::objects::ObjectId;
 use crate::pack::{take_from_pack, unwear, unwield};
-use crate::player::{Avatar, Player, RoomMark};
+use crate::player::{Player, RoomMark};
 use crate::potions::colors::ALL_POTION_COLORS;
 use crate::potions::kind::POTIONS;
 use crate::random::get_rand;
 use crate::render_system;
 use crate::render_system::backend;
 use crate::render_system::hallucinate::show_hallucination;
+use crate::resources::avatar::Avatar;
 use crate::ring::un_put_hand;
 use crate::room::{visit_room, visit_spot_area};
 
@@ -99,9 +100,9 @@ pub fn get_ench_color(player: &Player) -> &'static str {
 	}
 }
 
-pub fn confuse(player: &mut Player) {
+pub fn confuse(game: &mut impl Dungeon) {
 	let amount = get_rand(12, 22);
-	player.health.confused.extend(amount);
+	game.as_health_mut().confused.extend(amount);
 }
 
 pub fn unconfuse(game: &mut GameState) {

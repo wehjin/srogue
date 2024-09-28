@@ -2,15 +2,15 @@ use std::cmp::Ordering;
 use std::fs::File;
 use std::io::{Read, Seek, Write};
 
-use crate::init::{clean_up, GameState, BYEBYE_STRING};
+use crate::init::{clean_up, Dungeon, GameState, BYEBYE_STRING};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::machdep::{md_heed_signals, md_ignore_signals};
-use crate::pack::{has_amulet, unwear, unwield, wait_for_ack};
-use crate::player::{Avatar, Player};
+use crate::pack::{unwear, unwield, wait_for_ack};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::*;
 use crate::render_system::backend;
+use crate::resources::arena::Arena;
 use crate::resources::diary;
 use crate::resources::keyboard::rgetchar;
 use crate::ring::{un_put_hand, PlayerHand};
@@ -20,16 +20,17 @@ mod values;
 
 pub const SCORE_FILE: &'static str = "/usr/games/player.rogue.scores";
 
-pub fn killed_by(ending: Ending, game: &mut GameState) {
+pub fn killed_by(ending: Ending, game: &mut impl Dungeon) {
 	md_ignore_signals();
 	if !ending.is_quit() {
-		game.player.rogue.gold = ((game.player.rogue.gold as f64 * 9.0) / 10.0) as usize;
+		let fighter = game.as_fighter_mut();
+		fighter.gold = ((fighter.gold as f64 * 9.0) / 10.0) as usize;
 	}
 	backend::erase_screen();
 	let mut how_ended = ending_string(&ending);
-	how_ended += &format!(" with {} gold", game.player.rogue.gold);
-	if ending.is_monster() && game.player.settings.show_skull {
-		game.diary.turn_page();
+	how_ended += &format!(" with {} gold", game.as_fighter().gold);
+	if ending.is_monster() && game.shows_skull() {
+		game.as_diary_mut().turn_page();
 		backend::set_str("__---------__", (4, 32).into());
 		backend::set_str("_~             ~_", (5, 30).into());
 		backend::set_str("/                 \\", (6, 29).into());
@@ -46,10 +47,10 @@ pub fn killed_by(ending: Ending, game: &mut GameState) {
 		backend::set_str("|  ^^^^^^^^^^^  |", (17, 30).into());
 		backend::set_str("\\_           _/", (18, 31).into());
 		backend::set_str("~---------~", (19, 33).into());
-		center(21, game.player.settings.player_name().as_str());
+		center(21, game.player_name().as_str());
 		center(22, &how_ended);
 	} else {
-		diary::show_prompt(&how_ended, &mut game.diary);
+		diary::show_prompt(&how_ended, &mut game.as_diary_mut());
 	}
 	wait_for_ack();
 
@@ -121,21 +122,21 @@ pub fn ask_quit(from_intrpt: bool, game: &mut GameState) -> bool {
 		return false;
 	}
 	if from_intrpt {
-		clean_up(BYEBYE_STRING, &mut game.player);
+		clean_up(BYEBYE_STRING, game);
 		return true;
 	}
 	killed_by(Ending::Quit, game);
 	true
 }
 
-pub fn put_scores(ending: Option<Ending>, game: &mut GameState) {
+pub fn put_scores(ending: Option<Ending>, game: &mut impl Dungeon) {
 	// TODO turn_into_games();
 	let mut file = match File::options().read(true).write(true).open(SCORE_FILE) {
 		Ok(file) => file,
 		Err(_) => match File::options().write(true).open(SCORE_FILE) {
 			Ok(file) => file,
 			Err(_) => {
-				game.diary.add_entry("cannot read/write/create score file");
+				game.as_diary_mut().add_entry("cannot read/write/create score file");
 				score_file_error(game);
 				return;
 			}
@@ -143,7 +144,7 @@ pub fn put_scores(ending: Option<Ending>, game: &mut GameState) {
 	};
 	// TODO turn_into_user();
 
-	let mut score_only = game.player.settings.score_only;
+	let mut score_only = game.as_settings().score_only;
 	let mut scores: Vec<String> = Vec::new();
 	let mut n_names: Vec<String> = Vec::new();
 	{
@@ -165,9 +166,9 @@ pub fn put_scores(ending: Option<Ending>, game: &mut GameState) {
 	for i in 0..max_search {
 		if !score_only {
 			let name_in_score = &scores[i][START_OF_NAME..];
-			if name_cmp(name_in_score, &game.player.settings.login_name) == Ordering::Equal {
+			if name_cmp(name_in_score, &game.as_settings().login_name) == Ordering::Equal {
 				if let Some(gold_in_score) = gold_in_score(&scores[i]) {
-					if game.player.rogue.gold < gold_in_score {
+					if game.as_fighter().gold < gold_in_score {
 						score_only = true;
 					} else {
 						found_player = Some(i);
@@ -189,7 +190,7 @@ pub fn put_scores(ending: Option<Ending>, game: &mut GameState) {
 		let ne = scores.len().min(n_names.len()).min(10);
 		for i in 0..ne {
 			if let Some(gold_in_score) = gold_in_score(&scores[i]) {
-				if game.player.rogue.gold >= gold_in_score {
+				if game.as_fighter().gold >= gold_in_score {
 					rank = i;
 					break;
 				}
@@ -204,11 +205,11 @@ pub fn put_scores(ending: Option<Ending>, game: &mut GameState) {
 			rank = ne;
 		}
 		if rank < 10 {
-			let name = match &game.player.settings.nick_name {
+			let name = match &game.as_settings().nick_name {
 				None => "".to_string(),
 				Some(name) => name.to_string(),
 			};
-			insert_score(&mut scores, &mut n_names, &name, rank, ne, ending.expect("ending"), &game.player);
+			insert_score(&mut scores, &mut n_names, &name, rank, ne, ending.expect("ending"), game);
 		}
 		file.rewind().expect("rewind file");
 	}
@@ -239,8 +240,8 @@ pub fn put_scores(ending: Option<Ending>, game: &mut GameState) {
 	}
 	backend::push_screen();
 	drop(file);
-	game.diary.add_entry("");
-	clean_up("", &mut game.player);
+	game.as_diary_mut().add_entry("");
+	clean_up("", game);
 }
 
 fn gold_in_score(score: &str) -> Option<usize> {
@@ -256,12 +257,12 @@ fn insert_score(
 	rank: usize,
 	n: usize,
 	ending: Ending,
-	player: &Player,
+	game: &mut impl Dungeon,
 ) {
-	let mut buf = format!("{:2}    {:6}   {}: ", rank + 1, player.rogue.gold, player.settings.login_name);
+	let mut buf = format!("{:2}    {:6}   {}: ", rank + 1, game.as_fighter().gold, game.as_settings().login_name);
 	buf += &ending_string(&ending);
-	buf += &format!(" on level {} ", player.max_depth);
-	if (!ending.is_win()) && has_amulet(player) {
+	buf += &format!(" on level {} ", game.max_depth());
+	if (!ending.is_win()) && game.has_amulet() {
 		buf += "with amulet";
 	}
 	insert_to_limit(scores, &buf, rank, n);
@@ -350,7 +351,7 @@ pub fn center(row: i64, msg: &str) {
 	backend::set_str(msg, (row, margin as i64).into());
 }
 
-pub fn score_file_error(game: &mut GameState) {
-	game.player.interrupt_and_slurp();
-	clean_up("sorry, score file is out of order", &mut game.player);
+pub fn score_file_error(game: &mut impl Dungeon) {
+	game.interrupt_and_slurp();
+	clean_up("sorry, score file is out of order", game);
 }

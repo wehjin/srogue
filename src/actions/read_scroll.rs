@@ -1,5 +1,5 @@
 use crate::actions::GameUpdater;
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::monster::{aggravate, create_monster};
 use crate::objects::NoteStatus::Identified;
 use crate::pack::pack_letter;
@@ -77,7 +77,7 @@ fn read_scroll(game: &mut GameState) {
 								game.diary.add_entry(&msg);
 								armor.raise_armor_enchant(1);
 								armor.is_cursed = 0;
-								game.stats_changed = true;
+								game.as_diary_mut().set_stats_changed(true);
 							} else {
 								game.diary.add_entry("your skin crawls");
 							}
@@ -86,7 +86,8 @@ fn read_scroll(game: &mut GameState) {
 							game.diary.add_entry("this is a scroll of identify");
 							let obj = game.player.expect_object_mut(obj_id);
 							obj.identified = true;
-							game.player.notes.note_mut(Scroll, scroll_kind.to_index()).status = Identified;
+							let note = game.player.notes.note_mut(Scroll, scroll_kind.to_index());
+							note.status = Identified;
 							idntfy(game);
 						}
 						ScrollKind::Teleport => {

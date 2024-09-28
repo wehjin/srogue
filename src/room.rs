@@ -1,18 +1,18 @@
+use serde::{Deserialize, Serialize};
 use std::ops::RangeInclusive;
 
-use serde::{Deserialize, Serialize};
-
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM};
 use crate::level::materials::{CellMaterial, FloorFixture, TunnelFixture, Visibility};
 use crate::level::{same_col, same_row, DungeonCell, Level};
-use crate::monster::Monster;
 use crate::motion::can_move;
 use crate::objects::{gr_object, place_at};
 use crate::player::{Player, RoomMark};
 use crate::prelude::*;
 use crate::random::get_rand;
 use crate::render_system::RenderAction::RoomAndPlayer;
+
+use crate::resources::arena::Arena;
 use crate::resources::level::size::LevelSpot;
 use crate::room::room_visitor::RoomVisitor;
 use crate::room::DoorDirection::{Down, Left, Right, Up};
@@ -58,9 +58,8 @@ impl RoomType {
 		*self == RoomType::Room
 	}
 	pub fn is_vault(&self) -> bool { *self == RoomType::Room }
-	pub fn is_maze(&self) -> bool {
-		*self == RoomType::Maze
-	}
+	pub fn is_maze(&self) -> bool { *self == RoomType::Maze }
+	pub fn is_maze_or_vault(&self) -> bool { self.is_maze() || self.is_vault() }
 	pub fn is_type<T: AsRef<[RoomType]>>(&self, room_types: T) -> bool {
 		room_types.as_ref().iter().position(|rt| self == rt).is_some()
 	}
@@ -297,17 +296,32 @@ pub fn visit_room(rn: usize, game: &mut GameState) {
 }
 
 pub fn gr_spot(is_good_cell: impl Fn(&DungeonCell) -> bool, player: &Player, level: &Level) -> DungeonSpot {
+	gr_spot_without_rogue(player.rogue.row, player.rogue.col, &level, is_good_cell)
+}
+pub fn gr_spot_without_rogue(rogue_row: i64, rogue_col: i64, level: &Level, is_good_cell: impl Fn(&DungeonCell) -> bool + Sized) -> DungeonSpot {
+	let exclude_rogue_spot = Some(LevelSpot::from_i64(rogue_row, rogue_col));
+	gr_vacant_spot(level, exclude_rogue_spot, is_good_cell)
+}
+pub fn gr_vacant_spot(level: &Level, exclude: Option<LevelSpot>, is_good_cell: impl Fn(&DungeonCell) -> bool + Sized) -> DungeonSpot {
 	let mut row;
 	let mut col;
 	loop {
 		row = get_rand(MIN_ROW, DROWS as i64 - 2);
 		col = get_rand(0, DCOLS as i64 - 1);
 		let rn = get_room_number(row, col, level);
-		let keep_looking = rn == NO_ROOM
-			|| !is_good_cell(&level.dungeon[row as usize][col as usize])
-			|| !(level.rooms[rn as usize].room_type == RoomType::Room || level.rooms[rn as usize].room_type == RoomType::Maze)
-			|| ((row == player.rogue.row) && (col == player.rogue.col));
-		if !keep_looking {
+
+		let not_a_room = rn == NO_ROOM;
+		let fails_filter = !is_good_cell(&level.dungeon[row as usize][col as usize]);
+		let not_a_room_or_maze = !(level.rooms[rn as usize].room_type == RoomType::Room || level.rooms[rn as usize].room_type == RoomType::Maze);
+		let is_excluded = if let Some(exclusion) = exclude {
+			let (exclude_row, exclude_col) = exclusion.i64();
+			row == exclude_row && col == exclude_col
+		} else {
+			false
+		};
+		let bad_spot = not_a_room || fails_filter || not_a_room_or_maze || is_excluded;
+		let good_spot = !bad_spot;
+		if good_spot {
 			break;
 		}
 	}
@@ -460,20 +474,19 @@ pub fn draw_magic_map(game: &mut GameState) {
 
 const ROOM_OR_MAZE: [RoomType; 2] = [RoomType::Room, RoomType::Maze];
 
-pub fn dr_course(monster: &mut Monster, is_entering: bool, row: i64, col: i64, player: &Player, level: &Level) {
-	monster.spot.row = row;
-	monster.spot.col = col;
-	if monster.sees(player.rogue.row, player.rogue.col, level) {
-		monster.clear_target();
+pub fn dr_course_legacy(mon_id: u64, is_entering: bool, row: i64, col: i64, game: &mut GameState) {
+	game.set_monster_spot(mon_id, row, col);
+	if game.monster_sees_rogue(mon_id) {
+		game.as_monster_mut(mon_id).clear_target_reset_stuck();
 		return;
 	}
-	let mon_room = monster.cur_room(level);
+	let mon_room = game.as_monster(mon_id).cur_room(&game.level);
 	if is_entering {
 		/* look for door to some other room */
 		let random_start = get_rand(0, MAX_ROOM - 1);
 		for i in 0..MAX_ROOM {
 			let rr = (random_start + i) % MAX_ROOM;
-			let room = level.rooms[rr];
+			let room = game.level.rooms[rr];
 			let room_mark = RoomMark::Cavern(rr);
 			if !room.is_type(&ROOM_OR_MAZE) || room_mark == mon_room {
 				continue;
@@ -481,11 +494,11 @@ pub fn dr_course(monster: &mut Monster, is_entering: bool, row: i64, col: i64, p
 			let mon_rn = mon_room.rn();
 			for k in 0..4 {
 				if mon_rn == room.doors[k].oth_room {
-					monster.set_target_spot(
+					game.as_monster_mut(mon_id).set_target_spot(
 						room.doors[k].oth_row.expect("oth row"),
 						room.doors[k].oth_col.expect("oth col"),
 					);
-					let target_spot = monster.target_spot.expect("target spot");
+					let target_spot = game.as_monster(mon_id).target_spot.expect("target spot");
 					if target_spot.is_at(row, col) {
 						continue;
 					}
@@ -495,14 +508,14 @@ pub fn dr_course(monster: &mut Monster, is_entering: bool, row: i64, col: i64, p
 		}
 		/* look for door to dead end */
 		let mon_rn = mon_room.rn().expect("not an area");
-		let mon_room = level.rooms[mon_rn];
+		let mon_room = game.level.rooms[mon_rn];
 		{
 			let wall_bounds = mon_room.to_wall_bounds();
 			for i in wall_bounds.rows_usize() {
 				for j in wall_bounds.cols_usize() {
 					let spot = DungeonSpot::from_usize(i, j);
-					if level.dungeon[i][j].is_any_door() && !spot.shares_axis(&monster.spot) {
-						monster.set_target_spot(i as i64, j as i64);
+					if game.level.dungeon[i][j].is_any_door() && !spot.shares_axis(&game.as_monster(mon_id).spot) {
+						game.as_monster_mut(mon_id).set_target_spot(i as i64, j as i64);
 						return;
 					}
 				}
@@ -511,11 +524,11 @@ pub fn dr_course(monster: &mut Monster, is_entering: bool, row: i64, col: i64, p
 		/* return monster to room that he came from */
 		for i in 0..MAX_ROOM {
 			for j in 0..4usize {
-				if level.rooms[i].doors[j].oth_room == Some(mon_rn) {
+				if game.level.rooms[i].doors[j].oth_room == Some(mon_rn) {
 					for k in 0..4usize {
 						let door_k = mon_room.doors[k];
 						if door_k.oth_room == Some(i) {
-							monster.set_target_spot(
+							game.as_monster_mut(mon_id).set_target_spot(
 								door_k.oth_row.expect("oth row"),
 								door_k.oth_col.expect("oth col"),
 							);
@@ -526,18 +539,18 @@ pub fn dr_course(monster: &mut Monster, is_entering: bool, row: i64, col: i64, p
 			}
 		}
 		/* no place to send monster */
-		monster.clear_target();
+		game.as_monster_mut(mon_id).clear_target_reset_stuck();
 	} else {
 		/* exiting room */
 		match mon_room.rn() {
 			None => {
-				monster.clear_target();
+				game.as_monster_mut(mon_id).clear_target_reset_stuck();
 			}
 			Some(mon_rn) => {
-				if let Some((other_row, other_col)) = get_other_room(mon_rn, row, col, level) {
-					monster.set_target_spot(other_row, other_col);
+				if let Some((other_row, other_col)) = get_other_room(mon_rn, row, col, &game.level) {
+					game.as_monster_mut(mon_id).set_target_spot(other_row, other_col);
 				} else {
-					monster.clear_target();
+					game.as_monster_mut(mon_id).clear_target_reset_stuck();
 				}
 			}
 		}
@@ -565,5 +578,5 @@ fn get_other_room(rn: usize, row: i64, col: i64, level: &Level) -> Option<(i64, 
 			return Some((row, col));
 		}
 	}
-	return None;
+	None
 }

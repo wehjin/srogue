@@ -36,7 +36,7 @@ pub fn roll_level(party_type: PartyType, rogue: Rogue, stats: &mut DungeonStats,
 }
 
 fn roll_amulet(level: &mut DungeonLevel, rng: &mut impl Rng) {
-	if !level.rogue.has_amulet && level.depth >= AMULET_LEVEL as usize {
+	if !level.rogue.has_amulet && level.depth >= AMULET_LEVEL {
 		let amulet = Object::new(ObjectWhat::Amulet, rng);
 		let spot = level.roll_vacant_spot(false, false, false, rng);
 		level.put_object(spot, amulet);
@@ -68,7 +68,7 @@ fn roll_traps(level: &mut DungeonLevel, rng: &mut impl Rng) {
 }
 
 fn roll_traps_count(level: &DungeonLevel, rng: &mut impl Rng) -> usize {
-	const AMULET_LEVEL_AND_TWO: usize = (AMULET_LEVEL + 2) as usize;
+	const AMULET_LEVEL_AND_TWO: usize = AMULET_LEVEL + 2;
 	match level.depth {
 		0..=2 => 0,
 		3..=7 => rng.gen_range(0..=2),
@@ -108,6 +108,8 @@ fn roll_rooms(rogue: Rogue, party_type: PartyType, rng: &mut impl Rng) -> Dungeo
 			objects: Default::default(),
 			monsters: Default::default(),
 			rogue,
+			see_invisible: false,
+			detect_monster: false,
 		}
 	} else {
 		let design = roll_design(rng);
@@ -138,6 +140,8 @@ fn roll_rooms(rogue: Rogue, party_type: PartyType, rng: &mut impl Rng) -> Dungeo
 			objects: Default::default(),
 			monsters: Default::default(),
 			rogue,
+			see_invisible: false,
+			detect_monster: false,
 		}
 	}
 }

@@ -5,6 +5,7 @@ use crate::pack::pack_letter;
 use crate::player::rings::HandUsage;
 use crate::prelude::object_what::ObjectWhat::Ring;
 use crate::prelude::object_what::PackFilter::Rings;
+use crate::resources::avatar::Avatar;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::{ask_ring_hand, ring_stats, PlayerHand};
 use crate::systems::play_level::LevelResult;
@@ -13,7 +14,7 @@ pub struct PutOnRing;
 
 impl GameUpdater for PutOnRing {
 	fn update(game: &mut GameState) -> Option<LevelResult> {
-		if game.player.hand_usage() == HandUsage::Both {
+		if game.hand_usage() == HandUsage::Both {
 			game.diary.add_entry("wearing two rings already");
 			return None;
 		}

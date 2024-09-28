@@ -11,6 +11,7 @@ use crate::prelude::object_what::ObjectWhat::{Amulet, Armor, Food, Gold, Potion,
 use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::render_system::backend;
+use crate::resources::avatar::Avatar;
 use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::ring_kind::RingKind;
@@ -98,7 +99,7 @@ impl Object {
 
 pub fn inventory_legacy(filter: PackFilter, source: ObjectSource, game: &mut GameState) {
 	let pack = match source {
-		ObjectSource::Player => game.player.pack(),
+		ObjectSource::Player => game.as_rogue_pack(),
 		ObjectSource::Ground => &game.ground,
 	};
 	if pack.is_empty() {

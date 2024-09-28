@@ -82,7 +82,7 @@ pub struct RunStep {
 }
 
 fn _descend(state: RunState, rng: &mut impl Rng) -> RunStep {
-	let RunState { mut stats, level, visor, diary } = state;
+	let RunState { mut stats, level, visor, diary, settings } = state;
 	let party_type = if stats.is_party_depth(&level.rogue.depth) {
 		stats.party_depth = stats.party_depth.roll_next(&level.rogue.depth, rng);
 		PartyType::PartyRollBig
@@ -90,6 +90,6 @@ fn _descend(state: RunState, rng: &mut impl Rng) -> RunStep {
 		PartyType::NoParty
 	};
 	let level = roll_level(party_type, level.rogue, &mut stats, rng);
-	let state = RunState { stats, level, visor, diary };
+	let state = RunState { stats, level, visor, diary, settings };
 	RunStep { state, effect: RunEffect::Exit }
 }

@@ -14,6 +14,7 @@ pub fn roll_monsters(level: &mut DungeonLevel, rng: &mut impl Rng) {
 		}
 		let spot = level.roll_vacant_spot(true, false, true, rng);
 		level.put_monster(spot, monster);
+		// TODO Use Dungeon::insert_monster instead of put_monster.
 	}
 }
 

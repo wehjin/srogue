@@ -2,7 +2,7 @@ use crate::resources::dice::roll_chance;
 use crate::resources::level::design::Design;
 use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::maze::hide_random_tunnels;
-use crate::resources::level::room::{ExitId, LevelRoom};
+use crate::resources::level::room::{ExitSide, LevelRoom};
 use crate::resources::level::sector::{shuffled_sectors, Sector, ALL_SECTORS};
 use crate::resources::level::size::LevelSpot;
 use crate::resources::level::{deadend, maze};
@@ -123,6 +123,12 @@ fn roll_empty_sectors(spaces: &[LevelRoom; 9], percent: usize, rng: &mut impl Rn
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum Axis { Horizontal, Vertical }
 impl Axis {
+	pub fn flip(&self) -> Self {
+		match self {
+			Axis::Horizontal => Axis::Vertical,
+			Axis::Vertical => Axis::Horizontal
+		}
+	}
 	pub fn sort_spots(&self, spot1: LevelSpot, spot2: LevelSpot) -> (LevelSpot, LevelSpot) {
 		match self {
 			Axis::Horizontal => if spot1.col < spot2.col { (spot1, spot2) } else { (spot2, spot1) },
@@ -160,12 +166,16 @@ fn connect_spaces(axis: Axis, sector1: Sector, sector2: Sector, current_level: u
 	let end: LevelSpot;
 	match axis {
 		Axis::Horizontal => {
-			start = spaces[sector1 as usize].put_exit(ExitId::Right, sector2, current_level, map, rng);
-			end = spaces[sector2 as usize].put_exit(ExitId::Left, sector1, current_level, map, rng);
+			start = spaces[sector1 as usize].put_exit(ExitSide::Right, sector2, current_level, map, rng);
+			end = spaces[sector2 as usize].put_exit(ExitSide::Left, sector1, current_level, map, rng);
+			spaces[sector2 as usize][ExitSide::Left].set_far_spot(start);
+			spaces[sector1 as usize][ExitSide::Right].set_far_spot(end);
 		}
 		Axis::Vertical => {
-			start = spaces[sector1 as usize].put_exit(ExitId::Bottom, sector2, current_level, map, rng);
-			end = spaces[sector2 as usize].put_exit(ExitId::Top, sector1, current_level, map, rng);
+			start = spaces[sector1 as usize].put_exit(ExitSide::Bottom, sector2, current_level, map, rng);
+			end = spaces[sector2 as usize].put_exit(ExitSide::Top, sector1, current_level, map, rng);
+			spaces[sector2 as usize][ExitSide::Top].set_far_spot(start);
+			spaces[sector1 as usize][ExitSide::Bottom].set_far_spot(end);
 		}
 	}
 	map.put_passage(axis, start, end, current_level, rng);

@@ -3,6 +3,7 @@ use crate::init::GameState;
 use crate::inventory::{inventory_legacy, single_inv, ObjectSource};
 use crate::player::rings::HandUsage;
 use crate::prelude::object_what::PackFilter::AllObjects;
+use crate::resources::avatar::Avatar;
 use crate::ring::PlayerHand;
 use crate::systems::play_level::{LevelResult, UNKNOWN_COMMAND};
 
@@ -63,7 +64,7 @@ fn inv_armor_weapon(is_weapon: bool, game: &mut GameState) {
 			game.diary.add_entry("not wielding anything");
 		}
 	} else {
-		if let Some(armor) = game.player.armor() {
+		if let Some(armor) = game.armor() {
 			single_inv(Some(armor.ichar), game);
 		} else {
 			game.diary.add_entry("not wearing anything");

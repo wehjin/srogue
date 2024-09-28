@@ -1,4 +1,5 @@
 use crate::armors::constants::RINGMAIL;
+use crate::level::RogueExp;
 use crate::objects::{alloc_object, Object, ObjectId, ObjectPack};
 use crate::player::constants::INIT_HP;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
@@ -21,8 +22,7 @@ pub struct Fighter {
 	pub str_max: isize,
 	pub pack: ObjectPack,
 	pub gold: usize,
-	pub exp: isize,
-	pub exp_points: isize,
+	pub exp: RogueExp,
 	pub row: i64,
 	pub col: i64,
 	pub moves_left: isize,
@@ -105,8 +105,7 @@ impl Default for Fighter {
 			str_max: 16,
 			pack: ObjectPack::new(),
 			gold: 0,
-			exp: 1,
-			exp_points: 0,
+			exp: RogueExp::new(),
 			row: 0,
 			col: 0,
 			moves_left: 1250,

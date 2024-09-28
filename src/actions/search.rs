@@ -1,6 +1,7 @@
 use crate::actions::GameUpdater;
 use crate::init::GameState;
 use crate::random::rand_percent;
+use crate::resources::avatar::Avatar;
 use crate::systems::play_level::LevelResult;
 use crate::trap;
 use crate::trap::id_trap;
@@ -51,7 +52,7 @@ pub(crate) fn search(kind: SearchKind, game: &mut GameState) {
 	for _ in 0..n {
 		let mut unlucky_spots = Vec::new();
 		for spot in hidden_spots {
-			if rand_percent(17 + game.player.buffed_exp() as usize) {
+			if rand_percent(17 + game.buffed_exp() as usize) {
 				lucky_spots += 1;
 				game.cell_at_mut(spot).set_visible();
 				game.render_spot(spot);

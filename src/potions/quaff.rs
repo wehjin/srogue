@@ -1,12 +1,13 @@
 use crate::actions::quaff::STRANGE_FEELING;
 use crate::init::GameState;
-use crate::level::{add_exp, LEVEL_POINTS};
+use crate::level::add_exp;
 use crate::monster::show_monsters;
 use crate::objects::show_objects;
-use crate::player::Avatar;
 use crate::potions::kind::PotionKind;
 use crate::random::get_rand;
 use crate::render_system::RenderAction::MonstersFloorAndPlayer;
+use crate::resources::avatar::Avatar;
+use rand::thread_rng;
 
 pub fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
 	match potion_kind {
@@ -39,8 +40,9 @@ pub fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
 			}
 		}
 		PotionKind::RaiseLevel => {
-			game.player.rogue.exp_points = LEVEL_POINTS[(game.player.rogue.exp - 1) as usize];
-			add_exp(1, true, game);
+			let fighter = game.as_fighter_mut();
+			fighter.exp.raise_level();
+			add_exp(1, true, game, &mut thread_rng());
 		}
 		PotionKind::Blindness => {
 			if game.player.health.blind.is_inactive() {
@@ -76,7 +78,7 @@ pub fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
 				"you feel confused"
 			};
 			game.diary.add_entry(msg);
-			crate::r#use::confuse(&mut game.player);
+			crate::r#use::confuse(game);
 		}
 		PotionKind::Levitation => {
 			game.diary.add_entry("you start to float in the air");
@@ -102,7 +104,7 @@ pub fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
 }
 
 fn potion_heal(extra: bool, game: &mut GameState) {
-	game.player.rogue.hp_current += game.player.rogue.exp;
+	game.as_fighter_mut().hp_current += game.as_fighter().exp.level as isize;
 	let mut ratio = game.player.rogue.hp_current as f32 / game.player.rogue.hp_max as f32;
 	if ratio >= 1.00 {
 		let raise_max = if extra { 2 } else { 1 };

@@ -3,10 +3,12 @@ use crate::resources::dice::roll_chance;
 use crate::resources::level::feature_grid::feature::Feature;
 use crate::resources::level::feature_grid::FeatureGrid;
 use crate::resources::level::plain::Axis;
+use crate::resources::level::room_id::RoomId;
 use crate::resources::level::sector::{Sector, SectorBounds};
 use crate::resources::level::size::LevelSpot;
 use crate::room::{RoomBounds, RoomType};
 use rand::Rng;
+use std::ops::{Index, IndexMut};
 
 #[derive(Debug, Copy, Clone, Default, Eq, PartialEq, Hash)]
 pub struct LevelRoom {
@@ -14,60 +16,73 @@ pub struct LevelRoom {
 	pub bounds: RoomBounds,
 	pub exits: [RoomExit; 4],
 }
+
+impl Index<ExitSide> for LevelRoom {
+	type Output = RoomExit;
+	fn index(&self, index: ExitSide) -> &Self::Output {
+		&self.exits[index as usize]
+	}
+}
+impl IndexMut<ExitSide> for LevelRoom {
+	fn index_mut(&mut self, index: ExitSide) -> &mut Self::Output {
+		&mut self.exits[index as usize]
+	}
+}
+
 impl LevelRoom {
 	pub fn contains_spot(&self, spot: LevelSpot) -> bool {
 		self.bounds.contains_spot(spot)
 	}
 }
 impl LevelRoom {
-	pub fn exit_at(&self, exit: ExitId) -> &RoomExit {
+	pub fn exit_at(&self, exit: ExitSide) -> &RoomExit {
 		&self.exits[exit as usize]
 	}
-	pub fn put_exit(&mut self, exit: ExitId, sector: Sector, current_level: usize, map: &mut FeatureGrid, rng: &mut impl Rng) -> LevelSpot {
+	pub fn put_exit(&mut self, near_side: ExitSide, far_sector: Sector, depth: usize, map: &mut FeatureGrid, rng: &mut impl Rng) -> LevelSpot {
+		let near_spot: LevelSpot;
 		let wall_width = if self.is_maze() { 0u64 } else { 1 };
-		let spot: LevelSpot;
-		let axis: Axis;
-		match exit {
-			ExitId::Top | ExitId::Bottom => {
-				axis = Axis::Horizontal;
-				let row = if exit == ExitId::Top { self.bounds.top } else { self.bounds.bottom };
-				let search_bounds = self.bounds.inset(0, wall_width);
-				let col;
+		match near_side {
+			ExitSide::Top | ExitSide::Bottom => {
+				let near_row = if near_side == ExitSide::Top { self.bounds.top } else { self.bounds.bottom };
+				let near_col;
+				let col_bounds = self.bounds.inset(0, wall_width);
 				'init_col: loop {
-					let maybe_col = search_bounds.random_col(rng);
-					let feature = map.feature_at(LevelSpot::from_i64(row, maybe_col));
+					let maybe_col = col_bounds.random_col(rng);
+					let feature = map.feature_at(LevelSpot::from_i64(near_row, maybe_col));
 					if feature == Feature::HorizWall || feature == Feature::Tunnel {
-						col = maybe_col;
+						near_col = maybe_col;
 						break 'init_col;
 					}
 				}
-				spot = LevelSpot::from_i64(row, col)
+				near_spot = LevelSpot::from_i64(near_row, near_col)
 			}
-			ExitId::Left | ExitId::Right => {
-				axis = Axis::Vertical;
-				let col = if exit == ExitId::Right { self.bounds.right } else { self.bounds.left };
-				let search_bounds = self.bounds.inset(wall_width, 0);
-				let row;
+			ExitSide::Left | ExitSide::Right => {
+				let near_col = if near_side == ExitSide::Right { self.bounds.right } else { self.bounds.left };
+				let near_row;
+				let row_bounds = self.bounds.inset(wall_width, 0);
 				'init_row: loop {
-					let maybe_row = search_bounds.random_row(rng);
-					let feature = map.feature_at(LevelSpot::from_i64(maybe_row, col));
+					let maybe_row = row_bounds.random_row(rng);
+					let feature = map.feature_at(LevelSpot::from_i64(maybe_row, near_col));
 					if feature == Feature::VertWall || feature == Feature::Tunnel {
-						row = maybe_row;
+						near_row = maybe_row;
 						break 'init_row;
 					}
 				}
-				spot = LevelSpot::from_i64(row, col)
+				near_spot = LevelSpot::from_i64(near_row, near_col)
 			}
 		}
-		let conceal = current_level > 2 && roll_chance(HIDE_PERCENT, rng);
-		let feature = if self.is_vault() {
-			if conceal { Feature::ConcealedDoor(axis) } else { Feature::Door }
-		} else {
-			if conceal { Feature::ConcealedTunnel } else { Feature::Tunnel }
-		};
-		map.put_feature(spot, feature);
-		self.exits[exit as usize] = RoomExit::Passage { from_spot: spot, to: sector };
-		spot
+		{
+			let conceal = depth > 2 && roll_chance(HIDE_PERCENT, rng);
+			let feature = if self.is_vault() {
+				let wall_axis = near_side.to_axis().flip();
+				if conceal { Feature::ConcealedDoor(wall_axis) } else { Feature::Door }
+			} else {
+				if conceal { Feature::ConcealedTunnel } else { Feature::Tunnel }
+			};
+			map.put_feature(near_spot, feature);
+		}
+		self.exits[near_side as usize] = RoomExit::Passage { near_spot, far_sector, far_spot: None };
+		near_spot
 	}
 }
 
@@ -96,28 +111,35 @@ fn roll_room_bounds(sector_bounds: &SectorBounds, rng: &mut impl Rng) -> RoomBou
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum ExitId {
+pub enum ExitSide {
 	Top = 0,
 	Right = 1,
-	Left = 2,
-	Bottom = 3,
+	Bottom = 2,
+	Left = 3,
 }
-impl ExitId {
-	pub fn opposite(&self) -> Self {
+impl ExitSide {
+	pub fn flip(&self) -> Self {
 		match self {
-			ExitId::Top => ExitId::Bottom,
-			ExitId::Right => ExitId::Left,
-			ExitId::Left => ExitId::Right,
-			ExitId::Bottom => ExitId::Top,
+			ExitSide::Top => ExitSide::Bottom,
+			ExitSide::Right => ExitSide::Left,
+			ExitSide::Left => ExitSide::Right,
+			ExitSide::Bottom => ExitSide::Top,
+		}
+	}
+	pub fn to_axis(&self) -> Axis {
+		match self {
+			ExitSide::Top | ExitSide::Bottom => Axis::Vertical,
+			ExitSide::Right | ExitSide::Left => Axis::Horizontal,
 		}
 	}
 }
+pub const ALL_EXIT_SIDES: [ExitSide; 4] = [ExitSide::Top, ExitSide::Right, ExitSide::Bottom, ExitSide::Left];
 
 #[derive(Debug, Copy, Clone, Default, Eq, PartialEq, Hash)]
 pub enum RoomExit {
 	#[default]
 	None,
-	Passage { from_spot: LevelSpot, to: Sector },
+	Passage { near_spot: LevelSpot, far_sector: Sector, far_spot: Option<LevelSpot> },
 }
 
 impl RoomExit {
@@ -131,6 +153,33 @@ impl RoomExit {
 		match self {
 			RoomExit::Passage { .. } => true,
 			RoomExit::None => false,
+		}
+	}
+	pub fn leads_to_room(&self, room: RoomId) -> bool {
+		let room_sector = room.as_sector();
+		match self {
+			RoomExit::None => false,
+			RoomExit::Passage { far_sector: to_sector, .. } => room_sector == Some(to_sector),
+		}
+	}
+	pub fn get_near_spot(&self) -> Option<&LevelSpot> {
+		match self {
+			RoomExit::None => None,
+			RoomExit::Passage { near_spot, .. } => Some(near_spot),
+		}
+	}
+	pub fn get_far_spot(&self) -> Option<LevelSpot> {
+		match self {
+			RoomExit::None => None,
+			RoomExit::Passage { far_spot, .. } => *far_spot,
+		}
+	}
+	pub fn set_far_spot(&mut self, spot: LevelSpot) {
+		match self {
+			RoomExit::None => {}
+			RoomExit::Passage { far_spot, .. } => {
+				far_spot.replace(spot);
+			}
 		}
 	}
 }

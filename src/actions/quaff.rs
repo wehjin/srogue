@@ -1,5 +1,5 @@
 use crate::actions::GameUpdater;
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::pack::pack_letter;
 use crate::potions::quaff::quaff_potion;
 use crate::prelude::object_what::ObjectWhat::Potion;
@@ -34,7 +34,7 @@ pub fn quaff(game: &mut GameState) {
 				}
 				Some(potion_kind) => {
 					quaff_potion(potion_kind, game);
-					game.stats_changed = true;
+					game.as_diary_mut().set_stats_changed(true);
 					game.player.notes.identify_if_un_called(Potion, potion_kind.to_index());
 					crate::r#use::vanish(obj_id, true, game);
 				}

@@ -1,5 +1,5 @@
 use crate::actions::GameUpdater;
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::pack::{do_wear, pack_letter};
 use crate::prelude::object_what::ObjectWhat::Armor;
 use crate::prelude::object_what::PackFilter::Armors;
@@ -33,7 +33,7 @@ impl GameUpdater for Wear {
 				let obj_desc = game.player.get_obj_desc(obj_id);
 				game.diary.add_entry(&format!("wearing {}", obj_desc));
 				do_wear(obj_id, &mut game.player);
-				game.stats_changed = true;
+				game.as_diary_mut().set_stats_changed(true);
 				game.yield_turn_to_monsters();
 			}
 		}

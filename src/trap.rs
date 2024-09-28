@@ -4,16 +4,17 @@ use serde::{Deserialize, Serialize};
 use TrapKind::NoTrap;
 
 use crate::hit::{get_damage, DamageEffect, DamageStat};
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::level::constants::{DCOLS, DROWS, MAX_TRAP};
 use crate::level::Level;
 use crate::message::sound_bell;
 use crate::motion::{is_direction, MoveDirection};
-use crate::player::{Avatar, Player};
+use crate::player::Player;
 use crate::prelude::ending::Ending;
 use crate::prelude::*;
 use crate::r#use::{take_a_nap, tele};
 use crate::random::{get_rand, rand_percent};
+use crate::resources::avatar::Avatar;
 use crate::resources::diary;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::room::gr_spot;
@@ -138,7 +139,7 @@ pub fn trap_player(row: usize, col: usize, game: &mut GameState) {
 			if !game.player.ring_effects.has_sustain_strength() && rand_percent(40) && game.player.rogue.str_current >= 3 {
 				game.player.rogue.str_current -= 1;
 			}
-			game.stats_changed = true;
+			game.as_diary_mut().set_stats_changed(true);
 			if game.player.rogue.hp_current <= 0 {
 				killed_by(Ending::PoisonDart, game);
 			}

@@ -32,6 +32,12 @@ pub mod feature {
 		Trap(TrapKind, Visibility),
 	}
 	impl Feature {
+		pub fn is_any_trap(&self) -> bool {
+			match self {
+				Feature::Trap(..) => true,
+				_ => false,
+			}
+		}
 		pub fn is_any_tunnel(&self) -> bool {
 			match self {
 				Feature::Tunnel | Feature::ConcealedTunnel => true,
@@ -42,6 +48,12 @@ pub mod feature {
 			match self {
 				Feature::Door | Feature::ConcealedDoor(_) => true,
 				_ => false
+			}
+		}
+		pub fn is_nothing(&self) -> bool {
+			match self {
+				Feature::None => true,
+				_ => false,
 			}
 		}
 	}

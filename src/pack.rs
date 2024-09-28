@@ -1,4 +1,4 @@
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::inventory::{get_obj_desc, inventory_legacy, ObjectSource};
 use crate::message::sound_bell;
 use crate::motion::reg_move;
@@ -42,7 +42,7 @@ pub fn pick_up(row: i64, col: i64, game: &mut GameState) -> PickUpResult {
 		game.player.rogue.gold += quantity;
 		game.level.dungeon[row as usize][col as usize].clear_object();
 		let removed = game.ground.remove(obj_id).expect("remove level object");
-		game.stats_changed = true;
+		game.as_diary_mut().set_stats_changed(true);
 		PickUpResult::AddedToGold(removed)
 	} else if game.player.pack_weight_with_new_object(game.ground.object(obj_id))
 		>= MAX_PACK_COUNT {
@@ -212,6 +212,7 @@ pub fn get_pack_op(c: char, default_filter: PackFilter) -> Option<PackOp> {
 }
 
 pub fn has_amulet(player: &Player) -> bool {
+	// TODO Convert uses to Dungeon::has_amulet and remove this function.
 	mask_pack(&player.rogue.pack, Amulets)
 }
 

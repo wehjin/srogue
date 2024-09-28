@@ -1,5 +1,5 @@
 use crate::actions::GameUpdater;
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::inventory::get_obj_desc;
 use crate::monster::mv_aquatars;
 use crate::motion::{reg_move, MoveDirection};
@@ -7,6 +7,7 @@ use crate::objects::{place_at, Object};
 use crate::pack::{kick_into_pack, CURSE_MESSAGE};
 use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::prelude::object_what::PackFilter::AllObjects;
+use crate::resources::avatar::Avatar;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::un_put_hand;
 use crate::systems::play_level::LevelResult;
@@ -37,7 +38,7 @@ fn drop_item(game: &mut GameState) {
 		game.diary.add_entry("there's already something there");
 		return;
 	}
-	if game.player.pack().is_empty() {
+	if game.as_rogue_pack().is_empty() {
 		game.diary.add_entry("you have nothing to drop");
 		return;
 	}
@@ -63,7 +64,7 @@ fn drop_item(game: &mut GameState) {
 				}
 				mv_aquatars(game);
 				pack::unwear(&mut game.player);
-				game.stats_changed = true;
+				game.as_diary_mut().set_stats_changed(true);
 			} else if let Some(hand) = game.player.ring_hand(obj_id) {
 				if game.player.check_ring(hand, Object::is_cursed) {
 					game.diary.add_entry(CURSE_MESSAGE);

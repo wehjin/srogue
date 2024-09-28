@@ -1,3 +1,4 @@
+use crate::prelude::DungeonSpot;
 use crate::room::RoomBounds;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Default)]
@@ -67,6 +68,12 @@ impl LevelSpot {
 	}
 	pub fn has_same_row_or_col(&self, other: LevelSpot) -> bool {
 		self.has_same_row(other) || self.has_same_col(other)
+	}
+}
+impl From<DungeonSpot> for LevelSpot {
+	fn from(value: DungeonSpot) -> Self {
+		let DungeonSpot { row, col } = value;
+		Self::from_i64(row, col)
 	}
 }
 

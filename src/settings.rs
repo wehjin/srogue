@@ -1,23 +1,11 @@
-use std::env;
 use serde::{Deserialize, Serialize};
-use crate::machdep::get_login_name;
+use std::env;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum SettingsError { LoginName }
 
 pub fn load() -> Result<Settings, SettingsError> {
-	let login_name = get_login_name().ok_or(SettingsError::LoginName)?;
-	let mut settings = Settings {
-		login_name,
-		fruit: "slime-mold ".to_string(),
-		score_only: false,
-		rest_file: None,
-		save_file: None,
-		jump: true,
-		nick_name: None,
-		ask_quit: true,
-		show_skull: true,
-	};
+	let mut settings = Settings::default();
 	settings.do_args();
 	settings.do_opts();
 	Ok(settings)
@@ -34,6 +22,22 @@ pub struct Settings {
 	pub nick_name: Option<String>,
 	pub ask_quit: bool,
 	pub show_skull: bool,
+}
+
+impl Default for Settings {
+	fn default() -> Self {
+		Self {
+			login_name: whoami::username(),
+			fruit: "slime-mold ".to_string(),
+			score_only: false,
+			rest_file: None,
+			save_file: None,
+			jump: true,
+			nick_name: None,
+			ask_quit: true,
+			show_skull: true,
+		}
+	}
 }
 
 impl Settings {

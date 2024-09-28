@@ -5,6 +5,7 @@ use crate::inventory::get_obj_desc;
 use crate::objects::Object;
 use crate::pack::CURSE_MESSAGE;
 use crate::player::rings::HandUsage;
+use crate::resources::avatar::Avatar;
 use crate::ring::{un_put_hand, PlayerHand};
 use crate::systems::play_level::LevelResult;
 
@@ -12,7 +13,7 @@ pub struct RemoveRing;
 
 impl GameUpdater for RemoveRing {
 	fn update(game: &mut GameState) -> Option<LevelResult> {
-		let hand = match game.player.hand_usage() {
+		let hand = match game.hand_usage() {
 			HandUsage::None => {
 				inv_rings(game);
 				return None;

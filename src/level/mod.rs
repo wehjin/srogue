@@ -1,17 +1,18 @@
 use rand::seq::SliceRandom;
-use rand::thread_rng;
+use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::level::constants::{DCOLS, DROWS, MAX_ROOM, MAX_TRAP};
 use crate::level::materials::TunnelFixture;
 use crate::objects::put_amulet;
 use crate::pack::has_amulet;
 use crate::player::constants::INIT_HP;
-use crate::player::{Player, RoomMark};
+use crate::player::RoomMark;
 use crate::prelude::*;
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system::backend;
+use crate::resources::avatar::Avatar;
 use crate::resources::level::wake::wake_room_legacy;
 use crate::room::RoomType::Nothing;
 use crate::room::{gr_spot, is_all_connected, visit_room, visit_spot_area, DoorDirection, Room, RoomBounds, RoomType};
@@ -25,7 +26,7 @@ mod cells;
 mod dungeon;
 pub mod materials;
 
-pub const LEVEL_POINTS: [isize; MAX_EXP_LEVEL] = [
+pub const LEVEL_POINTS: [usize; MAX_EXP_LEVEL] = [
 	10,
 	20,
 	40,
@@ -68,7 +69,7 @@ impl Level {
 				return RoomMark::Cavern(i);
 			}
 		}
-		return RoomMark::None;
+		RoomMark::None
 	}
 	pub fn cell(&self, spot: DungeonSpot) -> &DungeonCell {
 		&self.dungeon[spot.row as usize][spot.col as usize]
@@ -210,7 +211,7 @@ pub fn make_room(rn: usize, r1: usize, r2: usize, r3: usize, level: &mut Level) 
 		let bottom = top + height - 1;
 		let left = left + col_offset;
 		let right = left + width - 1;
-		let skip_walls = (room_index != r1 as usize) && (room_index != r2 as usize) && (room_index != r3 as usize) && rand_percent(40);
+		let skip_walls = (room_index != r1) && (room_index != r2) && (room_index != r3) && rand_percent(40);
 		(left, right, top, bottom, !skip_walls)
 	} else {
 		(left, right, top, bottom, true)
@@ -229,7 +230,7 @@ pub fn make_room(rn: usize, r1: usize, r2: usize, r3: usize, level: &mut Level) 
 	level.rooms[rn].set_bounds(&room_bounds);
 }
 
-pub fn connect_rooms(room1: usize, room2: usize, level_depth: isize, level: &mut Level) -> bool {
+pub fn connect_rooms(room1: usize, room2: usize, level_depth: usize, level: &mut Level) -> bool {
 	if !level.rooms[room1].room_type.is_type(&vec![RoomType::Room, RoomType::Maze])
 		|| !level.rooms[room2].room_type.is_type(&vec![RoomType::Room, RoomType::Maze]) {
 		return false;
@@ -255,14 +256,14 @@ impl GameState {
 	pub fn clear_level(&mut self) {
 		self.level.clear();
 		self.player.reset_for_new_level();
-		self.player.cleaned_up = None;
+		self.diary.cleaned_up = None;
 		self.mash.clear();
 		self.ground.clear();
 		backend::erase_screen();
 	}
 }
 
-pub fn put_door(rn: usize, door_dir: DoorDirection, level_depth: isize, level: &mut Level) -> DungeonSpot {
+pub fn put_door(rn: usize, door_dir: DoorDirection, level_depth: usize, level: &mut Level) -> DungeonSpot {
 	let room = &mut level.rooms[rn];
 	let wall_width = if RoomType::Maze == room.room_type { 0 } else { 1 };
 	let door_spot = match door_dir {
@@ -304,7 +305,7 @@ pub fn put_door(rn: usize, door_dir: DoorDirection, level_depth: isize, level: &
 	door_spot
 }
 
-pub fn draw_simple_passage(spot1: DungeonSpot, spot2: DungeonSpot, dir: DoorDirection, level_depth: isize, level: &mut Level) {
+pub fn draw_simple_passage(spot1: DungeonSpot, spot2: DungeonSpot, dir: DoorDirection, level_depth: usize, level: &mut Level) {
 	let (spot1, spot2) =
 		match dir {
 			DoorDirection::Left | DoorDirection::Right => {
@@ -351,14 +352,14 @@ pub fn same_col(room1: usize, room2: usize) -> bool {
 	room1 % 3 == room2 % 3
 }
 
-pub fn add_mazes(level_depth: isize, level: &mut Level) {
+pub fn add_mazes(level_depth: usize, level: &mut Level) {
 	if level_depth > 1 {
 		let random_start = get_rand(0, MAX_ROOM - 1);
 		let maze_percent = (level_depth * 5) / 4 + if level_depth > 15 { level_depth } else { 0 };
 		for i in 0..MAX_ROOM {
 			let rn = (random_start + i) % MAX_ROOM;
 			if level.rooms[rn].room_type.is_nothing() {
-				if rand_percent(maze_percent as usize) {
+				if rand_percent(maze_percent) {
 					level.rooms[rn].room_type = RoomType::Maze;
 					let spot_in_room = level.rooms[rn].to_floor_bounds().to_random_spot(&mut thread_rng());
 					let room_bounds = level.rooms[rn].to_wall_bounds();
@@ -373,7 +374,7 @@ pub fn add_mazes(level_depth: isize, level: &mut Level) {
 	}
 }
 
-pub fn fill_out_level(level: &mut Level, level_depth: isize) {
+pub fn fill_out_level(level: &mut Level, level_depth: usize) {
 	let shuffled_rns = shuffled_rns();
 	level.recursive_deadend = None;
 	for rn in shuffled_rns {
@@ -387,7 +388,7 @@ pub fn fill_out_level(level: &mut Level, level_depth: isize) {
 	}
 }
 
-fn fill_it(rn: usize, do_rec_de: bool, level_depth: isize, level: &mut Level) {
+fn fill_it(rn: usize, do_rec_de: bool, level_depth: usize, level: &mut Level) {
 	let mut did_this = false;
 	level.target_room_offsets.shuffle(&mut thread_rng());
 	let mut rooms_found = 0;
@@ -433,7 +434,7 @@ fn fill_it(rn: usize, do_rec_de: bool, level_depth: isize, level: &mut Level) {
 	}
 }
 
-fn recursive_deadend(rn: usize, s_spot: DungeonSpot, level_depth: isize, level: &mut Level) {
+fn recursive_deadend(rn: usize, s_spot: DungeonSpot, level_depth: usize, level: &mut Level) {
 	level.rooms[rn].room_type = RoomType::DeadEnd;
 	level.dungeon[s_spot.row as usize][s_spot.col as usize].set_material_remove_others(CellMaterial::Tunnel(Visibility::Visible, TunnelFixture::None));
 
@@ -474,7 +475,7 @@ fn find_tunnel_in_room(rn: usize, level: &Level) -> Option<DungeonSpot> {
 			}
 		}
 	}
-	return None;
+	None
 }
 
 fn make_maze(spot: DungeonSpot, bounds: &RoomBounds, level: &mut Level) {
@@ -516,7 +517,7 @@ fn check_spot_for_maze(delta_row: i64, delta_col: i64, spot: DungeonSpot, bounds
 	}
 }
 
-fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: i64, level_depth: isize, level: &mut Level) {
+fn hide_boxed_passage(row1: i64, col1: i64, row2: i64, col2: i64, n: i64, level_depth: usize, level: &mut Level) {
 	if level_depth <= 2 {
 		return;
 	}
@@ -580,53 +581,86 @@ pub fn put_player_legacy(avoid_room: RoomMark, game: &mut GameState) {
 	game.render_spot(game.player.to_spot());
 }
 
-pub fn add_exp(e: isize, promotion: bool, game: &mut GameState) {
-	game.player.rogue.exp_points += e;
-	if game.player.rogue.exp_points >= LEVEL_POINTS[(game.player.rogue.exp - 1) as usize] {
-		let new_exp = get_exp_level(game.player.rogue.exp_points);
-		if game.player.rogue.exp_points > MAX_EXP {
-			game.player.rogue.exp_points = MAX_EXP + 1;
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize, Ord, PartialOrd)]
+pub struct RogueExp {
+	pub points: usize,
+	pub level: usize,
+}
+impl RogueExp {
+	pub fn new() -> Self {
+		Self { points: 0, level: 1 }
+	}
+	pub fn set_level(&mut self, value: usize) {
+		self.level = value;
+	}
+	pub fn raise_level(&mut self) {
+		self.points = LEVEL_POINTS[self.level - 1];
+	}
+	pub fn add_points_take_old(&mut self, points: usize) -> Self {
+		let old = self.to_owned();
+		let new_level;
+		let mut new_points = old.points + points;
+		if new_points >= LEVEL_POINTS[old.level - 1] {
+			new_level = get_exp_level(new_points);
+			new_points = new_points.min((MAX_EXP + 1) as usize);
+		} else {
+			new_level = old.level;
 		}
-		for i in (game.player.rogue.exp + 1)..=new_exp {
+		self.points = new_points;
+		self.level = new_level;
+		old
+	}
+}
+
+
+pub fn add_exp(e: usize, promotion: bool, game: &mut impl Dungeon, rng: &mut impl Rng) {
+	let old = game.as_fighter_mut().exp.add_points_take_old(e);
+	let new = game.as_fighter().exp;
+	if new.level > old.level {
+		for i in old.level + 1..=new.level {
 			let msg = format!("welcome to level {}", i);
-			game.diary.add_entry(&msg);
+			game.as_diary_mut().add_entry(&msg);
+
 			if promotion {
-				let hp = hp_raise(&mut game.player);
-				game.player.rogue.hp_current += hp;
-				game.player.rogue.hp_max += hp;
+				let hp = hp_raise(game.wizard(), rng);
+				let fighter = game.as_fighter_mut();
+				fighter.hp_current += hp;
+				fighter.hp_max += hp;
 			}
-			game.player.rogue.exp = i;
-			game.stats_changed = true;
+			// TODO the purpose of setting the level to i is to print the correct exp level
+			// every time we print the welcome message.
+			game.as_fighter_mut().exp.set_level(i);
+			game.as_diary_mut().set_stats_changed(true);
 		}
 	} else {
-		game.stats_changed = true;
+		game.as_diary_mut().set_stats_changed(true);
 	}
 }
 
-pub fn get_exp_level(e: isize) -> isize {
+pub fn get_exp_level(level: usize) -> usize {
 	for i in 0..(MAX_EXP_LEVEL - 1) {
-		if LEVEL_POINTS[i] > e {
-			return (i + 1) as isize;
+		if LEVEL_POINTS[i] > level {
+			return i + 1;
 		}
 	}
-	return MAX_EXP_LEVEL as isize;
+	MAX_EXP_LEVEL
 }
 
-pub fn hp_raise(player: &Player) -> isize {
-	if player.wizard {
-		10
-	} else {
-		get_rand(3, 10) as isize
+pub fn hp_raise(wizard: bool, rng: &mut impl Rng) -> isize {
+	match wizard {
+		true => 10,
+		false => rng.gen_range(3..=10)
 	}
 }
 
 pub fn show_average_hp(game: &mut GameState) {
 	let player = &game.player;
-	let (real_average, effective_average) = if player.rogue.exp == 1 {
+	let exp_level = game.as_fighter().exp.level;
+	let (real_average, effective_average) = if exp_level == 1 {
 		(0.0, 0.0)
 	} else {
-		let real = (player.rogue.hp_max - player.extra_hp - INIT_HP + player.less_hp) as f32 / (player.rogue.exp - 1) as f32;
-		let average = (player.rogue.hp_max - INIT_HP) as f32 / (player.rogue.exp - 1) as f32;
+		let real = (player.rogue.hp_max - player.extra_hp - INIT_HP + player.less_hp) as f32 / (exp_level - 1) as f32;
+		let average = (player.rogue.hp_max - INIT_HP) as f32 / (exp_level - 1) as f32;
 		(real, average)
 	};
 	let msg = format!(

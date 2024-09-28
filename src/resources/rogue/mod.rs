@@ -1,4 +1,3 @@
-use crate::objects::ObjectPack;
 use crate::player::RogueHealth;
 use crate::resources::rogue::depth::RogueDepth;
 use crate::ring::effects::RingEffects;
@@ -18,12 +17,7 @@ pub struct Rogue {
 	pub ring_effects: RingEffects,
 	pub fighter: Fighter,
 	pub health: RogueHealth,
-}
-
-impl Rogue {
-	pub fn as_pack(&self) -> &ObjectPack {
-		&self.fighter.pack
-	}
+	pub fight_monster: Option<u64>,
 }
 
 impl Rogue {
@@ -35,6 +29,7 @@ impl Rogue {
 			ring_effects: Default::default(),
 			fighter: Default::default(),
 			health: Default::default(),
+			fight_monster: None,
 		}
 	}
 	pub fn outfit(mut self, rng: &mut impl Rng) -> Self {

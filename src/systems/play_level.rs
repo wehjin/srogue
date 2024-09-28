@@ -1,4 +1,4 @@
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::render_system;
 use crate::render_system::RenderAction;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
@@ -25,7 +25,7 @@ pub fn play_level(game: &mut GameState) -> LevelResult {
 	render_system::refresh(game);
 	let mut player_state = PlayState::Idle;
 	loop {
-		if let Some(exit) = &game.player.cleaned_up {
+		if let Some(exit) = &game.as_diary().cleaned_up {
 			return CleanedUp(exit.to_string());
 		}
 		let next_state = match player_state {

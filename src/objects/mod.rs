@@ -29,6 +29,7 @@ use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::ObjectWhat::{Amulet, Food, Gold, Ring, Wand};
 use crate::prelude::{DungeonSpot, MAX_ARMOR};
 use crate::random::{coin_toss, get_rand, rand_percent};
+use crate::resources::avatar::Avatar;
 use crate::resources::diary;
 use crate::resources::input_line::get_input_line;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
@@ -240,7 +241,7 @@ pub fn put_objects(game: &mut GameState) {
 	put_gold(game.player.cur_depth, &mut game.level, &mut game.ground);
 }
 
-pub fn put_gold(level_depth: isize, level: &mut Level, ground: &mut ObjectPack) {
+pub fn put_gold(level_depth: usize, level: &mut Level, ground: &mut ObjectPack) {
 	for i in 0..MAX_ROOM {
 		let is_maze = level.rooms[i].room_type == RoomType::Maze;
 		let is_room = level.rooms[i].room_type == RoomType::Room;
@@ -261,7 +262,7 @@ pub fn put_gold(level_depth: isize, level: &mut Level, ground: &mut ObjectPack) 
 	}
 }
 
-pub fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: isize, level: &mut Level, ground: &mut ObjectPack) {
+pub fn plant_gold(row: i64, col: i64, is_maze: bool, cur_level: usize, level: &mut Level, ground: &mut ObjectPack) {
 	let mut obj = alloc_object(&mut thread_rng());
 	obj.spot.set(row, col);
 	obj.what_is = Gold;
@@ -294,12 +295,11 @@ impl Player {
 		if let Some(obj) = self.object(obj_id) { obj.which_kind } else { 0 }
 	}
 	pub fn check_object(&self, obj_id: ObjectId, f: impl Fn(&Object) -> bool) -> bool {
-		self.pack().check_object(obj_id, f)
+		self.as_rogue_pack().check_object(obj_id, f)
 	}
 	pub fn obj_id_if(&self, f: impl Fn(&Object) -> bool) -> Option<ObjectId> {
-		self.pack().find_id(f)
+		self.as_rogue_pack().find_id(f)
 	}
-	pub fn pack(&self) -> &ObjectPack { &self.rogue.pack }
 
 	pub fn object_with_letter(&self, ch: char) -> Option<&Object> {
 		self.find_pack_obj(|obj| obj.ichar == ch)
@@ -343,7 +343,7 @@ pub fn name_of(obj: &Object, fruit: String, notes: &NoteTables) -> String {
 }
 
 pub fn gr_object(player: &mut Player) -> Object {
-	roll_object(player.cur_depth as usize, &mut player.foods, &mut thread_rng())
+	roll_object(player.cur_depth, &mut player.foods, &mut thread_rng())
 }
 
 pub fn put_stairs(player: &Player, level: &mut Level) {
@@ -368,12 +368,12 @@ pub fn alloc_object(rng: &mut impl Rng) -> Object {
 	obj
 }
 
-pub fn make_party(level_depth: isize, game: &mut GameState) {
+pub fn make_party(level_depth: usize, game: &mut GameState) {
 	let party_room = gr_room(&game.level);
 	game.level.party_room = Some(party_room);
 	let n = if rand_percent(99) { party_objects(party_room, game) } else { 11 };
 	if rand_percent(99) {
-		party_monsters(party_room, n, level_depth, &mut game.mash, &mut game.level, &mut thread_rng());
+		party_monsters(party_room, n, level_depth, game, &mut thread_rng());
 	}
 }
 
@@ -512,8 +512,8 @@ fn get_kind(max_kind: usize, game: &mut GameState) -> Option<usize> {
 	good_kind
 }
 
-fn next_party(cur_level: isize) -> isize {
-	const PARTY_TIME: isize = 10;   /* one party somewhere in each 10 level span */
+fn next_party(cur_level: usize) -> usize {
+	const PARTY_TIME: usize = 10;   /* one party somewhere in each 10 level span */
 	let mut n = cur_level;
 	while (n % PARTY_TIME) > 0 {
 		n += 1;

@@ -2,7 +2,7 @@ use rand::thread_rng;
 use OnceResult::Idle;
 
 use crate::actions::action_set::PlayerEvent;
-use crate::init::{GameState, GameTurn};
+use crate::init::{Dungeon, GameState, GameTurn};
 use crate::motion::{multiple_move_rogue, one_move_rogue, reg_move};
 use crate::render_system;
 use crate::resources::diary;
@@ -63,10 +63,11 @@ fn dispatch_player_event(game: &mut GameState, player_event: PlayerEvent) -> Opt
 
 fn test_and_clear_loop_context(game: &mut GameState) -> Option<LevelResult> {
 	game.player.interrupted = false;
-	if !game.player.hit_message.is_empty() {
+	if !game.as_diary().hit_message.is_empty() {
 		game.player.interrupt_and_slurp();
-		game.diary.add_entry(&game.player.hit_message);
-		game.player.hit_message.clear();
+		let diary = game.as_diary_mut();
+		diary.add_entry(&diary.hit_message.to_string());
+		diary.hit_message.clear();
 	}
 	if game.level.trap_door {
 		game.level.trap_door = false;

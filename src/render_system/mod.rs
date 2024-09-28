@@ -1,6 +1,6 @@
 pub use constants::*;
 
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::player::RoomMark;
 use crate::prelude::DungeonSpot;
@@ -105,10 +105,10 @@ pub(crate) fn darken_room(rn: usize, game: &mut GameState) {
 
 
 pub fn refresh(game: &mut GameState) {
-	if game.stats_changed {
+	if game.as_diary().stats_changed {
 		const STATS_ROW: i32 = DROWS as i32 - 1;
 		backend::set_full_row(&format_stats(&game.player), STATS_ROW as usize);
-		game.stats_changed = false;
+		game.as_diary_mut().set_stats_changed(false);
 	}
 	if game.render_queue.len() > 0 {
 		let mut expander_bounds = ExpanderBounds::default();

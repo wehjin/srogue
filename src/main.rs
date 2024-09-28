@@ -1,5 +1,5 @@
 use crate::console::ConsoleError;
-use crate::init::{init, InitError, InitResult};
+use crate::init::{init, Dungeon, InitError, InitResult};
 use crate::level::{make_level, put_player_legacy};
 use crate::monster::put_mons;
 use crate::motion::MoveDirection;
@@ -166,7 +166,7 @@ pub fn main_legacy() -> anyhow::Result<()> {
 			add_traps(&game.player, &mut game.level);
 			put_mons(&mut game);
 			put_player_legacy(game.level.party_room.into(), &mut game);
-			game.stats_changed = true;
+			game.as_diary_mut().set_stats_changed(true);
 		}
 		restored = false;
 		match play_level(&mut game) {

@@ -1,8 +1,9 @@
 use crate::actions::GameUpdater;
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::monster::mv_aquatars;
 use crate::objects::Object;
 use crate::pack::{unwear, CURSE_MESSAGE};
+use crate::resources::avatar::Avatar;
 use crate::systems::play_level::LevelResult;
 
 pub struct TakeOff;
@@ -10,7 +11,7 @@ pub struct TakeOff;
 impl GameUpdater for TakeOff {
 	fn update(game: &mut GameState) -> Option<LevelResult> {
 		if let Some(armor_id) = game.player.armor_id() {
-			if game.player.pack().check_object(armor_id, Object::is_cursed) {
+			if game.as_rogue_pack().check_object(armor_id, Object::is_cursed) {
 				game.diary.add_entry(CURSE_MESSAGE);
 			} else {
 				mv_aquatars(game);
@@ -20,7 +21,7 @@ impl GameUpdater for TakeOff {
 					let msg = format!("was wearing {}", obj_desc);
 					game.diary.add_entry(&msg);
 				}
-				game.stats_changed = true;
+				game.as_diary_mut().set_stats_changed(true);
 				game.yield_turn_to_monsters();
 			}
 		} else {

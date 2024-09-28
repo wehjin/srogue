@@ -14,7 +14,7 @@ pub fn wake_room_legacy(rn: usize, entering: bool, row: i64, col: i64, game: &mu
 		let monster = game.mash.monster_mut(mon_id);
 		if monster.in_room(rn, &game.level) {
 			if entering {
-				monster.clear_target();
+				monster.clear_target_reset_stuck();
 			} else {
 				monster.set_target_spot(row, col);
 			}
@@ -46,7 +46,7 @@ pub fn wake_room(wake_type: WakeType, level: &mut DungeonLevel, rng: &mut impl R
 			if let Some(target) = target_spot {
 				monster.set_target(target)
 			} else {
-				monster.clear_target()
+				monster.clear_target_reset_stuck()
 			}
 			if monster.wakens() {
 				if dice::roll_chance(buffed_chance, rng) {

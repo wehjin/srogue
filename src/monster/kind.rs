@@ -240,7 +240,7 @@ impl MonsterKind {
 			MonsterKind::Zombie => 'Z',
 		}
 	}
-	pub fn kill_exp(&self) -> isize {
+	pub fn kill_exp(&self) -> usize {
 		match self {
 			MonsterKind::Aquator => 20,
 			MonsterKind::Bat => 2,

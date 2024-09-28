@@ -37,12 +37,12 @@ pub fn shuffled_sectors(rng: &mut impl Rng) -> Vec<Sector> {
 }
 
 impl Sector {
-	pub fn find_neighbor(&self, neighbor: SectorNeighbor) -> Option<Self> {
+	pub fn find_neighbor(&self, neighbor: NeighborSide) -> Option<Self> {
 		match neighbor {
-			SectorNeighbor::Above => self.neighbor_above(),
-			SectorNeighbor::Below => self.neighbor_below(),
-			SectorNeighbor::Right => self.neighbor_to_right(),
-			SectorNeighbor::Left => self.neighbor_to_left(),
+			NeighborSide::Above => self.neighbor_above(),
+			NeighborSide::Below => self.neighbor_below(),
+			NeighborSide::Right => self.neighbor_to_right(),
+			NeighborSide::Left => self.neighbor_to_left(),
 		}
 	}
 }
@@ -131,18 +131,18 @@ const SECTOR_BOUNDS: [SectorBounds; 9] = [
 ];
 
 
-pub fn shuffled_sector_neighbors(rng: &mut impl Rng) -> Vec<SectorNeighbor> {
-	let mut neighbors = SECTOR_NEIGHBORS.to_vec();
+pub fn shuffled_neighbor_sides(rng: &mut impl Rng) -> Vec<NeighborSide> {
+	let mut neighbors = NEIGHBOR_SIDES.to_vec();
 	neighbors.shuffle(rng);
 	neighbors
 }
 
-pub const SECTOR_NEIGHBORS: &'static [SectorNeighbor] = &[
-	SectorNeighbor::Left, SectorNeighbor::Right, SectorNeighbor::Below, SectorNeighbor::Above
+pub const NEIGHBOR_SIDES: &'static [NeighborSide] = &[
+	NeighborSide::Left, NeighborSide::Right, NeighborSide::Below, NeighborSide::Above
 ];
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum SectorNeighbor {
+pub enum NeighborSide {
 	Above,
 	Below,
 	Right,

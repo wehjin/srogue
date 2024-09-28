@@ -2,7 +2,7 @@ use rand::prelude::SliceRandom;
 use rand::{thread_rng, Rng};
 
 use crate::hit::{get_hit_chance, get_weapon_damage, mon_damage};
-use crate::init::GameState;
+use crate::init::{Dungeon, GameState};
 use crate::level::DungeonCell;
 use crate::monster::{mv_aquatars, MonsterIndex};
 use crate::motion::{get_dir_or_cancel, is_passable};
@@ -16,6 +16,7 @@ use crate::prelude::*;
 use crate::r#use::vanish;
 use crate::random::rand_percent;
 use crate::render_system::animation;
+use crate::resources::avatar::Avatar;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::ring::un_put_hand;
 use crate::throw::Motion::{Down, DownLeft, DownRight, Left, Right, Same, Up, UpLeft, UpRight};
@@ -76,7 +77,7 @@ pub fn throw(game: &mut GameState) {
 			} else if game.player.check_object(obj_id, |it| it.is_being_worn()) {
 				mv_aquatars(game);
 				unwear(&mut game.player);
-				game.stats_changed = true;
+				game.as_diary_mut().set_stats_changed(true);
 			} else if let Some(hand) = game.player.ring_hand(obj_id) {
 				un_put_hand(hand, game);
 			}
@@ -121,19 +122,21 @@ fn throw_at_monster(mon_id: u64, obj_id: ObjectId, game: &mut GameState) -> bool
 		hit_chance
 	};
 	{
-		game.player.hit_message = format!("the {}", game.player.to_object_name_with_quantity(obj_id, 1).trim());
+		let name = game.player.to_object_name_with_quantity(obj_id, 1).trim().to_string();
+		let diary = game.as_diary_mut();
+		diary.hit_message = format!("the {}", name);
 		if !rand_percent(hit_chance) {
-			game.player.hit_message += " misses  ";
+			diary.hit_message += " misses  ";
 			return false;
 		}
-		game.player.hit_message += " hit  ";
+		diary.hit_message += " hit  ";
 	}
 	if game.player.object_what(obj_id) == Wand && rand_percent(75) {
 		zap_monster(mon_id, game.player.object_kind(obj_id), game);
 	} else {
 		let player_str = game.player.buffed_strength();
-		let player_exp = game.player.buffed_exp();
-		let player_debuf = game.player.debuf_exp();
+		let player_exp = game.buffed_exp();
+		let player_debuf = game.debuf_exp();
 		let damage = {
 			let mut damage = get_weapon_damage(game.player.object(obj_id), player_str, player_exp, player_debuf);
 			if game.player.object_kind(obj_id) == ARROW && rogue_weapon_is_bow(&game.player) {

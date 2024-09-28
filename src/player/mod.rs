@@ -10,6 +10,7 @@ use crate::player::effects::TimeEffect;
 use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::{DungeonSpot, MAX_GOLD, MAX_HP, MAX_STRENGTH};
+use crate::resources::avatar::Avatar;
 use crate::resources::rogue::fighter::Fighter;
 use crate::ring::effects::RingEffects;
 use crate::room::RoomType;
@@ -76,6 +77,7 @@ impl Player {
 		self.can_see(spot.row, spot.col, level)
 	}
 	pub fn can_see(&self, row: i64, col: i64, level: &Level) -> bool {
+		// TODO Delete after converting users to physics::rogue_can_see.
 		if self.health.blind.is_active() {
 			false
 		} else {
@@ -94,43 +96,21 @@ impl Player {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
 	pub reg_search_count: usize,
-	pub hit_message: String,
 	pub interrupted: bool,
 	pub fight_monster: Option<u64>,
-	pub hunger: HungerLevel,
 	pub foods: usize,
 	pub wizard: bool,
 	pub cur_room: RoomMark,
 	pub notes: NoteTables,
 	pub settings: Settings,
-	pub cleaned_up: Option<String>,
-	pub cur_depth: isize,
-	pub max_depth: isize,
+	pub cur_depth: usize,
+	pub max_depth: usize,
 	pub rogue: Fighter,
-	pub party_counter: isize,
+	pub party_counter: usize,
 	pub ring_effects: RingEffects,
 	pub health: RogueHealth,
 	pub extra_hp: isize,
 	pub less_hp: isize,
-}
-
-impl Avatar for Player {
-	fn as_health(&self) -> &RogueHealth { &self.health }
-	fn as_health_mut(&mut self) -> &mut RogueHealth { &mut self.health }
-	fn rogue_row(&self) -> i64 { self.rogue.row }
-	fn rogue_col(&self) -> i64 { self.rogue.col }
-	fn set_rogue_row_col(&mut self, row: i64, col: i64) {
-		self.rogue.row = row;
-		self.rogue.col = col;
-	}
-}
-
-pub trait Avatar {
-	fn as_health(&self) -> &RogueHealth;
-	fn as_health_mut(&mut self) -> &mut RogueHealth;
-	fn rogue_row(&self) -> i64;
-	fn rogue_col(&self) -> i64;
-	fn set_rogue_row_col(&mut self, row: i64, col: i64);
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Default, Serialize, Deserialize, Hash)]
@@ -142,6 +122,7 @@ pub struct RogueHealth {
 	pub confused: TimeEffect,
 	pub bear_trap: usize,
 	pub being_held: bool,
+	pub hunger: HungerLevel,
 }
 
 impl RogueHealth {
@@ -149,10 +130,13 @@ impl RogueHealth {
 		self.bear_trap = 0;
 		self.being_held = false;
 	}
+	pub fn is_blind(&self) -> bool {
+		self.blind.is_active()
+	}
 }
 
 impl Player {
-	pub fn is_blind(&self) -> bool { self.health.blind.is_active() }
+	pub fn is_blind(&self) -> bool { self.health.is_blind() }
 	pub fn buffed_strength(&self) -> isize {
 		self.ring_effects.apply_add_strength(self.cur_strength())
 	}
@@ -166,14 +150,6 @@ impl Player {
 		if self.rogue.str_current > self.rogue.str_max {
 			self.rogue.str_max = self.rogue.str_current;
 		}
-	}
-
-	pub fn exp(&self) -> isize { self.rogue.exp }
-	pub fn buffed_exp(&self) -> isize {
-		self.ring_effects.apply_dexterity(self.exp())
-	}
-	pub fn debuf_exp(&self) -> isize {
-		self.hand_usage().count_hands()
 	}
 }
 
@@ -198,7 +174,7 @@ impl Player {
 		}
 	}
 	pub fn find_pack_obj(&self, f: impl Fn(&Object) -> bool) -> Option<&Object> {
-		self.pack().find_object(f)
+		self.as_rogue_pack().find_object(f)
 	}
 	pub fn find_pack_obj_mut(&mut self, f: impl Fn(&Object) -> bool) -> Option<&mut Object> {
 		self.pack_mut().find_object_mut(f)
@@ -212,19 +188,12 @@ impl Player {
 	}
 }
 
-pub const LAST_DUNGEON: isize = 99;
+pub const LAST_DUNGEON: usize = 99;
 
 impl Player {
 	pub fn armor_id(&self) -> Option<ObjectId> { self.rogue.armor }
 	pub fn armor_kind(&self) -> Option<ArmorKind> {
 		self.armor().map(|it| ArmorKind::from_index(it.which_kind as usize))
-	}
-	pub fn armor(&self) -> Option<&Object> {
-		if let Some(id) = self.rogue.armor {
-			self.pack().object_if_what(id, ObjectWhat::Armor)
-		} else {
-			None
-		}
 	}
 	pub fn armor_mut(&mut self) -> Option<&mut Object> {
 		if let Some(id) = self.rogue.armor {
@@ -260,7 +229,7 @@ impl Player {
 	}
 	pub fn weapon(&self) -> Option<&Object> {
 		if let Some(id) = self.weapon_id() {
-			self.pack().object_if_what(id, ObjectWhat::Weapon)
+			self.as_rogue_pack().object_if_what(id, ObjectWhat::Weapon)
 		} else {
 			None
 		}
@@ -295,16 +264,13 @@ impl Player {
 	pub fn new(settings: Settings) -> Self {
 		Player {
 			reg_search_count: 0,
-			hit_message: "".to_string(),
 			interrupted: false,
 			fight_monster: None,
-			hunger: HungerLevel::default(),
 			foods: 0,
 			wizard: false,
 			cur_room: RoomMark::None,
 			notes: NoteTables::new(),
 			settings,
-			cleaned_up: None,
 			cur_depth: 0,
 			max_depth: 1,
 			rogue: Fighter::default(),
