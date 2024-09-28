@@ -1,14 +1,15 @@
-use crate::motion::{dispatch_move_event, MoveDirection, MoveEffect, MoveEvent};
 use crate::resources::dungeon::DungeonVisor;
 use crate::resources::level::setup::roll_level;
 use crate::resources::level::PartyType;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
+use crate::resources::play::event::one_move::OneMoveEvent;
 use crate::resources::play::state::RunState;
 use message::MessageEvent;
 use rand::Rng;
 
 pub mod message;
+pub mod one_move;
 
 #[derive(Debug)]
 pub enum RunEvent {
@@ -18,7 +19,7 @@ pub enum RunEvent {
 	PlayerCloseModal(RunState),
 	PlayerOpenHelp(RunState),
 	PlayerOpenInventory(RunState),
-	PlayerMove(RunState, MoveDirection),
+	OneMove(OneMoveEvent),
 }
 
 impl RunEvent {
@@ -30,34 +31,9 @@ impl RunEvent {
 			RunEvent::PlayerCloseModal(state) => player_close_modal(state),
 			RunEvent::PlayerOpenHelp(state) => player_open_help(state),
 			RunEvent::PlayerOpenInventory(state) => player_open_inventory(state),
-			RunEvent::PlayerMove(state, direction) => player_move(direction, state, ctx.rng()),
+			RunEvent::OneMove(one_move_event) => one_move_event.into_step(ctx),
 		}
 	}
-}
-
-fn player_move(direction: MoveDirection, mut state: RunState, rng: &mut impl Rng) -> RunStep {
-	let mut next_event = Some(MoveEvent::Start { direction, pickup: true });
-	while let Some(event) = next_event.take() {
-		match dispatch_move_event(event, &mut state, rng) {
-			MoveEffect::Fail { consume_time } => {
-				if consume_time {
-					unimplemented!()
-				} else {
-					// TODO Deal with diary.
-					return RunStep::Effect(state, RunEffect::AwaitPlayerMove);
-				}
-			}
-			MoveEffect::PrepWithinRoom { row, col, rogue_row, rogue_col } => {
-				next_event = Some(MoveEvent::Continue { row, col, rogue_row, rogue_col })
-			}
-			MoveEffect::Done { .. } => {
-				let step = RunStep::Effect(state, RunEffect::AwaitPlayerMove);
-				return step;
-			}
-			_ => unimplemented!(),
-		}
-	}
-	RunStep::Exit(state)
 }
 
 fn player_open_inventory(mut state: RunState) -> RunStep {

@@ -233,7 +233,7 @@ pub fn seek_gold(mon_id: u64, game: &mut impl Dungeon) -> bool {
 	let bounds = game.room_bounds(room).inset(1, 1);
 	for spot in bounds.to_spots() {
 		let (row, col) = spot.i64();
-		if gold_at(row, col, game) && !game.has_monster(row, col) {
+		if gold_at(row, col, game) && !game.has_monster_at(row, col) {
 			if mon_can_go_and_reach(mon_id, row, col, true, game) {
 				game.move_mon_to(mon_id, row, col);
 				let flags = game.as_monster_flags_mut(mon_id);

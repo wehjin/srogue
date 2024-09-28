@@ -105,8 +105,9 @@ pub trait Dungeon: Avatar + Infra + Arena {
 	fn set_interrupted(&mut self, value: bool);
 	fn rogue_can_move(&self, row: i64, col: i64) -> bool;
 	fn rogue_can_see(&self, row: i64, col: i64) -> bool { rogue_sees_spot(LevelSpot::from_i64(row, col), self, self, self) }
-	fn has_monster(&self, row: i64, col: i64) -> bool;
-	fn try_monster(&self, mon_id: u64) -> Option<&Monster>;
+	fn has_monster_at(&self, row: i64, col: i64) -> bool;
+	fn get_monster_at(&self, row: i64, col: i64) -> Option<u64>;
+	fn get_monster(&self, mon_id: u64) -> Option<&Monster>;
 	fn interrupt_and_slurp(&mut self);
 	fn as_diary(&self) -> &Diary;
 	fn as_diary_mut(&mut self) -> &mut Diary;
@@ -158,8 +159,14 @@ impl Dungeon for GameState {
 
 	fn set_interrupted(&mut self, value: bool) { self.player.interrupted = value; }
 	fn rogue_can_move(&self, row: i64, col: i64) -> bool { can_move(self.rogue_row(), self.rogue_col(), row, col, &self.level) }
-	fn has_monster(&self, row: i64, col: i64) -> bool { self.level.dungeon[row as usize][col as usize].has_monster() }
-	fn try_monster(&self, mon_id: u64) -> Option<&Monster> { self.mash.try_monster(mon_id) }
+	fn has_monster_at(&self, row: i64, col: i64) -> bool { self.level.dungeon[row as usize][col as usize].has_monster() }
+	fn get_monster_at(&self, row: i64, col: i64) -> Option<u64> {
+		match self.mash.monster_at_spot(row, col) {
+			None => None,
+			Some(monster) => Some(monster.id())
+		}
+	}
+	fn get_monster(&self, mon_id: u64) -> Option<&Monster> { self.mash.try_monster(mon_id) }
 	fn interrupt_and_slurp(&mut self) { self.player.interrupt_and_slurp(); }
 	fn as_diary(&self) -> &Diary { &self.diary }
 	fn as_diary_mut(&mut self) -> &mut Diary { &mut self.diary }

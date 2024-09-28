@@ -53,7 +53,7 @@ pub fn mv_mons(game: &mut impl Dungeon) {
 		let mut done_with_monster = false;
 		if game.as_monster(mon_id).is_hasted() {
 			mv_monster(mon_id, game.rogue_row(), game.rogue_col(), false, game, rng);
-			if game.try_monster(mon_id).is_none() {
+			if game.get_monster(mon_id).is_none() {
 				done_with_monster = true;
 			}
 		} else if game.as_monster(mon_id).is_slowed() {
@@ -223,7 +223,7 @@ pub fn mon_can_go_and_reach(mon_id: u64, row: i64, col: i64, allow_any_direction
 	if game.is_no_feature_at(monster_row, col) || game.is_no_feature_at(row, monster_col) {
 		return false;
 	}
-	if !game.is_passable_at(row, col) || game.has_monster(row, col) {
+	if !game.is_passable_at(row, col) || game.has_monster_at(row, col) {
 		return false;
 	}
 	if (monster_row != row) && (monster_col != col) && (game.is_any_door_at(row, col) || game.is_any_door_at(monster_row, monster_col)) {

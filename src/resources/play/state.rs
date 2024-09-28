@@ -82,11 +82,18 @@ impl Dungeon for RunState {
 		self.level.features.can_move(*from, LevelSpot::from_i64(row, col))
 	}
 
-	fn has_monster(&self, row: i64, col: i64) -> bool {
+	fn has_monster_at(&self, row: i64, col: i64) -> bool {
 		self.level.try_monster(LevelSpot::from_i64(row, col)).is_some()
 	}
 
-	fn try_monster(&self, mon_id: u64) -> Option<&Monster> {
+	fn get_monster_at(&self, row: i64, col: i64) -> Option<u64> {
+		match self.level.try_monster(LevelSpot::from_i64(row, col)) {
+			None => None,
+			Some(monster) => Some(monster.id())
+		}
+	}
+
+	fn get_monster(&self, mon_id: u64) -> Option<&Monster> {
 		match self.level.find_monster(mon_id) {
 			None => None,
 			Some(spot) => self.level.try_monster(spot)
