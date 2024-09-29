@@ -1,6 +1,6 @@
 use crate::init::Dungeon;
 use crate::inventory::get_obj_desc;
-use crate::motion::MoveDirection;
+use crate::motion::{MoveDirection, MoveResult};
 use crate::odds::R_TELE_PERCENT;
 use crate::pack::{pick_up, PickUpResult};
 use crate::resources::arena::Arena;
@@ -21,22 +21,12 @@ pub struct OneMoveEvent(pub RunState, pub MoveDirection);
 impl OneMoveEvent {
 	pub fn into_step<R: Rng>(self, ctx: &mut RunContext<R>) -> RunStep {
 		let OneMoveEvent(state, direction) = self;
-		let new_state = match one_move_rogue(direction, true, state, ctx) {
-			OneMove::MoveFailed(state) => state,
-			OneMove::StoppedOnSomething(state) => state,
-			OneMove::Moved(state) => state,
-		};
-		RunStep::Effect(new_state, RunEffect::AwaitPlayerMove)
+		let step = one_move_rogue(direction, true, state, ctx);
+		step
 	}
 }
-
-pub enum OneMove {
-	MoveFailed(RunState),
-	StoppedOnSomething(RunState),
-	Moved(RunState),
-}
-
-fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunState, ctx: &mut RunContext<R>) -> OneMove {
+fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunState, ctx: &mut RunContext<R>) -> RunStep {
+	game.level.rogue.move_result = None;
 	{
 		// Where are we now?
 		let rogue_row = game.rogue_row();
@@ -51,7 +41,8 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 		// Is the spot navigable?
 		let to_spot_is_navigable = game.rogue_can_move(to_row, to_col);
 		if !to_spot_is_navigable {
-			return OneMove::MoveFailed(game);
+			game.level.rogue.move_result = Some(MoveResult::MoveFailed);
+			return RunStep::Effect(game, RunEffect::AwaitPlayerMove);
 		}
 		// What if we're stuck in place?
 		{
@@ -60,33 +51,38 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 			if begin_held || in_bear_trap {
 				let monster_in_spot = game.has_monster_at(to_row, to_col);
 				if !monster_in_spot {
-					if begin_held {
+					return if begin_held {
+						game.level.rogue.move_result = Some(MoveResult::MoveFailed);
 						let message = "you are being held";
 						let state = MessageEvent::dispatch(game, message, true, ctx);
-						return OneMove::MoveFailed(state);
+						RunStep::Effect(state, RunEffect::AwaitPlayerMove)
 					} else {
+						game.level.rogue.move_result = Some(MoveResult::MoveFailed);
 						let message = "you are still stuck in the bear trap";
 						let state = MessageEvent::dispatch(game, message, false, ctx);
 						// Do a regular move here so that the bear trap counts down.
 						// TODO (void) reg_move();
-						return OneMove::MoveFailed(state);
-					}
+						RunStep::Effect(state, RunEffect::AwaitPlayerMove)
+					};
 				}
 			}
 		}
 		// What if we're wearing a teleport ring?
 		if game.as_ring_effects().has_teleport() && ctx.roll_chance(R_TELE_PERCENT) {
+			game.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
 			// TODO tele(game);
-			return OneMove::StoppedOnSomething(game);
+			return RunStep::Effect(game, RunEffect::AwaitPlayerMove);
 		}
 		// What if there is a monster is where we want to go?
 		let monster_in_spot = game.has_monster_at(to_row, to_col);
 		if monster_in_spot {
 			let _mon_id = game.get_monster_at(to_row, to_col).unwrap();
+			game.level.rogue.move_result = Some(MoveResult::MoveFailed);
 			// TODO rogue_hit(mon_id, false, game);
 			// TODO reg_move(game);
-			return OneMove::MoveFailed(game);
+			return RunStep::Effect(game, RunEffect::AwaitPlayerMove);
 		}
+		// The lighting in the level changes as we move.
 		// What if we're moving to a door?
 		if game.is_any_door_at(to_row, to_col) {
 			match game.level.rogue.spot {
@@ -112,6 +108,7 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 			// tunnel to tunnel
 			game.level.light_tunnel_spot(LevelSpot::from_i64(to_row, to_col));
 		}
+
 		// Move the rogue.
 		game.set_rogue_row_col(to_row, to_col);
 	}
@@ -121,64 +118,69 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 	let col = game.rogue_col();
 	let has_object = game.level.try_object(LevelSpot::from_i64(row, col)).is_some();
 	if has_object {
-		let one_move = if !pickup {
+		return if !pickup {
 			stopped_on_something_with_moved_onto_message(row, col, game)
 		} else {
 			if game.as_health().levitate.is_active() {
-				OneMove::StoppedOnSomething(game)
+				game.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
+				RunStep::Effect(game, RunEffect::AwaitPlayerMove)
 			} else {
 				match pick_up(row, col, game, ctx) {
 					(PickUpResult::TurnedToDust, state) => {
 						moved_unless_hungry_or_confused(state)
 					}
-					(PickUpResult::AddedToGold(obj), state) => {
+					(PickUpResult::AddedToGold(obj), mut state) => {
+						state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
 						let msg = get_obj_desc(&obj, &state);
 						stopped_on_something_with_message(&msg, state)
 					}
-					(PickUpResult::AddedToPack { added_id, .. }, state) => {
+					(PickUpResult::AddedToPack { added_id, .. }, mut state) => {
+						state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
 						let msg = state.get_rogue_obj_desc(added_id);
 						stopped_on_something_with_message(&msg, state)
 					}
-					(PickUpResult::PackTooFull, state) => {
+					(PickUpResult::PackTooFull, mut state) => {
+						state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
 						stopped_on_something_with_moved_onto_message(row, col, state)
 					}
 				}
 			}
 		};
-		return one_move;
 	}
 	if game.is_any_door_at(row, col) || game.level.features.feature_at(LevelSpot::from_i64(row, col)).is_stairs() || game.is_any_trap_at(row, col) {
+		game.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
 		if game.as_health().levitate.is_inactive() && game.is_any_trap_at(row, col) {
 			// TODO trap_player(row as usize, col as usize, game);
 		}
 		// TODO reg_move(game);
-		return OneMove::StoppedOnSomething(game);
+		return RunStep::Effect(game, RunEffect::AwaitPlayerMove);
 	}
 	moved_unless_hungry_or_confused(game)
 }
 
-fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, mut game: RunState) -> OneMove {
+fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, game: RunState) -> RunStep {
 	let obj = game.level.try_object(LevelSpot::from_i64(row, col)).unwrap();
 	let obj_desc = get_obj_desc(obj, &game);
 	let desc = format!("moved onto {}", obj_desc);
 	stopped_on_something_with_message(&desc, game)
 }
 
-fn stopped_on_something_with_message(desc: &str, mut game: RunState) -> OneMove {
+fn stopped_on_something_with_message(desc: &str, mut game: RunState) -> RunStep {
 	game.interrupt_and_slurp();
 	game.diary.add_entry(desc);
 	// TODO reg_move(game);
-	OneMove::StoppedOnSomething(game)
+	RunStep::Effect(game, RunEffect::AwaitPlayerMove)
 }
 
-fn moved_unless_hungry_or_confused(mut game: RunState) -> OneMove {
+fn moved_unless_hungry_or_confused(mut game: RunState) -> RunStep {
 	// TODO if reg_move(&game) {
 	// 	/* fainted from hunger */
 	// 	return OneMove::StoppedOnSomething(game);
 	// }
 	if game.as_health().confused.is_active() {
-		OneMove::StoppedOnSomething(game)
+		game.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
 	} else {
-		OneMove::Moved(game)
+		game.level.rogue.move_result = Some(MoveResult::Moved);
 	}
+	RunStep::Effect(game, RunEffect::AwaitPlayerMove)
 }

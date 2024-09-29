@@ -32,7 +32,7 @@ use crate::trap::{is_off_screen, trap_player};
 
 pub const YOU_CAN_MOVE_AGAIN: &'static str = "you can move again";
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum MoveResult {
 	Moved,
 	MoveFailed,
