@@ -2,7 +2,7 @@ use crate::actions::GameUpdater;
 use crate::init::{Dungeon, GameState};
 use crate::inventory::get_obj_desc_legacy;
 use crate::monster::mv_aquatars;
-use crate::motion::{reg_move_legacy, MoveDirection};
+use crate::motion::{reg_move, MoveDirection};
 use crate::objects::{place_at, Object};
 use crate::pack::{kick_into_pack, CURSE_MESSAGE};
 use crate::prelude::object_what::ObjectWhat::Weapon;
@@ -85,7 +85,7 @@ fn drop_item(game: &mut GameState) {
 			let obj_desc = get_obj_desc_legacy(&place_obj, game.player.settings.fruit.to_string(), &game.player);
 			place_at(place_obj, game.player.rogue.row, game.player.rogue.col, &mut game.level, &mut game.ground);
 			game.diary.add_entry(&format!("dropped {}", obj_desc));
-			reg_move_legacy(game);
+			reg_move(game);
 		}
 	}
 }

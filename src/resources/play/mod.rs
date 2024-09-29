@@ -20,12 +20,14 @@ pub fn dispatch<R: Rng>(start_event: RunEvent, ctx: &mut RunContext<R>) -> RunSt
 	loop {
 		match next_event.dispatch(ctx) {
 			RunStep::Exit(state) => {
+				assert_eq!(&None, &state.diary.cleaned_up);
 				return state;
 			}
 			RunStep::Forward(event) => {
 				next_event = event;
 			}
 			RunStep::Effect(state, effect) => {
+				assert_eq!(&None, &state.diary.cleaned_up);
 				let console = ctx.console();
 				console.draw_lines(state.to_lines());
 				next_event = effect.perform_and_await(state, console);

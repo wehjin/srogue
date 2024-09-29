@@ -66,14 +66,14 @@ pub fn dispatch_move_event(event: MoveEvent, dungeon: &mut impl Dungeon, rng: &m
 			}
 			let rogue_stuck = dungeon.as_health().being_held || dungeon.as_health().bear_trap > 0;
 			if rogue_stuck && !dungeon.has_monster_at(row, col) {
-				if dungeon.as_health().being_held {
+				return if dungeon.as_health().being_held {
 					dungeon.interrupt_and_slurp();
 					dungeon.as_diary_mut().add_entry("you are being held");
-					return MoveEffect::Fail { consume_time: false };
+					MoveEffect::Fail { consume_time: false }
 				} else {
 					dungeon.as_diary_mut().add_entry("you are still stuck in the bear trap");
-					return MoveEffect::Fail { consume_time: true };
-				}
+					MoveEffect::Fail { consume_time: true }
+				};
 			}
 			if dungeon.as_ring_effects().has_teleport() && roll_chance(R_TELE_PERCENT, rng) {
 				return MoveEffect::Teleport;
@@ -108,7 +108,7 @@ pub fn one_move_rogue_legacy(direction: MoveDirection, pickup: bool, game: &mut 
 			MoveEffect::Fail { consume_time } => {
 				// TODO Call to reg_move into dispatch_move_event.
 				if consume_time {
-					reg_move_legacy(game);
+					reg_move(game);
 				}
 				return MoveFailed;
 			}
@@ -121,7 +121,7 @@ pub fn one_move_rogue_legacy(direction: MoveDirection, pickup: bool, game: &mut 
 				// TODO Call to reg_move into dispatch_move_event.
 				let mon_id = game.mash.monster_id_at_spot(row, col).expect("monster in mash at monster spot one_move_rogue");
 				rogue_hit(mon_id, false, game);
-				reg_move_legacy(game);
+				reg_move(game);
 				return MoveFailed;
 			}
 			MoveEffect::PrepToDoor { row, col, rogue_row, rogue_col } => {
@@ -202,7 +202,7 @@ pub fn one_move_rogue_legacy(direction: MoveDirection, pickup: bool, game: &mut 
 		if game.as_health().levitate.is_inactive() && player_cell.is_any_trap() {
 			trap_player(row as usize, col as usize, game);
 		}
-		reg_move_legacy(game);
+		reg_move(game);
 		StoppedOnSomething
 	} else {
 		moved_unless_hungry_or_confused(game)
@@ -219,12 +219,12 @@ fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, game: &mut G
 fn stopped_on_something_with_message(desc: &str, game: &mut GameState) -> MoveResult {
 	game.player.interrupt_and_slurp();
 	game.diary.add_entry(desc);
-	reg_move_legacy(game);
+	reg_move(game);
 	StoppedOnSomething
 }
 
 fn moved_unless_hungry_or_confused(game: &mut GameState) -> MoveResult {
-	if reg_move_legacy(game) {
+	if reg_move(game) == RegMoveResult::Fainted {
 		/* fainted from hunger */
 		StoppedOnSomething
 	} else {
@@ -462,25 +462,42 @@ fn random_faint(game: &mut impl Dungeon) -> bool {
 	}
 }
 
-pub fn reg_move_legacy(game: &mut impl Dungeon) -> bool {
+#[derive(Eq, PartialEq)]
+pub enum RegMoveResult {
+	Starved,
+	Fainted,
+	Alert,
+}
+
+pub fn reg_move(game: &mut impl Dungeon) -> RegMoveResult {
+	// Take care of hunger.
+	let mut fainted = false;
 	{
-		let hunger_check = if game.as_fighter().moves_left <= HUNGRY_MOVES_LEFT || game.is_max_depth() {
-			check_hunger(game)
-		} else {
-			HungerCheckResult::StillWalking
-		};
-		if hunger_check == HungerCheckResult::DidStarve {
-			return true;
+		if game.as_fighter().moves_left <= HUNGRY_MOVES_LEFT || game.is_max_depth() {
+			match check_hunger(game) {
+				HungerCheckResult::DidStarve => {
+					return RegMoveResult::Starved;
+				}
+				HungerCheckResult::DidFaint => {
+					fainted = true;
+				}
+				HungerCheckResult::StillWalking => {}
+			}
 		}
 	}
+	// Move monsters.
 	mv_mons(game);
-	let next_m_move = game.m_moves() + 1;
-	if next_m_move >= 120 {
-		*game.m_moves_mut() = 0;
-		put_wanderer(game);
-	} else {
-		*game.m_moves_mut() = next_m_move;
+	// Every 120 moves, add a wanderer.
+	{
+		let next_m_move = game.m_moves() + 1;
+		if next_m_move >= 120 {
+			*game.m_moves_mut() = 0;
+			put_wanderer(game);
+		} else {
+			*game.m_moves_mut() = next_m_move;
+		}
 	}
+	// Take care of hallucinations.
 	if game.as_health().halluc.is_active() {
 		game.as_health_mut().halluc.decr();
 		if game.as_health().halluc.is_active() {
@@ -489,21 +506,25 @@ pub fn reg_move_legacy(game: &mut impl Dungeon) -> bool {
 			// TODO unhallucinate(game);
 		}
 	}
+	// Take care of blindness.
 	if game.as_health().blind.is_active() {
 		game.as_health_mut().blind.decr();
 		if game.as_health().blind.is_inactive() {
 			//TODO unblind(game);
 		}
 	}
+	// Take care of confusion.
 	if game.as_health().confused.is_active() {
 		game.as_health_mut().confused.decr();
 		if game.as_health().confused.is_inactive() {
 			// TODO unconfuse(game);
 		}
 	}
+	// Take care of bear traps.
 	if game.as_health().bear_trap > 0 {
 		game.as_health_mut().bear_trap -= 1;
 	}
+	// Take care of levitation.
 	if game.as_health().levitate.is_active() {
 		game.as_health_mut().levitate.decr();
 		if game.as_health().levitate.is_inactive() {
@@ -516,20 +537,28 @@ pub fn reg_move_legacy(game: &mut impl Dungeon) -> bool {
 			}
 		}
 	}
+	// Take care of haste effect.
 	if game.as_health().haste_self.is_active() {
 		game.as_health_mut().haste_self.decr();
 		if game.as_health().haste_self.is_inactive() {
 			game.as_diary_mut().add_entry("you feel yourself slowing down");
 		}
 	}
-	//TODO game.heal_player();
+	// Take care of healing.
+	// TODO game.heal_player();
+	// Take care of searching.
 	{
 		let auto_search = game.as_ring_effects().auto_search();
 		if auto_search > 0 {
 			// TODO search(SearchKind::Auto { n: auto_search as usize }, game);
 		}
 	}
-	hunger_check == HungerCheckResult::DidFaint
+	// Done
+	if fainted {
+		RegMoveResult::Fainted
+	} else {
+		RegMoveResult::Alert
+	}
 }
 
 

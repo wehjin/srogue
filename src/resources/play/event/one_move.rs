@@ -1,6 +1,6 @@
 use crate::init::Dungeon;
 use crate::inventory::get_obj_desc;
-use crate::motion::{reg_move_legacy, MoveDirection, MoveResult};
+use crate::motion::{reg_move, MoveDirection, MoveResult, RegMoveResult};
 use crate::odds::R_TELE_PERCENT;
 use crate::pack::{pick_up, PickUpResult};
 use crate::resources::arena::Arena;
@@ -59,9 +59,9 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 					} else {
 						game.level.rogue.move_result = Some(MoveResult::MoveFailed);
 						let message = "you are still stuck in the bear trap";
-						let state = MessageEvent::dispatch(game, message, false, ctx);
+						let mut state = MessageEvent::dispatch(game, message, false, ctx);
 						// Do a regular move here so that the bear trap counts down.
-						// TODO (void) reg_move();
+						reg_move(&mut state);
 						RunStep::Effect(state, RunEffect::AwaitPlayerMove)
 					};
 				}
@@ -79,7 +79,7 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 			let _mon_id = game.get_monster_at(to_row, to_col).unwrap();
 			game.level.rogue.move_result = Some(MoveResult::MoveFailed);
 			// TODO rogue_hit(mon_id, false, game);
-			// TODO reg_move(game);
+			reg_move(&mut game);
 			return RunStep::Effect(game, RunEffect::AwaitPlayerMove);
 		}
 		// The lighting in the level changes as we move.
@@ -119,7 +119,7 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 	let has_object = game.level.try_object(LevelSpot::from_i64(row, col)).is_some();
 	if has_object {
 		return if !pickup {
-			stopped_on_something_with_moved_onto_message(row, col, game)
+			stopped_on_something_with_message(&moved_on_message(row, col, &game), game)
 		} else {
 			if game.as_health().levitate.is_active() {
 				game.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
@@ -127,7 +127,7 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 			} else {
 				match pick_up(row, col, game, ctx) {
 					(PickUpResult::TurnedToDust, state) => {
-						moved_unless_hungry_or_confused(state)
+						keep_moving_unless_hungry_or_confused(state)
 					}
 					(PickUpResult::AddedToGold(obj), mut state) => {
 						state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
@@ -141,7 +141,7 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 					}
 					(PickUpResult::PackTooFull, mut state) => {
 						state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
-						stopped_on_something_with_moved_onto_message(row, col, state)
+						stopped_on_something_with_message(&moved_on_message(row, col, &state), state)
 					}
 				}
 			}
@@ -152,35 +152,42 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 		if game.as_health().levitate.is_inactive() && game.is_any_trap_at(row, col) {
 			// TODO trap_player(row as usize, col as usize, game);
 		}
-		// TODO reg_move(game);
+		reg_move(&mut game);
 		return RunStep::Effect(game, RunEffect::AwaitPlayerMove);
 	}
-	moved_unless_hungry_or_confused(game)
-}
-
-fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, game: RunState) -> RunStep {
-	let obj = game.level.try_object(LevelSpot::from_i64(row, col)).unwrap();
-	let obj_desc = get_obj_desc(obj, &game);
-	let desc = format!("moved onto {}", obj_desc);
-	stopped_on_something_with_message(&desc, game)
+	keep_moving_unless_hungry_or_confused(game)
 }
 
 fn stopped_on_something_with_message(desc: &str, mut game: RunState) -> RunStep {
 	game.interrupt_and_slurp();
 	game.diary.add_entry(desc);
-	// TODO reg_move(game);
+	reg_move(&mut game);
 	RunStep::Effect(game, RunEffect::AwaitPlayerMove)
 }
 
-fn moved_unless_hungry_or_confused(mut game: RunState) -> RunStep {
-	// TODO if reg_move(&game) {
-	// 	/* fainted from hunger */
-	// 	return OneMove::StoppedOnSomething(game);
-	// }
-	if game.as_health().confused.is_active() {
-		game.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
-	} else {
-		game.level.rogue.move_result = Some(MoveResult::Moved);
+fn keep_moving_unless_hungry_or_confused(mut game: RunState) -> RunStep {
+	match reg_move(&mut game) {
+		RegMoveResult::Starved => {
+			// TODO Might need to do something like killed_by here instead.
+			RunStep::Exit(game)
+		}
+		RegMoveResult::Fainted => {
+			game.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
+			RunStep::Effect(game, RunEffect::AwaitPlayerMove)
+		}
+		RegMoveResult::Alert => if game.as_health().confused.is_active() {
+			game.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
+			RunStep::Effect(game, RunEffect::AwaitPlayerMove)
+		} else {
+			game.level.rogue.move_result = Some(MoveResult::Moved);
+			RunStep::Effect(game, RunEffect::AwaitPlayerMove)
+		},
 	}
-	RunStep::Effect(game, RunEffect::AwaitPlayerMove)
+}
+
+fn moved_on_message(row: i64, col: i64, game: &RunState) -> String {
+	let obj = game.level.try_object(LevelSpot::from_i64(row, col)).unwrap();
+	let obj_desc = get_obj_desc(obj, &game);
+	let desc = format!("moved onto {}", obj_desc);
+	desc
 }

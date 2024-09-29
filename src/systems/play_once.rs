@@ -3,7 +3,7 @@ use OnceResult::Idle;
 
 use crate::actions::action_set::PlayerEvent;
 use crate::init::{Dungeon, GameState, GameTurn};
-use crate::motion::{multiple_move_rogue, one_move_rogue_legacy, reg_move_legacy};
+use crate::motion::{multiple_move_rogue, one_move_rogue_legacy, reg_move};
 use crate::render_system;
 use crate::resources::diary;
 use crate::resources::keyboard::rgetchar;
@@ -35,7 +35,7 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> OnceResult {
 				return Leaving(level_result);
 			}
 			if game.turn == GameTurn::Monsters {
-				reg_move_legacy(game);
+				reg_move(game);
 			}
 		}
 		Err(e) => {

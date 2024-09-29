@@ -5,7 +5,7 @@ use crate::hit::rogue_hit;
 use crate::init::GameState;
 use crate::level::Level;
 use crate::monster::{MonsterIndex, MonsterMash};
-use crate::motion::{get_dir_or_cancel, reg_move_legacy, MoveDirection};
+use crate::motion::{get_dir_or_cancel, reg_move, MoveDirection};
 use crate::pack::pack_letter;
 use crate::resources::avatar::Avatar;
 use crate::prelude::object_what::ObjectWhat::Wand;
@@ -56,7 +56,7 @@ pub fn zapp(game: &mut GameState) {
 					relight(game);
 				}
 			}
-			reg_move_legacy(game);
+			reg_move(game);
 		}
 	}
 }
