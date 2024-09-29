@@ -1,4 +1,3 @@
-use crate::objects::note_tables::NoteTables;
 use crate::resources::level::setup::party::depth::PartyDepth;
 use crate::resources::rogue::depth::RogueDepth;
 use rand::Rng;
@@ -7,9 +6,6 @@ use rand::Rng;
 pub struct DungeonStats {
 	pub party_depth: PartyDepth,
 	pub food_drops: usize,
-	pub fruit: String,
-	pub notes: NoteTables,
-	pub wizard: bool,
 	pub m_moves: usize,
 }
 
@@ -20,9 +16,6 @@ impl DungeonStats {
 		Self {
 			party_depth: PartyDepth::roll(rng),
 			food_drops: 0,
-			fruit: DEFAULT_FRUIT.to_string(),
-			notes: NoteTables::new(),
-			wizard: false,
 			m_moves: 0,
 		}
 	}

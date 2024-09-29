@@ -1,8 +1,8 @@
 use crate::actions::instruct::instruction_lines;
 use crate::init::Dungeon;
-use crate::inventory::inventory;
+use crate::inventory::{get_obj_desc, inventory};
 use crate::monster::Monster;
-use crate::objects::Object;
+use crate::objects::{Object, ObjectId};
 use crate::prelude::object_what::PackFilter;
 use crate::resources::diary::Diary;
 use crate::resources::dungeon::stats::DungeonStats;
@@ -49,10 +49,16 @@ impl RunState {
 			DungeonVisor::Help => instruction_lines(),
 			DungeonVisor::Inventory => {
 				let pack = self.as_rogue_pack();
-				let stats = &self.stats;
-				inventory(pack, PackFilter::AllObjects, stats.fruit.as_str(), &stats.notes, stats.wizard)
+				let rogue = &self.level.rogue;
+				inventory(pack, PackFilter::AllObjects, self.settings.fruit.as_str(), &rogue.notes, rogue.wizard)
 			}
 		}
+	}
+	pub fn get_rogue_obj_desc(&self, obj_id: ObjectId) -> String {
+		let obj = self.as_fighter().pack.object(obj_id).unwrap();
+		let obj_ichar = obj.ichar;
+		let obj_desc = get_obj_desc(obj, self);
+		format!("{}({})", obj_desc, obj_ichar)
 	}
 }
 
@@ -101,7 +107,8 @@ impl Dungeon for RunState {
 	}
 
 	fn interrupt_and_slurp(&mut self) {
-		todo!()
+		self.diary.interrupted = true;
+		// TODO slurp or get rid of this function.
 	}
 
 	fn as_diary(&self) -> &Diary {

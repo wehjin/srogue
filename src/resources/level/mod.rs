@@ -17,7 +17,7 @@ use rand::Rng;
 use std::collections::BTreeMap;
 use std::ops::Index;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct DungeonLevel {
 	pub depth: usize,
 	pub is_max: bool,
@@ -214,6 +214,9 @@ impl DungeonLevel {
 		object.set_spot(spot);
 		self.objects.insert(spot, object);
 	}
+	pub fn remove_object(&mut self, spot: LevelSpot) -> Option<Object> {
+		self.objects.remove(&spot)
+	}
 }
 impl DungeonLevel {
 	pub fn trap_at(&self, spot: LevelSpot) -> Option<TrapKind> {
@@ -292,9 +295,8 @@ pub mod room_id {
 
 #[cfg(test)]
 mod tests {
-	use crate::objects::note_tables::NoteTables;
 	use crate::prelude::AMULET_LEVEL;
-	use crate::resources::dungeon::stats::{DungeonStats, DEFAULT_FRUIT};
+	use crate::resources::dungeon::stats::DungeonStats;
 	use crate::resources::level::setup::party::depth::PartyDepth;
 	use crate::resources::level::setup::roll_level;
 	use crate::resources::level::{DungeonLevel, PartyType};
@@ -310,9 +312,6 @@ mod tests {
 			let stats = &mut DungeonStats {
 				party_depth: PartyDepth::new(99),
 				food_drops: 7,
-				fruit: DEFAULT_FRUIT.to_string(),
-				notes: NoteTables::new(),
-				wizard: false,
 				m_moves: 0,
 			};
 			roll_level(PartyType::NoParty, Rogue::new(16), stats, rng)
@@ -330,9 +329,6 @@ mod tests {
 		let stats = &mut DungeonStats {
 			party_depth: PartyDepth::new(99),
 			food_drops: 7,
-			fruit: DEFAULT_FRUIT.to_string(),
-			notes: NoteTables::new(),
-			wizard: false,
 			m_moves: 0,
 		};
 		let mut level = roll_level(PartyType::NoParty, Rogue::new(16), stats, rng);
@@ -346,9 +342,6 @@ mod tests {
 		let stats = &mut DungeonStats {
 			party_depth: PartyDepth::roll(rng),
 			food_drops: AMULET_LEVEL / 2 - 1,
-			fruit: DEFAULT_FRUIT.to_string(),
-			notes: NoteTables::new(),
-			wizard: false,
 			m_moves: 0,
 		};
 		let mut level = roll_level(PartyType::PartyBig, Rogue::new(AMULET_LEVEL), stats, rng);

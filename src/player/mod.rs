@@ -183,9 +183,6 @@ impl Player {
 
 	pub fn pack_mut(&mut self) -> &mut ObjectPack { &mut self.rogue.pack }
 
-	pub fn combine_or_add_item_to_pack(&mut self, obj: Object) -> ObjectId {
-		self.rogue.pack.combine_or_add_item(obj)
-	}
 }
 
 pub const LAST_DUNGEON: usize = 99;

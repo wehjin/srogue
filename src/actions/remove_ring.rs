@@ -1,7 +1,7 @@
 use crate::actions::inventory::inv_rings;
 use crate::actions::GameUpdater;
 use crate::init::GameState;
-use crate::inventory::get_obj_desc;
+use crate::inventory::get_obj_desc_legacy;
 use crate::objects::Object;
 use crate::pack::CURSE_MESSAGE;
 use crate::player::rings::HandUsage;
@@ -39,7 +39,7 @@ impl GameUpdater for RemoveRing {
 		let removed_id = un_put_hand(hand, game).expect("some removed_id");
 		{
 			let removed_obj = game.player.object(removed_id).expect("some removed_obj");
-			let removed_desc = get_obj_desc(removed_obj, game.player.settings.fruit.to_string(), &game.player);
+			let removed_desc = get_obj_desc_legacy(removed_obj, game.player.settings.fruit.to_string(), &game.player);
 			let msg = format!("removed {}", removed_desc);
 			game.diary.add_entry(&msg);
 		}

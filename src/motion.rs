@@ -4,14 +4,14 @@ use MoveResult::MoveFailed;
 use crate::components::hunger::{HungerLevel, FAINT_MOVES_LEFT, HUNGRY_MOVES_LEFT, STARVE_MOVES_LEFT, WEAK_MOVES_LEFT};
 use crate::hit::rogue_hit;
 use crate::init::{Dungeon, GameState};
-use crate::inventory::get_obj_desc;
+use crate::inventory::get_obj_desc_legacy;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
 use crate::message::sound_bell;
 use crate::monster::{mv_mons, put_wanderer};
 use crate::motion::MoveResult::{Moved, StoppedOnSomething};
 use crate::odds::R_TELE_PERCENT;
-use crate::pack::{pick_up, PickUpResult};
+use crate::pack::{pick_up_legacy, PickUpResult};
 use crate::player::{Player, RoomMark};
 use crate::prelude::ending::Ending;
 use crate::prelude::{DungeonSpot, MIN_ROW};
@@ -180,12 +180,12 @@ pub fn one_move_rogue_legacy(direction: MoveDirection, pickup: bool, game: &mut 
 			if game.as_health().levitate.is_active() {
 				StoppedOnSomething
 			} else {
-				match pick_up(row, col, game) {
+				match pick_up_legacy(row, col, game) {
 					PickUpResult::TurnedToDust => {
 						moved_unless_hungry_or_confused(game)
 					}
 					PickUpResult::AddedToGold(obj) => {
-						let msg = get_obj_desc(&obj, game.player.settings.fruit.to_string(), &game.player);
+						let msg = get_obj_desc_legacy(&obj, game.player.settings.fruit.to_string(), &game.player);
 						stopped_on_something_with_message(&msg, game)
 					}
 					PickUpResult::AddedToPack { added_id, .. } => {
@@ -211,7 +211,7 @@ pub fn one_move_rogue_legacy(direction: MoveDirection, pickup: bool, game: &mut 
 
 fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, game: &mut GameState) -> MoveResult {
 	let obj = game.ground.find_object_at(row, col).expect("moved-on object");
-	let obj_desc = get_obj_desc(obj, game.player.settings.fruit.to_string(), &game.player);
+	let obj_desc = get_obj_desc_legacy(obj, game.player.settings.fruit.to_string(), &game.player);
 	let desc = format!("moved onto {}", obj_desc);
 	stopped_on_something_with_message(&desc, game)
 }

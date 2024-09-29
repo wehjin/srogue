@@ -12,8 +12,8 @@ use crate::prelude::object_what::PackFilter;
 use crate::prelude::object_what::PackFilter::AllObjects;
 use crate::render_system::backend;
 use crate::resources::avatar::Avatar;
-use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::keyboard::CANCEL_CHAR;
+use crate::resources::play::state::RunState;
 use crate::ring::ring_kind::RingKind;
 use crate::score::is_vowel;
 use crate::scrolls::ScrollKind;
@@ -45,10 +45,10 @@ pub enum ObjectSource {
 }
 
 impl ObjectPack {
-	fn to_pickup_line_maybe(&self, obj_id: ObjectId, stats: &DungeonStats) -> String {
+	fn to_pickup_line_maybe(&self, obj_id: ObjectId, game: &RunState) -> String {
 		let obj = self.as_object(obj_id);
 		let obj_ichar = obj.ichar;
-		let obj_desc = obj.to_description(&stats.fruit, &stats.notes, stats.wizard);
+		let obj_desc = obj.to_description(&game.settings.fruit, &game.level.rogue.notes, game.level.rogue.wizard);
 		format!("{}({})", obj_desc, obj_ichar)
 	}
 }
@@ -257,12 +257,60 @@ impl Player {
 		let obj = self.expect_object(obj_id);
 		let fruit = self.settings.fruit.to_string();
 		let obj_ichar = obj.ichar;
-		let obj_desc = get_obj_desc(&obj, fruit, self);
+		let obj_desc = get_obj_desc_legacy(&obj, fruit, self);
 		format!("{}({})", obj_desc, obj_ichar)
 	}
 }
 
-pub fn get_obj_desc(obj: &Object, fruit: String, player: &Player) -> String {
+pub fn get_obj_desc(obj: &Object, game: &RunState) -> String {
+	let what = obj.what_is;
+	if what == Amulet {
+		return "the amulet of Yendor ".to_string();
+	}
+	if what == Gold {
+		return format!("{} pieces of gold", obj.quantity);
+	}
+
+	let fruit = game.as_settings().fruit.to_string();
+	let desc = if what == Food {
+		let quantity = if obj.which_kind == RATION {
+			if obj.quantity > 1 {
+				format!("{} rations of ", obj.quantity)
+			} else {
+				"some ".to_string()
+			}
+		} else {
+			"a ".to_string()
+		};
+		format!("{}{}", quantity, name_of(obj, fruit, &game.as_notes()))
+	} else {
+		if game.wizard() {
+			get_identified(obj, fruit, &game.as_notes(), game.wizard())
+		} else {
+			match what {
+				Weapon | Armor | Wand | Ring => {
+					get_unidentified(obj, fruit, &game.as_notes(), game.wizard())
+				}
+				_ => {
+					match game.as_notes().status(what, obj.which_kind as usize) {
+						NoteStatus::Unidentified => get_unidentified(obj, fruit, &game.as_notes(), game.wizard()),
+						NoteStatus::Identified => get_identified(obj, fruit, &game.as_notes(), game.wizard()),
+						NoteStatus::Called => get_called(obj, fruit, &game.as_notes()),
+					}
+				}
+			}
+		}
+	};
+	let desc = if desc.starts_with("a ")
+		&& is_vowel(desc.chars().nth(2).expect("char at 2")) {
+		format!("an {}", &desc[2..])
+	} else {
+		desc
+	};
+	format!("{}{}", desc, get_in_use_description(obj))
+}
+
+pub fn get_obj_desc_legacy(obj: &Object, fruit: String, player: &Player) -> String {
 	let what = obj.what_is;
 	if what == Amulet {
 		return "the amulet of Yendor ".to_string();
@@ -334,7 +382,7 @@ pub fn single_inv(ichar: Option<char>, game: &mut GameState) {
 	}
 	if let Some(obj) = game.player.object_with_letter(ch) {
 		let separator = if obj.what_is == Armor && obj.is_protected != 0 { '}' } else { ')' };
-		let obj_desc = get_obj_desc(obj, game.player.settings.fruit.to_string(), &game.player);
+		let obj_desc = get_obj_desc_legacy(obj, game.player.settings.fruit.to_string(), &game.player);
 		let msg = format!("{}{} {}", ch, separator, obj_desc);
 		game.diary.add_entry(&msg);
 	} else {

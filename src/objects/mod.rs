@@ -11,7 +11,7 @@ use crate::armors::constants::ARMORS;
 use crate::armors::ArmorKind;
 use crate::hit::DamageStat;
 use crate::init::GameState;
-use crate::inventory::get_obj_desc;
+use crate::inventory::get_obj_desc_legacy;
 use crate::level::constants::MAX_ROOM;
 use crate::level::materials::{CellMaterial, FloorFixture, TunnelFixture, Visibility};
 use crate::level::Level;
@@ -56,7 +56,7 @@ mod weapons;
 
 pub(crate) mod note_tables;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
 pub enum Title {
 	None,
 	WeaponName(WeaponKind),
@@ -92,14 +92,14 @@ impl Default for Title {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Hash, Eq, PartialEq)]
 pub struct Note {
 	pub title: Title,
 	pub status: NoteStatus,
 	pub is_wood: bool,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Debug, Hash)]
 pub enum NoteStatus {
 	Unidentified,
 	Identified,
@@ -480,7 +480,7 @@ pub fn new_object_for_wizard(game: &mut GameState) {
 			return;
 		}
 	}
-	let obj_desc = get_obj_desc(&obj, game.player.settings.fruit.to_string(), &game.player);
+	let obj_desc = get_obj_desc_legacy(&obj, game.player.settings.fruit.to_string(), &game.player);
 	game.diary.add_entry(&obj_desc);
 	game.player.combine_or_add_item_to_pack(obj);
 }

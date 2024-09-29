@@ -1,4 +1,5 @@
 use crate::init::GameState;
+use crate::objects::note_tables::NoteTables;
 use crate::objects::{Object, ObjectId, ObjectPack};
 use crate::pack::mask_pack;
 use crate::player::rings::HandUsage;
@@ -16,6 +17,10 @@ use crate::settings::Settings;
 pub trait Avatar {
 	fn as_settings(&self) -> &Settings;
 	fn as_settings_mut(&mut self) -> &mut Settings;
+
+	fn as_notes(&self) -> &NoteTables;
+	fn as_notes_mut(&mut self) -> &mut NoteTables;
+
 	fn set_rogue_row_col(&mut self, row: i64, col: i64);
 	fn as_ring_effects(&self) -> &RingEffects;
 
@@ -82,11 +87,36 @@ pub trait Avatar {
 			None => None,
 		}
 	}
+	fn pack_weight_with_new_object(&self, new_obj: Option<&Object>) -> usize {
+		// TODO Revisit. This is kind of screwed up.
+		let mut weight = 0;
+		for obj in self.as_fighter().pack.objects() {
+			weight += obj.pack_weight_with_new_obj(new_obj);
+		}
+		// Note: the original C code forgets to include weight of the new object.
+		if let Some(new_obj) = new_obj {
+			weight += new_obj.pack_weight_with_new_obj(None);
+		}
+		weight
+	}
+	fn combine_or_add_item_to_pack(&mut self, obj: Object) -> ObjectId {
+		let fighter = self.as_fighter_mut();
+		fighter.pack.combine_or_add_item(obj)
+	}
 }
 
 impl Avatar for Player {
 	fn as_settings(&self) -> &Settings { &self.settings }
 	fn as_settings_mut(&mut self) -> &mut Settings { &mut self.settings }
+
+	fn as_notes(&self) -> &NoteTables {
+		&self.notes
+	}
+
+	fn as_notes_mut(&mut self) -> &mut NoteTables {
+		&mut self.notes
+	}
+
 	fn set_rogue_row_col(&mut self, row: i64, col: i64) {
 		self.rogue.row = row;
 		self.rogue.col = col;
@@ -129,6 +159,14 @@ impl Avatar for Player {
 impl Avatar for GameState {
 	fn as_settings(&self) -> &Settings { self.player.as_settings() }
 	fn as_settings_mut(&mut self) -> &mut Settings { self.player.as_settings_mut() }
+
+	fn as_notes(&self) -> &NoteTables {
+		self.player.as_notes()
+	}
+
+	fn as_notes_mut(&mut self) -> &mut NoteTables {
+		self.player.as_notes_mut()
+	}
 
 	fn set_rogue_row_col(&mut self, row: i64, col: i64) { self.player.set_rogue_row_col(row, col) }
 	fn as_ring_effects(&self) -> &RingEffects {
@@ -174,6 +212,15 @@ impl Avatar for GameState {
 impl Avatar for RunState {
 	fn as_settings(&self) -> &Settings { &self.settings }
 	fn as_settings_mut(&mut self) -> &mut Settings { &mut self.settings }
+
+	fn as_notes(&self) -> &NoteTables {
+		&self.level.rogue.notes
+	}
+
+	fn as_notes_mut(&mut self) -> &mut NoteTables {
+		&mut self.level.rogue.notes
+	}
+
 	fn set_rogue_row_col(&mut self, row: i64, col: i64) {
 		let spot = LevelSpot::from_i64(row, col);
 		self.level.rogue.spot = RogueSpot::from_spot(spot, &self.level);
@@ -192,7 +239,7 @@ impl Avatar for RunState {
 	}
 
 	fn wizard(&self) -> bool {
-		self.stats.wizard
+		self.level.rogue.wizard
 	}
 
 	fn rogue_depth(&self) -> usize {

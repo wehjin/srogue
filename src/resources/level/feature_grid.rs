@@ -50,6 +50,12 @@ pub mod feature {
 				_ => false
 			}
 		}
+		pub fn is_stairs(&self) -> bool {
+			match self {
+				Feature::Stairs => true,
+				_ => false
+			}
+		}
 		pub fn is_nothing(&self) -> bool {
 			match self {
 				Feature::None => true,

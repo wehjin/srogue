@@ -134,7 +134,7 @@ impl NoteTables {
 	}
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq)]
 pub struct NoteTables {
 	pub potions: [Note; POTIONS],
 	pub scrolls: [Note; SCROLLS],
@@ -142,6 +142,12 @@ pub struct NoteTables {
 	pub armors: [Note; ARMORS],
 	pub wands: [Note; WANDS],
 	pub rings: [Note; RINGS],
+}
+
+impl Default for NoteTables {
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 mod constants {

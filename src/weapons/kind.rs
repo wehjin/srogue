@@ -3,7 +3,7 @@ use crate::hit::DamageStat;
 use crate::weapons::constants::{ARROW, BOW, DAGGER, DART, LONG_SWORD, MACE, SHURIKEN, TWO_HANDED_SWORD, WEAPON_NAMES};
 use crate::weapons::kind::WeaponKind::{Arrow, Bow, Dagger, Dart, LongSword, Mace, Shuriken, TwoHandedSword};
 
-#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Debug, Hash)]
 pub enum WeaponKind {
 	Bow,
 	Dart,

@@ -1,7 +1,7 @@
 use crate::armors::ArmorKind;
 use crate::hit::mon_hit;
 use crate::init::{Dungeon, GameState};
-use crate::inventory::get_obj_desc;
+use crate::inventory::get_obj_desc_legacy;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::{add_exp, hp_raise, Level, LEVEL_POINTS};
 use crate::monster::{mon_can_go_and_reach, mon_name, mv_mons, mv_monster, MonsterMash};
@@ -141,7 +141,7 @@ fn steal_item(mon_id: u64, game: &mut GameState) {
 					if temp_obj.what_is != Weapon {
 						temp_obj.quantity = 1;
 					}
-					get_obj_desc(&temp_obj, game.as_settings().fruit.to_string(), &game.player)
+					get_obj_desc_legacy(&temp_obj, game.as_settings().fruit.to_string(), &game.player)
 				};
 				format!("she stole {}", obj_desc)
 			};

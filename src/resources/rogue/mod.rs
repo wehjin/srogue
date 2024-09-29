@@ -1,3 +1,4 @@
+use crate::objects::note_tables::NoteTables;
 use crate::player::RogueHealth;
 use crate::resources::rogue::depth::RogueDepth;
 use crate::ring::effects::RingEffects;
@@ -9,7 +10,7 @@ pub mod depth;
 pub mod fighter;
 pub mod spot;
 
-#[derive(Debug, Clone, Default, Eq, Hash, PartialEq)]
+#[derive(Debug, Clone, Default, Hash, Eq, PartialEq)]
 pub struct Rogue {
 	pub has_amulet: bool,
 	pub depth: RogueDepth,
@@ -18,6 +19,8 @@ pub struct Rogue {
 	pub fighter: Fighter,
 	pub health: RogueHealth,
 	pub fight_monster: Option<u64>,
+	pub notes: NoteTables,
+	pub wizard: bool,
 }
 
 impl Rogue {
@@ -30,6 +33,8 @@ impl Rogue {
 			fighter: Default::default(),
 			health: Default::default(),
 			fight_monster: None,
+			notes: Default::default(),
+			wizard: false,
 		}
 	}
 	pub fn outfit(mut self, rng: &mut impl Rng) -> Self {

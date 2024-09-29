@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use crate::objects::{Note, NoteStatus, Title};
 use crate::potions::kind::POTIONS;
 
-#[derive(Copy, Clone, Serialize, Deserialize, Debug)]
+#[derive(Copy, Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq)]
 pub enum PotionColor {
 	Blue,
 	Red,
