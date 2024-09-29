@@ -1,6 +1,6 @@
 use crate::init::Dungeon;
 use crate::inventory::get_obj_desc;
-use crate::motion::{MoveDirection, MoveResult};
+use crate::motion::{reg_move_legacy, MoveDirection, MoveResult};
 use crate::odds::R_TELE_PERCENT;
 use crate::pack::{pick_up, PickUpResult};
 use crate::resources::arena::Arena;

@@ -108,7 +108,7 @@ pub fn one_move_rogue_legacy(direction: MoveDirection, pickup: bool, game: &mut 
 			MoveEffect::Fail { consume_time } => {
 				// TODO Call to reg_move into dispatch_move_event.
 				if consume_time {
-					reg_move(game);
+					reg_move_legacy(game);
 				}
 				return MoveFailed;
 			}
@@ -121,7 +121,7 @@ pub fn one_move_rogue_legacy(direction: MoveDirection, pickup: bool, game: &mut 
 				// TODO Call to reg_move into dispatch_move_event.
 				let mon_id = game.mash.monster_id_at_spot(row, col).expect("monster in mash at monster spot one_move_rogue");
 				rogue_hit(mon_id, false, game);
-				reg_move(game);
+				reg_move_legacy(game);
 				return MoveFailed;
 			}
 			MoveEffect::PrepToDoor { row, col, rogue_row, rogue_col } => {
@@ -202,7 +202,7 @@ pub fn one_move_rogue_legacy(direction: MoveDirection, pickup: bool, game: &mut 
 		if game.as_health().levitate.is_inactive() && player_cell.is_any_trap() {
 			trap_player(row as usize, col as usize, game);
 		}
-		reg_move(game);
+		reg_move_legacy(game);
 		StoppedOnSomething
 	} else {
 		moved_unless_hungry_or_confused(game)
@@ -219,12 +219,12 @@ fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, game: &mut G
 fn stopped_on_something_with_message(desc: &str, game: &mut GameState) -> MoveResult {
 	game.player.interrupt_and_slurp();
 	game.diary.add_entry(desc);
-	reg_move(game);
+	reg_move_legacy(game);
 	StoppedOnSomething
 }
 
 fn moved_unless_hungry_or_confused(game: &mut GameState) -> MoveResult {
-	if reg_move(game) {
+	if reg_move_legacy(game) {
 		/* fainted from hunger */
 		StoppedOnSomething
 	} else {
@@ -462,14 +462,16 @@ fn random_faint(game: &mut impl Dungeon) -> bool {
 	}
 }
 
-pub fn reg_move(game: &mut impl Dungeon) -> bool {
-	let hunger_check = if game.as_fighter().moves_left <= HUNGRY_MOVES_LEFT || game.is_max_depth() {
-		check_hunger(game)
-	} else {
-		HungerCheckResult::StillWalking
-	};
-	if hunger_check == HungerCheckResult::DidStarve {
-		return true;
+pub fn reg_move_legacy(game: &mut impl Dungeon) -> bool {
+	{
+		let hunger_check = if game.as_fighter().moves_left <= HUNGRY_MOVES_LEFT || game.is_max_depth() {
+			check_hunger(game)
+		} else {
+			HungerCheckResult::StillWalking
+		};
+		if hunger_check == HungerCheckResult::DidStarve {
+			return true;
+		}
 	}
 	mv_mons(game);
 	let next_m_move = game.m_moves() + 1;

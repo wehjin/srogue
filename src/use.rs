@@ -1,7 +1,7 @@
 use crate::init::{Dungeon, GameState};
 use crate::level::put_player_legacy;
 use crate::monster::{mv_mons, show_monsters};
-use crate::motion::{reg_move, YOU_CAN_MOVE_AGAIN};
+use crate::motion::{reg_move_legacy, YOU_CAN_MOVE_AGAIN};
 use crate::objects::ObjectId;
 use crate::pack::{take_from_pack, unwear, unwield};
 use crate::player::{Player, RoomMark};
@@ -33,7 +33,7 @@ pub fn vanish(obj_id: ObjectId, do_regular_move: bool, game: &mut GameState) {
 		take_from_pack(obj_id, &mut game.player.rogue.pack);
 	}
 	if do_regular_move {
-		reg_move(game);
+		reg_move_legacy(game);
 	}
 }
 
