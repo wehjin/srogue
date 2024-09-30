@@ -25,14 +25,14 @@ impl StateAction for RegMove {
 			}
 			RogueEnergy::Fainted => {
 				state.level.rogue.move_result = Some(move_result.unwrap_or(MoveResult::StoppedOnSomething));
-				RunStep::Effect(state, RunEffect::AwaitPlayerMove)
+				RunStep::Effect(state, RunEffect::AwaitMove)
 			}
 			RogueEnergy::Normal => if state.as_health().confused.is_active() {
 				state.level.rogue.move_result = Some(move_result.unwrap_or(MoveResult::StoppedOnSomething));
-				RunStep::Effect(state, RunEffect::AwaitPlayerMove)
+				RunStep::Effect(state, RunEffect::AwaitMove)
 			} else {
 				state.level.rogue.move_result = Some(move_result.unwrap_or(MoveResult::Moved));
-				RunStep::Effect(state, RunEffect::AwaitPlayerMove)
+				RunStep::Effect(state, RunEffect::AwaitMove)
 			},
 		}
 	}

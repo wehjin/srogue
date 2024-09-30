@@ -67,7 +67,7 @@ fn player_open_help(mut state: RunState) -> RunStep {
 
 fn player_close_modal(mut state: RunState) -> RunStep {
 	state.visor = DungeonVisor::Map;
-	RunStep::Effect(state, RunEffect::AwaitPlayerMove)
+	RunStep::Effect(state, RunEffect::AwaitMove)
 }
 
 fn player_quit(state: RunState) -> RunStep {
@@ -76,7 +76,7 @@ fn player_quit(state: RunState) -> RunStep {
 
 fn init(rng: &mut impl Rng) -> RunStep {
 	let state = RunState::init(rng);
-	RunStep::Effect(state, RunEffect::AwaitPlayerMove)
+	RunStep::Effect(state, RunEffect::AwaitMove)
 }
 
 pub enum RunStep {

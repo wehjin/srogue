@@ -8,17 +8,17 @@ use crate::resources::player::{InputMode, PlayerInput};
 
 #[derive(Debug)]
 pub enum RunEffect {
-	AwaitPlayerMove,
+	AwaitMove,
 	AwaitModalClose,
-	PlayerAckAndDispatch(EventSeed),
+	AwaitAck(EventSeed),
 }
 
 impl RunEffect {
 	pub fn perform_and_await(self, state: RunState, console: &mut impl TextConsole) -> RunEvent {
 		match self {
-			RunEffect::AwaitPlayerMove => await_player_move(state, console),
+			RunEffect::AwaitMove => await_player_move(state, console),
 			RunEffect::AwaitModalClose => await_modal_close(state, console),
-			RunEffect::PlayerAckAndDispatch(event_seed) => {
+			RunEffect::AwaitAck(event_seed) => {
 				let _input = console.get_input(InputMode::Alert);
 				event_seed.create_event(state)
 			}

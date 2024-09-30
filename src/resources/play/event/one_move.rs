@@ -50,7 +50,7 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut stat
 		let to_spot_is_navigable = state.rogue_can_move(to_row, to_col);
 		if !to_spot_is_navigable {
 			state.level.rogue.move_result = Some(MoveResult::MoveFailed);
-			return RunStep::Effect(state, RunEffect::AwaitPlayerMove);
+			return RunStep::Effect(state, RunEffect::AwaitMove);
 		}
 		// What if we're stuck in place?
 		{
@@ -64,7 +64,7 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut stat
 						state.level.rogue.move_result = Some(MoveResult::MoveFailed);
 						let message = "you are being held";
 						Message::new(state, message, true, |state| {
-							RunStep::Effect(state, RunEffect::AwaitPlayerMove)
+							RunStep::Effect(state, RunEffect::AwaitMove)
 						}).dispatch(ctx)
 					} else {
 						state.level.rogue.move_result = Some(MoveResult::MoveFailed);
@@ -81,7 +81,7 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut stat
 		if state.as_ring_effects().has_teleport() && ctx.roll_chance(R_TELE_PERCENT) {
 			state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
 			// TODO tele(game);
-			return RunStep::Effect(state, RunEffect::AwaitPlayerMove);
+			return RunStep::Effect(state, RunEffect::AwaitMove);
 		}
 		// What if there is a monster is where we want to go?
 		let monster_in_spot = state.has_monster_at(to_row, to_col);

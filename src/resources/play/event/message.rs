@@ -45,7 +45,7 @@ impl StateAction for Message {
 					let on_player_ack = EventSeed::new(|state| {
 						RunEvent::PrintNextAndStep(state, post_step)
 					});
-					RunStep::Effect(state, RunEffect::PlayerAckAndDispatch(on_player_ack))
+					RunStep::Effect(state, RunEffect::AwaitAck(on_player_ack))
 				}
 			}
 		}

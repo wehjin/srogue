@@ -37,7 +37,7 @@ impl StateAction for Pickup {
 				match state.as_health().levitate.is_active() {
 					true => {
 						state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
-						RunStep::Effect(state, RunEffect::AwaitPlayerMove)
+						RunStep::Effect(state, RunEffect::AwaitMove)
 					}
 					false => match pick_up(row, col, state, ctx) {
 						(PickUpResult::TurnedToDust, state) => {
