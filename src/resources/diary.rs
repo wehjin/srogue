@@ -38,6 +38,11 @@ impl Diary {
 		let text = entry.as_ref();
 		self.current_page.push(text.to_string());
 	}
+	pub fn clear_message_lines(&mut self) {
+		self.message_line = None;
+		self.next_message_line = None;
+	}
+
 	pub fn rewind(&mut self) {
 		assert!(self.current_page.is_empty());
 		self.rewound = true;

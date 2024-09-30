@@ -4,6 +4,7 @@ use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::{RunEvent, RunStep};
 use crate::resources::play::state::RunState;
 use rand::Rng;
+use crate::resources::play::seed::EventSeed;
 
 #[derive(Debug)]
 pub enum MessageEvent {
@@ -36,7 +37,7 @@ impl MessageEvent {
 					RunStep::Effect(state, RunEffect::AwaitMessageAck)
 				} else {
 					let message_event = MessageEvent::PostAck(state);
-					RunStep::Forward(RunEvent::Message(message_event))
+					RunStep::Redirect(RunEvent::Message(message_event))
 				}
 			}
 			MessageEvent::PostAck(mut state) => {
@@ -83,5 +84,25 @@ mod tests {
 		let new_state = MessageEvent::dispatch(state, "World", false, &mut ctx);
 		assert_eq!(Some("World".to_string()), new_state.diary.message_line);
 		assert!(!new_state.diary.interrupted);
+	}
+}
+
+pub fn print_then_dispatch(mut state: RunState, msg: impl AsRef<str>, interrupt: bool, event_seed: impl FnOnce(RunState) -> RunEvent + 'static) -> RunStep {
+
+	// TODO if !save_is_interactive {return;}
+	let diary = &mut state.diary;
+	if interrupt {
+		diary.interrupted = true;
+		// TODO md_slurp().
+	}
+	if diary.message_line.is_none() {
+		diary.message_line = Some(msg.as_ref().to_string());
+		diary.next_message_line = None;
+		RunStep::Redirect(event_seed(state))
+	} else {
+		diary.next_message_line = Some(msg.as_ref().to_string());
+		let customer_event_seed = EventSeed::new(event_seed);
+		let print_event_seed = EventSeed::new(|state| RunEvent::PrintNextAndDispatch(state, customer_event_seed));
+		RunStep::Effect(state, RunEffect::DispatchAfterPlayerAck(print_event_seed))
 	}
 }

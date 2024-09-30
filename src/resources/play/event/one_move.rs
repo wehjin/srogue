@@ -10,7 +10,7 @@ use crate::resources::level::wake::{wake_room, WakeType};
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::message::MessageEvent;
-use crate::resources::play::event::RunStep;
+use crate::resources::play::event::{message, RunEvent, RunStep};
 use crate::resources::play::state::RunState;
 use crate::resources::rogue::spot::RogueSpot;
 use rand::Rng;
@@ -25,8 +25,10 @@ impl OneMoveEvent {
 		step
 	}
 }
+
 fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunState, ctx: &mut RunContext<R>) -> RunStep {
 	game.level.rogue.move_result = None;
+	game.diary.clear_message_lines();
 	{
 		// Where are we now?
 		let rogue_row = game.rogue_row();
@@ -158,11 +160,8 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 	keep_moving_unless_hungry_or_confused(game)
 }
 
-fn stopped_on_something_with_message(desc: &str, mut game: RunState) -> RunStep {
-	game.interrupt_and_slurp();
-	game.diary.add_entry(desc);
-	reg_move(&mut game);
-	RunStep::Effect(game, RunEffect::AwaitPlayerMove)
+fn stopped_on_something_with_message(desc: &str, game: RunState) -> RunStep {
+	message::print_then_dispatch(game, desc, true, |state| RunEvent::RegisterMove(state))
 }
 
 fn keep_moving_unless_hungry_or_confused(mut game: RunState) -> RunStep {

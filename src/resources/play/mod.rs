@@ -8,6 +8,7 @@ use state::RunState;
 pub mod context;
 pub mod effect;
 pub mod event;
+pub mod seed;
 pub mod state;
 
 pub fn run(console: impl TextConsole + 'static) {
@@ -23,7 +24,7 @@ pub fn dispatch<R: Rng>(start_event: RunEvent, ctx: &mut RunContext<R>) -> RunSt
 				assert_eq!(&None, &state.diary.cleaned_up);
 				return state;
 			}
-			RunStep::Forward(event) => {
+			RunStep::Redirect(event) => {
 				next_event = event;
 			}
 			RunStep::Effect(state, effect) => {

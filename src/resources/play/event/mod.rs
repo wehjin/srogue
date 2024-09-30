@@ -1,9 +1,11 @@
+use crate::motion::reg_move;
 use crate::resources::dungeon::DungeonVisor;
 use crate::resources::level::setup::roll_level;
 use crate::resources::level::PartyType;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::one_move::OneMoveEvent;
+use crate::resources::play::seed::EventSeed;
 use crate::resources::play::state::RunState;
 use message::MessageEvent;
 use rand::Rng;
@@ -20,6 +22,9 @@ pub enum RunEvent {
 	PlayerOpenHelp(RunState),
 	PlayerOpenInventory(RunState),
 	OneMove(OneMoveEvent),
+	PrintNextAndPerform(RunState, RunEffect),
+	PrintNextAndDispatch(RunState, EventSeed),
+	RegisterMove(RunState),
 }
 
 impl RunEvent {
@@ -32,6 +37,18 @@ impl RunEvent {
 			RunEvent::PlayerOpenHelp(state) => player_open_help(state),
 			RunEvent::PlayerOpenInventory(state) => player_open_inventory(state),
 			RunEvent::OneMove(one_move_event) => one_move_event.into_step(ctx),
+			RunEvent::PrintNextAndDispatch(mut state, seed) => {
+				state.diary.message_line = state.diary.next_message_line.take();
+				RunStep::Redirect(seed.into_event(state))
+			}
+			RunEvent::PrintNextAndPerform(mut state, effect) => {
+				state.diary.message_line = state.diary.next_message_line.take();
+				RunStep::Effect(state, effect)
+			}
+			RunEvent::RegisterMove(mut state) => {
+				reg_move(&mut state); // Ignore result.
+				RunStep::Effect(state, RunEffect::AwaitPlayerMove)
+			}
 		}
 	}
 }
@@ -62,7 +79,7 @@ fn init(rng: &mut impl Rng) -> RunStep {
 
 pub enum RunStep {
 	Exit(RunState),
-	Forward(RunEvent),
+	Redirect(RunEvent),
 	Effect(RunState, RunEffect),
 }
 fn _descend(state: RunState, rng: &mut impl Rng) -> RunStep {

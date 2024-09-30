@@ -41,8 +41,13 @@ impl RunState {
 	pub fn to_lines(&self) -> Vec<String> {
 		match self.visor {
 			DungeonVisor::Map => {
+				let progress_line = {
+					let content = self.diary.message_line.clone().unwrap_or("".to_string());
+					let more = if self.diary.next_message_line.is_some() { "-more-" } else { "" }.to_string();
+					format!("{content}{more}")
+				};
 				let mut lines = self.level.format(true);
-				lines.insert(0, "".to_string());
+				lines.insert(0, progress_line);
 				lines.push("".to_string());
 				lines
 			}

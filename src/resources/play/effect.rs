@@ -1,6 +1,7 @@
 use crate::resources::play::event::message::MessageEvent;
 use crate::resources::play::event::one_move::OneMoveEvent;
 use crate::resources::play::event::RunEvent;
+use crate::resources::play::seed::EventSeed;
 use crate::resources::play::state::RunState;
 use crate::resources::play::TextConsole;
 use crate::resources::player::{InputMode, PlayerInput};
@@ -10,6 +11,7 @@ pub enum RunEffect {
 	AwaitPlayerMove,
 	AwaitModalClose,
 	AwaitMessageAck,
+	DispatchAfterPlayerAck(EventSeed),
 }
 
 impl RunEffect {
@@ -18,6 +20,10 @@ impl RunEffect {
 			RunEffect::AwaitPlayerMove => await_player_move(state, console),
 			RunEffect::AwaitModalClose => await_modal_close(state, console),
 			RunEffect::AwaitMessageAck => await_message_ack(state, console),
+			RunEffect::DispatchAfterPlayerAck(event_seed) => {
+				let _input = console.get_input(InputMode::Alert);
+				event_seed.into_event(state)
+			}
 		}
 	}
 }
