@@ -1,10 +1,10 @@
-use crate::motion::reg_move;
 use crate::resources::dungeon::DungeonVisor;
 use crate::resources::level::setup::roll_level;
 use crate::resources::level::PartyType;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::one_move::OneMoveEvent;
+use crate::resources::play::event::reg_move::{RegMoveEvent, StepEvent};
 use crate::resources::play::seed::EventSeed;
 use crate::resources::play::state::RunState;
 use message::MessageEvent;
@@ -12,31 +12,36 @@ use rand::Rng;
 
 pub mod message;
 pub mod one_move;
+pub mod reg_move;
 
 #[derive(Debug)]
 pub enum RunEvent {
 	Init,
 	Message(MessageEvent),
 	PlayerQuit(RunState),
+	OneMove(OneMoveEvent),
+	RegisterMove(RegMoveEvent),
 	PlayerCloseModal(RunState),
 	PlayerOpenHelp(RunState),
 	PlayerOpenInventory(RunState),
-	OneMove(OneMoveEvent),
 	PrintNextAndEffect(RunState, RunEffect),
 	PrintNextAndRedirect(RunState, EventSeed),
-	RegisterMove(RunState),
 }
 
 impl RunEvent {
 	pub fn dispatch<R: Rng>(self, ctx: &mut RunContext<R>) -> RunStep {
 		match self {
 			RunEvent::Init => init(ctx.rng()),
-			RunEvent::Message(message_event) => message_event.into_step(),
+
+			RunEvent::Message(message) => message.into_step(),
+			RunEvent::OneMove(one_move) => one_move.into_step(ctx),
+			RunEvent::RegisterMove(reg_move) => reg_move.step(ctx),
+
 			RunEvent::PlayerQuit(state) => player_quit(state),
 			RunEvent::PlayerCloseModal(state) => player_close_modal(state),
 			RunEvent::PlayerOpenHelp(state) => player_open_help(state),
 			RunEvent::PlayerOpenInventory(state) => player_open_inventory(state),
-			RunEvent::OneMove(one_move_event) => one_move_event.into_step(ctx),
+
 			RunEvent::PrintNextAndRedirect(mut state, seed) => {
 				state.diary.message_line = state.diary.next_message_line.take();
 				RunStep::Redirect(seed.into_event(state))
@@ -44,10 +49,6 @@ impl RunEvent {
 			RunEvent::PrintNextAndEffect(mut state, effect) => {
 				state.diary.message_line = state.diary.next_message_line.take();
 				RunStep::Effect(state, effect)
-			}
-			RunEvent::RegisterMove(mut state) => {
-				reg_move(&mut state); // Ignore result.
-				RunStep::Effect(state, RunEffect::AwaitPlayerMove)
 			}
 		}
 	}

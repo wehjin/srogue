@@ -1,6 +1,6 @@
 use crate::init::Dungeon;
 use crate::inventory::get_obj_desc;
-use crate::motion::{reg_move, MoveDirection, MoveResult, RegMoveResult};
+use crate::motion::{reg_move, MoveDirection, MoveResult, RogueEnergy};
 use crate::odds::R_TELE_PERCENT;
 use crate::pack::{pick_up, PickUpResult};
 use crate::resources::arena::Arena;
@@ -10,7 +10,8 @@ use crate::resources::level::wake::{wake_room, WakeType};
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::message::{print_and_redirect, MessageEvent};
-use crate::resources::play::event::{RunEvent, RunStep};
+use crate::resources::play::event::reg_move::RegMoveEvent;
+use crate::resources::play::event::RunStep;
 use crate::resources::play::state::RunState;
 use crate::resources::rogue::spot::RogueSpot;
 use rand::Rng;
@@ -120,8 +121,11 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 	let col = game.rogue_col();
 	let has_object = game.level.try_object(LevelSpot::from_i64(row, col)).is_some();
 	if has_object {
-		return if !pickup {
-			stopped_on_something_with_message(&moved_on_message(row, col, &game), game)
+		let step = if !pickup {
+			let moved_onto_message = moved_onto_message(row, col, &game);
+			print_and_redirect(game, &moved_onto_message, true, |state| {
+				RegMoveEvent(state, Some(MoveResult::StoppedOnSomething)).into()
+			})
 		} else {
 			if game.as_health().levitate.is_active() {
 				game.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
@@ -129,26 +133,30 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 			} else {
 				match pick_up(row, col, game, ctx) {
 					(PickUpResult::TurnedToDust, state) => {
-						keep_moving_unless_hungry_or_confused(state)
+						moved(state)
 					}
-					(PickUpResult::AddedToGold(obj), mut state) => {
-						state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
-						let msg = get_obj_desc(&obj, &state);
-						print_and_redirect(state, &msg, true, |state| RunEvent::RegisterMove(state),
-						)
+					(PickUpResult::AddedToGold(obj), state) => {
+						let object_desc = get_obj_desc(&obj, &state);
+						print_and_redirect(state, &object_desc, true, |state| {
+							RegMoveEvent(state, Some(MoveResult::StoppedOnSomething)).into()
+						})
 					}
-					(PickUpResult::AddedToPack { added_id, .. }, mut state) => {
-						state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
-						let msg = state.get_rogue_obj_desc(added_id);
-						print_and_redirect(state, &msg, true, |state| RunEvent::RegisterMove(state))
+					(PickUpResult::AddedToPack { added_id, .. }, state) => {
+						let object_desc_with_item_handle = state.get_rogue_obj_desc(added_id);
+						print_and_redirect(state, &object_desc_with_item_handle, true, |state| {
+							RegMoveEvent(state, Some(MoveResult::StoppedOnSomething)).into()
+						})
 					}
-					(PickUpResult::PackTooFull, mut state) => {
-						state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
-						stopped_on_something_with_message(&moved_on_message(row, col, &state), state)
+					(PickUpResult::PackTooFull, state) => {
+						let moved_onto_message = moved_onto_message(row, col, &state);
+						print_and_redirect(state, &moved_onto_message, true, |state| {
+							RegMoveEvent(state, Some(MoveResult::StoppedOnSomething)).into()
+						})
 					}
 				}
 			}
 		};
+		return step;
 	}
 	if game.is_any_door_at(row, col) || game.level.features.feature_at(LevelSpot::from_i64(row, col)).is_stairs() || game.is_any_trap_at(row, col) {
 		game.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
@@ -158,24 +166,20 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 		reg_move(&mut game);
 		return RunStep::Effect(game, RunEffect::AwaitPlayerMove);
 	}
-	keep_moving_unless_hungry_or_confused(game)
+	moved(game)
 }
 
-fn stopped_on_something_with_message(desc: &str, game: RunState) -> RunStep {
-	print_and_redirect(game, desc, true, |state| RunEvent::RegisterMove(state))
-}
-
-fn keep_moving_unless_hungry_or_confused(mut game: RunState) -> RunStep {
+fn moved(mut game: RunState) -> RunStep {
 	match reg_move(&mut game) {
-		RegMoveResult::Starved => {
+		RogueEnergy::Starved => {
 			// TODO Might need to do something like killed_by here instead.
 			RunStep::Exit(game)
 		}
-		RegMoveResult::Fainted => {
+		RogueEnergy::Fainted => {
 			game.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
 			RunStep::Effect(game, RunEffect::AwaitPlayerMove)
 		}
-		RegMoveResult::Alert => if game.as_health().confused.is_active() {
+		RogueEnergy::Normal => if game.as_health().confused.is_active() {
 			game.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
 			RunStep::Effect(game, RunEffect::AwaitPlayerMove)
 		} else {
@@ -185,7 +189,7 @@ fn keep_moving_unless_hungry_or_confused(mut game: RunState) -> RunStep {
 	}
 }
 
-fn moved_on_message(row: i64, col: i64, game: &RunState) -> String {
+fn moved_onto_message(row: i64, col: i64, game: &RunState) -> String {
 	let obj = game.level.try_object(LevelSpot::from_i64(row, col)).unwrap();
 	let obj_desc = get_obj_desc(obj, &game);
 	let desc = format!("moved onto {}", obj_desc);

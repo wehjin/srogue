@@ -224,7 +224,7 @@ fn stopped_on_something_with_message(desc: &str, game: &mut GameState) -> MoveRe
 }
 
 fn moved_unless_hungry_or_confused(game: &mut GameState) -> MoveResult {
-	if reg_move(game) == RegMoveResult::Fainted {
+	if reg_move(game) == RogueEnergy::Fainted {
 		/* fainted from hunger */
 		StoppedOnSomething
 	} else {
@@ -463,20 +463,20 @@ fn random_faint(game: &mut impl Dungeon) -> bool {
 }
 
 #[derive(Eq, PartialEq)]
-pub enum RegMoveResult {
+pub enum RogueEnergy {
 	Starved,
 	Fainted,
-	Alert,
+	Normal,
 }
 
-pub fn reg_move(game: &mut impl Dungeon) -> RegMoveResult {
+pub fn reg_move(game: &mut impl Dungeon) -> RogueEnergy {
 	// Take care of hunger.
 	let mut fainted = false;
 	{
 		if game.as_fighter().moves_left <= HUNGRY_MOVES_LEFT || game.is_max_depth() {
 			match check_hunger(game) {
 				HungerCheckResult::DidStarve => {
-					return RegMoveResult::Starved;
+					return RogueEnergy::Starved;
 				}
 				HungerCheckResult::DidFaint => {
 					fainted = true;
@@ -555,9 +555,9 @@ pub fn reg_move(game: &mut impl Dungeon) -> RegMoveResult {
 	}
 	// Done
 	if fainted {
-		RegMoveResult::Fainted
+		RogueEnergy::Fainted
 	} else {
-		RegMoveResult::Alert
+		RogueEnergy::Normal
 	}
 }
 
