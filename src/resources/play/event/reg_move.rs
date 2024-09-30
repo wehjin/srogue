@@ -10,12 +10,6 @@ use rand::Rng;
 #[derive(Debug)]
 pub struct RegMove(pub RunState, pub Option<MoveResult>);
 
-impl RegMove {
-	pub fn delay_state(move_result: Option<MoveResult>) -> impl FnOnce(RunState) -> Self {
-		move |state| Self(state, move_result)
-	}
-}
-
 impl StateAction for RegMove {
 	fn into_event(self) -> RunEvent {
 		RunEvent::RegisterMove(self)

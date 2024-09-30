@@ -8,10 +8,10 @@ use crate::resources::level::size::LevelSpot;
 use crate::resources::level::wake::{wake_room, WakeType};
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
-use crate::resources::play::event::message::{print_and_do, Message};
+use crate::resources::play::event::message::Message;
 use crate::resources::play::event::pickup::{Pickup, PickupType};
 use crate::resources::play::event::reg_move::RegMove;
-use crate::resources::play::event::state_action::StateAction;
+use crate::resources::play::event::state_action::{redirect, StateAction};
 use crate::resources::play::event::{RunEvent, RunStep};
 use crate::resources::play::state::RunState;
 use crate::resources::rogue::spot::RogueSpot;
@@ -62,12 +62,12 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut stat
 					return if begin_held {
 						state.level.rogue.move_result = Some(MoveResult::MoveFailed);
 						let message = "you are being held";
-						let state = Message::dispatch_new(state, message, true, ctx);
+						let state = Message::new(state, message, true, RunStep::Exit).run(ctx);
 						RunStep::Effect(state, RunEffect::AwaitPlayerMove)
 					} else {
 						state.level.rogue.move_result = Some(MoveResult::MoveFailed);
 						let message = "you are still stuck in the bear trap";
-						let mut state = Message::dispatch_new(state, message, false, ctx);
+						let mut state = Message::new(state, message, false, RunStep::Exit).run(ctx);
 						// Do a regular move here so that the bear trap counts down.
 						reg_move(&mut state);
 						RunStep::Effect(state, RunEffect::AwaitPlayerMove)
@@ -165,7 +165,8 @@ fn pickup_object<R: Rng>(row: i64, col: i64, allow_pickup: bool, state: RunState
 		Pickup(state, PickupType::AfterMove(spot)).dispatch(ctx)
 	} else {
 		let message = moved_onto_message(row, col, &state);
-		print_and_do(state, &message, true, RegMove::delay_state(Some(MoveResult::StoppedOnSomething)))
+		let post_step = move |state| redirect(RegMove(state, Some(MoveResult::StoppedOnSomething)));
+		redirect(Message::new(state, message, true, post_step))
 	}
 }
 

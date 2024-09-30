@@ -1,4 +1,3 @@
-use crate::resources::play::event::message::Message;
 use crate::resources::play::event::one_move::OneMove;
 use crate::resources::play::event::state_action::StateAction;
 use crate::resources::play::event::RunEvent;
@@ -11,8 +10,7 @@ use crate::resources::player::{InputMode, PlayerInput};
 pub enum RunEffect {
 	AwaitPlayerMove,
 	AwaitModalClose,
-	AwaitMessageAck,
-	DispatchAfterPlayerAck(EventSeed),
+	PlayerAckAndDispatch(EventSeed),
 }
 
 impl RunEffect {
@@ -20,19 +18,12 @@ impl RunEffect {
 		match self {
 			RunEffect::AwaitPlayerMove => await_player_move(state, console),
 			RunEffect::AwaitModalClose => await_modal_close(state, console),
-			RunEffect::AwaitMessageAck => await_message_ack(state, console),
-			RunEffect::DispatchAfterPlayerAck(event_seed) => {
+			RunEffect::PlayerAckAndDispatch(event_seed) => {
 				let _input = console.get_input(InputMode::Alert);
-				event_seed.into_event(state)
+				event_seed.create_event(state)
 			}
 		}
 	}
-}
-
-fn await_message_ack(state: RunState, console: &impl TextConsole) -> RunEvent {
-	let _input = console.get_input(InputMode::Alert);
-	let message_event = Message::PostAck(state);
-	RunEvent::Message(message_event)
 }
 
 fn await_modal_close(state: RunState, console: &impl TextConsole) -> RunEvent {

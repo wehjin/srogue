@@ -7,10 +7,10 @@ use crate::resources::avatar::Avatar;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
-use crate::resources::play::event::message::{print_and_do, Message};
+use crate::resources::play::event::message::Message;
 use crate::resources::play::event::one_move::moved_onto_message;
 use crate::resources::play::event::reg_move::RegMove;
-use crate::resources::play::event::state_action::StateAction;
+use crate::resources::play::event::state_action::{redirect, StateAction};
 use crate::resources::play::event::{RunEvent, RunStep};
 use crate::resources::play::state::RunState;
 use crate::scrolls::ScrollKind::ScareMonster;
@@ -70,13 +70,14 @@ fn register_move<R: Rng>(state: RunState, ctx: &mut RunContext<R>) -> RunStep {
 }
 
 fn print_message_register_move(message: impl AsRef<str>, move_result: Option<MoveResult>, state: RunState) -> RunStep {
-	print_and_do(state, message.as_ref(), true, RegMove::delay_state(move_result))
+	let post_step = move |state| redirect(RegMove(state, move_result));
+	redirect(Message::new(state, message, true, post_step))
 }
 
 fn pick_up<R: Rng>(row: i64, col: i64, mut state: RunState, ctx: &mut RunContext<R>) -> (PickUpResult, RunState) {
 	let obj = state.try_object_at(row, col).unwrap();
 	if obj.is_used_scare_monster_scroll() {
-		let mut state = Message::dispatch_new(state, "the scroll turns to dust as you pick it up", false, ctx);
+		let mut state = Message::new(state, "the scroll turns to dust as you pick it up", false, RunStep::Exit).run(ctx);
 		state.level.remove_object(LevelSpot::from_i64(row, col));
 		if state.as_notes().scrolls[ScareMonster.to_index()].status == Unidentified {
 			let notes = state.as_notes_mut();
@@ -92,7 +93,7 @@ fn pick_up<R: Rng>(row: i64, col: i64, mut state: RunState, ctx: &mut RunContext
 	}
 	if state.pack_weight_with_new_object(Some(obj)) >= MAX_PACK_COUNT {
 		state.interrupt_and_slurp();
-		let state = Message::dispatch_new(state, "pack too full", true, ctx);
+		let state = Message::new(state, "pack too full", true, RunStep::Exit).run(ctx);
 		return (PickUpResult::PackTooFull, state);
 	}
 	let removed = state.level.remove_object(LevelSpot::from_i64(row, col)).unwrap();

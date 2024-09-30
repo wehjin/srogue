@@ -6,7 +6,7 @@ use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::one_move::OneMove;
 use crate::resources::play::event::pickup::Pickup;
 use crate::resources::play::event::reg_move::RegMove;
-use crate::resources::play::seed::EventSeed;
+use crate::resources::play::seed::StepSeed;
 use crate::resources::play::state::RunState;
 use message::Message;
 use rand::Rng;
@@ -30,8 +30,7 @@ pub enum RunEvent {
 	PlayerCloseModal(RunState),
 	PlayerOpenHelp(RunState),
 	PlayerOpenInventory(RunState),
-	PrintNextAndEffect(RunState, RunEffect),
-	PrintNextAndRedirect(RunState, EventSeed),
+	PrintNextAndStep(RunState, StepSeed),
 }
 
 impl RunEvent {
@@ -48,14 +47,9 @@ impl RunEvent {
 			RunEvent::PlayerCloseModal(state) => player_close_modal(state),
 			RunEvent::PlayerOpenHelp(state) => player_open_help(state),
 			RunEvent::PlayerOpenInventory(state) => player_open_inventory(state),
-
-			RunEvent::PrintNextAndRedirect(mut state, seed) => {
+			RunEvent::PrintNextAndStep(mut state, step_seed) => {
 				state.diary.message_line = state.diary.next_message_line.take();
-				RunStep::Redirect(seed.into_event(state))
-			}
-			RunEvent::PrintNextAndEffect(mut state, effect) => {
-				state.diary.message_line = state.diary.next_message_line.take();
-				RunStep::Effect(state, effect)
+				step_seed.create_step(state)
 			}
 		}
 	}
