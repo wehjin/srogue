@@ -46,17 +46,17 @@ impl StateAction for Pickup {
 						(PickUpResult::AddedToGold(obj), state) => {
 							let object_desc = get_obj_desc(&obj, &state);
 							let move_result = Some(MoveResult::StoppedOnSomething);
-							print_message_register_move(object_desc, move_result, state)
+							print_message_register_move(object_desc, move_result, state, ctx)
 						}
 						(PickUpResult::AddedToPack { added_id, .. }, state) => {
 							let object_desc_with_item_handle = state.get_rogue_obj_desc(added_id);
 							let move_result = Some(MoveResult::StoppedOnSomething);
-							print_message_register_move(object_desc_with_item_handle, move_result, state)
+							print_message_register_move(object_desc_with_item_handle, move_result, state, ctx)
 						}
 						(PickUpResult::PackTooFull, state) => {
 							let moved_onto_message = moved_onto_message(row, col, &state);
 							let move_result = Some(MoveResult::StoppedOnSomething);
-							print_message_register_move(moved_onto_message, move_result, state)
+							print_message_register_move(moved_onto_message, move_result, state, ctx)
 						}
 					},
 				}
@@ -69,9 +69,9 @@ fn register_move<R: Rng>(state: RunState, ctx: &mut RunContext<R>) -> RunStep {
 	RegMove(state, None).dispatch(ctx)
 }
 
-fn print_message_register_move(message: impl AsRef<str>, move_result: Option<MoveResult>, state: RunState) -> RunStep {
+fn print_message_register_move<R: Rng>(message: impl AsRef<str>, move_result: Option<MoveResult>, state: RunState, ctx: &mut RunContext<R>) -> RunStep {
 	let post_step = move |state| redirect(RegMove(state, move_result));
-	redirect(Message::new(state, message, true, post_step))
+	Message::new(state, message, true, post_step).dispatch(ctx)
 }
 
 fn pick_up<R: Rng>(row: i64, col: i64, mut state: RunState, ctx: &mut RunContext<R>) -> (PickUpResult, RunState) {

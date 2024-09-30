@@ -1,6 +1,6 @@
 use crate::init::Dungeon;
 use crate::inventory::get_obj_desc;
-use crate::motion::{reg_move, MoveDirection, MoveResult, RogueEnergy};
+use crate::motion::{MoveDirection, MoveResult};
 use crate::odds::R_TELE_PERCENT;
 use crate::resources::arena::Arena;
 use crate::resources::avatar::Avatar;
@@ -54,23 +54,25 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut stat
 		}
 		// What if we're stuck in place?
 		{
-			let begin_held = state.as_health().being_held;
-			let in_bear_trap = state.as_health().bear_trap > 0;
-			if begin_held || in_bear_trap {
+			let health = state.as_health();
+			let in_bear_trap = health.bear_trap > 0;
+			let being_held = health.being_held;
+			if being_held || in_bear_trap {
 				let monster_in_spot = state.has_monster_at(to_row, to_col);
 				if !monster_in_spot {
-					return if begin_held {
+					return if being_held {
 						state.level.rogue.move_result = Some(MoveResult::MoveFailed);
 						let message = "you are being held";
-						let state = Message::new(state, message, true, RunStep::Exit).run(ctx);
-						RunStep::Effect(state, RunEffect::AwaitPlayerMove)
+						Message::new(state, message, true, |state| {
+							RunStep::Effect(state, RunEffect::AwaitPlayerMove)
+						}).dispatch(ctx)
 					} else {
 						state.level.rogue.move_result = Some(MoveResult::MoveFailed);
 						let message = "you are still stuck in the bear trap";
-						let mut state = Message::new(state, message, false, RunStep::Exit).run(ctx);
-						// Do a regular move here so that the bear trap counts down.
-						reg_move(&mut state);
-						RunStep::Effect(state, RunEffect::AwaitPlayerMove)
+						Message::new(state, message, true, |state| {
+							// Do a regular move here so that the bear trap counts down.
+							redirect(RegMove(state, Some(MoveResult::MoveFailed)))
+						}).dispatch(ctx)
 					};
 				}
 			}
@@ -87,8 +89,7 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut stat
 			let _mon_id = state.get_monster_at(to_row, to_col).unwrap();
 			state.level.rogue.move_result = Some(MoveResult::MoveFailed);
 			// TODO rogue_hit(mon_id, false, game);
-			reg_move(&mut state);
-			return RunStep::Effect(state, RunEffect::AwaitPlayerMove);
+			return RegMove(state, Some(MoveResult::MoveFailed)).dispatch(ctx);
 		}
 		// The lighting in the level changes as we move.
 		// What if we're moving to a door?
@@ -129,34 +130,12 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut stat
 		return pickup_object(row, col, allow_pickup, state, ctx);
 	}
 	if state.is_any_door_at(row, col) || state.level.features.feature_at(LevelSpot::from_i64(row, col)).is_stairs() || state.is_any_trap_at(row, col) {
-		state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
 		if state.as_health().levitate.is_inactive() && state.is_any_trap_at(row, col) {
 			// TODO trap_player(row as usize, col as usize, game);
 		}
-		reg_move(&mut state);
-		return RunStep::Effect(state, RunEffect::AwaitPlayerMove);
+		return RegMove(state, Some(MoveResult::StoppedOnSomething)).dispatch(ctx);
 	}
-	moved(state)
-}
-
-fn moved(mut state: RunState) -> RunStep {
-	match reg_move(&mut state) {
-		RogueEnergy::Starved => {
-			// TODO Might need to do something like killed_by here instead.
-			RunStep::Exit(state)
-		}
-		RogueEnergy::Fainted => {
-			state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
-			RunStep::Effect(state, RunEffect::AwaitPlayerMove)
-		}
-		RogueEnergy::Normal => if state.as_health().confused.is_active() {
-			state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
-			RunStep::Effect(state, RunEffect::AwaitPlayerMove)
-		} else {
-			state.level.rogue.move_result = Some(MoveResult::Moved);
-			RunStep::Effect(state, RunEffect::AwaitPlayerMove)
-		},
-	}
+	RegMove(state, None).dispatch(ctx)
 }
 
 fn pickup_object<R: Rng>(row: i64, col: i64, allow_pickup: bool, state: RunState, ctx: &mut RunContext<R>) -> RunStep {
@@ -166,7 +145,7 @@ fn pickup_object<R: Rng>(row: i64, col: i64, allow_pickup: bool, state: RunState
 	} else {
 		let message = moved_onto_message(row, col, &state);
 		let post_step = move |state| redirect(RegMove(state, Some(MoveResult::StoppedOnSomething)));
-		redirect(Message::new(state, message, true, post_step))
+		Message::new(state, message, true, post_step).dispatch(ctx)
 	}
 }
 
