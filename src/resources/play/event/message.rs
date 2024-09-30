@@ -2,9 +2,9 @@ use crate::init::Dungeon;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::{RunEvent, RunStep};
+use crate::resources::play::seed::EventSeed;
 use crate::resources::play::state::RunState;
 use rand::Rng;
-use crate::resources::play::seed::EventSeed;
 
 #[derive(Debug)]
 pub enum MessageEvent {
@@ -87,8 +87,7 @@ mod tests {
 	}
 }
 
-pub fn print_then_dispatch(mut state: RunState, msg: impl AsRef<str>, interrupt: bool, event_seed: impl FnOnce(RunState) -> RunEvent + 'static) -> RunStep {
-
+pub fn print_and_redirect(mut state: RunState, msg: impl AsRef<str>, interrupt: bool, event_seed: impl FnOnce(RunState) -> RunEvent + 'static) -> RunStep {
 	// TODO if !save_is_interactive {return;}
 	let diary = &mut state.diary;
 	if interrupt {
@@ -102,7 +101,7 @@ pub fn print_then_dispatch(mut state: RunState, msg: impl AsRef<str>, interrupt:
 	} else {
 		diary.next_message_line = Some(msg.as_ref().to_string());
 		let customer_event_seed = EventSeed::new(event_seed);
-		let print_event_seed = EventSeed::new(|state| RunEvent::PrintNextAndDispatch(state, customer_event_seed));
+		let print_event_seed = EventSeed::new(|state| RunEvent::PrintNextAndRedirect(state, customer_event_seed));
 		RunStep::Effect(state, RunEffect::DispatchAfterPlayerAck(print_event_seed))
 	}
 }

@@ -42,6 +42,8 @@ impl Rogue {
 	}
 	pub fn outfit(mut self, rng: &mut impl Rng) -> Self {
 		self.fighter.provision(rng);
+		self.notes.assign_dynamic_titles();
+		// TODO ring_stats(false, &mut game);
 		self
 	}
 	pub fn descend(&mut self) {

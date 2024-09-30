@@ -22,8 +22,8 @@ pub enum RunEvent {
 	PlayerOpenHelp(RunState),
 	PlayerOpenInventory(RunState),
 	OneMove(OneMoveEvent),
-	PrintNextAndPerform(RunState, RunEffect),
-	PrintNextAndDispatch(RunState, EventSeed),
+	PrintNextAndEffect(RunState, RunEffect),
+	PrintNextAndRedirect(RunState, EventSeed),
 	RegisterMove(RunState),
 }
 
@@ -37,11 +37,11 @@ impl RunEvent {
 			RunEvent::PlayerOpenHelp(state) => player_open_help(state),
 			RunEvent::PlayerOpenInventory(state) => player_open_inventory(state),
 			RunEvent::OneMove(one_move_event) => one_move_event.into_step(ctx),
-			RunEvent::PrintNextAndDispatch(mut state, seed) => {
+			RunEvent::PrintNextAndRedirect(mut state, seed) => {
 				state.diary.message_line = state.diary.next_message_line.take();
 				RunStep::Redirect(seed.into_event(state))
 			}
-			RunEvent::PrintNextAndPerform(mut state, effect) => {
+			RunEvent::PrintNextAndEffect(mut state, effect) => {
 				state.diary.message_line = state.diary.next_message_line.take();
 				RunStep::Effect(state, effect)
 			}

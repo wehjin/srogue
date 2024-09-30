@@ -9,8 +9,8 @@ use crate::resources::level::size::LevelSpot;
 use crate::resources::level::wake::{wake_room, WakeType};
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
-use crate::resources::play::event::message::MessageEvent;
-use crate::resources::play::event::{message, RunEvent, RunStep};
+use crate::resources::play::event::message::{print_and_redirect, MessageEvent};
+use crate::resources::play::event::{RunEvent, RunStep};
 use crate::resources::play::state::RunState;
 use crate::resources::rogue::spot::RogueSpot;
 use rand::Rng;
@@ -134,12 +134,13 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 					(PickUpResult::AddedToGold(obj), mut state) => {
 						state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
 						let msg = get_obj_desc(&obj, &state);
-						stopped_on_something_with_message(&msg, state)
+						print_and_redirect(state, &msg, true, |state| RunEvent::RegisterMove(state),
+						)
 					}
 					(PickUpResult::AddedToPack { added_id, .. }, mut state) => {
 						state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
 						let msg = state.get_rogue_obj_desc(added_id);
-						stopped_on_something_with_message(&msg, state)
+						print_and_redirect(state, &msg, true, |state| RunEvent::RegisterMove(state))
 					}
 					(PickUpResult::PackTooFull, mut state) => {
 						state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
@@ -161,7 +162,7 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 }
 
 fn stopped_on_something_with_message(desc: &str, game: RunState) -> RunStep {
-	message::print_then_dispatch(game, desc, true, |state| RunEvent::RegisterMove(state))
+	print_and_redirect(game, desc, true, |state| RunEvent::RegisterMove(state))
 }
 
 fn keep_moving_unless_hungry_or_confused(mut game: RunState) -> RunStep {
