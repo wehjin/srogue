@@ -5,7 +5,6 @@ use crate::motion::reg_move;
 use crate::objects::NoteStatus::{Identified, Unidentified};
 use crate::objects::{Object, ObjectId, ObjectPack};
 use crate::player::Player;
-use rand::Rng;
 
 use crate::prelude::object_what::ObjectWhat::Scroll;
 use crate::prelude::object_what::PackFilter;
@@ -13,10 +12,6 @@ use crate::prelude::object_what::PackFilter::{Amulets, Armors, Foods, Potions, R
 use crate::resources::avatar::Avatar;
 use crate::resources::diary;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
-use crate::resources::level::size::LevelSpot;
-use crate::resources::play::context::RunContext;
-use crate::resources::play::event::message::MessageEvent;
-use crate::resources::play::state::RunState;
 use crate::scrolls::ScrollKind::ScareMonster;
 use crate::weapons::kind::WeaponKind;
 
@@ -34,37 +29,6 @@ pub enum PickUpResult {
 	PackTooFull,
 }
 
-pub fn pick_up<R: Rng>(row: i64, col: i64, mut game: RunState, ctx: &mut RunContext<R>) -> (PickUpResult, RunState) {
-	let obj = game.try_object_at(row, col).unwrap();
-	if obj.is_used_scare_monster_scroll() {
-		let mut state = MessageEvent::dispatch(game, "the scroll turns to dust as you pick it up", false, ctx);
-		state.level.remove_object(LevelSpot::from_i64(row, col));
-		if state.as_notes().scrolls[ScareMonster.to_index()].status == Unidentified {
-			let notes = state.as_notes_mut();
-			notes.scrolls[ScareMonster.to_index()].status = Identified
-		}
-		return (PickUpResult::TurnedToDust, state);
-	}
-	if let Some(quantity) = obj.gold_quantity() {
-		game.as_fighter_mut().gold += quantity;
-		let removed = game.level.remove_object(LevelSpot::from_i64(row, col)).unwrap();
-		game.as_diary_mut().set_stats_changed(true);
-		return (PickUpResult::AddedToGold(removed), game);
-	}
-	if game.pack_weight_with_new_object(Some(obj)) >= MAX_PACK_COUNT {
-		game.interrupt_and_slurp();
-		let state = MessageEvent::dispatch(game, "pack too full", true, ctx);
-		return (PickUpResult::PackTooFull, state);
-	}
-	let removed = game.level.remove_object(LevelSpot::from_i64(row, col)).unwrap();
-	let added_id = game.combine_or_add_item_to_pack(removed);
-	let added_kind = {
-		let obj = game.as_fighter_mut().pack.object_mut(added_id).unwrap();
-		obj.picked_up = 1;
-		obj.which_kind
-	};
-	(PickUpResult::AddedToPack { added_id, added_kind: added_kind as usize }, game)
-}
 pub fn pick_up_legacy(row: i64, col: i64, game: &mut GameState) -> PickUpResult {
 	let obj_id = game.ground.find_id_at(row, col).expect("obj_id in level-objects at pick-up spot");
 	if game.ground.check_object(obj_id, Object::is_used_scare_monster_scroll) {

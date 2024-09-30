@@ -77,6 +77,10 @@ impl From<DungeonSpot> for LevelSpot {
 	}
 }
 
+impl Into<(i64, i64)> for LevelSpot {
+	fn into(self) -> (i64, i64) { self.i64() }
+}
+
 impl LevelSpot {
 	pub fn i64(&self) -> (i64, i64) {
 		(self.row.0 as i64, self.col.0 as i64)

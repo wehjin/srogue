@@ -3,24 +3,30 @@ use crate::resources::level::setup::roll_level;
 use crate::resources::level::PartyType;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
-use crate::resources::play::event::one_move::OneMoveEvent;
-use crate::resources::play::event::reg_move::{RegMoveEvent, StepEvent};
+use crate::resources::play::event::one_move::OneMove;
+use crate::resources::play::event::pickup::Pickup;
+use crate::resources::play::event::reg_move::RegMove;
 use crate::resources::play::seed::EventSeed;
 use crate::resources::play::state::RunState;
-use message::MessageEvent;
+use message::Message;
 use rand::Rng;
+use state_action::StateAction;
 
 pub mod message;
 pub mod one_move;
+pub mod pickup;
 pub mod reg_move;
+pub mod state_action;
 
 #[derive(Debug)]
 pub enum RunEvent {
 	Init,
-	Message(MessageEvent),
+	Message(Message),
 	PlayerQuit(RunState),
-	OneMove(OneMoveEvent),
-	RegisterMove(RegMoveEvent),
+	OneMove(OneMove),
+	RegisterMove(RegMove),
+	Pickup(Pickup),
+
 	PlayerCloseModal(RunState),
 	PlayerOpenHelp(RunState),
 	PlayerOpenInventory(RunState),
@@ -35,7 +41,8 @@ impl RunEvent {
 
 			RunEvent::Message(message) => message.into_step(),
 			RunEvent::OneMove(one_move) => one_move.into_step(ctx),
-			RunEvent::RegisterMove(reg_move) => reg_move.step(ctx),
+			RunEvent::RegisterMove(reg_move) => reg_move.dispatch(ctx),
+			RunEvent::Pickup(pickup) => pickup.dispatch(ctx),
 
 			RunEvent::PlayerQuit(state) => player_quit(state),
 			RunEvent::PlayerCloseModal(state) => player_close_modal(state),

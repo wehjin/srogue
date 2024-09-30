@@ -2,19 +2,26 @@ use crate::motion::{reg_move, MoveResult, RogueEnergy};
 use crate::resources::avatar::Avatar;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
+use crate::resources::play::event::state_action::StateAction;
 use crate::resources::play::event::{RunEvent, RunStep};
 use crate::resources::play::state::RunState;
 use rand::Rng;
 
-pub trait StepEvent: Into<RunEvent> {
-	fn step<R: Rng>(self, _ctx: &mut RunContext<R>) -> RunStep;
+#[derive(Debug)]
+pub struct RegMove(pub RunState, pub Option<MoveResult>);
+
+impl RegMove {
+	pub fn delay_state(move_result: Option<MoveResult>) -> impl FnOnce(RunState) -> Self {
+		move |state| Self(state, move_result)
+	}
 }
 
-#[derive(Debug)]
-pub struct RegMoveEvent(pub RunState, pub Option<MoveResult>);
+impl StateAction for RegMove {
+	fn defer(self) -> RunEvent {
+		RunEvent::RegisterMove(self)
+	}
 
-impl StepEvent for RegMoveEvent {
-	fn step<R: Rng>(self, _ctx: &mut RunContext<R>) -> RunStep {
+	fn dispatch<R: Rng>(self, _ctx: &mut RunContext<R>) -> RunStep {
 		let Self(mut state, move_result) = self;
 		match reg_move(&mut state) {
 			RogueEnergy::Starved => {
@@ -34,11 +41,5 @@ impl StepEvent for RegMoveEvent {
 				RunStep::Effect(state, RunEffect::AwaitPlayerMove)
 			},
 		}
-	}
-}
-
-impl Into<RunEvent> for RegMoveEvent {
-	fn into(self) -> RunEvent {
-		RunEvent::RegisterMove(self)
 	}
 }

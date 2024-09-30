@@ -2,32 +2,33 @@ use crate::init::Dungeon;
 use crate::inventory::get_obj_desc;
 use crate::motion::{reg_move, MoveDirection, MoveResult, RogueEnergy};
 use crate::odds::R_TELE_PERCENT;
-use crate::pack::{pick_up, PickUpResult};
 use crate::resources::arena::Arena;
 use crate::resources::avatar::Avatar;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::level::wake::{wake_room, WakeType};
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
-use crate::resources::play::event::message::{print_and_redirect, MessageEvent};
-use crate::resources::play::event::reg_move::RegMoveEvent;
+use crate::resources::play::event::message::{print_and_do, Message};
+use crate::resources::play::event::pickup::{Pickup, PickupType};
+use crate::resources::play::event::reg_move::RegMove;
+use crate::resources::play::event::state_action::StateAction;
 use crate::resources::play::event::RunStep;
 use crate::resources::play::state::RunState;
 use crate::resources::rogue::spot::RogueSpot;
 use rand::Rng;
 
 #[derive(Debug)]
-pub struct OneMoveEvent(pub RunState, pub MoveDirection);
+pub struct OneMove(pub RunState, pub MoveDirection);
 
-impl OneMoveEvent {
+impl OneMove {
 	pub fn into_step<R: Rng>(self, ctx: &mut RunContext<R>) -> RunStep {
-		let OneMoveEvent(state, direction) = self;
+		let OneMove(state, direction) = self;
 		let step = one_move_rogue(direction, true, state, ctx);
 		step
 	}
 }
 
-fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunState, ctx: &mut RunContext<R>) -> RunStep {
+fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut game: RunState, ctx: &mut RunContext<R>) -> RunStep {
 	game.level.rogue.move_result = None;
 	game.diary.clear_message_lines();
 	{
@@ -57,12 +58,12 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 					return if begin_held {
 						game.level.rogue.move_result = Some(MoveResult::MoveFailed);
 						let message = "you are being held";
-						let state = MessageEvent::dispatch(game, message, true, ctx);
+						let state = Message::dispatch(game, message, true, ctx);
 						RunStep::Effect(state, RunEffect::AwaitPlayerMove)
 					} else {
 						game.level.rogue.move_result = Some(MoveResult::MoveFailed);
 						let message = "you are still stuck in the bear trap";
-						let mut state = MessageEvent::dispatch(game, message, false, ctx);
+						let mut state = Message::dispatch(game, message, false, ctx);
 						// Do a regular move here so that the bear trap counts down.
 						reg_move(&mut state);
 						RunStep::Effect(state, RunEffect::AwaitPlayerMove)
@@ -121,42 +122,7 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, pickup: bool, mut game: RunS
 	let col = game.rogue_col();
 	let has_object = game.level.try_object(LevelSpot::from_i64(row, col)).is_some();
 	if has_object {
-		let step = if !pickup {
-			let moved_onto_message = moved_onto_message(row, col, &game);
-			print_and_redirect(game, &moved_onto_message, true, |state| {
-				RegMoveEvent(state, Some(MoveResult::StoppedOnSomething)).into()
-			})
-		} else {
-			if game.as_health().levitate.is_active() {
-				game.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
-				RunStep::Effect(game, RunEffect::AwaitPlayerMove)
-			} else {
-				match pick_up(row, col, game, ctx) {
-					(PickUpResult::TurnedToDust, state) => {
-						moved(state)
-					}
-					(PickUpResult::AddedToGold(obj), state) => {
-						let object_desc = get_obj_desc(&obj, &state);
-						print_and_redirect(state, &object_desc, true, |state| {
-							RegMoveEvent(state, Some(MoveResult::StoppedOnSomething)).into()
-						})
-					}
-					(PickUpResult::AddedToPack { added_id, .. }, state) => {
-						let object_desc_with_item_handle = state.get_rogue_obj_desc(added_id);
-						print_and_redirect(state, &object_desc_with_item_handle, true, |state| {
-							RegMoveEvent(state, Some(MoveResult::StoppedOnSomething)).into()
-						})
-					}
-					(PickUpResult::PackTooFull, state) => {
-						let moved_onto_message = moved_onto_message(row, col, &state);
-						print_and_redirect(state, &moved_onto_message, true, |state| {
-							RegMoveEvent(state, Some(MoveResult::StoppedOnSomething)).into()
-						})
-					}
-				}
-			}
-		};
-		return step;
+		return pickup_object(row, col, allow_pickup, game, ctx);
 	}
 	if game.is_any_door_at(row, col) || game.level.features.feature_at(LevelSpot::from_i64(row, col)).is_stairs() || game.is_any_trap_at(row, col) {
 		game.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
@@ -189,7 +155,17 @@ fn moved(mut game: RunState) -> RunStep {
 	}
 }
 
-fn moved_onto_message(row: i64, col: i64, game: &RunState) -> String {
+fn pickup_object<R: Rng>(row: i64, col: i64, allow_pickup: bool, game: RunState, ctx: &mut RunContext<R>) -> RunStep {
+	if allow_pickup {
+		let spot = LevelSpot::from_i64(row, col);
+		Pickup(game, PickupType::AfterMove(spot)).dispatch(ctx)
+	} else {
+		let message = moved_onto_message(row, col, &game);
+		print_and_do(game, &message, true, RegMove::delay_state(Some(MoveResult::StoppedOnSomething)))
+	}
+}
+
+pub fn moved_onto_message(row: i64, col: i64, game: &RunState) -> String {
 	let obj = game.level.try_object(LevelSpot::from_i64(row, col)).unwrap();
 	let obj_desc = get_obj_desc(obj, &game);
 	let desc = format!("moved onto {}", obj_desc);

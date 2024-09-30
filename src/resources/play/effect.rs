@@ -1,5 +1,5 @@
-use crate::resources::play::event::message::MessageEvent;
-use crate::resources::play::event::one_move::OneMoveEvent;
+use crate::resources::play::event::message::Message;
+use crate::resources::play::event::one_move::OneMove;
 use crate::resources::play::event::RunEvent;
 use crate::resources::play::seed::EventSeed;
 use crate::resources::play::state::RunState;
@@ -30,7 +30,7 @@ impl RunEffect {
 
 fn await_message_ack(state: RunState, console: &impl TextConsole) -> RunEvent {
 	let _input = console.get_input(InputMode::Alert);
-	let message_event = MessageEvent::PostAck(state);
+	let message_event = Message::PostAck(state);
 	RunEvent::Message(message_event)
 }
 
@@ -44,6 +44,6 @@ fn await_player_move(state: RunState, console: &impl TextConsole) -> RunEvent {
 		PlayerInput::Close | PlayerInput::Space => RunEvent::PlayerQuit(state),
 		PlayerInput::Help => RunEvent::PlayerOpenHelp(state),
 		PlayerInput::Menu => RunEvent::PlayerOpenInventory(state),
-		PlayerInput::Arrow(direction) => RunEvent::OneMove(OneMoveEvent(state, direction)),
+		PlayerInput::Arrow(direction) => RunEvent::OneMove(OneMove(state, direction)),
 	}
 }
