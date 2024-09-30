@@ -17,7 +17,7 @@ impl RegMove {
 }
 
 impl StateAction for RegMove {
-	fn defer(self) -> RunEvent {
+	fn into_event(self) -> RunEvent {
 		RunEvent::RegisterMove(self)
 	}
 

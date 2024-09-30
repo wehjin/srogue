@@ -1,5 +1,6 @@
 use crate::resources::play::event::message::Message;
 use crate::resources::play::event::one_move::OneMove;
+use crate::resources::play::event::state_action::StateAction;
 use crate::resources::play::event::RunEvent;
 use crate::resources::play::seed::EventSeed;
 use crate::resources::play::state::RunState;
@@ -44,6 +45,6 @@ fn await_player_move(state: RunState, console: &impl TextConsole) -> RunEvent {
 		PlayerInput::Close | PlayerInput::Space => RunEvent::PlayerQuit(state),
 		PlayerInput::Help => RunEvent::PlayerOpenHelp(state),
 		PlayerInput::Menu => RunEvent::PlayerOpenInventory(state),
-		PlayerInput::Arrow(direction) => RunEvent::OneMove(OneMove(state, direction)),
+		PlayerInput::Arrow(direction) => OneMove(state, direction).into_event(),
 	}
 }

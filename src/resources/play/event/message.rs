@@ -14,16 +14,22 @@ pub enum Message {
 }
 
 impl Message {
-	pub fn dispatch<R: Rng>(state: RunState, text: impl AsRef<str>, interrupt: bool, ctx: &mut RunContext<R>) -> RunState {
-		let message_event = Self::new(state, text, interrupt);
-		ctx.dispatch(RunEvent::Message(message_event))
-	}
 	fn new(state: RunState, text: impl AsRef<str>, interrupt: bool) -> Message {
 		let message_event = Self::PreAck { state, text: text.as_ref().to_string(), interrupt };
 		message_event
 	}
+	pub fn dispatch_new<R: Rng>(state: RunState, text: impl AsRef<str>, interrupt: bool, ctx: &mut RunContext<R>) -> RunState {
+		let event = Self::new(state, text, interrupt).into_event();
+		ctx.dispatch(event)
+	}
+}
 
-	pub fn into_step(self) -> RunStep {
+impl StateAction for Message {
+	fn into_event(self) -> RunEvent {
+		RunEvent::Message(self)
+	}
+
+	fn dispatch<R: Rng>(self, _ctx: &mut RunContext<R>) -> RunStep {
 		match self {
 			Message::PreAck { mut state, text, interrupt } => {
 				// TODO if !save_is_interactive {return;}
@@ -50,7 +56,6 @@ impl Message {
 	}
 }
 
-
 #[cfg(test)]
 mod tests {
 	use crate::resources::play::context::RunContext;
@@ -73,7 +78,7 @@ mod tests {
 	fn no_previous_message_line_works() {
 		let mut ctx = RunContext::new(ChaChaRng::seed_from_u64(17), TestConsole);
 		let state = RunState::init(ctx.rng());
-		let new_state = Message::dispatch(state, "Hello", true, &mut ctx);
+		let new_state = Message::dispatch_new(state, "Hello", true, &mut ctx);
 		assert_eq!(Some("Hello".to_string()), new_state.diary.message_line);
 		assert!(new_state.diary.interrupted);
 	}
@@ -82,14 +87,14 @@ mod tests {
 		let mut ctx = RunContext::new(ChaChaRng::seed_from_u64(17), TestConsole);
 		let mut state = RunState::init(ctx.rng());
 		state.diary.message_line = Some("Hello".to_string());
-		let new_state = Message::dispatch(state, "World", false, &mut ctx);
+		let new_state = Message::dispatch_new(state, "World", false, &mut ctx);
 		assert_eq!(Some("World".to_string()), new_state.diary.message_line);
 		assert!(!new_state.diary.interrupted);
 	}
 }
 
 pub fn print_and_do<T: StateAction>(state: RunState, msg: impl AsRef<str>, interrupt: bool, action_seed: impl FnOnce(RunState) -> T + 'static) -> RunStep {
-	print_and_redirect(state, msg, interrupt, |state| action_seed(state).defer())
+	print_and_redirect(state, msg, interrupt, |state| action_seed(state).into_event())
 }
 
 pub fn print_and_redirect(mut state: RunState, msg: impl AsRef<str>, interrupt: bool, event_seed: impl FnOnce(RunState) -> RunEvent + 'static) -> RunStep {

@@ -12,7 +12,7 @@ use crate::resources::play::event::message::{print_and_do, Message};
 use crate::resources::play::event::pickup::{Pickup, PickupType};
 use crate::resources::play::event::reg_move::RegMove;
 use crate::resources::play::event::state_action::StateAction;
-use crate::resources::play::event::RunStep;
+use crate::resources::play::event::{RunEvent, RunStep};
 use crate::resources::play::state::RunState;
 use crate::resources::rogue::spot::RogueSpot;
 use rand::Rng;
@@ -20,8 +20,12 @@ use rand::Rng;
 #[derive(Debug)]
 pub struct OneMove(pub RunState, pub MoveDirection);
 
-impl OneMove {
-	pub fn into_step<R: Rng>(self, ctx: &mut RunContext<R>) -> RunStep {
+impl StateAction for OneMove {
+	fn into_event(self) -> RunEvent {
+		RunEvent::OneMove(self)
+	}
+
+	fn dispatch<R: Rng>(self, ctx: &mut RunContext<R>) -> RunStep {
 		let OneMove(state, direction) = self;
 		let step = one_move_rogue(direction, true, state, ctx);
 		step
@@ -58,12 +62,12 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut game
 					return if begin_held {
 						game.level.rogue.move_result = Some(MoveResult::MoveFailed);
 						let message = "you are being held";
-						let state = Message::dispatch(game, message, true, ctx);
+						let state = Message::dispatch_new(game, message, true, ctx);
 						RunStep::Effect(state, RunEffect::AwaitPlayerMove)
 					} else {
 						game.level.rogue.move_result = Some(MoveResult::MoveFailed);
 						let message = "you are still stuck in the bear trap";
-						let mut state = Message::dispatch(game, message, false, ctx);
+						let mut state = Message::dispatch_new(game, message, false, ctx);
 						// Do a regular move here so that the bear trap counts down.
 						reg_move(&mut state);
 						RunStep::Effect(state, RunEffect::AwaitPlayerMove)

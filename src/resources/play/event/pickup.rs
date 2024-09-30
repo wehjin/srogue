@@ -25,7 +25,7 @@ pub enum PickupType {
 pub struct Pickup(pub RunState, pub PickupType);
 
 impl StateAction for Pickup {
-	fn defer(self) -> RunEvent {
+	fn into_event(self) -> RunEvent {
 		RunEvent::Pickup(self)
 	}
 	fn dispatch<R: Rng>(self, ctx: &mut RunContext<R>) -> RunStep {
@@ -76,7 +76,7 @@ fn print_message_register_move(message: impl AsRef<str>, move_result: Option<Mov
 fn pick_up<R: Rng>(row: i64, col: i64, mut game: RunState, ctx: &mut RunContext<R>) -> (PickUpResult, RunState) {
 	let obj = game.try_object_at(row, col).unwrap();
 	if obj.is_used_scare_monster_scroll() {
-		let mut state = Message::dispatch(game, "the scroll turns to dust as you pick it up", false, ctx);
+		let mut state = Message::dispatch_new(game, "the scroll turns to dust as you pick it up", false, ctx);
 		state.level.remove_object(LevelSpot::from_i64(row, col));
 		if state.as_notes().scrolls[ScareMonster.to_index()].status == Unidentified {
 			let notes = state.as_notes_mut();
@@ -92,7 +92,7 @@ fn pick_up<R: Rng>(row: i64, col: i64, mut game: RunState, ctx: &mut RunContext<
 	}
 	if game.pack_weight_with_new_object(Some(obj)) >= MAX_PACK_COUNT {
 		game.interrupt_and_slurp();
-		let state = Message::dispatch(game, "pack too full", true, ctx);
+		let state = Message::dispatch_new(game, "pack too full", true, ctx);
 		return (PickUpResult::PackTooFull, state);
 	}
 	let removed = game.level.remove_object(LevelSpot::from_i64(row, col)).unwrap();

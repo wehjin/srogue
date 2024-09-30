@@ -5,6 +5,7 @@ use crate::resources::play::{dispatch, TextConsole};
 use rand::Rng;
 
 pub struct RunContext<R: Rng> {
+	// TODO Move rng into RunState so that we can split dispatch into step and walk.
 	pub rng: Box<R>,
 	pub console: Box<dyn TextConsole>,
 }

@@ -39,8 +39,8 @@ impl RunEvent {
 		match self {
 			RunEvent::Init => init(ctx.rng()),
 
-			RunEvent::Message(message) => message.into_step(),
-			RunEvent::OneMove(one_move) => one_move.into_step(ctx),
+			RunEvent::Message(message) => message.dispatch(ctx),
+			RunEvent::OneMove(one_move) => one_move.dispatch(ctx),
 			RunEvent::RegisterMove(reg_move) => reg_move.dispatch(ctx),
 			RunEvent::Pickup(pickup) => pickup.dispatch(ctx),
 
