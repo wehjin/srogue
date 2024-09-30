@@ -73,10 +73,10 @@ fn print_message_register_move(message: impl AsRef<str>, move_result: Option<Mov
 	print_and_do(state, message.as_ref(), true, RegMove::delay_state(move_result))
 }
 
-fn pick_up<R: Rng>(row: i64, col: i64, mut game: RunState, ctx: &mut RunContext<R>) -> (PickUpResult, RunState) {
-	let obj = game.try_object_at(row, col).unwrap();
+fn pick_up<R: Rng>(row: i64, col: i64, mut state: RunState, ctx: &mut RunContext<R>) -> (PickUpResult, RunState) {
+	let obj = state.try_object_at(row, col).unwrap();
 	if obj.is_used_scare_monster_scroll() {
-		let mut state = Message::dispatch_new(game, "the scroll turns to dust as you pick it up", false, ctx);
+		let mut state = Message::dispatch_new(state, "the scroll turns to dust as you pick it up", false, ctx);
 		state.level.remove_object(LevelSpot::from_i64(row, col));
 		if state.as_notes().scrolls[ScareMonster.to_index()].status == Unidentified {
 			let notes = state.as_notes_mut();
@@ -85,22 +85,22 @@ fn pick_up<R: Rng>(row: i64, col: i64, mut game: RunState, ctx: &mut RunContext<
 		return (PickUpResult::TurnedToDust, state);
 	}
 	if let Some(quantity) = obj.gold_quantity() {
-		game.as_fighter_mut().gold += quantity;
-		let removed = game.level.remove_object(LevelSpot::from_i64(row, col)).unwrap();
-		game.as_diary_mut().set_stats_changed(true);
-		return (PickUpResult::AddedToGold(removed), game);
+		state.as_fighter_mut().gold += quantity;
+		let removed = state.level.remove_object(LevelSpot::from_i64(row, col)).unwrap();
+		state.as_diary_mut().set_stats_changed(true);
+		return (PickUpResult::AddedToGold(removed), state);
 	}
-	if game.pack_weight_with_new_object(Some(obj)) >= MAX_PACK_COUNT {
-		game.interrupt_and_slurp();
-		let state = Message::dispatch_new(game, "pack too full", true, ctx);
+	if state.pack_weight_with_new_object(Some(obj)) >= MAX_PACK_COUNT {
+		state.interrupt_and_slurp();
+		let state = Message::dispatch_new(state, "pack too full", true, ctx);
 		return (PickUpResult::PackTooFull, state);
 	}
-	let removed = game.level.remove_object(LevelSpot::from_i64(row, col)).unwrap();
-	let added_id = game.combine_or_add_item_to_pack(removed);
+	let removed = state.level.remove_object(LevelSpot::from_i64(row, col)).unwrap();
+	let added_id = state.combine_or_add_item_to_pack(removed);
 	let added_kind = {
-		let obj = game.as_fighter_mut().pack.object_mut(added_id).unwrap();
+		let obj = state.as_fighter_mut().pack.object_mut(added_id).unwrap();
 		obj.picked_up = 1;
 		obj.which_kind
 	};
-	(PickUpResult::AddedToPack { added_id, added_kind: added_kind as usize }, game)
+	(PickUpResult::AddedToPack { added_id, added_kind: added_kind as usize }, state)
 }
