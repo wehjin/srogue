@@ -5,7 +5,7 @@ use crate::resources::dice;
 use crate::resources::level::room_id::RoomId;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::level::DungeonLevel;
-use rand::Rng;
+use rand_chacha::ChaCha8Rng;
 
 pub fn wake_room_legacy(rn: usize, entering: bool, row: i64, col: i64, game: &mut GameState) {
 	let normal_chance = game.level.room_wake_percent(rn);
@@ -32,14 +32,14 @@ pub enum WakeType {
 	EnterVault(RoomId),
 	ExitVault(RoomId, LevelSpot),
 }
-pub fn wake_room(wake_type: WakeType, level: &mut DungeonLevel, rng: &mut impl Rng) {
+pub fn wake_room(wake_type: WakeType, mut level: DungeonLevel, mut rng: ChaCha8Rng) -> (DungeonLevel, ChaCha8Rng) {
 	let (wake_room, target_spot) = match wake_type {
 		WakeType::DropIn(room) => (room, None),
 		WakeType::EnterVault(room) => (Some(room), None),
 		WakeType::ExitVault(room, spot) => (Some(room), Some(spot)),
 	};
 	if let Some(room) = wake_room {
-		let chance = wake_chance(room, level);
+		let chance = wake_chance(room, &level);
 		let buffed_chance = level.rogue.ring_effects.apply_stealthy(chance);
 		for monster_spot in level.monster_spots_in(room) {
 			let monster = level.as_monster_mut(monster_spot);
@@ -49,15 +49,16 @@ pub fn wake_room(wake_type: WakeType, level: &mut DungeonLevel, rng: &mut impl R
 				monster.clear_target_reset_stuck()
 			}
 			if monster.wakens() {
-				if dice::roll_chance(buffed_chance, rng) {
+				if dice::roll_chance(buffed_chance, &mut rng) {
 					monster.wake_up();
 				}
 			}
 		}
 	}
+	(level, rng)
 }
 
-fn wake_chance(room: RoomId, level: &mut DungeonLevel) -> usize {
+fn wake_chance(room: RoomId, level: &DungeonLevel) -> usize {
 	if let Some(party_room) = level.party_room {
 		if party_room == room {
 			return PARTY_WAKE_PERCENT;

@@ -21,18 +21,19 @@ use crate::trap::trap_kind::TrapKind;
 use crate::trap::Trap;
 use rand::prelude::SliceRandom;
 use rand::Rng;
+use rand_chacha::ChaCha8Rng;
 
 pub mod npc;
 
-pub fn roll_level(party_type: PartyType, rogue: Rogue, stats: &mut DungeonStats, rng: &mut impl Rng) -> DungeonLevel {
-	let mut level = roll_rooms(rogue, party_type, rng);
-	roll_amulet(&mut level, rng);
-	roll_objects(&mut level, stats, rng);
-	roll_stairs(&mut level, rng);
-	roll_traps(&mut level, rng);
-	roll_monsters(&mut level, rng);
-	rogue::put_player(&mut level, rng);
-	level
+pub fn roll_level(party_type: PartyType, rogue: Rogue, mut stats: DungeonStats, mut rng: ChaCha8Rng) -> (DungeonLevel, DungeonStats, ChaCha8Rng) {
+	let mut level = roll_rooms(rogue, party_type, &mut rng);
+	roll_amulet(&mut level, &mut rng);
+	roll_objects(&mut level, &mut stats, &mut rng);
+	roll_stairs(&mut level, &mut rng);
+	roll_traps(&mut level, &mut rng);
+	roll_monsters(&mut level, &mut rng);
+	let (level, rng) = rogue::put_player(level, rng);
+	(level, stats, rng)
 }
 
 fn roll_amulet(level: &mut DungeonLevel, rng: &mut impl Rng) {

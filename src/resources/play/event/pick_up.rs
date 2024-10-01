@@ -14,7 +14,6 @@ use crate::resources::play::event::state_action::{redirect, StateAction};
 use crate::resources::play::event::{RunEvent, RunStep};
 use crate::resources::play::state::RunState;
 use crate::scrolls::ScrollKind::ScareMonster;
-use rand::Rng;
 
 #[derive(Debug)]
 pub enum PickupType {
@@ -28,7 +27,7 @@ impl StateAction for PickUp {
 	fn into_event(self) -> RunEvent {
 		RunEvent::PickUp(self)
 	}
-	fn dispatch<R: Rng>(self, ctx: &mut RunContext<R>) -> RunStep {
+	fn dispatch(self, ctx: &mut RunContext) -> RunStep {
 		let PickUp(mut state, pickup_type) = self;
 
 		match pickup_type {
@@ -65,16 +64,16 @@ impl StateAction for PickUp {
 	}
 }
 
-fn register_move<R: Rng>(state: RunState, ctx: &mut RunContext<R>) -> RunStep {
+fn register_move(state: RunState, ctx: &mut RunContext) -> RunStep {
 	RegMove(state, None).dispatch(ctx)
 }
 
-fn print_message_register_move<R: Rng>(message: impl AsRef<str>, move_result: Option<MoveResult>, state: RunState, ctx: &mut RunContext<R>) -> RunStep {
+fn print_message_register_move(message: impl AsRef<str>, move_result: Option<MoveResult>, state: RunState, ctx: &mut RunContext) -> RunStep {
 	let post_step = move |state| redirect(RegMove(state, move_result));
 	Message::new(state, message, true, post_step).dispatch(ctx)
 }
 
-fn pick_up<R: Rng>(row: i64, col: i64, mut state: RunState, ctx: &mut RunContext<R>) -> (PickUpResult, RunState) {
+fn pick_up(row: i64, col: i64, mut state: RunState, ctx: &mut RunContext) -> (PickUpResult, RunState) {
 	let obj = state.try_object_at(row, col).unwrap();
 	if obj.is_used_scare_monster_scroll() {
 		let mut state = Message::new(state, "the scroll turns to dust as you pick it up", false, RunStep::Exit).run(ctx);

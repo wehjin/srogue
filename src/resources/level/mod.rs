@@ -302,19 +302,20 @@ mod tests {
 	use crate::resources::level::{DungeonLevel, PartyType};
 	use crate::resources::rogue::Rogue;
 	use rand::SeedableRng;
-	use rand_chacha::ChaChaRng;
+	use rand_chacha::ChaCha8Rng;
 	use std::collections::HashSet;
 
 	#[test]
 	fn same_rng_builds_same_level() {
 		fn build_level() -> DungeonLevel {
-			let rng = &mut ChaChaRng::seed_from_u64(17);
-			let stats = &mut DungeonStats {
+			let rng = ChaCha8Rng::seed_from_u64(17);
+			let stats = DungeonStats {
 				party_depth: PartyDepth::new(99),
 				food_drops: 7,
 				m_moves: 0,
 			};
-			roll_level(PartyType::NoParty, Rogue::new(16), stats, rng)
+			let (level, ..) = roll_level(PartyType::NoParty, Rogue::new(16), stats, rng);
+			level
 		}
 		let mut set = HashSet::new();
 		for _ in 0..10 {
@@ -325,26 +326,26 @@ mod tests {
 
 	#[test]
 	fn no_party_works() {
-		let rng = &mut ChaChaRng::seed_from_u64(17);
-		let stats = &mut DungeonStats {
+		let rng = ChaCha8Rng::seed_from_u64(17);
+		let stats = DungeonStats {
 			party_depth: PartyDepth::new(99),
 			food_drops: 7,
 			m_moves: 0,
 		};
-		let mut level = roll_level(PartyType::NoParty, Rogue::new(16), stats, rng);
+		let (mut level, ..) = roll_level(PartyType::NoParty, Rogue::new(16), stats, rng);
 		level.print(true);
 		level.lighting_enabled = true;
 		level.print(false);
 	}
 	#[test]
 	fn party_big_works() {
-		let rng = &mut ChaChaRng::seed_from_u64(17);
-		let stats = &mut DungeonStats {
-			party_depth: PartyDepth::roll(rng),
+		let mut rng = ChaCha8Rng::seed_from_u64(17);
+		let stats = DungeonStats {
+			party_depth: PartyDepth::roll(&mut rng),
 			food_drops: AMULET_LEVEL / 2 - 1,
 			m_moves: 0,
 		};
-		let mut level = roll_level(PartyType::PartyBig, Rogue::new(AMULET_LEVEL), stats, rng);
+		let (mut level, ..) = roll_level(PartyType::PartyBig, Rogue::new(AMULET_LEVEL), stats, rng);
 		level.lighting_enabled = true;
 		level.print(true);
 	}

@@ -17,8 +17,10 @@ use crate::prelude::DungeonSpot;
 use crate::resources::arena::Arena;
 use crate::resources::avatar::Avatar;
 use crate::resources::course::dr_course;
+use crate::resources::dice::roll_chance;
 use crate::settings::Settings;
 use rand::Rng;
+use rand_chacha::ChaCha8Rng;
 
 #[derive(Debug, Clone)]
 pub struct RunState {
@@ -27,16 +29,23 @@ pub struct RunState {
 	pub level: DungeonLevel,
 	pub visor: DungeonVisor,
 	pub diary: Diary,
+	pub rng: ChaCha8Rng,
 }
 
 impl RunState {
-	pub fn init(rng: &mut impl Rng) -> Self {
-		let mut stats = DungeonStats::new(rng);
-		let rogue = Rogue::new(1).outfit(rng);
+	pub fn init(mut rng: ChaCha8Rng) -> Self {
+		let stats = DungeonStats::new(&mut rng);
+		let rogue = Rogue::new(1).outfit(&mut rng);
 		let party_type = PartyType::NoParty;
-		let mut level = roll_level(party_type, rogue, &mut stats, rng);
+		let (mut level, stats, rng) = roll_level(party_type, rogue, stats, rng);
 		level.lighting_enabled = true;
-		Self { stats, level, visor: DungeonVisor::Map, diary: Diary::default(), settings: Settings::default() }
+		Self { stats, level, visor: DungeonVisor::Map, diary: Diary::default(), settings: Settings::default(), rng }
+	}
+	pub fn rng(&mut self) -> &mut ChaCha8Rng {
+		&mut self.rng
+	}
+	pub fn roll_chance(&mut self, chance: usize) -> bool {
+		roll_chance(chance, self.rng())
 	}
 	pub fn to_lines(&self) -> Vec<String> {
 		match self.visor {

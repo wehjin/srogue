@@ -5,7 +5,6 @@ use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::state_action::StateAction;
 use crate::resources::play::event::{RunEvent, RunStep};
 use crate::resources::play::state::RunState;
-use rand::Rng;
 
 #[derive(Debug)]
 pub struct RegMove(pub RunState, pub Option<MoveResult>);
@@ -15,7 +14,7 @@ impl StateAction for RegMove {
 		RunEvent::RegisterMove(self)
 	}
 
-	fn dispatch<R: Rng>(self, ctx: &mut RunContext<R>) -> RunStep {
+	fn dispatch(self, ctx: &mut RunContext) -> RunStep {
 		let Self(state, move_result) = self;
 		match reg_move(state, ctx) {
 			(RogueEnergy::Starved, mut state) => {

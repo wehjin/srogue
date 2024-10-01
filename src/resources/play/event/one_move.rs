@@ -15,7 +15,6 @@ use crate::resources::play::event::state_action::{redirect, StateAction};
 use crate::resources::play::event::{RunEvent, RunStep};
 use crate::resources::play::state::RunState;
 use crate::resources::rogue::spot::RogueSpot;
-use rand::Rng;
 
 #[derive(Debug)]
 pub struct OneMove(pub RunState, pub MoveDirection);
@@ -25,14 +24,14 @@ impl StateAction for OneMove {
 		RunEvent::OneMove(self)
 	}
 
-	fn dispatch<R: Rng>(self, ctx: &mut RunContext<R>) -> RunStep {
+	fn dispatch(self, ctx: &mut RunContext) -> RunStep {
 		let OneMove(state, direction) = self;
 		let step = one_move_rogue(direction, true, state, ctx);
 		step
 	}
 }
 
-fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut state: RunState, ctx: &mut RunContext<R>) -> RunStep {
+fn one_move_rogue(direction: MoveDirection, allow_pickup: bool, mut state: RunState, ctx: &mut RunContext) -> RunStep {
 	state.level.rogue.move_result = None;
 	state.diary.clear_message_lines();
 	{
@@ -43,7 +42,7 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut stat
 		// Where are we going?
 		let (to_row, to_col) = {
 			let confused = state.as_health().confused.is_active();
-			let confused_direction = if !confused { direction } else { MoveDirection::random(ctx.rng()) };
+			let confused_direction = if !confused { direction } else { MoveDirection::random(state.rng()) };
 			confused_direction.apply(rogue_row, rogue_col)
 		};
 		// Is the spot navigable?
@@ -78,7 +77,7 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut stat
 			}
 		}
 		// What if we're wearing a teleport ring?
-		if state.as_ring_effects().has_teleport() && ctx.roll_chance(R_TELE_PERCENT) {
+		if state.as_ring_effects().has_teleport() && state.roll_chance(R_TELE_PERCENT) {
 			state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
 			// TODO tele(game);
 			return RunStep::Effect(state, RunEffect::AwaitMove);
@@ -100,7 +99,9 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut stat
 					// tunnel to door
 					let door = state.level.get_door_at(LevelSpot::from_i64(to_row, to_col)).unwrap();
 					state.level.light_room(door.room_id);
-					wake_room(WakeType::EnterVault(door.room_id), &mut state.level, ctx.rng());
+					let (level, rng) = wake_room(WakeType::EnterVault(door.room_id), state.level, state.rng);
+					state.level = level;
+					state.rng = rng;
 				}
 				RogueSpot::Vault(_, _) => {
 					// vault to door
@@ -111,7 +112,9 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut stat
 			// door to tunnel
 			let door = state.level.get_door_at(LevelSpot::from_i64(rogue_row, rogue_col)).unwrap();
 			state.level.light_tunnel_spot(LevelSpot::from_i64(to_row, to_col));
-			wake_room(WakeType::ExitVault(door.room_id, LevelSpot::from_i64(rogue_row, rogue_col)), &mut state.level, ctx.rng());
+			let (level, rng) = wake_room(WakeType::ExitVault(door.room_id, LevelSpot::from_i64(rogue_row, rogue_col)), state.level, state.rng);
+			state.level = level;
+			state.rng = rng;
 			// TODO darken_room()
 		} else if state.is_any_tunnel_at(to_row, to_col) {
 			// tunnel to tunnel
@@ -138,7 +141,7 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut stat
 	RegMove(state, None).dispatch(ctx)
 }
 
-fn pickup_object<R: Rng>(row: i64, col: i64, allow_pickup: bool, state: RunState, ctx: &mut RunContext<R>) -> RunStep {
+fn pickup_object(row: i64, col: i64, allow_pickup: bool, state: RunState, ctx: &mut RunContext) -> RunStep {
 	if allow_pickup {
 		let spot = LevelSpot::from_i64(row, col);
 		PickUp(state, PickupType::AfterMove(spot)).dispatch(ctx)

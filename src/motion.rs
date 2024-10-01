@@ -273,7 +273,7 @@ fn get_hunger_transition_with_burn_count(moves_left: isize, moves_burned: isize)
 	}
 }
 
-pub fn check_hunger<R: Rng>(mut game: RunState, ctx: &mut RunContext<R>) -> (HungerCheckResult, RunState) {
+pub fn check_hunger(mut game: RunState, ctx: &mut RunContext) -> (HungerCheckResult, RunState) {
 	let moves_to_burn = match game.as_ring_effects().calorie_burn() {
 		-2 => 0,
 		-1 => game.as_fighter().moves_left % 2,
@@ -310,7 +310,7 @@ pub fn check_hunger<R: Rng>(mut game: RunState, ctx: &mut RunContext<R>) -> (Hun
 	(HungerCheckResult::StillWalking, game)
 }
 
-fn random_faint<R: Rng>(mut game: RunState, ctx: &mut RunContext<R>) -> (bool, RunState) {
+fn random_faint(mut game: RunState, ctx: &mut RunContext) -> (bool, RunState) {
 	let n = get_rand(0, FAINT_MOVES_LEFT - game.as_fighter().moves_left);
 	if n > 0 {
 		if rand_percent(40) {
@@ -338,7 +338,7 @@ pub enum RogueEnergy {
 	Normal,
 }
 
-pub fn reg_move<R: Rng>(mut game: RunState, ctx: &mut RunContext<R>) -> (RogueEnergy, RunState) {
+pub fn reg_move(mut game: RunState, ctx: &mut RunContext) -> (RogueEnergy, RunState) {
 	// Take care of hunger.
 	let mut fainted = false;
 	{

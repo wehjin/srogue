@@ -1,8 +1,8 @@
 use crate::resources::player::{InputMode, PlayerInput};
 use context::RunContext;
 use event::{RunEvent, RunStep};
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaChaRng;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 use state::RunState;
 
 pub mod context;
@@ -12,11 +12,12 @@ pub mod seed;
 pub mod state;
 
 pub fn run(console: impl TextConsole + 'static) {
-	let mut ctx = RunContext::new(ChaChaRng::from_entropy(), console);
-	dispatch(RunEvent::Init, &mut ctx);
+	let rng = ChaCha8Rng::from_entropy();
+	let mut ctx = RunContext::new(console);
+	dispatch(RunEvent::Init(rng), &mut ctx);
 }
 
-pub fn dispatch<R: Rng>(start_event: RunEvent, ctx: &mut RunContext<R>) -> RunState {
+pub fn dispatch(start_event: RunEvent, ctx: &mut RunContext) -> RunState {
 	let mut next_event = start_event;
 	loop {
 		match next_event.dispatch(ctx) {

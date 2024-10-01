@@ -222,7 +222,7 @@ fn try_to_cough(row: i64, col: i64, obj: &Object, game: &mut GameState) -> bool 
 	false
 }
 
-pub fn seek_gold<R: Rng>(mut game: RunState, mon_id: u64, ctx: &mut RunContext<R>) -> (bool, RunState) {
+pub fn seek_gold(mut game: RunState, mon_id: u64, ctx: &mut RunContext) -> (bool, RunState) {
 	let room = {
 		let monster = game.as_monster(mon_id);
 		let monster_row = monster.spot.row;
@@ -389,7 +389,7 @@ pub fn m_confuse(mon_id: u64, game: &mut impl Dungeon) -> bool {
 	false
 }
 
-pub fn flame_broil<R: Rng>(mut game: RunState, mon_id: u64, ctx: &mut RunContext<R>) -> (bool, RunState) {
+pub fn flame_broil(mut game: RunState, mon_id: u64, ctx: &mut RunContext) -> (bool, RunState) {
 	let cant_see_rogue = !game.monster_sees_rogue(mon_id);
 	if cant_see_rogue || coin_toss() {
 		return (false, game);

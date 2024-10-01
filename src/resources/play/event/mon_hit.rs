@@ -11,9 +11,8 @@ use crate::resources::play::context::RunContext;
 use crate::resources::play::event::message::Message;
 use crate::resources::play::state::RunState;
 use crate::spec_hit::special_hit;
-use rand::Rng;
 
-pub fn mon_hit<R: Rng>(mut game: RunState, mon_id: u64, flame: Option<&'static str>, ctx: &mut RunContext<R>) -> RunState {
+pub fn mon_hit(mut game: RunState, mon_id: u64, flame: Option<&'static str>, ctx: &mut RunContext) -> RunState {
 	if let Some(fight_id) = game.fight_to_death() {
 		if mon_id != fight_id {
 			game.set_fight_to_death(None);

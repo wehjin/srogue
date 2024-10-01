@@ -5,7 +5,6 @@ use crate::resources::play::event::state_action::StateAction;
 use crate::resources::play::event::{RunEvent, RunStep};
 use crate::resources::play::seed::{EventSeed, StepSeed};
 use crate::resources::play::state::RunState;
-use rand::Rng;
 
 #[derive(Debug)]
 pub struct Message {
@@ -19,7 +18,7 @@ impl Message {
 	pub fn new(state: RunState, text: impl AsRef<str>, interrupt: bool, post_step: impl FnOnce(RunState) -> RunStep + 'static) -> Message {
 		Self { state, text: text.as_ref().to_string(), interrupt, post_step: StepSeed::new("post-print", post_step) }
 	}
-	pub fn run<R: Rng>(state: RunState, text: impl AsRef<str>, interrupt: bool, ctx: &mut RunContext<R>) -> RunState {
+	pub fn run(state: RunState, text: impl AsRef<str>, interrupt: bool, ctx: &mut RunContext) -> RunState {
 		let after_state = Message::new(state, text, interrupt, RunStep::Exit).run(ctx);
 		after_state
 	}
@@ -30,7 +29,7 @@ impl StateAction for Message {
 		RunEvent::Message(self)
 	}
 
-	fn dispatch<R: Rng>(self, _ctx: &mut RunContext<R>) -> RunStep {
+	fn dispatch(self, _ctx: &mut RunContext) -> RunStep {
 		match self {
 			Self { mut state, text, interrupt, post_step } => {
 				// TODO if !save_is_interactive {return;}
@@ -66,7 +65,7 @@ mod tests {
 	use crate::resources::play::TextConsole;
 	use crate::resources::player::{InputMode, PlayerInput};
 	use rand::SeedableRng;
-	use rand_chacha::ChaChaRng;
+	use rand_chacha::ChaCha8Rng;
 
 	struct TestConsole;
 	impl TextConsole for TestConsole {
@@ -78,16 +77,18 @@ mod tests {
 
 	#[test]
 	fn no_previous_message_line_works() {
-		let mut ctx = RunContext::new(ChaChaRng::seed_from_u64(17), TestConsole);
-		let state = RunState::init(ctx.rng());
+		let rng = ChaCha8Rng::seed_from_u64(17);
+		let mut ctx = RunContext::new(TestConsole);
+		let state = RunState::init(rng);
 		let new_state = Message::new(state, "Hello", true, RunStep::Exit).run(&mut ctx);
 		assert_eq!(Some("Hello".to_string()), new_state.diary.message_line);
 		assert!(new_state.diary.interrupted);
 	}
 	#[test]
 	fn previous_message_line_works() {
-		let mut ctx = RunContext::new(ChaChaRng::seed_from_u64(17), TestConsole);
-		let mut state = RunState::init(ctx.rng());
+		let rng = ChaCha8Rng::seed_from_u64(17);
+		let mut ctx = RunContext::new(TestConsole);
+		let mut state = RunState::init(rng);
 		state.diary.message_line = Some("Hello".to_string());
 		let new_state = Message::new(state, "World", false, RunStep::Exit).run(&mut ctx);
 		assert_eq!(Some("World".to_string()), new_state.diary.message_line);

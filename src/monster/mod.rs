@@ -44,7 +44,7 @@ pub fn put_mons(game: &mut GameState) {
 	}
 }
 
-pub fn mv_mons<R: Rng>(mut game: RunState, ctx: &mut RunContext<R>) -> RunState {
+pub fn mv_mons(mut game: RunState, ctx: &mut RunContext) -> RunState {
 	if game.as_health().haste_self.is_half_active() {
 		return game;
 	}
@@ -117,7 +117,7 @@ pub fn party_monsters(rn: usize, n: usize, level_depth: usize, game: &mut GameSt
 	}
 }
 
-pub fn mv_monster<R: Rng>(mut game: RunState, mon_id: u64, row: i64, col: i64, allow_any_direction: bool, ctx: &mut RunContext<R>) -> RunState {
+pub fn mv_monster(mut game: RunState, mon_id: u64, row: i64, col: i64, allow_any_direction: bool, ctx: &mut RunContext) -> RunState {
 	if game.as_monster(mon_id).m_flags.asleep {
 		if game.as_monster(mon_id).m_flags.napping {
 			game.as_monster_mut(mon_id).do_nap();
@@ -129,7 +129,7 @@ pub fn mv_monster<R: Rng>(mut game: RunState, mon_id: u64, row: i64, col: i64, a
 		let col1 = monster.spot.col;
 		if (monster.m_flags.wakens)
 			&& game.rogue_is_near(row1, col1)
-			&& roll_chance(game.as_ring_effects().apply_stealthy(chance), ctx.rng()) {
+			&& roll_chance(game.as_ring_effects().apply_stealthy(chance), game.rng()) {
 			game.as_monster_mut(mon_id).wake_up();
 		}
 		return game;

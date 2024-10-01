@@ -9,7 +9,7 @@ use crate::resources::play::event::reg_move::RegMove;
 use crate::resources::play::seed::StepSeed;
 use crate::resources::play::state::RunState;
 use message::Message;
-use rand::Rng;
+use rand_chacha::ChaCha8Rng;
 use state_action::StateAction;
 
 pub mod message;
@@ -21,7 +21,7 @@ pub mod state_action;
 
 #[derive(Debug)]
 pub enum RunEvent {
-	Init,
+	Init(ChaCha8Rng),
 	PlayerQuit(RunState),
 
 	Message(Message),
@@ -36,9 +36,9 @@ pub enum RunEvent {
 }
 
 impl RunEvent {
-	pub fn dispatch<R: Rng>(self, ctx: &mut RunContext<R>) -> RunStep {
+	pub fn dispatch(self, ctx: &mut RunContext) -> RunStep {
 		match self {
-			RunEvent::Init => init(ctx.rng()),
+			RunEvent::Init(rng) => init(rng),
 
 			RunEvent::Message(message) => message.dispatch(ctx),
 			RunEvent::OneMove(one_move) => one_move.dispatch(ctx),
@@ -76,7 +76,7 @@ fn player_quit(state: RunState) -> RunStep {
 	RunStep::Exit(state)
 }
 
-fn init(rng: &mut impl Rng) -> RunStep {
+fn init(rng: ChaCha8Rng) -> RunStep {
 	let state = RunState::init(rng);
 	RunStep::Effect(state, RunEffect::AwaitMove)
 }
@@ -86,15 +86,15 @@ pub enum RunStep {
 	Redirect(RunEvent),
 	Effect(RunState, RunEffect),
 }
-fn _descend(state: RunState, rng: &mut impl Rng) -> RunStep {
-	let RunState { mut stats, level, visor, diary, settings } = state;
+fn _descend(state: RunState) -> RunStep {
+	let RunState { mut stats, level, visor, diary, settings, mut rng } = state;
 	let party_type = if stats.is_party_depth(&level.rogue.depth) {
-		stats.party_depth = stats.party_depth.roll_next(&level.rogue.depth, rng);
+		stats.party_depth = stats.party_depth.roll_next(&level.rogue.depth, &mut rng);
 		PartyType::PartyRollBig
 	} else {
 		PartyType::NoParty
 	};
-	let level = roll_level(party_type, level.rogue, &mut stats, rng);
-	let state = RunState { stats, level, visor, diary, settings };
+	let (level, stats, rng) = roll_level(party_type, level.rogue, stats, rng);
+	let state = RunState { stats, level, visor, diary, settings, rng };
 	RunStep::Exit(state)
 }
