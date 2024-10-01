@@ -76,7 +76,8 @@ fn print_message_register_move(message: impl AsRef<str>, move_result: Option<Mov
 fn pick_up(row: i64, col: i64, mut state: RunState, ctx: &mut RunContext) -> (PickUpResult, RunState) {
 	let obj = state.try_object_at(row, col).unwrap();
 	if obj.is_used_scare_monster_scroll() {
-		let mut state = Message::new(state, "the scroll turns to dust as you pick it up", false, RunStep::Exit).run(ctx);
+		let report = "the scroll turns to dust as you pick it up";
+		let mut state = Message::run_await_exit(state, report, false, ctx);
 		state.level.remove_object(LevelSpot::from_i64(row, col));
 		if state.as_notes().scrolls[ScareMonster.to_index()].status == Unidentified {
 			let notes = state.as_notes_mut();
@@ -91,8 +92,8 @@ fn pick_up(row: i64, col: i64, mut state: RunState, ctx: &mut RunContext) -> (Pi
 		return (PickUpResult::AddedToGold(removed), state);
 	}
 	if state.pack_weight_with_new_object(Some(obj)) >= MAX_PACK_COUNT {
-		state.interrupt_and_slurp();
-		let state = Message::new(state, "pack too full", true, RunStep::Exit).run(ctx);
+		let report = "pack too full";
+		let state = Message::run_await_exit(state, report, true, ctx);
 		return (PickUpResult::PackTooFull, state);
 	}
 	let removed = state.level.remove_object(LevelSpot::from_i64(row, col)).unwrap();

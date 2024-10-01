@@ -310,7 +310,7 @@ pub fn check_hunger(mut game: RunState, ctx: &mut RunContext) -> (HungerCheckRes
 	(HungerCheckResult::StillWalking, game)
 }
 
-fn random_faint(mut game: RunState, ctx: &mut RunContext) -> (bool, RunState) {
+pub fn random_faint(mut game: RunState, ctx: &mut RunContext) -> (bool, RunState) {
 	let n = get_rand(0, FAINT_MOVES_LEFT - game.as_fighter().moves_left);
 	if n > 0 {
 		if rand_percent(40) {
