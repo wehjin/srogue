@@ -3,6 +3,7 @@ use crate::resources::level::setup::roll_level;
 use crate::resources::level::PartyType;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
+use crate::resources::play::event::mon_hit::MonHit;
 use crate::resources::play::event::one_move::OneMove;
 use crate::resources::play::event::pick_up::PickUp;
 use crate::resources::play::event::reg_move::RegMove;
@@ -13,6 +14,7 @@ use rand::Rng;
 use state_action::StateAction;
 
 pub mod message;
+pub mod mon_hit;
 pub mod one_move;
 pub mod pick_up;
 pub mod reg_move;
@@ -21,11 +23,13 @@ pub mod state_action;
 #[derive(Debug)]
 pub enum RunEvent {
 	Init,
-	Message(Message),
 	PlayerQuit(RunState),
+
+	Message(Message),
+	MonsterHit(MonHit),
 	OneMove(OneMove),
-	RegisterMove(RegMove),
 	PickUp(PickUp),
+	RegisterMove(RegMove),
 
 	PlayerCloseModal(RunState),
 	PlayerOpenHelp(RunState),

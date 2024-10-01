@@ -6,99 +6,17 @@ use crate::level::add_exp;
 use crate::message::sound_bell;
 use crate::monster::{mon_name, Monster};
 use crate::motion::{can_move, is_direction, one_move_rogue_legacy, MoveDirection};
-use crate::objects::{get_armor_class, Object};
+use crate::objects::Object;
 use crate::player::Player;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
-use crate::prelude::AMULET_LEVEL;
 use crate::random::rand_percent;
 use crate::resources::avatar::Avatar;
 use crate::resources::diary;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::score::killed_by;
-use crate::spec_hit::{check_imitator, cough_up, special_hit};
+use crate::spec_hit::{check_imitator, cough_up};
 use crate::throw::Motion;
-
-fn reduce_chance(chance: usize, reduction: isize) -> usize {
-	let reduction: usize = reduction.max(0) as usize;
-	if chance <= reduction { 0 } else { chance - reduction }
-}
-
-pub fn mon_hit(mon_id: u64, other: Option<&'static str>, flame: bool, game: &mut impl Dungeon) {
-	if let Some(fight_id) = game.fight_monster() {
-		if mon_id == fight_id {
-			game.set_fight_monster(None);
-		}
-	}
-	game.as_monster_mut(mon_id).clear_target_reset_stuck();
-	let mut hit_chance: usize = if game.rogue_depth() >= (AMULET_LEVEL * 2) {
-		100
-	} else {
-		let reduction = (2 * game.buffed_exp()) - game.debuf_exp();
-		reduce_chance(game.as_monster(mon_id).m_hit_chance(), reduction)
-	};
-	if game.wizard() {
-		hit_chance /= 2;
-	}
-	if game.fight_monster().is_none() {
-		let diary = game.as_diary_mut();
-		diary.interrupted = true;
-	}
-
-	if other.is_some() {
-		hit_chance = reduce_chance(hit_chance, game.buffed_exp() - game.debuf_exp());
-	}
-
-	let base_monster_name = mon_name(mon_id, game);
-	let monster_name = if let Some(name) = other { name } else { &base_monster_name };
-	if !rand_percent(hit_chance) {
-		if game.fight_monster().is_none() {
-			let msg = format!("{}the {} misses", game.as_diary().hit_message, monster_name);
-			game.as_diary_mut().hit_message.clear();
-			game.interrupt_and_slurp();
-			game.as_diary_mut().add_entry(&msg);
-		}
-		return;
-	}
-	if game.fight_monster().is_none() {
-		let msg = format!("{}the {} hit", game.as_diary().hit_message, monster_name);
-		game.as_diary_mut().hit_message.clear();
-		game.interrupt_and_slurp();
-		game.as_diary_mut().add_entry(&msg);
-	}
-	let mut damage: isize = if !game.as_monster_flags(mon_id).stationary {
-		let mut damage = get_damage(game.as_monster(mon_id).m_damage(), DamageEffect::Roll);
-		if other.is_some() && flame {
-			damage -= get_armor_class(game.armor());
-			if damage < 0 {
-				damage = 1;
-			}
-		}
-		let rogue_depth = game.rogue_depth();
-		let minus: isize = if rogue_depth >= (AMULET_LEVEL * 2) {
-			((AMULET_LEVEL * 2) - rogue_depth) as isize
-		} else {
-			let mut minus = get_armor_class(game.armor()) * 3;
-			minus = (minus as f64 / 100.0 * damage as f64) as isize;
-			minus
-		};
-		damage -= minus;
-		damage
-	} else {
-		let original = game.as_monster(mon_id).stationary_damage;
-		game.as_monster_mut(mon_id).stationary_damage += 1;
-		original
-	};
-	if game.wizard() {
-		damage /= 3;
-	}
-	if damage > 0 {
-		rogue_damage(damage, mon_id, game);
-	}
-	if game.as_monster_flags(mon_id).special_hit() {
-		special_hit(mon_id, game);
-	}
-}
 
 pub fn rogue_hit(mon_id: u64, force_hit: bool, game: &mut GameState) {
 	if check_imitator(mon_id, game) {

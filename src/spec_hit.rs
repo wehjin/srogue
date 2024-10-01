@@ -1,5 +1,5 @@
 use crate::armors::ArmorKind;
-use crate::hit::mon_hit;
+use crate::resources::play::event::mon_hit::mon_hit;
 use crate::init::{Dungeon, GameState};
 use crate::inventory::get_obj_desc_legacy;
 use crate::level::constants::{DCOLS, DROWS};
