@@ -24,7 +24,7 @@ fn reduce_chance(chance: usize, reduction: isize) -> usize {
 	if chance <= reduction { 0 } else { chance - reduction }
 }
 
-pub fn mon_hit(mon_id: u64, other: Option<&str>, flame: bool, game: &mut impl Dungeon) {
+pub fn mon_hit(mon_id: u64, other: Option<&'static str>, flame: bool, game: &mut impl Dungeon) {
 	if let Some(fight_id) = game.fight_monster() {
 		if mon_id == fight_id {
 			game.set_fight_monster(None);

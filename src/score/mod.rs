@@ -21,6 +21,7 @@ mod values;
 pub const SCORE_FILE: &'static str = "/usr/games/player.rogue.scores";
 
 pub fn killed_by(ending: Ending, game: &mut impl Dungeon) {
+	panic!("Killed");
 	md_ignore_signals();
 	if !ending.is_quit() {
 		let fighter = game.as_fighter_mut();

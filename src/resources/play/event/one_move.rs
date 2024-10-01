@@ -9,7 +9,7 @@ use crate::resources::level::wake::{wake_room, WakeType};
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::message::Message;
-use crate::resources::play::event::pickup::{Pickup, PickupType};
+use crate::resources::play::event::pick_up::{PickUp, PickupType};
 use crate::resources::play::event::reg_move::RegMove;
 use crate::resources::play::event::state_action::{redirect, StateAction};
 use crate::resources::play::event::{RunEvent, RunStep};
@@ -141,7 +141,7 @@ fn one_move_rogue<R: Rng>(direction: MoveDirection, allow_pickup: bool, mut stat
 fn pickup_object<R: Rng>(row: i64, col: i64, allow_pickup: bool, state: RunState, ctx: &mut RunContext<R>) -> RunStep {
 	if allow_pickup {
 		let spot = LevelSpot::from_i64(row, col);
-		Pickup(state, PickupType::AfterMove(spot)).dispatch(ctx)
+		PickUp(state, PickupType::AfterMove(spot)).dispatch(ctx)
 	} else {
 		let message = moved_onto_message(row, col, &state);
 		let post_step = move |state| redirect(RegMove(state, Some(MoveResult::StoppedOnSomething)));

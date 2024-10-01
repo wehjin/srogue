@@ -22,14 +22,14 @@ pub enum PickupType {
 }
 
 #[derive(Debug)]
-pub struct Pickup(pub RunState, pub PickupType);
+pub struct PickUp(pub RunState, pub PickupType);
 
-impl StateAction for Pickup {
+impl StateAction for PickUp {
 	fn into_event(self) -> RunEvent {
-		RunEvent::Pickup(self)
+		RunEvent::PickUp(self)
 	}
 	fn dispatch<R: Rng>(self, ctx: &mut RunContext<R>) -> RunStep {
-		let Pickup(mut state, pickup_type) = self;
+		let PickUp(mut state, pickup_type) = self;
 
 		match pickup_type {
 			PickupType::AfterMove(spot) => {

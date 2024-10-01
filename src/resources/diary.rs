@@ -34,6 +34,7 @@ impl Diary {
 		self.current_page.len() > 0
 	}
 	pub fn add_entry(&mut self, entry: impl AsRef<str>) {
+		panic!("ADD ENTREY: {}", entry.as_ref());
 		assert!(!self.rewound);
 		let text = entry.as_ref();
 		self.current_page.push(text.to_string());

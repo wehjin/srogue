@@ -4,7 +4,7 @@ use crate::resources::level::PartyType;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::one_move::OneMove;
-use crate::resources::play::event::pickup::Pickup;
+use crate::resources::play::event::pick_up::PickUp;
 use crate::resources::play::event::reg_move::RegMove;
 use crate::resources::play::seed::StepSeed;
 use crate::resources::play::state::RunState;
@@ -14,7 +14,7 @@ use state_action::StateAction;
 
 pub mod message;
 pub mod one_move;
-pub mod pickup;
+pub mod pick_up;
 pub mod reg_move;
 pub mod state_action;
 
@@ -25,7 +25,7 @@ pub enum RunEvent {
 	PlayerQuit(RunState),
 	OneMove(OneMove),
 	RegisterMove(RegMove),
-	Pickup(Pickup),
+	PickUp(PickUp),
 
 	PlayerCloseModal(RunState),
 	PlayerOpenHelp(RunState),
@@ -41,7 +41,7 @@ impl RunEvent {
 			RunEvent::Message(message) => message.dispatch(ctx),
 			RunEvent::OneMove(one_move) => one_move.dispatch(ctx),
 			RunEvent::RegisterMove(reg_move) => reg_move.dispatch(ctx),
-			RunEvent::Pickup(pickup) => pickup.dispatch(ctx),
+			RunEvent::PickUp(pickup) => pickup.dispatch(ctx),
 
 			RunEvent::PlayerQuit(state) => player_quit(state),
 			RunEvent::PlayerCloseModal(state) => player_close_modal(state),
