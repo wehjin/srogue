@@ -1,6 +1,5 @@
 use crate::resources::play::context::RunContext;
 use crate::resources::play::event::{RunEvent, RunStep};
-use crate::resources::play::state::RunState;
 
 pub trait StateAction {
 	fn into_event(self) -> RunEvent;

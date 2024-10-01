@@ -12,10 +12,10 @@ use crate::odds::R_TELE_PERCENT;
 use crate::player::Player;
 use crate::prelude::ending::Ending;
 use crate::prelude::MIN_ROW;
-use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
 use crate::resources::arena::Arena;
 use crate::resources::avatar::Avatar;
+use crate::resources::cofx::random_faint::RandomFaint;
 use crate::resources::diary;
 use crate::resources::dice::roll_chance;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
@@ -294,40 +294,22 @@ pub fn check_hunger(mut game: RunState, ctx: &mut RunContext) -> (HungerCheckRes
 		diary.add_entry(next_hunger.as_str());
 		diary.stats_changed = true;
 	}
-
-	let hunger = game.as_health().hunger;
-	if hunger == HungerLevel::Starved {
-		killed_by(Ending::Starvation, &mut game);
-		return (HungerCheckResult::DidStarve, game);
-	}
-	if hunger == HungerLevel::Faint {
-		let (did_faint, game_after_faint) = random_faint(game, ctx);
-		game = game_after_faint;
-		if did_faint {
-			return (HungerCheckResult::DidFaint, game);
+	match game.as_health().hunger {
+		HungerLevel::Normal | HungerLevel::Hungry | HungerLevel::Weak => {
+			(HungerCheckResult::StillWalking, game)
 		}
-	}
-	(HungerCheckResult::StillWalking, game)
-}
-
-pub fn random_faint(mut game: RunState, ctx: &mut RunContext) -> (bool, RunState) {
-	let n = get_rand(0, FAINT_MOVES_LEFT - game.as_fighter().moves_left);
-	if n > 0 {
-		if rand_percent(40) {
-			game.as_fighter_mut().moves_left += 1;
-		}
-		game.interrupt_and_slurp();
-		game.as_diary_mut().add_entry("you faint");
-		for _ in 0..n {
-			if coin_toss() {
-				game = mv_mons(game, ctx);
+		HungerLevel::Faint => {
+			let RandomFaint { did_faint, state } = RandomFaint::run(game, ctx);
+			if did_faint {
+				(HungerCheckResult::DidFaint, state)
+			} else {
+				(HungerCheckResult::StillWalking, state)
 			}
 		}
-		game.interrupt_and_slurp();
-		game.as_diary_mut().add_entry(YOU_CAN_MOVE_AGAIN);
-		(true, game)
-	} else {
-		(false, game)
+		HungerLevel::Starved => {
+			killed_by(Ending::Starvation, &mut game);
+			(HungerCheckResult::DidStarve, game)
+		}
 	}
 }
 

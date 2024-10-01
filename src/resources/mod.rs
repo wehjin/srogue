@@ -1,5 +1,6 @@
 pub mod arena;
 pub mod avatar;
+pub mod cofx;
 pub mod course;
 pub mod diary;
 pub mod dice;
