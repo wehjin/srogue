@@ -16,7 +16,7 @@ use crate::resources::play::event::{RunEvent, RunStep};
 use crate::resources::play::state::RunState;
 use crate::resources::rogue::spot::RogueSpot;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OneMove(pub RunState, pub MoveDirection);
 
 impl StateAction for OneMove {
@@ -26,119 +26,168 @@ impl StateAction for OneMove {
 
 	fn dispatch(self, ctx: &mut RunContext) -> RunStep {
 		let OneMove(state, direction) = self;
-		let step = one_move_rogue(direction, true, state, ctx);
-		step
+		walk(state, direction, true, ctx)
 	}
 }
 
-fn one_move_rogue(direction: MoveDirection, allow_pickup: bool, mut state: RunState, ctx: &mut RunContext) -> RunStep {
-	state.level.rogue.move_result = None;
-	state.diary.clear_message_lines();
-	{
-		// Where are we now?
-		let rogue_row = state.rogue_row();
-		let rogue_col = state.rogue_col();
 
-		// Where are we going?
-		let (to_row, to_col) = {
-			let confused = state.as_health().confused.is_active();
-			let confused_direction = if !confused { direction } else { MoveDirection::random(state.rng()) };
-			confused_direction.apply(rogue_row, rogue_col)
-		};
-		// Is the spot navigable?
-		let to_spot_is_navigable = state.rogue_can_move(to_row, to_col);
-		if !to_spot_is_navigable {
-			state.level.rogue.move_result = Some(MoveResult::MoveFailed);
-			return RunStep::Effect(state, RunEffect::AwaitMove);
+fn walk(state: RunState, direction: MoveDirection, allow_pickup: bool, ctx: &mut RunContext) -> RunStep {
+	let mut next_state = State::Start { state, direction, allow_pickup };
+	loop {
+		let state = step(next_state, ctx);
+		if let State::End(step) = state {
+			return step;
 		}
-		// What if we're stuck in place?
-		{
-			let health = state.as_health();
-			let in_bear_trap = health.bear_trap > 0;
-			let being_held = health.being_held;
-			if being_held || in_bear_trap {
-				let monster_in_spot = state.has_monster_at(to_row, to_col);
-				if !monster_in_spot {
-					return if being_held {
-						state.level.rogue.move_result = Some(MoveResult::MoveFailed);
-						let message = "you are being held";
-						Message::new(state, message, true, |state| {
-							RunStep::Effect(state, RunEffect::AwaitMove)
-						}).dispatch(ctx)
-					} else {
-						state.level.rogue.move_result = Some(MoveResult::MoveFailed);
-						let message = "you are still stuck in the bear trap";
-						Message::new(state, message, true, |state| {
-							// Do a regular move here so that the bear trap counts down.
-							redirect(RegMove(state, Some(MoveResult::MoveFailed)))
-						}).dispatch(ctx)
-					};
-				}
+		next_state = state;
+	}
+}
+
+fn step(state: State, ctx: &mut RunContext) -> State {
+	match state {
+		State::Start { mut state, direction, allow_pickup } => {
+			state.move_result = None;
+			state.diary.clear_message_lines();
+			// Where are we now?
+			let rogue_spot = (state.rogue_row(), state.rogue_col());
+			// Where are we going?
+			let to_spot = get_destination_spot(direction, rogue_spot.0, rogue_spot.1, &mut state);
+			let to_spot_is_navigable = state.rogue_can_move(to_spot.0, to_spot.1);
+			if !to_spot_is_navigable {
+				state.move_result = Some(MoveResult::MoveFailed);
+				State::End(RunStep::Effect(state, RunEffect::AwaitMove))
+			} else {
+				State::CheckStuck { state, to_spot, rogue_spot, allow_pickup }
 			}
 		}
-		// What if we're wearing a teleport ring?
-		if state.as_ring_effects().has_teleport() && state.roll_chance(R_TELE_PERCENT) {
-			state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
-			// TODO tele(game);
-			return RunStep::Effect(state, RunEffect::AwaitMove);
-		}
-		// What if there is a monster is where we want to go?
-		let monster_in_spot = state.has_monster_at(to_row, to_col);
-		if monster_in_spot {
-			let _mon_id = state.get_monster_at(to_row, to_col).unwrap();
-			state.level.rogue.move_result = Some(MoveResult::MoveFailed);
-			// TODO rogue_hit(mon_id, false, game);
-			return RegMove(state, Some(MoveResult::MoveFailed)).dispatch(ctx);
-		}
-		// The lighting in the level changes as we move.
-		// What if we're moving to a door?
-		if state.is_any_door_at(to_row, to_col) {
-			match state.level.rogue.spot {
-				RogueSpot::None => {}
-				RogueSpot::Passage(_) => {
-					// tunnel to door
-					let door = state.level.get_door_at(LevelSpot::from_i64(to_row, to_col)).unwrap();
-					state.level.light_room(door.room_id);
-					let (level, rng) = wake_room(WakeType::EnterVault(door.room_id), state.level, state.rng);
-					state.level = level;
-					state.rng = rng;
-				}
-				RogueSpot::Vault(_, _) => {
-					// vault to door
-					state.level.light_tunnel_spot(LevelSpot::from_i64(to_row, to_col));
-				}
+		State::CheckStuck { mut state, to_spot, rogue_spot, allow_pickup } => {
+			// What if we're stuck in place?
+			let no_monster_at_spot = !state.has_monster_at(to_spot.0, to_spot.1);
+			let in_bear_trap = state.as_health().bear_trap > 0;
+			let being_held = state.as_health().being_held;
+			if being_held && no_monster_at_spot {
+				state.move_result = Some(MoveResult::MoveFailed);
+				State::End(redirect(Message::new(
+					state,
+					"you are being held",
+					true,
+					|state| RunStep::Effect(state, RunEffect::AwaitMove),
+				)))
+			} else if in_bear_trap && no_monster_at_spot {
+				State::End(redirect(Message::new(
+					state,
+					"you are still stuck in the bear trap",
+					true,
+					|state| {
+						// Do a regular move here so that the bear trap counts down.
+						redirect(RegMove(state, Some(MoveResult::MoveFailed)))
+					},
+				)))
+			} else {
+				State::CheckTeleport { state, to_spot, rogue_spot, allow_pickup }
 			}
-		} else if state.is_any_door_at(rogue_row, rogue_col) && state.is_any_tunnel_at(to_row, to_col) {
-			// door to tunnel
-			let door = state.level.get_door_at(LevelSpot::from_i64(rogue_row, rogue_col)).unwrap();
-			state.level.light_tunnel_spot(LevelSpot::from_i64(to_row, to_col));
-			let (level, rng) = wake_room(WakeType::ExitVault(door.room_id, LevelSpot::from_i64(rogue_row, rogue_col)), state.level, state.rng);
-			state.level = level;
-			state.rng = rng;
-			// TODO darken_room()
-		} else if state.is_any_tunnel_at(to_row, to_col) {
-			// tunnel to tunnel
-			state.level.light_tunnel_spot(LevelSpot::from_i64(to_row, to_col));
 		}
-
-		// Move the rogue.
-		state.set_rogue_row_col(to_row, to_col);
-	}
-
-	// We have moved.
-	let row = state.rogue_row();
-	let col = state.rogue_col();
-	let has_object = state.level.try_object(LevelSpot::from_i64(row, col)).is_some();
-	if has_object {
-		return pickup_object(row, col, allow_pickup, state, ctx);
-	}
-	if state.is_any_door_at(row, col) || state.level.features.feature_at(LevelSpot::from_i64(row, col)).is_stairs() || state.is_any_trap_at(row, col) {
-		if state.as_health().levitate.is_inactive() && state.is_any_trap_at(row, col) {
-			// TODO trap_player(row as usize, col as usize, game);
+		State::CheckTeleport { mut state, to_spot, rogue_spot, allow_pickup } => {
+			// What if we're wearing a teleport ring?
+			if state.as_ring_effects().has_teleport() && state.roll_chance(R_TELE_PERCENT) {
+				state.move_result = Some(MoveResult::StoppedOnSomething);
+				// TODO tele(game);
+				State::End(RunStep::Effect(state, RunEffect::AwaitMove))
+			} else {
+				State::CheckMonster { state, to_spot, rogue_spot, allow_pickup }
+			}
 		}
-		return RegMove(state, Some(MoveResult::StoppedOnSomething)).dispatch(ctx);
+		State::CheckMonster { mut state, to_spot, rogue_spot, allow_pickup } => {
+			// What if there is a monster is where we want to go?
+			let monster_in_spot = state.has_monster_at(to_spot.0, to_spot.1);
+			if monster_in_spot {
+				let _mon_id = state.get_monster_at(to_spot.0, to_spot.1).unwrap();
+				state.move_result = Some(MoveResult::MoveFailed);
+				// TODO rogue_hit(mon_id, false, game);
+				State::End(redirect(RegMove(state, Some(MoveResult::MoveFailed))))
+			} else {
+				State::AdjustLighting { state, to_spot, rogue_spot, allow_pickup }
+			}
+		}
+		State::AdjustLighting { mut state, to_spot, rogue_spot, allow_pickup } => {
+			// The lighting in the level changes as we move.
+			if state.is_any_door_at(to_spot.0, to_spot.1) {
+				// What if we're moving to a door?
+				match state.level.rogue.spot {
+					RogueSpot::None => {}
+					RogueSpot::Passage(_) => {
+						// tunnel to door
+						let door = state.level.get_door_at(LevelSpot::from(to_spot)).unwrap();
+						state.level.light_room(door.room_id);
+						let (level, rng) = wake_room(WakeType::EnterVault(door.room_id), state.level, state.rng);
+						state.level = level;
+						state.rng = rng;
+					}
+					RogueSpot::Vault(_, _) => {
+						// vault to door
+						state.level.light_tunnel_spot(LevelSpot::from(to_spot));
+					}
+				}
+			} else if state.is_any_door_at(rogue_spot.0, rogue_spot.1) && state.is_any_tunnel_at(to_spot.0, to_spot.1) {
+				// door to tunnel
+				let door = state.level.get_door_at(LevelSpot::from(rogue_spot)).unwrap();
+				state.level.light_tunnel_spot(LevelSpot::from(to_spot));
+				let (level, rng) = wake_room(WakeType::ExitVault(door.room_id, LevelSpot::from(rogue_spot)), state.level, state.rng);
+				state.level = level;
+				state.rng = rng;
+				// TODO darken_room()
+			} else if state.is_any_tunnel_at(to_spot.0, to_spot.1) {
+				// tunnel to tunnel
+				state.level.light_tunnel_spot(LevelSpot::from(to_spot));
+			}
+			State::MoveRogue { state, to_spot, allow_pickup }
+		}
+		State::MoveRogue { mut state, to_spot, allow_pickup } => {
+			// Move the rogue.
+			state.set_rogue_row_col(to_spot.0, to_spot.1);
+			State::PickupObjects { state, spot: to_spot, allow_pickup }
+		}
+		State::PickupObjects { state, spot, allow_pickup } => {
+			// Pick up objects.
+			let has_object = state.level.try_object(LevelSpot::from(spot)).is_some();
+			if has_object {
+				let step = pickup_object(spot.0, spot.1, allow_pickup, state, ctx);
+				State::End(step)
+			} else {
+				State::CheckTraps { state, spot }
+			}
+		}
+		State::CheckTraps { state, spot: (row, col) } => {
+			// Check for traps.
+			if state.is_any_door_at(row, col)
+				|| state.level.features.feature_at(LevelSpot::from_i64(row, col)).is_stairs()
+				|| state.is_any_trap_at(row, col) {
+				if state.as_health().levitate.is_inactive() & &state.is_any_trap_at(row, col) {
+					// TODO trap_player(row as usize, col as usize, game);
+				}
+				return State::End(redirect(RegMove(state, Some(MoveResult::StoppedOnSomething))));
+			}
+			State::End(redirect(RegMove(state, None)))
+		}
+		State::End(_) => { panic!("Do not step the end state!") }
 	}
-	RegMove(state, None).dispatch(ctx)
+}
+
+pub enum State {
+	Start { state: RunState, direction: MoveDirection, allow_pickup: bool },
+	CheckStuck { state: RunState, to_spot: (i64, i64), rogue_spot: (i64, i64), allow_pickup: bool },
+	CheckTeleport { state: RunState, to_spot: (i64, i64), rogue_spot: (i64, i64), allow_pickup: bool },
+	CheckMonster { state: RunState, to_spot: (i64, i64), rogue_spot: (i64, i64), allow_pickup: bool },
+	AdjustLighting { state: RunState, to_spot: (i64, i64), rogue_spot: (i64, i64), allow_pickup: bool },
+	MoveRogue { state: RunState, to_spot: (i64, i64), allow_pickup: bool },
+	PickupObjects { state: RunState, spot: (i64, i64), allow_pickup: bool },
+	CheckTraps { state: RunState, spot: (i64, i64) },
+	End(RunStep),
+}
+
+fn get_destination_spot(direction: MoveDirection, from_row: i64, from_col: i64, state: &mut RunState) -> (i64, i64) {
+	let confused = state.as_health().confused.is_active();
+	let confused_direction = if !confused { direction } else { MoveDirection::random(state.rng()) };
+	confused_direction.apply(from_row, from_col)
 }
 
 fn pickup_object(row: i64, col: i64, allow_pickup: bool, state: RunState, ctx: &mut RunContext) -> RunStep {

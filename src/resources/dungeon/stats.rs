@@ -2,7 +2,7 @@ use crate::resources::level::setup::party::depth::PartyDepth;
 use crate::resources::rogue::depth::RogueDepth;
 use rand::Rng;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct DungeonStats {
 	pub party_depth: PartyDepth,
 	pub food_drops: usize,

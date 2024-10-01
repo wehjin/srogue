@@ -1,7 +1,7 @@
 use crate::resources::rogue::depth::RogueDepth;
 use rand::Rng;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, Hash, PartialEq)]
 pub struct PartyDepth(usize);
 
 impl PartyDepth {

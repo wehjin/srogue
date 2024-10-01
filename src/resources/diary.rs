@@ -1,7 +1,7 @@
 use crate::pack::wait_for_ack;
 use crate::render_system::backend;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Diary {
 	pub message_line: Option<String>,
 	pub next_message_line: Option<String>,

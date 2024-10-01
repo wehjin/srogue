@@ -13,6 +13,7 @@ use crate::resources::level::{DungeonLevel, PartyType};
 use crate::resources::physics::rogue_sees_spot;
 use crate::resources::rogue::Rogue;
 
+use crate::motion::MoveResult;
 use crate::prelude::DungeonSpot;
 use crate::resources::arena::Arena;
 use crate::resources::avatar::Avatar;
@@ -22,7 +23,7 @@ use crate::settings::Settings;
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RunState {
 	pub settings: Settings,
 	pub stats: DungeonStats,
@@ -30,6 +31,7 @@ pub struct RunState {
 	pub visor: DungeonVisor,
 	pub diary: Diary,
 	pub rng: ChaCha8Rng,
+	pub move_result: Option<MoveResult>,
 }
 
 impl RunState {
@@ -39,7 +41,7 @@ impl RunState {
 		let party_type = PartyType::NoParty;
 		let (mut level, stats, rng) = roll_level(party_type, rogue, stats, rng);
 		level.lighting_enabled = true;
-		Self { stats, level, visor: DungeonVisor::Map, diary: Diary::default(), settings: Settings::default(), rng }
+		Self { stats, level, visor: DungeonVisor::Map, diary: Diary::default(), settings: Settings::default(), rng, move_result: None }
 	}
 	pub fn rng(&mut self) -> &mut ChaCha8Rng {
 		&mut self.rng

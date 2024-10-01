@@ -11,7 +11,7 @@ pub fn load() -> Result<Settings, SettingsError> {
 	Ok(settings)
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, Eq, Hash, PartialEq)]
 pub struct Settings {
 	pub login_name: String,
 	pub fruit: String,

@@ -15,12 +15,12 @@ use crate::resources::play::event::{RunEvent, RunStep};
 use crate::resources::play::state::RunState;
 use crate::scrolls::ScrollKind::ScareMonster;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum PickupType {
 	AfterMove(LevelSpot),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PickUp(pub RunState, pub PickupType);
 
 impl StateAction for PickUp {
@@ -29,13 +29,12 @@ impl StateAction for PickUp {
 	}
 	fn dispatch(self, ctx: &mut RunContext) -> RunStep {
 		let PickUp(mut state, pickup_type) = self;
-
 		match pickup_type {
 			PickupType::AfterMove(spot) => {
 				let (row, col) = spot.into();
 				match state.as_health().levitate.is_active() {
 					true => {
-						state.level.rogue.move_result = Some(MoveResult::StoppedOnSomething);
+						state.move_result = Some(MoveResult::StoppedOnSomething);
 						RunStep::Effect(state, RunEffect::AwaitMove)
 					}
 					false => match pick_up(row, col, state, ctx) {

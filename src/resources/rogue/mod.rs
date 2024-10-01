@@ -1,4 +1,3 @@
-use crate::motion::MoveResult;
 use crate::objects::note_tables::NoteTables;
 use crate::player::RogueHealth;
 use crate::resources::rogue::depth::RogueDepth;
@@ -22,7 +21,6 @@ pub struct Rogue {
 	pub fight_to_death: Option<u64>,
 	pub notes: NoteTables,
 	pub wizard: bool,
-	pub move_result: Option<MoveResult>,
 }
 
 impl Rogue {
@@ -37,7 +35,6 @@ impl Rogue {
 			fight_to_death: None,
 			notes: Default::default(),
 			wizard: false,
-			move_result: None,
 		}
 	}
 	pub fn outfit(mut self, rng: &mut impl Rng) -> Self {

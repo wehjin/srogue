@@ -81,13 +81,14 @@ fn init(rng: ChaCha8Rng) -> RunStep {
 	RunStep::Effect(state, RunEffect::AwaitMove)
 }
 
+#[derive(Debug)]
 pub enum RunStep {
 	Exit(RunState),
 	Redirect(RunEvent),
 	Effect(RunState, RunEffect),
 }
 fn _descend(state: RunState) -> RunStep {
-	let RunState { mut stats, level, visor, diary, settings, mut rng } = state;
+	let RunState { mut stats, level, visor, diary, settings, mut rng, move_result } = state;
 	let party_type = if stats.is_party_depth(&level.rogue.depth) {
 		stats.party_depth = stats.party_depth.roll_next(&level.rogue.depth, &mut rng);
 		PartyType::PartyRollBig
@@ -95,6 +96,6 @@ fn _descend(state: RunState) -> RunStep {
 		PartyType::NoParty
 	};
 	let (level, stats, rng) = roll_level(party_type, level.rogue, stats, rng);
-	let state = RunState { stats, level, visor, diary, settings, rng };
+	let state = RunState { stats, level, visor, diary, settings, rng, move_result };
 	RunStep::Exit(state)
 }
