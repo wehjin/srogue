@@ -3,7 +3,6 @@ use crate::resources::level::setup::roll_level;
 use crate::resources::level::PartyType;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
-use crate::resources::play::event::mon_hit::MonHit;
 use crate::resources::play::event::one_move::OneMove;
 use crate::resources::play::event::pick_up::PickUp;
 use crate::resources::play::event::reg_move::RegMove;
@@ -26,7 +25,6 @@ pub enum RunEvent {
 	PlayerQuit(RunState),
 
 	Message(Message),
-	MonsterHit(MonHit),
 	OneMove(OneMove),
 	PickUp(PickUp),
 	RegisterMove(RegMove),
@@ -45,8 +43,8 @@ impl RunEvent {
 			RunEvent::Message(message) => message.dispatch(ctx),
 			RunEvent::OneMove(one_move) => one_move.dispatch(ctx),
 			RunEvent::RegisterMove(reg_move) => reg_move.dispatch(ctx),
-			RunEvent::PickUp(pickup) => pickup.dispatch(ctx),
 
+			RunEvent::PickUp(pickup) => pickup.dispatch(ctx),
 			RunEvent::PlayerQuit(state) => player_quit(state),
 			RunEvent::PlayerCloseModal(state) => player_close_modal(state),
 			RunEvent::PlayerOpenHelp(state) => player_open_help(state),

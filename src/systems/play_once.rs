@@ -3,7 +3,7 @@ use OnceResult::Idle;
 
 use crate::actions::action_set::PlayerEvent;
 use crate::init::{Dungeon, GameState, GameTurn};
-use crate::motion::{multiple_move_rogue, one_move_rogue_legacy, reg_move};
+use crate::motion::{multiple_move_rogue, one_move_rogue_legacy};
 use crate::render_system;
 use crate::resources::diary;
 use crate::resources::keyboard::rgetchar;
@@ -35,7 +35,7 @@ pub fn play_once(key_code: Option<char>, game: &mut GameState) -> OnceResult {
 				return Leaving(level_result);
 			}
 			if game.turn == GameTurn::Monsters {
-				reg_move(game);
+				// TODO reg_move(game);
 			}
 		}
 		Err(e) => {
@@ -63,11 +63,11 @@ fn dispatch_player_event(game: &mut GameState, player_event: PlayerEvent) -> Opt
 
 fn test_and_clear_loop_context(game: &mut GameState) -> Option<LevelResult> {
 	game.player.interrupted = false;
-	if !game.as_diary().hit_message.is_empty() {
+	if !game.as_diary().hit_message.is_none() {
 		game.player.interrupt_and_slurp();
 		let diary = game.as_diary_mut();
-		diary.add_entry(&diary.hit_message.to_string());
-		diary.hit_message.clear();
+		let message = diary.hit_message.take().unwrap_or_else(String::new);
+		diary.add_entry(&message);
 	}
 	if game.level.trap_door {
 		game.level.trap_door = false;

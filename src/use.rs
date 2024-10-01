@@ -1,7 +1,7 @@
 use crate::init::{Dungeon, GameState};
 use crate::level::put_player_legacy;
-use crate::monster::{mv_mons, show_monsters};
-use crate::motion::{reg_move, YOU_CAN_MOVE_AGAIN};
+use crate::monster::show_monsters;
+use crate::motion::YOU_CAN_MOVE_AGAIN;
 use crate::objects::ObjectId;
 use crate::pack::{take_from_pack, unwear, unwield};
 use crate::player::{Player, RoomMark};
@@ -33,7 +33,7 @@ pub fn vanish(obj_id: ObjectId, do_regular_move: bool, game: &mut GameState) {
 		take_from_pack(obj_id, &mut game.player.rogue.pack);
 	}
 	if do_regular_move {
-		reg_move(game);
+		todo!("reg_move(game)");
 	}
 }
 
@@ -86,7 +86,7 @@ pub fn take_a_nap(game: &mut GameState) {
 	backend::await_frame();
 	while i > 0 {
 		i -= 1;
-		mv_mons(game);
+		todo!("mv_mons(game)");
 		backend::await_frame()
 	}
 	game.diary.add_entry(YOU_CAN_MOVE_AGAIN);

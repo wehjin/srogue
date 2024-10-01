@@ -32,8 +32,8 @@ pub trait Avatar {
 	fn max_depth(&self) -> usize;
 	fn has_amulet(&self) -> bool;
 
-	fn fight_monster(&self) -> Option<u64>;
-	fn set_fight_monster(&mut self, value: Option<u64>);
+	fn fight_to_death(&self) -> Option<u64>;
+	fn set_fight_to_death(&mut self, value: Option<u64>);
 
 	fn as_fighter(&self) -> &Fighter;
 	fn as_fighter_mut(&mut self) -> &mut Fighter;
@@ -140,11 +140,11 @@ impl Avatar for Player {
 		mask_pack(&self.rogue.pack, Amulets)
 	}
 
-	fn fight_monster(&self) -> Option<u64> {
+	fn fight_to_death(&self) -> Option<u64> {
 		self.fight_monster
 	}
 
-	fn set_fight_monster(&mut self, value: Option<u64>) {
+	fn set_fight_to_death(&mut self, value: Option<u64>) {
 		self.fight_monster = value;
 	}
 
@@ -192,12 +192,12 @@ impl Avatar for GameState {
 		self.player.has_amulet()
 	}
 
-	fn fight_monster(&self) -> Option<u64> {
+	fn fight_to_death(&self) -> Option<u64> {
 		self.player.fight_monster
 	}
 
-	fn set_fight_monster(&mut self, value: Option<u64>) {
-		self.player.set_fight_monster(value)
+	fn set_fight_to_death(&mut self, value: Option<u64>) {
+		self.player.set_fight_to_death(value)
 	}
 
 	fn as_fighter(&self) -> &Fighter {
@@ -254,12 +254,12 @@ impl Avatar for RunState {
 		self.level.rogue.has_amulet
 	}
 
-	fn fight_monster(&self) -> Option<u64> {
-		self.level.rogue.fight_monster
+	fn fight_to_death(&self) -> Option<u64> {
+		self.level.rogue.fight_to_death
 	}
 
-	fn set_fight_monster(&mut self, value: Option<u64>) {
-		self.level.rogue.fight_monster = value;
+	fn set_fight_to_death(&mut self, value: Option<u64>) {
+		self.level.rogue.fight_to_death = value;
 	}
 
 	fn as_fighter(&self) -> &Fighter {

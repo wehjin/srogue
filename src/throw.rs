@@ -124,12 +124,11 @@ fn throw_at_monster(mon_id: u64, obj_id: ObjectId, game: &mut GameState) -> bool
 	{
 		let name = game.player.to_object_name_with_quantity(obj_id, 1).trim().to_string();
 		let diary = game.as_diary_mut();
-		diary.hit_message = format!("the {}", name);
 		if !rand_percent(hit_chance) {
-			diary.hit_message += " misses  ";
+			diary.hit_message = Some(format!("the {} misses", name));
 			return false;
 		}
-		diary.hit_message += " hit  ";
+		diary.hit_message = Some(format!("the {} hit", name));
 	}
 	if game.player.object_what(obj_id) == Wand && rand_percent(75) {
 		zap_monster(mon_id, game.player.object_kind(obj_id), game);

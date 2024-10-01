@@ -14,6 +14,7 @@ use crate::random::rand_percent;
 use crate::resources::avatar::Avatar;
 use crate::resources::diary;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
+use crate::resources::play::event::mon_hit::fight_report;
 use crate::score::killed_by;
 use crate::spec_hit::{check_imitator, cough_up};
 use crate::throw::Motion;
@@ -27,7 +28,7 @@ pub fn rogue_hit(mon_id: u64, force_hit: bool, game: &mut GameState) {
 	if !rand_percent(hit_chance) {
 		if game.player.fight_monster.is_none() {
 			let diary = game.as_diary_mut();
-			diary.hit_message = "you miss  ".to_string();
+			diary.hit_message = Some("you miss".to_string());
 		}
 	} else {
 		let player_exp = game.player.buffed_exp();
@@ -43,7 +44,7 @@ pub fn rogue_hit(mon_id: u64, force_hit: bool, game: &mut GameState) {
 			MonDamageEffect::MonsterSurvives => {
 				if game.player.fight_monster.is_none() {
 					let diary = game.as_diary_mut();
-					diary.hit_message = "you hit  ".to_string();
+					diary.hit_message = Some("you hit".to_string());
 				}
 			}
 		}
@@ -123,11 +124,11 @@ pub fn mon_damage(mon_id: u64, damage: isize, game: &mut GameState) -> MonDamage
 		game.player.fight_monster = None;
 		cough_up(mon_id, game);
 		{
+			game.interrupt_and_slurp();
 			let monster_name = mon_name(mon_id, game);
-			let msg = format!("{}defeated the {}", game.as_diary().hit_message, monster_name);
-			game.as_diary_mut().hit_message.clear();
-			game.player.interrupt_and_slurp();
-			game.diary.add_entry(&msg);
+			let monster_report = format!("defeated the {}", monster_name);
+			let fight_report = fight_report(monster_report, game);
+			game.as_diary_mut().add_entry(&fight_report);
 		}
 		add_exp(game.mash.monster(mon_id).kill_exp(), true, game, &mut thread_rng());
 		if game.mash.monster_flags(mon_id).holds {

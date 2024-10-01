@@ -2,33 +2,28 @@ use rand::{thread_rng, Rng};
 use MoveResult::MoveFailed;
 
 use crate::components::hunger::{HungerLevel, FAINT_MOVES_LEFT, HUNGRY_MOVES_LEFT, STARVE_MOVES_LEFT, WEAK_MOVES_LEFT};
-use crate::hit::rogue_hit;
 use crate::init::{Dungeon, GameState};
-use crate::inventory::get_obj_desc_legacy;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
 use crate::message::sound_bell;
 use crate::monster::{mv_mons, put_wanderer};
 use crate::motion::MoveResult::{Moved, StoppedOnSomething};
 use crate::odds::R_TELE_PERCENT;
-use crate::pack::{pick_up_legacy, PickUpResult};
-use crate::player::{Player, RoomMark};
+use crate::player::Player;
 use crate::prelude::ending::Ending;
-use crate::prelude::{DungeonSpot, MIN_ROW};
-use crate::r#use::tele;
+use crate::prelude::MIN_ROW;
 use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::render_system;
-use crate::render_system::darken_room;
 use crate::resources::arena::Arena;
 use crate::resources::avatar::Avatar;
 use crate::resources::diary;
 use crate::resources::dice::roll_chance;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
-use crate::resources::level::wake::wake_room_legacy;
-use crate::room::{visit_room, visit_spot_area};
+use crate::resources::play::context::RunContext;
+use crate::resources::play::state::RunState;
 use crate::score::killed_by;
 use crate::throw::Motion;
-use crate::trap::{is_off_screen, trap_player};
+use crate::trap::is_off_screen;
 
 pub const YOU_CAN_MOVE_AGAIN: &'static str = "you can move again";
 
@@ -82,16 +77,16 @@ pub fn dispatch_move_event(event: MoveEvent, dungeon: &mut impl Dungeon, rng: &m
 				return MoveEffect::Fight { row, col };
 			}
 			if dungeon.is_any_door_at(row, col) {
-				return MoveEffect::PrepToDoor { row, col, rogue_row, rogue_col };
+				MoveEffect::PrepToDoor { row, col, rogue_row, rogue_col }
 			} else if dungeon.is_any_tunnel_at(row, col) {
 				if dungeon.is_any_door_at(rogue_row, rogue_col) {
-					return MoveEffect::PrepDoorToTunnel { row, col, rogue_row, rogue_col };
+					MoveEffect::PrepDoorToTunnel { row, col, rogue_row, rogue_col }
 				} else {
-					return MoveEffect::PrepTunnelToTunnel { row, col, rogue_row, rogue_col };
+					MoveEffect::PrepTunnelToTunnel { row, col, rogue_row, rogue_col }
 				}
 			} else {
 				// room to room, door to room
-				return MoveEffect::PrepWithinRoom { row, col, rogue_row, rogue_col };
+				MoveEffect::PrepWithinRoom { row, col, rogue_row, rogue_col }
 			}
 		}
 		MoveEvent::Continue { row, col, rogue_row, rogue_col } => {
@@ -101,139 +96,9 @@ pub fn dispatch_move_event(event: MoveEvent, dungeon: &mut impl Dungeon, rng: &m
 	}
 }
 
-pub fn one_move_rogue_legacy(direction: MoveDirection, pickup: bool, game: &mut GameState, rng: &mut impl Rng) -> MoveResult {
-	let mut next_event = Some(MoveEvent::Start { direction, pickup });
-	while let Some(event) = next_event.take() {
-		match dispatch_move_event(event, game, rng) {
-			MoveEffect::Fail { consume_time } => {
-				// TODO Call to reg_move into dispatch_move_event.
-				if consume_time {
-					reg_move(game);
-				}
-				return MoveFailed;
-			}
-			MoveEffect::Teleport => {
-				// TODO Call to reg_move into dispatch_move_event.
-				tele(game);
-				return StoppedOnSomething;
-			}
-			MoveEffect::Fight { row, col } => {
-				// TODO Call to reg_move into dispatch_move_event.
-				let mon_id = game.mash.monster_id_at_spot(row, col).expect("monster in mash at monster spot one_move_rogue");
-				rogue_hit(mon_id, false, game);
-				reg_move(game);
-				return MoveFailed;
-			}
-			MoveEffect::PrepToDoor { row, col, rogue_row, rogue_col } => {
-				// TODO Call to reg_move into dispatch_move_event.
-				match game.player.cur_room {
-					RoomMark::None => {}
-					RoomMark::Passage => {
-						// tunnel to door
-						game.player.cur_room = game.level.room(row, col);
-						let cur_rn = game.player.cur_room.rn().expect("current room should be the room at rol,col");
-						visit_room(cur_rn, game);
-						wake_room_legacy(cur_rn, true, row, col, game);
-					}
-					RoomMark::Cavern(_) => {
-						// room to door
-						visit_spot_area(row, col, game);
-					}
-				}
-				next_event = Some(MoveEvent::Continue { row, col, rogue_row, rogue_col })
-			}
-			MoveEffect::PrepDoorToTunnel { row, col, rogue_row, rogue_col } => {
-				// door to tunnel
-				visit_spot_area(row, col, game);
-				let rn = game.player.cur_room.rn().expect("player room not an area moving from door to passage");
-				wake_room_legacy(rn, false, rogue_row, rogue_col, game);
-				darken_room(rn, game);
-				game.player.cur_room = RoomMark::Passage;
-				next_event = Some(MoveEvent::Continue { row, col, rogue_row, rogue_col })
-			}
-			MoveEffect::PrepTunnelToTunnel { row, col, rogue_row, rogue_col } => {
-				visit_spot_area(row, col, game);
-				next_event = Some(MoveEvent::Continue { row, col, rogue_row, rogue_col })
-			}
-			MoveEffect::PrepWithinRoom { row, col, rogue_row, rogue_col } => {
-				next_event = Some(MoveEvent::Continue { row, col, rogue_row, rogue_col })
-			}
-			MoveEffect::Done { row, col, rogue_row, rogue_col } => {
-				let vacated = DungeonSpot { row: rogue_row, col: rogue_col };
-				let occupied = DungeonSpot { row, col };
-				game.render_spot(vacated);
-				game.render_spot(occupied);
-				if !game.player.settings.jump {
-					render_system::refresh(game);
-				}
-			}
-		}
-	}
-	// TODO Move this portion into dispatch_move_event.
-	let row = game.rogue_row();
-	let col = game.rogue_col();
-	let player_cell = game.level.dungeon[row as usize][col as usize];
-	if player_cell.has_object() {
-		if !pickup {
-			stopped_on_something_with_moved_onto_message(row, col, game)
-		} else {
-			if game.as_health().levitate.is_active() {
-				StoppedOnSomething
-			} else {
-				match pick_up_legacy(row, col, game) {
-					PickUpResult::TurnedToDust => {
-						moved_unless_hungry_or_confused(game)
-					}
-					PickUpResult::AddedToGold(obj) => {
-						let msg = get_obj_desc_legacy(&obj, game.player.settings.fruit.to_string(), &game.player);
-						stopped_on_something_with_message(&msg, game)
-					}
-					PickUpResult::AddedToPack { added_id, .. } => {
-						let msg = game.player.get_obj_desc(added_id);
-						stopped_on_something_with_message(&msg, game)
-					}
-					PickUpResult::PackTooFull => {
-						stopped_on_something_with_moved_onto_message(row, col, game)
-					}
-				}
-			}
-		}
-	} else if player_cell.is_any_door() || player_cell.is_stairs() || player_cell.is_any_trap() {
-		if game.as_health().levitate.is_inactive() && player_cell.is_any_trap() {
-			trap_player(row as usize, col as usize, game);
-		}
-		reg_move(game);
-		StoppedOnSomething
-	} else {
-		moved_unless_hungry_or_confused(game)
-	}
-}
-
-fn stopped_on_something_with_moved_onto_message(row: i64, col: i64, game: &mut GameState) -> MoveResult {
-	let obj = game.ground.find_object_at(row, col).expect("moved-on object");
-	let obj_desc = get_obj_desc_legacy(obj, game.player.settings.fruit.to_string(), &game.player);
-	let desc = format!("moved onto {}", obj_desc);
-	stopped_on_something_with_message(&desc, game)
-}
-
-fn stopped_on_something_with_message(desc: &str, game: &mut GameState) -> MoveResult {
-	game.player.interrupt_and_slurp();
-	game.diary.add_entry(desc);
-	reg_move(game);
+// TODO Delete this function after converting multiple_move_rogue
+pub fn one_move_rogue_legacy(_direction: MoveDirection, _pickup: bool, _game: &mut GameState, _rng: &mut impl Rng) -> MoveResult {
 	StoppedOnSomething
-}
-
-fn moved_unless_hungry_or_confused(game: &mut GameState) -> MoveResult {
-	if reg_move(game) == RogueEnergy::Fainted {
-		/* fainted from hunger */
-		StoppedOnSomething
-	} else {
-		if game.player.health.confused.is_active() {
-			StoppedOnSomething
-		} else {
-			Moved
-		}
-	}
 }
 
 
@@ -408,7 +273,7 @@ fn get_hunger_transition_with_burn_count(moves_left: isize, moves_burned: isize)
 	}
 }
 
-pub fn check_hunger(game: &mut impl Dungeon) -> HungerCheckResult {
+pub fn check_hunger<R: Rng>(mut game: RunState, ctx: &mut RunContext<R>) -> (HungerCheckResult, RunState) {
 	let moves_to_burn = match game.as_ring_effects().calorie_burn() {
 		-2 => 0,
 		-1 => game.as_fighter().moves_left % 2,
@@ -418,7 +283,7 @@ pub fn check_hunger(game: &mut impl Dungeon) -> HungerCheckResult {
 		_ => panic!("invalid calorie burn")
 	};
 	if moves_to_burn == 0 {
-		return HungerCheckResult::StillWalking;
+		return (HungerCheckResult::StillWalking, game);
 	}
 	game.as_fighter_mut().moves_left -= moves_to_burn;
 	if let Some(next_hunger) = get_hunger_transition_with_burn_count(game.as_fighter().moves_left, moves_to_burn) {
@@ -432,16 +297,20 @@ pub fn check_hunger(game: &mut impl Dungeon) -> HungerCheckResult {
 
 	let hunger = game.as_health().hunger;
 	if hunger == HungerLevel::Starved {
-		killed_by(Ending::Starvation, game);
-		return HungerCheckResult::DidStarve;
+		killed_by(Ending::Starvation, &mut game);
+		return (HungerCheckResult::DidStarve, game);
 	}
-	if hunger == HungerLevel::Faint && random_faint(game) {
-		return HungerCheckResult::DidFaint;
+	if hunger == HungerLevel::Faint {
+		let (did_faint, game_after_faint) = random_faint(game, ctx);
+		game = game_after_faint;
+		if did_faint {
+			return (HungerCheckResult::DidFaint, game);
+		}
 	}
-	HungerCheckResult::StillWalking
+	(HungerCheckResult::StillWalking, game)
 }
 
-fn random_faint(game: &mut impl Dungeon) -> bool {
+fn random_faint<R: Rng>(mut game: RunState, ctx: &mut RunContext<R>) -> (bool, RunState) {
 	let n = get_rand(0, FAINT_MOVES_LEFT - game.as_fighter().moves_left);
 	if n > 0 {
 		if rand_percent(40) {
@@ -451,14 +320,14 @@ fn random_faint(game: &mut impl Dungeon) -> bool {
 		game.as_diary_mut().add_entry("you faint");
 		for _ in 0..n {
 			if coin_toss() {
-				mv_mons(game);
+				game = mv_mons(game, ctx);
 			}
 		}
 		game.interrupt_and_slurp();
 		game.as_diary_mut().add_entry(YOU_CAN_MOVE_AGAIN);
-		true
+		(true, game)
 	} else {
-		false
+		(false, game)
 	}
 }
 
@@ -469,30 +338,32 @@ pub enum RogueEnergy {
 	Normal,
 }
 
-pub fn reg_move(game: &mut impl Dungeon) -> RogueEnergy {
+pub fn reg_move<R: Rng>(mut game: RunState, ctx: &mut RunContext<R>) -> (RogueEnergy, RunState) {
 	// Take care of hunger.
 	let mut fainted = false;
 	{
 		if game.as_fighter().moves_left <= HUNGRY_MOVES_LEFT || game.is_max_depth() {
-			match check_hunger(game) {
+			let (result, after_hunger) = check_hunger(game, ctx);
+			match result {
 				HungerCheckResult::DidStarve => {
-					return RogueEnergy::Starved;
+					return (RogueEnergy::Starved, after_hunger);
 				}
 				HungerCheckResult::DidFaint => {
 					fainted = true;
 				}
 				HungerCheckResult::StillWalking => {}
 			}
+			game = after_hunger;
 		}
 	}
 	// Move monsters.
-	mv_mons(game);
+	game = mv_mons(game, ctx);
 	// Every 120 moves, add a wanderer.
 	{
 		let next_m_move = game.m_moves() + 1;
 		if next_m_move >= 120 {
 			*game.m_moves_mut() = 0;
-			put_wanderer(game);
+			put_wanderer(&mut game);
 		} else {
 			*game.m_moves_mut() = next_m_move;
 		}
@@ -555,9 +426,9 @@ pub fn reg_move(game: &mut impl Dungeon) -> RogueEnergy {
 	}
 	// Done
 	if fainted {
-		RogueEnergy::Fainted
+		(RogueEnergy::Fainted, game)
 	} else {
-		RogueEnergy::Normal
+		(RogueEnergy::Normal, game)
 	}
 }
 

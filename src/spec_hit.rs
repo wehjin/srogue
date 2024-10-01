@@ -1,10 +1,9 @@
 use crate::armors::ArmorKind;
-use crate::resources::play::event::mon_hit::mon_hit;
 use crate::init::{Dungeon, GameState};
 use crate::inventory::get_obj_desc_legacy;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::{add_exp, hp_raise, Level, LEVEL_POINTS};
-use crate::monster::{mon_can_go_and_reach, mon_name, mv_mons, mv_monster, MonsterMash};
+use crate::monster::{mon_can_go_and_reach, mon_name, mv_monster, MonsterMash};
 use crate::motion::YOU_CAN_MOVE_AGAIN;
 use crate::objects::{alloc_object, get_armor_class, gr_object, place_at, Object};
 use crate::prelude::ending::Ending;
@@ -16,6 +15,10 @@ use crate::render_system::animation::animate_flame_broil;
 use crate::resources::arena::Arena;
 use crate::resources::avatar::Avatar;
 use crate::resources::dice::roll_chance;
+use crate::resources::infra::Infra;
+use crate::resources::play::context::RunContext;
+use crate::resources::play::event::mon_hit::mon_hit;
+use crate::resources::play::state::RunState;
 use crate::score::killed_by;
 use rand::{thread_rng, Rng};
 
@@ -93,11 +96,11 @@ fn freeze(mon_id: u64, game: &mut GameState) {
 
 		let n = get_rand(4, 8);
 		for _ in 0..n {
-			mv_mons(game);
+			// TODO mv_mons(game);
 		}
 		if rand_percent(freeze_percent as usize) {
 			for _ in 0..50 {
-				mv_mons(game);
+				// TODO mv_mons(game);
 			}
 			killed_by(Ending::Hypothermia, game);
 		}
@@ -219,7 +222,7 @@ fn try_to_cough(row: i64, col: i64, obj: &Object, game: &mut GameState) -> bool 
 	false
 }
 
-pub fn seek_gold(mon_id: u64, game: &mut impl Dungeon) -> bool {
+pub fn seek_gold<R: Rng>(mut game: RunState, mon_id: u64, ctx: &mut RunContext<R>) -> (bool, RunState) {
 	let room = {
 		let monster = game.as_monster(mon_id);
 		let monster_row = monster.spot.row;
@@ -227,34 +230,34 @@ pub fn seek_gold(mon_id: u64, game: &mut impl Dungeon) -> bool {
 		game.get_room_at(monster_row, monster_col)
 	};
 	if room.is_none() {
-		return false;
+		return (false, game);
 	}
 	let room = room.unwrap();
 	let bounds = game.room_bounds(room).inset(1, 1);
 	for spot in bounds.to_spots() {
 		let (row, col) = spot.i64();
-		if gold_at(row, col, game) && !game.has_monster_at(row, col) {
-			if mon_can_go_and_reach(mon_id, row, col, true, game) {
+		if gold_at(row, col, &game) && !game.has_monster_at(row, col) {
+			if mon_can_go_and_reach(mon_id, row, col, true, &game) {
 				game.move_mon_to(mon_id, row, col);
 				let flags = game.as_monster_flags_mut(mon_id);
 				flags.asleep = true;
 				flags.wakens = false;
 				flags.seeks_gold = false;
-				return true;
+				return (true, game);
 			}
 			{
 				let flags = game.as_monster_flags_mut(mon_id);
 				flags.seeks_gold = false;
 			}
-			mv_monster(mon_id, row, col, true, game, &mut thread_rng());
+			game = mv_monster(game, mon_id, row, col, true, ctx);
 			{
 				let flags = game.as_monster_flags_mut(mon_id);
 				flags.seeks_gold = true;
 			}
-			return true;
+			return (true, game);
 		}
 	}
-	false
+	(false, game)
 }
 
 fn gold_at(row: i64, col: i64, game: &impl Dungeon) -> bool {
@@ -386,21 +389,21 @@ pub fn m_confuse(mon_id: u64, game: &mut impl Dungeon) -> bool {
 	false
 }
 
-pub fn flame_broil(mon_id: u64, game: &mut impl Dungeon) -> bool {
+pub fn flame_broil<R: Rng>(mut game: RunState, mon_id: u64, ctx: &mut RunContext<R>) -> (bool, RunState) {
 	let cant_see_rogue = !game.monster_sees_rogue(mon_id);
 	if cant_see_rogue || coin_toss() {
-		return false;
+		return (false, game);
 	}
 
 	let mon_spot = game.as_monster(mon_id).spot;
 	let player_spot = DungeonSpot { row: game.rogue_row(), col: game.rogue_col() };
 	if !mon_spot.has_attack_vector_to(player_spot) || player_spot.distance_from(mon_spot) > 7 {
-		return false;
+		return (false, game);
 	}
 	if !game.as_health().is_blind() && !player_spot.is_near(mon_spot) {
 		let path = mon_spot.path_to(player_spot);
 		animate_flame_broil(&path);
 	}
-	mon_hit(mon_id, Some(FLAME_NAME), true, game);
-	true
+	game = mon_hit(game, mon_id, Some(FLAME_NAME), ctx);
+	(true, game)
 }

@@ -1,7 +1,6 @@
 use crate::init::{Dungeon, GameState};
 use crate::inventory::{get_obj_desc_legacy, inventory_legacy, ObjectSource};
 use crate::message::sound_bell;
-use crate::motion::reg_move;
 use crate::objects::NoteStatus::{Identified, Unidentified};
 use crate::objects::{Object, ObjectId, ObjectPack};
 use crate::player::Player;
@@ -210,7 +209,7 @@ pub fn kick_into_pack(game: &mut GameState) {
 		let settings = game.player.settings.clone();
 		match pick_up_legacy(game.player.rogue.row, game.player.rogue.col, game) {
 			PickUpResult::TurnedToDust => {
-				reg_move(game);
+				// TODO reg_move(game);
 			}
 			PickUpResult::AddedToGold(obj) => {
 				let msg = get_obj_desc_legacy(&obj, settings.fruit.to_string(), &game.player);

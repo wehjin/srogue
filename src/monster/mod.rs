@@ -1,6 +1,5 @@
 use rand::{thread_rng, Rng};
 
-use crate::resources::play::event::mon_hit::mon_hit;
 use crate::init::{Dungeon, GameState};
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
@@ -9,9 +8,13 @@ use crate::prelude::object_what::ObjectWhat::Scroll;
 use crate::prelude::*;
 use crate::random::{coin_toss, get_rand, get_rand_indices, rand_percent};
 use crate::resources::arena::Arena;
+use crate::resources::avatar::Avatar;
 use crate::resources::dice::roll_chance;
 use crate::resources::level::setup::npc;
 use crate::resources::physics;
+use crate::resources::play::context::RunContext;
+use crate::resources::play::event::mon_hit::mon_hit;
+use crate::resources::play::state::RunState;
 use crate::room::{get_room_number, gr_spot};
 use crate::scrolls::ScrollKind;
 use crate::scrolls::ScrollKind::ScareMonster;
@@ -41,10 +44,9 @@ pub fn put_mons(game: &mut GameState) {
 	}
 }
 
-pub fn mv_mons(game: &mut impl Dungeon) {
-	let rng = &mut thread_rng();
+pub fn mv_mons<R: Rng>(mut game: RunState, ctx: &mut RunContext<R>) -> RunState {
 	if game.as_health().haste_self.is_half_active() {
-		return;
+		return game;
 	}
 	for mon_id in game.monster_ids() {
 		if game.cleaned_up().is_some() {
@@ -52,7 +54,9 @@ pub fn mv_mons(game: &mut impl Dungeon) {
 		}
 		let mut done_with_monster = false;
 		if game.as_monster(mon_id).is_hasted() {
-			mv_monster(mon_id, game.rogue_row(), game.rogue_col(), false, game, rng);
+			let rogue_row = game.rogue_row();
+			let rogue_col = game.rogue_col();
+			game = mv_monster(game, mon_id, rogue_row, rogue_col, false, ctx);
 			if game.get_monster(mon_id).is_none() {
 				done_with_monster = true;
 			}
@@ -63,7 +67,7 @@ pub fn mv_mons(game: &mut impl Dungeon) {
 			}
 		}
 		if !done_with_monster && game.as_monster(mon_id).is_confused() {
-			if move_confused(mon_id, false, game) {
+			if move_confused(mon_id, false, &mut game) {
 				done_with_monster = true;
 			}
 		}
@@ -74,15 +78,16 @@ pub fn mv_mons(game: &mut impl Dungeon) {
 
 			if game.as_monster(mon_id).flies()
 				&& !game.as_monster(mon_id).is_napping()
-				&& !mon_can_go_and_reach(mon_id, rogue_row, rogue_col, false, game) {
+				&& !mon_can_go_and_reach(mon_id, rogue_row, rogue_col, false, &game) {
 				flew = true;
-				mv_monster(mon_id, rogue_row, rogue_col, false, game, rng);
+				game = mv_monster(game, mon_id, rogue_row, rogue_col, false, ctx);
 			}
-			if !(flew && mon_can_go_and_reach(mon_id, rogue_row, rogue_col, false, game)) {
-				mv_monster(mon_id, rogue_row, rogue_col, false, game, rng);
+			if !(flew && mon_can_go_and_reach(mon_id, rogue_row, rogue_col, false, &game)) {
+				game = mv_monster(game, mon_id, rogue_row, rogue_col, false, ctx);
 			}
 		}
 	}
+	game
 }
 
 pub fn party_monsters(rn: usize, n: usize, level_depth: usize, game: &mut GameState, rng: &mut impl Rng) {
@@ -112,11 +117,11 @@ pub fn party_monsters(rn: usize, n: usize, level_depth: usize, game: &mut GameSt
 	}
 }
 
-pub fn mv_monster(mon_id: u64, row: i64, col: i64, allow_any_direction: bool, game: &mut impl Dungeon, rng: &mut impl Rng) {
+pub fn mv_monster<R: Rng>(mut game: RunState, mon_id: u64, row: i64, col: i64, allow_any_direction: bool, ctx: &mut RunContext<R>) -> RunState {
 	if game.as_monster(mon_id).m_flags.asleep {
 		if game.as_monster(mon_id).m_flags.napping {
 			game.as_monster_mut(mon_id).do_nap();
-			return;
+			return game;
 		}
 		let chance = odds::WAKE_PERCENT;
 		let monster = game.as_monster(mon_id);
@@ -124,61 +129,68 @@ pub fn mv_monster(mon_id: u64, row: i64, col: i64, allow_any_direction: bool, ga
 		let col1 = monster.spot.col;
 		if (monster.m_flags.wakens)
 			&& game.rogue_is_near(row1, col1)
-			&& roll_chance(game.as_ring_effects().apply_stealthy(chance), rng) {
+			&& roll_chance(game.as_ring_effects().apply_stealthy(chance), ctx.rng()) {
 			game.as_monster_mut(mon_id).wake_up();
 		}
-		return;
+		return game;
 	} else if game.as_monster(mon_id).m_flags.already_moved {
 		let monster = game.as_monster_mut(mon_id);
 		monster.m_flags.already_moved = false;
-		return;
+		return game;
 	}
-	if game.as_monster(mon_id).m_flags.flits && flit(mon_id, allow_any_direction, game) {
-		return;
+	if game.as_monster(mon_id).m_flags.flits && flit(mon_id, allow_any_direction, &mut game) {
+		return game;
 	}
 	if game.as_monster(mon_id).m_flags.stationary
-		&& !mon_can_go_and_reach(mon_id, game.rogue_row(), game.rogue_col(), allow_any_direction, game) {
-		return;
+		&& !mon_can_go_and_reach(mon_id, game.rogue_row(), game.rogue_col(), allow_any_direction, &mut game) {
+		return game;
 	}
 	if game.as_monster(mon_id).m_flags.freezing_rogue {
-		return;
+		return game;
 	}
-	if game.as_monster(mon_id).m_flags.confuses && m_confuse(mon_id, game) {
-		return;
+	if game.as_monster(mon_id).m_flags.confuses && m_confuse(mon_id, &mut game) {
+		return game;
 	}
-	if mon_can_go_and_reach(mon_id, game.rogue_row(), game.rogue_col(), allow_any_direction, game) {
-		mon_hit(mon_id, None, false, game);
-		return;
+	if mon_can_go_and_reach(mon_id, game.rogue_row(), game.rogue_col(), allow_any_direction, &mut game) {
+		game = mon_hit(game, mon_id, None, ctx);
+		return game;
 	}
-	if game.as_monster(mon_id).m_flags.flames && flame_broil(mon_id, game) {
-		return;
+	if game.as_monster(mon_id).m_flags.flames {
+		let (broiled, after_broil) = flame_broil(game, mon_id, ctx);
+		if broiled {
+			return after_broil;
+		}
+		game = after_broil;
 	}
-	if game.as_monster(mon_id).m_flags.seeks_gold && seek_gold(mon_id, game) {
-		return;
+	if game.as_monster(mon_id).m_flags.seeks_gold {
+		let (seeked, after_seek) = seek_gold(game, mon_id, ctx);
+		if seeked {
+			return after_seek;
+		}
+		game = after_seek;
 	}
-
 	game.as_monster_mut(mon_id).clear_target_spot_if_reached();
 	let target_spot = game.as_monster(mon_id).target_spot_or(DungeonSpot { row, col });
 	let monster_spot = game.as_monster(mon_id).spot;
 	let row = monster_spot.next_closest_row(target_spot.row);
-	if game.is_any_door_at(row, monster_spot.col) && mtry(mon_id, row, monster_spot.col, allow_any_direction, game) {
-		return;
+	if game.is_any_door_at(row, monster_spot.col) && mtry(mon_id, row, monster_spot.col, allow_any_direction, &mut game) {
+		return game;
 	}
 	let col = monster_spot.next_closest_col(target_spot.col);
-	if game.is_any_door_at(monster_spot.row, col) && mtry(mon_id, monster_spot.row, col, allow_any_direction, game) {
-		return;
+	if game.is_any_door_at(monster_spot.row, col) && mtry(mon_id, monster_spot.row, col, allow_any_direction, &mut game) {
+		return game;
 	}
-	if mtry(mon_id, row, col, allow_any_direction, game) {
-		return;
+	if mtry(mon_id, row, col, allow_any_direction, &mut game) {
+		return game;
 	}
 	for kind in get_rand_indices(6) {
 		match kind {
-			0 => if mtry(mon_id, row, monster_spot.col - 1, allow_any_direction, game) { break; }
-			1 => if mtry(mon_id, row, monster_spot.col, allow_any_direction, game) { break; }
-			2 => if mtry(mon_id, row, monster_spot.col + 1, allow_any_direction, game) { break; }
-			3 => if mtry(mon_id, monster_spot.row - 1, col, allow_any_direction, game) { break; }
-			4 => if mtry(mon_id, monster_spot.row, col, allow_any_direction, game) { break; }
-			5 => if mtry(mon_id, monster_spot.row + 1, col, allow_any_direction, game) { break; }
+			0 => if mtry(mon_id, row, monster_spot.col - 1, allow_any_direction, &mut game) { break; }
+			1 => if mtry(mon_id, row, monster_spot.col, allow_any_direction, &mut game) { break; }
+			2 => if mtry(mon_id, row, monster_spot.col + 1, allow_any_direction, &mut game) { break; }
+			3 => if mtry(mon_id, monster_spot.row - 1, col, allow_any_direction, &mut game) { break; }
+			4 => if mtry(mon_id, monster_spot.row, col, allow_any_direction, &mut game) { break; }
+			5 => if mtry(mon_id, monster_spot.row + 1, col, allow_any_direction, &mut game) { break; }
 			_ => unreachable!("0 <= n  <= 5")
 		}
 	}
@@ -200,6 +212,7 @@ pub fn mv_monster(mon_id: u64, row: i64, col: i64, allow_any_direction: bool, ga
 			monster.clear_target_reset_stuck();
 		}
 	}
+	game
 }
 
 pub fn mtry(mon_id: MonsterIndex, row: i64, col: i64, allow_any_direction: bool, game: &mut impl Dungeon) -> bool {
@@ -248,7 +261,7 @@ pub fn mon_can_go_and_reach(mon_id: u64, row: i64, col: i64, allow_any_direction
 	true
 }
 
-pub fn mon_name(mon_id: u64, game: &mut impl Dungeon) -> &'static str {
+pub fn mon_name(mon_id: u64, game: &impl Dungeon) -> &'static str {
 	if game.as_health().blind.is_active()
 		|| (game.as_monster(mon_id).m_flags.invisible && !player_defeats_invisibility(game)) {
 		"something"
@@ -332,7 +345,7 @@ pub fn create_monster(game: &mut GameState) {
 	}
 }
 
-pub fn move_confused(mon_id: MonsterIndex, force_flit: bool, game: &mut impl Dungeon) -> bool {
+pub fn move_confused(mon_id: MonsterIndex, force_flit: bool, game: &mut RunState) -> bool {
 	let monster = game.as_monster_mut(mon_id);
 	if !monster.m_flags.asleep {
 		monster.decrement_moves_confused();
@@ -429,11 +442,11 @@ pub fn aggravate(game: &mut GameState) {
 }
 
 pub fn mv_aquatars(game: &mut GameState) {
-	let rng = &mut thread_rng();
+	let _rng = &mut thread_rng();
 	for mon_id in game.mash.monster_ids() {
 		if MonsterKind::Aquator == game.mash.monster(mon_id).kind
 			&& mon_can_go_and_reach(mon_id, game.player.rogue.row, game.player.rogue.col, false, game) {
-			mv_monster(mon_id, game.player.rogue.row, game.player.rogue.col, false, game, rng);
+			// TODO game = mv_monster(game, mon_id, game.player.rogue.row, game.player.rogue.col, false, rng);
 			let monster = game.mash.monster_flags_mut(mon_id);
 			monster.already_moved = true;
 		}

@@ -19,6 +19,10 @@ impl Message {
 	pub fn new(state: RunState, text: impl AsRef<str>, interrupt: bool, post_step: impl FnOnce(RunState) -> RunStep + 'static) -> Message {
 		Self { state, text: text.as_ref().to_string(), interrupt, post_step: StepSeed::new("post-print", post_step) }
 	}
+	pub fn run<R: Rng>(state: RunState, text: impl AsRef<str>, interrupt: bool, ctx: &mut RunContext<R>) -> RunState {
+		let after_state = Message::new(state, text, interrupt, RunStep::Exit).run(ctx);
+		after_state
+	}
 }
 
 impl StateAction for Message {

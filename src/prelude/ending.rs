@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Ending {
 	Monster(String),
 	Hypothermia,

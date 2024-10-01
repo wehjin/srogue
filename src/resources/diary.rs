@@ -11,7 +11,7 @@ pub struct Diary {
 	pub stats_changed: bool,
 	pub cleaned_up: Option<String>,
 	pub interrupted: bool,
-	pub hit_message: String,
+	pub hit_message: Option<String>,
 }
 impl Default for Diary {
 	fn default() -> Self {
@@ -24,7 +24,7 @@ impl Default for Diary {
 			stats_changed: true,
 			cleaned_up: None,
 			interrupted: false,
-			hit_message: "".to_string(),
+			hit_message: None,
 		}
 	}
 }
@@ -34,7 +34,7 @@ impl Diary {
 		self.current_page.len() > 0
 	}
 	pub fn add_entry(&mut self, entry: impl AsRef<str>) {
-		panic!("ADD ENTREY: {}", entry.as_ref());
+		panic!("DIARY ADD ENTRY: {}", entry.as_ref());
 		assert!(!self.rewound);
 		let text = entry.as_ref();
 		self.current_page.push(text.to_string());
