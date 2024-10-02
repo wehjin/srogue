@@ -19,6 +19,8 @@ use crate::resources::arena::Arena;
 use crate::resources::avatar::Avatar;
 use crate::resources::course::dr_course;
 use crate::resources::dice::roll_chance;
+use crate::resources::play::effect::RunEffect;
+use crate::resources::play::event::RunStep;
 use crate::settings::Settings;
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
@@ -32,6 +34,11 @@ pub struct RunState {
 	pub diary: Diary,
 	pub rng: ChaCha8Rng,
 	pub move_result: Option<MoveResult>,
+}
+
+impl RunState {
+	pub fn into_exit(self) -> RunStep { RunStep::Exit(self) }
+	pub fn into_effect(self, effect: RunEffect) -> RunStep { RunStep::Effect(self, effect) }
 }
 
 impl RunState {

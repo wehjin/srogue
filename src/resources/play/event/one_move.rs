@@ -9,9 +9,10 @@ use crate::resources::level::size::LevelSpot;
 use crate::resources::level::wake::{wake_room, WakeType};
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
+use crate::resources::play::event::game::GameEventVariant;
 use crate::resources::play::event::message::Message;
 use crate::resources::play::event::pick_up::{PickUpRegMove, PickupType};
-use crate::resources::play::event::reg_move::RegMove;
+use crate::resources::play::event::reg_move::RegMoveEvent;
 use crate::resources::play::event::state_action::{redirect, StateAction};
 use crate::resources::play::event::{RunEvent, RunStep};
 use crate::resources::play::state::RunState;
@@ -75,7 +76,7 @@ fn step(state: State, ctx: &mut RunContext) -> State {
 			} else if in_bear_trap && no_monster_at_spot {
 				state.move_result = Some(MoveResult::MoveFailed);
 				// Do a regular move after reporting the bear trap so that the bear trap counts down.
-				let after_report = |state| redirect(RegMove(state));
+				let after_report = |state| RegMoveEvent::new().into_redirect(state);
 				let report = "you are still stuck in the bear trap";
 				let next_step = redirect(Message::new(state, report, true, after_report));
 				State::End(next_step)
@@ -100,7 +101,7 @@ fn step(state: State, ctx: &mut RunContext) -> State {
 				state.move_result = Some(MoveResult::MoveFailed);
 				let mon_id = state.get_monster_at(to_spot.0, to_spot.1).unwrap();
 				state = rogue_hit(state, mon_id, false, ctx);
-				let next_step = redirect(RegMove(state));
+				let next_step = RegMoveEvent::new().into_redirect(state);
 				State::End(next_step)
 			} else {
 				State::AdjustLighting { state, to_spot, rogue_spot, allow_pickup }
@@ -166,10 +167,10 @@ fn step(state: State, ctx: &mut RunContext) -> State {
 					// TODO trap_player(row as usize, col as usize, game);
 				}
 				state.move_result = Some(MoveResult::StoppedOnSomething);
-				State::End(redirect(RegMove(state)))
+				State::End(RegMoveEvent::new().into_redirect(state))
 			} else {
 				// RegMove will update [move_result].
-				State::End(redirect(RegMove(state)))
+				State::End(RegMoveEvent::new().into_redirect(state))
 			}
 		}
 		State::End(_) => { panic!("Do not step the end state!") }
@@ -202,7 +203,7 @@ fn pickup_object(row: i64, col: i64, allow_pickup: bool, mut state: RunState, ct
 	} else {
 		// Leave the object alone but stop moving and report we're on top of it. Then complete the move.
 		state.move_result = Some(MoveResult::StoppedOnSomething);
-		let after_report = move |state| redirect(RegMove(state));
+		let after_report = move |state| RegMoveEvent::new().into_redirect(state);
 		let report = moved_onto_message(row, col, &state);
 		Message::new(state, report, true, after_report).dispatch(ctx)
 	}

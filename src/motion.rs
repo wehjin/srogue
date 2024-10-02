@@ -20,7 +20,7 @@ use crate::trap::is_off_screen;
 
 pub const YOU_CAN_MOVE_AGAIN: &'static str = "you can move again";
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum MoveResult {
 	Moved,
 	MoveFailed,

@@ -3,15 +3,16 @@ use crate::resources::level::setup::roll_level;
 use crate::resources::level::PartyType;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
+use crate::resources::play::event::game::{Dispatch, GameEvent};
 use crate::resources::play::event::one_move::OneMove;
 use crate::resources::play::event::pick_up::PickUpRegMove;
-use crate::resources::play::event::reg_move::RegMove;
 use crate::resources::play::seed::StepSeed;
 use crate::resources::play::state::RunState;
 use message::Message;
 use rand_chacha::ChaCha8Rng;
 use state_action::StateAction;
 
+pub mod game;
 pub mod message;
 pub mod mon_hit;
 pub mod one_move;
@@ -22,12 +23,11 @@ pub mod state_action;
 #[derive(Debug)]
 pub enum RunEvent {
 	Init(ChaCha8Rng),
+	Game(RunState, GameEvent),
 	PlayerQuit(RunState),
-
 	Message(Message),
 	OneMove(OneMove),
 	PickUp(PickUpRegMove),
-	RegisterMove(RegMove),
 
 	PlayerCloseModal(RunState),
 	PlayerOpenHelp(RunState),
@@ -39,10 +39,9 @@ impl RunEvent {
 	pub fn dispatch(self, ctx: &mut RunContext) -> RunStep {
 		match self {
 			RunEvent::Init(rng) => init(rng),
-
+			RunEvent::Game(state, game_event) => game_event.dispatch(state, ctx),
 			RunEvent::Message(message) => message.dispatch(ctx),
 			RunEvent::OneMove(one_move) => one_move.dispatch(ctx),
-			RunEvent::RegisterMove(reg_move) => reg_move.dispatch(ctx),
 
 			RunEvent::PickUp(pickup) => pickup.dispatch(ctx),
 			RunEvent::PlayerQuit(state) => player_quit(state),
@@ -54,6 +53,16 @@ impl RunEvent {
 				step_seed.create_step(state)
 			}
 		}
+	}
+}
+
+pub trait RunEventVariant: Dispatch {
+	fn into_run_event(self, state: RunState) -> RunEvent;
+	fn into_redirect(self, state: RunState) -> RunStep
+	where
+		Self: Sized,
+	{
+		RunStep::Redirect(self.into_run_event(state))
 	}
 }
 

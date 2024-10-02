@@ -7,10 +7,11 @@ use crate::resources::avatar::Avatar;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
+use crate::resources::play::event::game::{Dispatch, GameEventVariant};
 use crate::resources::play::event::message::Message;
 use crate::resources::play::event::one_move::moved_onto_message;
-use crate::resources::play::event::reg_move::RegMove;
-use crate::resources::play::event::state_action::{redirect, StateAction};
+use crate::resources::play::event::reg_move::RegMoveEvent;
+use crate::resources::play::event::state_action::StateAction;
 use crate::resources::play::event::{RunEvent, RunStep};
 use crate::resources::play::state::RunState;
 use crate::scrolls::ScrollKind::ScareMonster;
@@ -61,13 +62,13 @@ impl StateAction for PickUpRegMove {
 }
 
 fn register_move(state: RunState, ctx: &mut RunContext) -> RunStep {
-	RegMove(state).dispatch(ctx)
+	RegMoveEvent::new().dispatch(state, ctx)
 }
 
-fn print_message_register_move(message: impl AsRef<str>, mut state: RunState, ctx: &mut RunContext) -> RunStep {
+fn print_message_register_move(report: impl AsRef<str>, mut state: RunState, ctx: &mut RunContext) -> RunStep {
 	state.move_result = Some(MoveResult::StoppedOnSomething);
-	let post_step = move |state| redirect(RegMove(state));
-	Message::new(state, message, true, post_step).dispatch(ctx)
+	let after_report = move |state| RegMoveEvent::new().into_redirect(state);
+	Message::new(state, report, true, after_report).dispatch(ctx)
 }
 
 fn pick_up(row: i64, col: i64, mut state: RunState, ctx: &mut RunContext) -> (PickUpResult, RunState) {
