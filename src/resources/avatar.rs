@@ -1,3 +1,4 @@
+use crate::resources::rogue::energy::RogueEnergy;
 use crate::init::GameState;
 use crate::objects::note_tables::NoteTables;
 use crate::objects::{Object, ObjectId, ObjectPack};
@@ -18,7 +19,9 @@ use crate::weapons::kind::WeaponKind;
 pub trait Avatar {
 	fn as_settings(&self) -> &Settings;
 	fn as_settings_mut(&mut self) -> &mut Settings;
-
+	fn rogue_energy(&self) -> RogueEnergy {
+		RogueEnergy::from_moves(self.as_fighter().moves_left)
+	}
 	fn as_notes(&self) -> &NoteTables;
 	fn as_notes_mut(&mut self) -> &mut NoteTables;
 

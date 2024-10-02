@@ -7,6 +7,7 @@ use rand::Rng;
 use spot::RogueSpot;
 
 pub mod depth;
+pub mod energy;
 pub mod fighter;
 pub mod spot;
 

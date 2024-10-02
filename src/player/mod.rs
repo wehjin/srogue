@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::armors::ArmorKind;
-use crate::components::hunger::HungerLevel;
 use crate::level::{DungeonCell, Level};
 use crate::machdep::md_slurp;
 use crate::objects::note_tables::NoteTables;
@@ -121,7 +120,6 @@ pub struct RogueHealth {
 	pub confused: TimeEffect,
 	pub bear_trap: usize,
 	pub being_held: bool,
-	pub hunger: HungerLevel,
 }
 
 impl RogueHealth {

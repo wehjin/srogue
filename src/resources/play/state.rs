@@ -41,7 +41,15 @@ impl RunState {
 		let party_type = PartyType::NoParty;
 		let (mut level, stats, rng) = roll_level(party_type, rogue, stats, rng);
 		level.lighting_enabled = true;
-		Self { stats, level, visor: DungeonVisor::Map, diary: Diary::default(), settings: Settings::default(), rng, move_result: None }
+		Self {
+			stats,
+			level,
+			visor: DungeonVisor::Map,
+			diary: Diary::default(),
+			settings: Settings::default(),
+			rng,
+			move_result: None,
+		}
 	}
 	pub fn rng(&mut self) -> &mut ChaCha8Rng {
 		&mut self.rng

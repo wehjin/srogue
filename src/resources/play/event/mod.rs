@@ -87,15 +87,17 @@ pub enum RunStep {
 	Redirect(RunEvent),
 	Effect(RunState, RunEffect),
 }
-fn _descend(state: RunState) -> RunStep {
-	let RunState { mut stats, level, visor, diary, settings, mut rng, move_result } = state;
-	let party_type = if stats.is_party_depth(&level.rogue.depth) {
-		stats.party_depth = stats.party_depth.roll_next(&level.rogue.depth, &mut rng);
+fn _descend(mut state: RunState) -> RunStep {
+	let party_type = if state.stats.is_party_depth(&state.level.rogue.depth) {
+		let rogue_depth = state.level.rogue.depth;
+		state.stats.party_depth = state.stats.party_depth.roll_next(&rogue_depth, state.rng());
 		PartyType::PartyRollBig
 	} else {
 		PartyType::NoParty
 	};
-	let (level, stats, rng) = roll_level(party_type, level.rogue, stats, rng);
-	let state = RunState { stats, level, visor, diary, settings, rng, move_result };
+	let (level, stats, rng) = roll_level(party_type, state.level.rogue, state.stats, state.rng);
+	state.level = level;
+	state.stats = stats;
+	state.rng = rng;
 	RunStep::Exit(state)
 }

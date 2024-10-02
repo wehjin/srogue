@@ -1,9 +1,7 @@
 use crate::actions::GameUpdater;
-use crate::components::hunger::HungerLevel;
 use crate::init::{Dungeon, GameState};
 use crate::level::add_exp;
 use crate::pack::pack_letter;
-use crate::resources::avatar::Avatar;
 use crate::prelude::food_kind::{FRUIT, RATION};
 use crate::prelude::object_what::ObjectWhat::Food;
 use crate::prelude::object_what::PackFilter::Foods;
@@ -53,8 +51,6 @@ fn eat(game: &mut GameState) {
 			};
 			game.player.rogue.moves_left /= 3;
 			game.player.rogue.moves_left += moves;
-			let health = game.as_health_mut();
-			health.hunger = HungerLevel::Normal;
 			game.as_diary_mut().set_stats_changed(true);
 			crate::r#use::vanish(obj_id, true, game);
 		}
