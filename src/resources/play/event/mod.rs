@@ -4,7 +4,7 @@ use crate::resources::level::PartyType;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::one_move::OneMove;
-use crate::resources::play::event::pick_up::PickUp;
+use crate::resources::play::event::pick_up::PickUpRegMove;
 use crate::resources::play::event::reg_move::RegMove;
 use crate::resources::play::seed::StepSeed;
 use crate::resources::play::state::RunState;
@@ -26,7 +26,7 @@ pub enum RunEvent {
 
 	Message(Message),
 	OneMove(OneMove),
-	PickUp(PickUp),
+	PickUp(PickUpRegMove),
 	RegisterMove(RegMove),
 
 	PlayerCloseModal(RunState),

@@ -1,4 +1,3 @@
-use crate::resources::rogue::energy::RogueEnergy;
 use crate::init::Dungeon;
 use crate::monster::{mv_mons, put_wanderer};
 use crate::motion::MoveResult;
@@ -12,10 +11,11 @@ use crate::resources::play::event::message::Message;
 use crate::resources::play::event::state_action::StateAction;
 use crate::resources::play::event::{RunEvent, RunStep};
 use crate::resources::play::state::RunState;
+use crate::resources::rogue::energy::RogueEnergy;
 use crate::score::killed_by;
 
 #[derive(Debug, Clone)]
-pub struct RegMove(pub RunState, pub Option<MoveResult>);
+pub struct RegMove(pub RunState);
 
 impl StateAction for RegMove {
 	fn into_event(self) -> RunEvent {
@@ -23,67 +23,67 @@ impl StateAction for RegMove {
 	}
 
 	fn dispatch(self, ctx: &mut RunContext) -> RunStep {
-		let Self(mut state, move_result) = self;
+		let Self(mut state) = self;
 		let old_energy = state.rogue_energy();
-		state = reg_move(state, ctx);
-		let energy = state.rogue_energy();
-		match energy {
-			RogueEnergy::Normal | RogueEnergy::Hungry | RogueEnergy::Weak => {
-				if energy != old_energy || state.as_health().confused.is_active() {
-					state.move_result = Some(move_result.unwrap_or(MoveResult::StoppedOnSomething));
-					RunStep::Effect(state, RunEffect::AwaitMove)
-				} else {
-					state.move_result = Some(move_result.unwrap_or(MoveResult::Moved));
-					RunStep::Effect(state, RunEffect::AwaitMove)
-				}
-			}
-			RogueEnergy::Faint => {
-				state.move_result = Some(move_result.unwrap_or(MoveResult::StoppedOnSomething));
-				RunStep::Effect(state, RunEffect::AwaitMove)
-			}
-			RogueEnergy::Starved => {
-				state.move_result = Some(move_result.unwrap_or(MoveResult::StoppedOnSomething));
-				RunStep::Exit(state)
-			}
+		state = reg_move(state, old_energy, ctx);
+
+		let new_energy = state.rogue_energy();
+		if RogueEnergy::Starved == new_energy {
+			RunStep::Exit(state)
+		} else {
+			RunStep::Effect(state, RunEffect::AwaitMove)
 		}
 	}
 }
 
 
 /// Sets [game.rogue_energy] to some value of [RogueEnergy] before returning.
-fn reg_move(mut game: RunState, ctx: &mut RunContext) -> RunState {
+fn reg_move(mut game: RunState, old_energy: RogueEnergy, ctx: &mut RunContext) -> RunState {
 	// Take care of hunger.
 	if game.is_max_depth() || game.as_fighter().moves_left <= RogueEnergy::MAX_HUNGRY {
-		game = check_hunger(game, ctx);
-		if RogueEnergy::Starved == game.rogue_energy() {
-			game
-		} else {
-			move_monsters_etc(game, ctx)
-		}
+		check_hunger_etc(game, old_energy, ctx)
 	} else {
-		move_monsters_etc(game, ctx)
+		move_monsters_etc(game, old_energy, ctx)
 	}
 }
 
-fn move_monsters_etc(mut game: RunState, ctx: &mut RunContext) -> RunState {
+fn check_hunger_etc(mut game: RunState, old_energy: RogueEnergy, ctx: &mut RunContext) -> RunState {
+	game = check_hunger(game, ctx);
+	if RogueEnergy::Starved == game.rogue_energy() {
+		update_move_result(game, old_energy)
+	} else {
+		move_monsters_etc(game, old_energy, ctx)
+	}
+}
+
+fn move_monsters_etc(mut game: RunState, old_energy: RogueEnergy, ctx: &mut RunContext) -> RunState {
 	// Move monsters.
 	game = mv_mons(game, ctx);
 	game = update_wanderers(game);
 	game = update_health(game);
+	game = update_move_result(game, old_energy);
 	game
 }
 
-fn update_wanderers(mut game: RunState) -> RunState {
-	// Every 120 moves, add a wanderer.
-	let next_m_move = game.m_moves() + 1;
-	if next_m_move >= 120 {
-		*game.m_moves_mut() = 0;
-		put_wanderer(&mut game);
-	} else {
-		*game.m_moves_mut() = next_m_move;
-	}
-	game
+fn update_move_result(mut state: RunState, old_energy: RogueEnergy) -> RunState {
+	state.move_result = match state.move_result {
+		None => {
+			let energy = state.rogue_energy();
+			let energy_changed = energy != old_energy;
+			let starved = energy == RogueEnergy::Starved;
+			let confused = state.as_health().confused.is_active();
+			let interrupted = state.diary.interrupted;
+			if energy_changed || starved || confused || interrupted {
+				Some(MoveResult::StoppedOnSomething)
+			} else {
+				Some(MoveResult::Moved)
+			}
+		}
+		Some(value) => Some(value)
+	};
+	state
 }
+
 fn update_health(mut game: RunState) -> RunState {
 	// Take care of hallucinations.
 	if game.as_health().halluc.is_active() {
@@ -143,6 +143,17 @@ fn update_health(mut game: RunState) -> RunState {
 	}
 	game
 }
+fn update_wanderers(mut game: RunState) -> RunState {
+	// Every 120 moves, add a wanderer.
+	let next_m_move = game.m_moves() + 1;
+	if next_m_move >= 120 {
+		*game.m_moves_mut() = 0;
+		put_wanderer(&mut game);
+	} else {
+		*game.m_moves_mut() = next_m_move;
+	}
+	game
+}
 
 fn check_hunger(mut game: RunState, ctx: &mut RunContext) -> RunState {
 	let calorie_burn = match game.as_ring_effects().calorie_burn() {
@@ -174,12 +185,8 @@ fn check_hunger(mut game: RunState, ctx: &mut RunContext) -> RunState {
 		game = Message::run_await_exit(game, report, interrupt, ctx);
 	}
 	match new_energy {
-		RogueEnergy::Normal | RogueEnergy::Hungry | RogueEnergy::Weak => {
-			game
-		}
-		RogueEnergy::Faint => {
-			RandomFaint::run(game, ctx)
-		}
+		RogueEnergy::Normal | RogueEnergy::Hungry | RogueEnergy::Weak => game,
+		RogueEnergy::Faint => RandomFaint::run(game, ctx),
 		RogueEnergy::Starved => {
 			killed_by(Ending::Starvation, &mut game);
 			game

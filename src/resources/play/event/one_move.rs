@@ -10,7 +10,7 @@ use crate::resources::level::wake::{wake_room, WakeType};
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::message::Message;
-use crate::resources::play::event::pick_up::{PickUp, PickupType};
+use crate::resources::play::event::pick_up::{PickUpRegMove, PickupType};
 use crate::resources::play::event::reg_move::RegMove;
 use crate::resources::play::event::state_action::{redirect, StateAction};
 use crate::resources::play::event::{RunEvent, RunStep};
@@ -67,22 +67,18 @@ fn step(state: State, ctx: &mut RunContext) -> State {
 			let being_held = state.as_health().being_held;
 			if being_held && no_monster_at_spot {
 				state.move_result = Some(MoveResult::MoveFailed);
-				State::End(redirect(Message::new(
-					state,
-					"you are being held",
-					true,
-					|state| RunStep::Effect(state, RunEffect::AwaitMove),
-				)))
+				// Wait for the player's next move after reporting being held.
+				let after_report = |state| RunStep::Effect(state, RunEffect::AwaitMove);
+				let report = "you are being held";
+				let next_step = redirect(Message::new(state, report, true, after_report));
+				State::End(next_step)
 			} else if in_bear_trap && no_monster_at_spot {
-				State::End(redirect(Message::new(
-					state,
-					"you are still stuck in the bear trap",
-					true,
-					|state| {
-						// Do a regular move here so that the bear trap counts down.
-						redirect(RegMove(state, Some(MoveResult::MoveFailed)))
-					},
-				)))
+				state.move_result = Some(MoveResult::MoveFailed);
+				// Do a regular move after reporting the bear trap so that the bear trap counts down.
+				let after_report = |state| redirect(RegMove(state));
+				let report = "you are still stuck in the bear trap";
+				let next_step = redirect(Message::new(state, report, true, after_report));
+				State::End(next_step)
 			} else {
 				State::CheckTeleport { state, to_spot, rogue_spot, allow_pickup }
 			}
@@ -104,7 +100,8 @@ fn step(state: State, ctx: &mut RunContext) -> State {
 				state.move_result = Some(MoveResult::MoveFailed);
 				let mon_id = state.get_monster_at(to_spot.0, to_spot.1).unwrap();
 				state = rogue_hit(state, mon_id, false, ctx);
-				State::End(redirect(RegMove(state, Some(MoveResult::MoveFailed))))
+				let next_step = redirect(RegMove(state));
+				State::End(next_step)
 			} else {
 				State::AdjustLighting { state, to_spot, rogue_spot, allow_pickup }
 			}
@@ -151,23 +148,29 @@ fn step(state: State, ctx: &mut RunContext) -> State {
 			// Pick up objects.
 			let has_object = state.level.try_object(LevelSpot::from(spot)).is_some();
 			if has_object {
+				// [pickup_object] will update [move_result].
 				let step = pickup_object(spot.0, spot.1, allow_pickup, state, ctx);
 				State::End(step)
 			} else {
 				State::CheckTraps { state, spot }
 			}
 		}
-		State::CheckTraps { state, spot: (row, col) } => {
+		State::CheckTraps { mut state, spot: (row, col) } => {
 			// Check for traps.
-			if state.is_any_door_at(row, col)
-				|| state.level.features.feature_at(LevelSpot::from_i64(row, col)).is_stairs()
-				|| state.is_any_trap_at(row, col) {
-				if state.as_health().levitate.is_inactive() & &state.is_any_trap_at(row, col) {
+			let is_door = state.is_any_door_at(row, col);
+			let is_stairs = state.level.features.feature_at(LevelSpot::from_i64(row, col)).is_stairs();
+			let is_trap = state.is_any_trap_at(row, col);
+			if is_door || is_stairs || is_trap {
+				let not_levitating = state.as_health().levitate.is_inactive();
+				if is_trap && not_levitating {
 					// TODO trap_player(row as usize, col as usize, game);
 				}
-				return State::End(redirect(RegMove(state, Some(MoveResult::StoppedOnSomething))));
+				state.move_result = Some(MoveResult::StoppedOnSomething);
+				State::End(redirect(RegMove(state)))
+			} else {
+				// RegMove will update [move_result].
+				State::End(redirect(RegMove(state)))
 			}
-			State::End(redirect(RegMove(state, None)))
 		}
 		State::End(_) => { panic!("Do not step the end state!") }
 	}
@@ -191,14 +194,17 @@ fn get_destination_spot(direction: MoveDirection, from_row: i64, from_col: i64, 
 	confused_direction.apply(from_row, from_col)
 }
 
-fn pickup_object(row: i64, col: i64, allow_pickup: bool, state: RunState, ctx: &mut RunContext) -> RunStep {
+fn pickup_object(row: i64, col: i64, allow_pickup: bool, mut state: RunState, ctx: &mut RunContext) -> RunStep {
 	if allow_pickup {
+		// Pick up the object and complete the move.
 		let spot = LevelSpot::from_i64(row, col);
-		PickUp(state, PickupType::AfterMove(spot)).dispatch(ctx)
+		PickUpRegMove(state, PickupType::AfterMove(spot)).dispatch(ctx)
 	} else {
-		let message = moved_onto_message(row, col, &state);
-		let post_step = move |state| redirect(RegMove(state, Some(MoveResult::StoppedOnSomething)));
-		Message::new(state, message, true, post_step).dispatch(ctx)
+		// Leave the object alone but stop moving and report we're on top of it. Then complete the move.
+		state.move_result = Some(MoveResult::StoppedOnSomething);
+		let after_report = move |state| redirect(RegMove(state));
+		let report = moved_onto_message(row, col, &state);
+		Message::new(state, report, true, after_report).dispatch(ctx)
 	}
 }
 

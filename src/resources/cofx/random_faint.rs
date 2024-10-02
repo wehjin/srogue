@@ -1,4 +1,3 @@
-use crate::resources::rogue::energy::RogueEnergy;
 use crate::init::Dungeon;
 use crate::monster::mv_mons;
 use crate::motion::YOU_CAN_MOVE_AGAIN;
@@ -6,6 +5,7 @@ use crate::resources::avatar::Avatar;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::event::message::Message;
 use crate::resources::play::state::RunState;
+use crate::resources::rogue::energy::RogueEnergy;
 use rand::Rng;
 use FaintState::{End, MoveMonsters, Start};
 
