@@ -1,7 +1,6 @@
 use rand::thread_rng;
 use wand_kind::WandKind;
 
-use crate::hit::rogue_hit;
 use crate::init::GameState;
 use crate::level::Level;
 use crate::monster::{MonsterIndex, MonsterMash};
@@ -144,7 +143,7 @@ pub fn zap_monster(mon_id: u64, which_kind: u16, game: &mut GameState) {
 			monster.nap_length = get_rand(3, 6);
 		}
 		WandKind::MagicMissile => {
-			rogue_hit(mon_id, true, game);
+			todo!("rogue_hit(mon_id, true, game);")
 		}
 		WandKind::Cancellation => {
 			if game.mash.monster(mon_id).m_flags.holds {

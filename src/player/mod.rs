@@ -16,7 +16,6 @@ use crate::ring::effects::RingEffects;
 use crate::room::RoomType;
 use crate::room::RoomType::Maze;
 use crate::settings::Settings;
-use crate::weapons::kind::WeaponKind;
 
 pub(crate) mod rings;
 pub(crate) mod objects;
@@ -137,14 +136,9 @@ impl RogueHealth {
 
 impl Player {
 	pub fn is_blind(&self) -> bool { self.health.is_blind() }
-	pub fn buffed_strength(&self) -> isize {
-		self.ring_effects.apply_add_strength(self.cur_strength())
-	}
 	pub fn raise_hp_max(&mut self, raise: isize) {
 		self.rogue.hp_max = (self.rogue.hp_max + raise).min(MAX_HP);
 	}
-	pub fn cur_strength(&self) -> isize { self.rogue.str_current }
-	pub fn max_strength(&self) -> isize { self.rogue.str_max }
 	pub fn raise_strength(&mut self) {
 		self.rogue.str_current = (self.rogue.str_current + 1).min(MAX_STRENGTH);
 		if self.rogue.str_current > self.rogue.str_max {
@@ -182,7 +176,6 @@ impl Player {
 	pub fn pack_objects(&self) -> &Vec<Object> { self.rogue.pack.objects() }
 
 	pub fn pack_mut(&mut self) -> &mut ObjectPack { &mut self.rogue.pack }
-
 }
 
 pub const LAST_DUNGEON: usize = 99;
@@ -219,24 +212,6 @@ impl Player {
 			obj.in_use_flags &= !BEING_WIELDED;
 		}
 		self.rogue.weapon = None;
-	}
-	pub fn weapon_id(&self) -> Option<ObjectId> { self.rogue.weapon }
-	pub fn weapon_kind(&self) -> Option<WeaponKind> {
-		self.weapon().map(|it| it.weapon_kind()).flatten()
-	}
-	pub fn weapon(&self) -> Option<&Object> {
-		if let Some(id) = self.weapon_id() {
-			self.as_rogue_pack().object_if_what(id, ObjectWhat::Weapon)
-		} else {
-			None
-		}
-	}
-	pub fn weapon_mut(&mut self) -> Option<&mut Object> {
-		if let Some(id) = self.weapon_id() {
-			self.pack_mut().object_if_what_mut(id, ObjectWhat::Weapon)
-		} else {
-			None
-		}
 	}
 	pub fn maintain_max_gold(&mut self) {
 		if self.rogue.gold > MAX_GOLD {

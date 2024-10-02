@@ -1,7 +1,7 @@
 use rand::prelude::SliceRandom;
 use rand::{thread_rng, Rng};
 
-use crate::hit::{get_hit_chance, get_weapon_damage, mon_damage};
+use crate::hit::{get_hit_chance, get_weapon_damage};
 use crate::init::{Dungeon, GameState};
 use crate::level::DungeonCell;
 use crate::monster::{mv_aquatars, MonsterIndex};
@@ -146,7 +146,7 @@ fn throw_at_monster(mon_id: u64, obj_id: ObjectId, game: &mut GameState) -> bool
 			}
 			damage
 		};
-		mon_damage(mon_id, damage, game);
+		todo!("mon_damage(mon_id, damage, game);")
 	}
 	true
 }

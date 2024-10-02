@@ -13,6 +13,7 @@ use crate::resources::rogue::spot::RogueSpot;
 use crate::ring::effects::RingEffects;
 use crate::ring::PlayerHand;
 use crate::settings::Settings;
+use crate::weapons::kind::WeaponKind;
 
 pub trait Avatar {
 	fn as_settings(&self) -> &Settings;
@@ -47,6 +48,32 @@ pub trait Avatar {
 	fn debuf_exp(&self) -> isize {
 		self.hand_usage().count_hands()
 	}
+	fn buffed_strength(&self) -> isize {
+		self.as_ring_effects().apply_add_strength(self.cur_strength())
+	}
+	fn cur_strength(&self) -> isize { self.as_fighter().str_current }
+	fn max_strength(&self) -> isize { self.as_fighter().str_max }
+
+	fn weapon_id(&self) -> Option<ObjectId> { self.as_fighter().weapon }
+	fn weapon_kind(&self) -> Option<WeaponKind> {
+		self.weapon().map(|it| it.weapon_kind()).flatten()
+	}
+	fn weapon(&self) -> Option<&Object> {
+		if let Some(id) = self.weapon_id() {
+			self.as_rogue_pack().object_if_what(id, ObjectWhat::Weapon)
+		} else {
+			None
+		}
+	}
+	fn weapon_mut(&mut self) -> Option<&mut Object> {
+		if let Some(id) = self.weapon_id() {
+			self.as_rogue_pack_mut().object_if_what_mut(id, ObjectWhat::Weapon)
+		} else {
+			None
+		}
+	}
+
+
 	fn ring_id(&self, hand: PlayerHand) -> Option<ObjectId> {
 		match hand {
 			PlayerHand::Left => self.as_fighter().left_ring,
@@ -79,6 +106,9 @@ pub trait Avatar {
 	}
 	fn as_rogue_pack(&self) -> &ObjectPack {
 		&self.as_fighter().pack
+	}
+	fn as_rogue_pack_mut(&mut self) -> &mut ObjectPack {
+		&mut self.as_fighter_mut().pack
 	}
 
 	fn armor(&self) -> Option<&Object> {

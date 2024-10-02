@@ -5,7 +5,7 @@ use crate::level::constants::{DCOLS, DROWS};
 use crate::level::{add_exp, hp_raise, Level, LEVEL_POINTS};
 use crate::monster::{mon_can_go_and_reach, mon_name, mv_monster, MonsterMash};
 use crate::motion::YOU_CAN_MOVE_AGAIN;
-use crate::objects::{alloc_object, get_armor_class, gr_object, place_at, Object};
+use crate::objects::{alloc_object, get_armor_class, Object};
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::{Gold, Weapon};
 use crate::prelude::*;
@@ -16,6 +16,9 @@ use crate::resources::arena::Arena;
 use crate::resources::avatar::Avatar;
 use crate::resources::dice::roll_chance;
 use crate::resources::infra::Infra;
+use crate::resources::level::feature_grid::feature::Feature;
+use crate::resources::level::setup::roll_object;
+use crate::resources::level::size::LevelSpot;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::event::mon_hit::mon_hit;
 use crate::resources::play::state::RunState;
@@ -168,22 +171,25 @@ fn disappear(mon_id: u64, game: &mut GameState) {
 }
 
 
-pub fn cough_up(mon_id: u64, game: &mut GameState) {
-	if game.player.cur_depth < game.player.max_depth {
+pub fn cough_up(mon_id: u64, game: &mut RunState) {
+	if !game.level.rogue.depth.is_max() {
 		return;
 	}
-	let obj = if game.mash.monster_flags(mon_id).steals_gold {
-		let mut obj = alloc_object(&mut thread_rng());
+	let obj = if game.as_monster_flags(mon_id).steals_gold {
+		let mut obj = alloc_object(game.rng());
 		obj.what_is = Gold;
-		obj.quantity = get_rand((game.player.cur_depth * 15) as i16, (game.player.cur_depth * 30) as i16);
+		obj.quantity = game.rng.gen_range((game.rogue_depth() * 15) as i16..=(game.rogue_depth() * 30) as i16);
 		obj
 	} else {
-		if !rand_percent(game.mash.monster(mon_id).drop_percent) {
+		if !rand_percent(game.as_monster(mon_id).drop_percent) {
 			return;
 		}
-		gr_object(&mut game.player)
+		let mut food_drops = game.stats.food_drops;
+		let object = roll_object(game.rogue_depth(), &mut food_drops, game.rng());
+		game.stats.food_drops = food_drops;
+		object
 	};
-	let monster = game.mash.monster(mon_id);
+	let monster = game.as_monster(mon_id);
 	let row = monster.spot.row;
 	let col = monster.spot.col;
 	for n in 0..=5 {
@@ -208,18 +214,25 @@ pub fn cough_up(mon_id: u64, game: &mut GameState) {
 	}
 }
 
-fn try_to_cough(row: i64, col: i64, obj: &Object, game: &mut GameState) -> bool {
+fn try_to_cough(row: i64, col: i64, obj: &Object, game: &mut RunState) -> bool {
 	if row < MIN_ROW || row > (DROWS - 2) as i64 || col < 0 || col > (DCOLS - 1) as i64 {
 		return false;
 	}
-	let dungeon_cell = game.level.dungeon[row as usize][col as usize];
-	if !(dungeon_cell.has_object() || dungeon_cell.is_stairs() || dungeon_cell.is_any_trap())
-		&& (dungeon_cell.is_any_tunnel() || dungeon_cell.is_any_floor() || dungeon_cell.is_any_door()) {
-		place_at(obj.clone(), row, col, &mut game.level, &mut game.ground);
-		game.render_spot(DungeonSpot { row, col });
-		return true;
+	if game.has_object_at(row, col) {
+		return false;
 	}
-	false
+	let spot = LevelSpot::from_i64(row, col);
+	let feature = game.level.features.feature_at(spot);
+	match feature {
+		Feature::None | Feature::HorizWall | Feature::VertWall | Feature::Stairs | Feature::Trap(_, _) => {
+			false
+		}
+		Feature::Floor | Feature::Tunnel | Feature::ConcealedTunnel | Feature::Door | Feature::ConcealedDoor(_) => {
+			let object = obj.clone();
+			game.level.put_object(spot, object);
+			true
+		}
+	}
 }
 
 pub fn seek_gold(mut game: RunState, mon_id: u64, ctx: &mut RunContext) -> (bool, RunState) {
@@ -269,16 +282,14 @@ fn gold_at(row: i64, col: i64, game: &impl Dungeon) -> bool {
 	false
 }
 
-pub fn check_imitator(mon_id: u64, game: &mut GameState) -> bool {
+pub fn check_imitator(mon_id: u64, game: &mut RunState) -> bool {
 	if game.as_monster(mon_id).imitates() {
 		game.as_monster_mut(mon_id).wake_up();
 
-		if game.player.health.blind.is_inactive() {
-			let mon_name = mon_name(mon_id, game);
-			let mon_spot = game.as_monster(mon_id).spot;
-			game.render_spot(mon_spot);
-			game.player.interrupt_and_slurp();
-			game.diary.add_entry(&format!("wait, that's a {mon_name}!"));
+		if game.as_health().blind.is_inactive() {
+			game.interrupt_and_slurp();
+			let report = format!("wait, that's a {}!", mon_name(mon_id, game));
+			game.as_diary_mut().add_entry(&report);
 		}
 		return true;
 	}

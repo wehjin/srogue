@@ -7,51 +7,58 @@ use crate::message::sound_bell;
 use crate::monster::{mon_name, Monster};
 use crate::motion::{can_move, is_direction, one_move_rogue_legacy, MoveDirection};
 use crate::objects::Object;
-use crate::player::Player;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
 use crate::random::rand_percent;
+use crate::resources::arena::Arena;
 use crate::resources::avatar::Avatar;
 use crate::resources::diary;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
+use crate::resources::level::size::LevelSpot;
+use crate::resources::play::context::RunContext;
+use crate::resources::play::event::message::Message;
 use crate::resources::play::event::mon_hit::fight_report;
+use crate::resources::play::state::RunState;
 use crate::score::killed_by;
 use crate::spec_hit::{check_imitator, cough_up};
 use crate::throw::Motion;
 
-pub fn rogue_hit(mon_id: u64, force_hit: bool, game: &mut GameState) {
-	if check_imitator(mon_id, game) {
-		return;
+pub fn rogue_hit(mut game: RunState, mon_id: u64, force_hit: bool, ctx: &mut RunContext) -> RunState {
+	if check_imitator(mon_id, &mut game) {
+		return game;
 	}
-	let hit_chance = if force_hit { 100 } else { get_hit_chance_player(game.player.weapon(), &game.player) };
-	let hit_chance = if game.player.wizard { hit_chance * 2 } else { hit_chance };
+	let hit_chance = if force_hit { 100 } else { get_hit_chance_player(&game) };
+	let hit_chance = if game.wizard() { hit_chance * 2 } else { hit_chance };
 	if !rand_percent(hit_chance) {
-		if game.player.fight_monster.is_none() {
+		if game.level.rogue.fight_to_death.is_none() {
 			let diary = game.as_diary_mut();
 			diary.hit_message = Some("you miss".to_string());
 		}
 	} else {
-		let player_exp = game.player.buffed_exp();
-		let player_debuf = game.player.debuf_exp();
-		let player_str = game.player.buffed_strength();
-		let damage = get_weapon_damage(game.player.weapon(), player_str, player_exp, player_debuf);
-		let damage = if game.player.wizard { damage * 3 } else { damage };
-		match mon_damage(mon_id, damage, game) {
+		let player_exp = game.buffed_exp();
+		let player_debuf = game.debuf_exp();
+		let player_str = game.buffed_strength();
+		let damage = get_weapon_damage(game.weapon(), player_str, player_exp, player_debuf);
+		let damage = if game.wizard() { damage * 3 } else { damage };
+		let (effect, state) = mon_damage(mon_id, damage, game, ctx);
+		match effect {
 			MonDamageEffect::MonsterDies(_) => {
 				// mon_id is no longer in the mash.
-				return;
+				return state;
 			}
 			MonDamageEffect::MonsterSurvives => {
-				if game.player.fight_monster.is_none() {
+				game = state;
+				if game.level.rogue.fight_to_death.is_none() {
 					let diary = game.as_diary_mut();
 					diary.hit_message = Some("you hit".to_string());
 				}
 			}
 		}
 	}
-	let monster = game.mash.monster_mut(mon_id);
+	let monster = game.as_monster_mut(mon_id);
 	monster.m_flags.seeks_gold = false;
 	monster.wake_up();
+	game
 }
 
 pub fn rogue_damage(d: isize, mon_id: u64, game: &mut impl Dungeon) {
@@ -113,32 +120,28 @@ pub enum MonDamageEffect {
 	MonsterSurvives,
 }
 
-pub fn mon_damage(mon_id: u64, damage: isize, game: &mut GameState) -> MonDamageEffect {
-	game.mash.monster_mut(mon_id).hp_to_kill -= damage;
-	if game.mash.monster(mon_id).hp_to_kill <= 0 {
+pub fn mon_damage(mon_id: u64, damage: isize, mut game: RunState, ctx: &mut RunContext) -> (MonDamageEffect, RunState) {
+	game.as_monster_mut(mon_id).hp_to_kill -= damage;
+	if game.as_monster(mon_id).hp_to_kill <= 0 {
+		game.level.rogue.fight_to_death = None;
+		cough_up(mon_id, &mut game);
 		{
-			let spot = game.mash.monster(mon_id).spot;
-			game.level.cell_mut(spot).set_monster(false);
-			game.render_spot(spot);
+			let monster_report = format!("defeated the {}", mon_name(mon_id, &game));
+			let fight_report = fight_report(monster_report, &mut game);
+			game = Message::run_await_exit(game, fight_report, true, ctx);
 		}
-		game.player.fight_monster = None;
-		cough_up(mon_id, game);
-		{
-			game.interrupt_and_slurp();
-			let monster_name = mon_name(mon_id, game);
-			let monster_report = format!("defeated the {}", monster_name);
-			let fight_report = fight_report(monster_report, game);
-			game.as_diary_mut().add_entry(&fight_report);
-		}
-		add_exp(game.mash.monster(mon_id).kill_exp(), true, game, &mut thread_rng());
-		if game.mash.monster_flags(mon_id).holds {
+		add_exp(game.as_monster(mon_id).kill_exp(), true, &mut game, &mut thread_rng());
+		if game.as_monster_flags(mon_id).holds {
 			let health = game.as_health_mut();
 			health.being_held = false;
 		}
-		let removed = game.mash.remove_monster(game.mash.monster(mon_id).id());
-		return MonDamageEffect::MonsterDies(removed);
+		let removed = {
+			let spot = game.as_monster(mon_id).spot;
+			game.level.take_monster(LevelSpot::from(spot)).unwrap()
+		};
+		return (MonDamageEffect::MonsterDies(removed), game);
 	}
-	MonDamageEffect::MonsterSurvives
+	(MonDamageEffect::MonsterSurvives, game)
 }
 
 pub fn fight(to_the_death: bool, game: &mut GameState) {
@@ -204,10 +207,10 @@ pub fn fight(to_the_death: bool, game: &mut GameState) {
 	}
 }
 
-pub fn get_hit_chance_player(weapon: Option<&Object>, player: &Player) -> usize {
-	let player_exp = player.buffed_exp();
-	let player_debuf = player.debuf_exp();
-	get_hit_chance(weapon, player_exp, player_debuf)
+pub fn get_hit_chance_player(state: &RunState) -> usize {
+	let player_exp = state.buffed_exp();
+	let player_debuf = state.debuf_exp();
+	get_hit_chance(state.weapon(), player_exp, player_debuf)
 }
 
 pub fn get_hit_chance(obj: Option<&Object>, buffed_exp: isize, debuf_exp: isize) -> usize {

@@ -7,6 +7,7 @@ use crate::player::Player;
 use crate::prelude::object_what::ObjectWhat::{Armor, Potion, Ring, Scroll, Wand, Weapon};
 use crate::prelude::object_what::PackFilter::{AllObjects, Scrolls};
 use crate::random::coin_toss;
+use crate::resources::avatar::Avatar;
 use crate::resources::diary;
 use crate::resources::keyboard::CANCEL_CHAR;
 use crate::room::draw_magic_map;
@@ -54,7 +55,7 @@ fn read_scroll(game: &mut GameState) {
 						}
 						ScrollKind::EnchWeapon => {
 							let glow_color = crate::r#use::get_ench_color(&game.player);
-							if let Some(weapon_id) = game.player.weapon_id() {
+							if let Some(weapon_id) = game.weapon_id() {
 								let weapon_name = game.player.name_of(weapon_id);
 								let weapon = game.player.expect_object_mut(weapon_id);
 								let plural_char = if weapon.quantity <= 1 { "s" } else { "" };

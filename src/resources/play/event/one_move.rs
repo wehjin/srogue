@@ -1,3 +1,4 @@
+use crate::hit::rogue_hit;
 use crate::init::Dungeon;
 use crate::inventory::get_obj_desc;
 use crate::motion::{MoveDirection, MoveResult};
@@ -100,9 +101,9 @@ fn step(state: State, ctx: &mut RunContext) -> State {
 			// What if there is a monster is where we want to go?
 			let monster_in_spot = state.has_monster_at(to_spot.0, to_spot.1);
 			if monster_in_spot {
-				let _mon_id = state.get_monster_at(to_spot.0, to_spot.1).unwrap();
 				state.move_result = Some(MoveResult::MoveFailed);
-				// TODO rogue_hit(mon_id, false, game);
+				let mon_id = state.get_monster_at(to_spot.0, to_spot.1).unwrap();
+				state = rogue_hit(state, mon_id, false, ctx);
 				State::End(redirect(RegMove(state, Some(MoveResult::MoveFailed))))
 			} else {
 				State::AdjustLighting { state, to_spot, rogue_spot, allow_pickup }
