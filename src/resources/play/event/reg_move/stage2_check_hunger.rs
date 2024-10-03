@@ -3,12 +3,11 @@ use crate::prelude::ending::Ending;
 use crate::resources::avatar::Avatar;
 use crate::resources::cofx::random_faint::RandomFaint;
 use crate::resources::play::context::RunContext;
-use crate::resources::play::event::game::Dispatch;
+use crate::resources::play::event::game::{Dispatch, GameEventVariant};
 use crate::resources::play::event::message::Message;
-use crate::resources::play::event::reg_move::RegMoveEvent;
-use crate::resources::play::event::reg_move::stage3_move_monsters::Stage3MoveMonsters;
-use crate::resources::play::event::reg_move::stage5_update_move_result::Stage5UpdateMoveResult;
 use crate::resources::play::event::reg_move::stage::RegMoveStage;
+use crate::resources::play::event::reg_move::stage5_update_move_result::Stage5UpdateMoveResult;
+use crate::resources::play::event::reg_move::RegMoveEvent;
 use crate::resources::play::event::RunStep;
 use crate::resources::play::state::RunState;
 use crate::resources::rogue::energy::RogueEnergy;
@@ -31,7 +30,7 @@ impl Dispatch for Stage2CheckHunger {
 		if RogueEnergy::Starved == state.rogue_energy() {
 			Stage5UpdateMoveResult::new(old_energy).into_redirect(state)
 		} else {
-			Stage3MoveMonsters::new(old_energy).into_redirect(state)
+			RegMoveEvent::Stage3MoveMonsters { old_energy, mon_ids: None }.into_redirect(state)
 		}
 	}
 }

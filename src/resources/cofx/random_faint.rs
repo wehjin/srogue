@@ -1,5 +1,5 @@
 use crate::init::Dungeon;
-use crate::monster::mv_mons;
+use crate::resources::play::event::reg_move::stage3_move_monsters::mv_mons;
 use crate::motion::YOU_CAN_MOVE_AGAIN;
 use crate::resources::avatar::Avatar;
 use crate::resources::play::context::RunContext;

@@ -44,52 +44,6 @@ pub fn put_mons(game: &mut GameState) {
 	}
 }
 
-pub fn mv_mons(mut game: RunState, ctx: &mut RunContext) -> RunState {
-	if game.as_health().haste_self.is_half_active() {
-		return game;
-	}
-	for mon_id in game.monster_ids() {
-		if game.cleaned_up().is_some() {
-			break;
-		}
-		let mut done_with_monster = false;
-		if game.as_monster(mon_id).is_hasted() {
-			let rogue_row = game.rogue_row();
-			let rogue_col = game.rogue_col();
-			game = mv_monster(game, mon_id, rogue_row, rogue_col, false, ctx);
-			if game.get_monster(mon_id).is_none() {
-				done_with_monster = true;
-			}
-		} else if game.as_monster(mon_id).is_slowed() {
-			game.as_monster_mut(mon_id).flip_slowed_toggle();
-			if game.as_monster(mon_id).is_slowed_toggle() {
-				done_with_monster = true;
-			}
-		}
-		if !done_with_monster && game.as_monster(mon_id).is_confused() {
-			if move_confused(mon_id, false, &mut game) {
-				done_with_monster = true;
-			}
-		}
-		if !done_with_monster {
-			let mut flew = false;
-			let rogue_row = game.rogue_row();
-			let rogue_col = game.rogue_col();
-
-			if game.as_monster(mon_id).flies()
-				&& !game.as_monster(mon_id).is_napping()
-				&& !mon_can_go_and_reach(mon_id, rogue_row, rogue_col, false, &game) {
-				flew = true;
-				game = mv_monster(game, mon_id, rogue_row, rogue_col, false, ctx);
-			}
-			if !(flew && mon_can_go_and_reach(mon_id, rogue_row, rogue_col, false, &game)) {
-				game = mv_monster(game, mon_id, rogue_row, rogue_col, false, ctx);
-			}
-		}
-	}
-	game
-}
-
 pub fn party_monsters(rn: usize, n: usize, level_depth: usize, game: &mut GameState, rng: &mut impl Rng) {
 	let first_level_shift = level_depth % 3;
 	let n = n + n;
