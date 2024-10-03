@@ -25,12 +25,9 @@ pub fn rogue_hit(mut game: RunState, mon_id: u64, force_hit: bool, ctx: &mut Run
 		RogueStrike::DefeatsTarget => {
 			game.level.rogue.fight_to_death = None;
 			cough_up(mon_id, &mut game);
-			{
-				let diary = game.as_diary_mut();
-				diary.hit_message = None;
-				let report = format!("defeated the {}", mon_name(mon_id, &game));
-				game = Message::run_await_exit(game, report, true, ctx);
-			}
+			let monster_name = mon_name(mon_id, &game);
+			let report = format!("defeated the {}", monster_name);
+			game = Message::run_await_exit(game, report, true, ctx);
 			let removed = game.level.take_monster(LevelSpot::from(game.as_monster(mon_id).spot)).unwrap();
 			if removed.m_flags.holds {
 				let health = game.as_health_mut();
@@ -260,4 +257,3 @@ pub fn get_weapon_damage(weapon: Option<&Object>, buffed_str: isize, buffed_exp:
 }
 
 mod damage_stat;
-
