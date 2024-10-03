@@ -1,6 +1,7 @@
 use crate::hit::rogue_hit;
 use crate::init::Dungeon;
 use crate::inventory::get_obj_desc;
+use crate::level::hp_raise;
 use crate::motion::{MoveDirection, MoveResult};
 use crate::odds::R_TELE_PERCENT;
 use crate::resources::arena::Arena;
@@ -11,7 +12,7 @@ use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::game::{Dispatch, GameEvent, GameEventVariant};
 use crate::resources::play::event::message::Message;
-use crate::resources::play::event::one_move::OneMoveEvent::{Stage1Start, Stage2CheckStuck, Stage3CheckTeleport, Stage4CheckMonster, Stage5AdjustLighting, Stage6MoveRogue, Stage7PickupObjects, Stage8CheckStoppedAndTraps};
+use crate::resources::play::event::one_move::OneMoveEvent::{Stage1Start, Stage2CheckStuck, Stage3CheckTeleport, Stage4AUpgradeRogue, Stage4CheckMonster, Stage5AdjustLighting, Stage6MoveRogue, Stage7PickupObjects, Stage8CheckStoppedAndTraps};
 use crate::resources::play::event::pick_up::{PickUpRegMove, PickupType};
 use crate::resources::play::event::reg_move::RegMoveEvent;
 use crate::resources::play::event::state_action::{redirect, StateAction};
@@ -25,6 +26,7 @@ pub enum OneMoveEvent {
 	Stage2CheckStuck { to_spot: (i64, i64), rogue_spot: (i64, i64), allow_pickup: bool },
 	Stage3CheckTeleport { to_spot: (i64, i64), rogue_spot: (i64, i64), allow_pickup: bool },
 	Stage4CheckMonster { to_spot: (i64, i64), rogue_spot: (i64, i64), allow_pickup: bool },
+	Stage4AUpgradeRogue,
 	Stage5AdjustLighting { to_spot: (i64, i64), rogue_spot: (i64, i64), allow_pickup: bool },
 	Stage6MoveRogue { to_spot: (i64, i64), allow_pickup: bool },
 	Stage7PickupObjects { spot: (i64, i64), allow_pickup: bool },
@@ -101,10 +103,26 @@ impl Dispatch for OneMoveEvent {
 					state.move_result = Some(MoveResult::MoveFailed);
 					let mon_id = state.get_monster_at(to_spot.0, to_spot.1).unwrap();
 					state = rogue_hit(state, mon_id, false, ctx);
-					RegMoveEvent::new().into_redirect(state)
+					Stage4AUpgradeRogue.into_redirect(state)
 				} else {
 					// No monster. Go to next stage.
 					Stage5AdjustLighting { to_spot, rogue_spot, allow_pickup }.into_redirect(state)
+				}
+			}
+			Stage4AUpgradeRogue => {
+				if let Some(promotion_level) = state.as_fighter().exp.can_promote() {
+					// Update rogue's hp and exp level.
+					let hp = hp_raise(state.wizard(), state.rng());
+					state.upgrade_hp(hp);
+					state.as_fighter_mut().exp.set_level(promotion_level);
+					state.as_diary_mut().set_stats_changed(true);
+					// Send welcome message and try again since we may have more upgrades to consider.
+					let post_report = |state| Stage4AUpgradeRogue.into_redirect(state);
+					let report = format!("welcome to level {}", promotion_level);
+					Message::new(state, report, false, post_report).into_redirect()
+				} else {
+					// Done upgrading.
+					RegMoveEvent::new().into_redirect(state)
 				}
 			}
 			Stage5AdjustLighting { to_spot, rogue_spot, allow_pickup } => {

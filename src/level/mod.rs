@@ -596,6 +596,10 @@ impl RogueExp {
 	pub fn raise_level(&mut self) {
 		self.points = LEVEL_POINTS[self.level - 1];
 	}
+	pub fn add_points(&mut self, value: usize) {
+		self.points += value;
+	}
+
 	pub fn add_points_take_old(&mut self, points: usize) -> Self {
 		let old = self.to_owned();
 		let new_level;
@@ -610,10 +614,32 @@ impl RogueExp {
 		self.level = new_level;
 		old
 	}
+	pub fn can_promote(&self) -> Option<usize> {
+		let current_level_promotion = Self::max_points_for_level(self.level);
+		match self.points >= current_level_promotion {
+			true => Some(self.level + 1),
+			false => None,
+		}
+	}
+	pub fn can_demote(&self) -> Option<usize> {
+		if self.level == 1 {
+			return None;
+		}
+		let lower_level = self.level - 1;
+		let lower_level_promotion_points = Self::max_points_for_level(lower_level);
+		match self.points < lower_level_promotion_points {
+			true => Some(lower_level),
+			false => None
+		}
+	}
+
+	fn max_points_for_level(exp_level: usize) -> usize {
+		if exp_level == 0 { 0 } else { LEVEL_POINTS[exp_level - 1] }
+	}
 }
 
-
 pub fn add_exp(e: usize, promotion: bool, game: &mut impl Dungeon, rng: &mut impl Rng) {
+	// TODO Delete add_exp.
 	let old = game.as_fighter_mut().exp.add_points_take_old(e);
 	let new = game.as_fighter().exp;
 	if new.level > old.level {

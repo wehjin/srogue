@@ -6,7 +6,7 @@ use crate::player::RoomMark;
 use crate::prelude::DungeonSpot;
 use crate::render_system::appearance::appearance_for_spot;
 use crate::render_system::backend::get_char;
-use crate::render_system::stats::format_stats;
+use crate::render_system::stats::format_stats_legacy;
 use crate::room::RoomBounds;
 
 pub(crate) mod animation;
@@ -107,7 +107,7 @@ pub(crate) fn darken_room(rn: usize, game: &mut GameState) {
 pub fn refresh(game: &mut GameState) {
 	if game.as_diary().stats_changed {
 		const STATS_ROW: i32 = DROWS as i32 - 1;
-		backend::set_full_row(&format_stats(&game.player), STATS_ROW as usize);
+		backend::set_full_row(&format_stats_legacy(&game.player), STATS_ROW as usize);
 		game.as_diary_mut().set_stats_changed(false);
 	}
 	if game.render_queue.len() > 0 {

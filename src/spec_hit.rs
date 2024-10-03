@@ -282,20 +282,6 @@ fn gold_at(row: i64, col: i64, game: &impl Dungeon) -> bool {
 	false
 }
 
-pub fn check_imitator(mon_id: u64, game: &mut RunState) -> bool {
-	if game.as_monster(mon_id).imitates() {
-		game.as_monster_mut(mon_id).wake_up();
-
-		if game.as_health().blind.is_inactive() {
-			game.interrupt_and_slurp();
-			let report = format!("wait, that's a {}!", mon_name(mon_id, game));
-			game.as_diary_mut().add_entry(&report);
-		}
-		return true;
-	}
-	false
-}
-
 pub fn imitating(row: usize, col: usize, mash: &MonsterMash, level: &Level) -> bool {
 	if level.dungeon[row][col].has_monster() {
 		if let Some(monster) = mash.monster_at_spot(row as i64, col as i64) {

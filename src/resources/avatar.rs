@@ -1,4 +1,3 @@
-use crate::resources::rogue::energy::RogueEnergy;
 use crate::init::GameState;
 use crate::objects::note_tables::NoteTables;
 use crate::objects::{Object, ObjectId, ObjectPack};
@@ -9,6 +8,7 @@ use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::PackFilter::Amulets;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::play::state::RunState;
+use crate::resources::rogue::energy::RogueEnergy;
 use crate::resources::rogue::fighter::Fighter;
 use crate::resources::rogue::spot::RogueSpot;
 use crate::ring::effects::RingEffects;
@@ -41,6 +41,12 @@ pub trait Avatar {
 
 	fn as_fighter(&self) -> &Fighter;
 	fn as_fighter_mut(&mut self) -> &mut Fighter;
+
+	fn upgrade_hp(&mut self, hp: isize) {
+		let fighter = self.as_fighter_mut();
+		fighter.hp_max = (fighter.hp_max + hp).max(1);
+		fighter.hp_current = (fighter.hp_current + hp).max(1);
+	}
 
 	fn exp(&self) -> isize {
 		self.as_fighter().exp.level as isize

@@ -15,6 +15,7 @@ use crate::resources::rogue::Rogue;
 
 use crate::motion::MoveResult;
 use crate::prelude::DungeonSpot;
+use crate::render_system::stats::format_stats;
 use crate::resources::arena::Arena;
 use crate::resources::avatar::Avatar;
 use crate::resources::course::dr_course;
@@ -74,7 +75,7 @@ impl RunState {
 				};
 				let mut lines = self.level.format(true);
 				lines.insert(0, progress_line);
-				lines.push("".to_string());
+				lines.push(format_stats(self));
 				lines
 			}
 			DungeonVisor::Help => instruction_lines(),

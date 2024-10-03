@@ -2,14 +2,12 @@ pub use damage_stat::*;
 use rand::thread_rng;
 
 use crate::init::{Dungeon, GameState};
-use crate::level::add_exp;
 use crate::message::sound_bell;
-use crate::monster::{mon_name, Monster};
+use crate::monster::mon_name;
 use crate::motion::{can_move, is_direction, one_move_rogue_legacy, MoveDirection};
 use crate::objects::Object;
 use crate::prelude::ending::Ending;
 use crate::prelude::object_what::ObjectWhat::Weapon;
-use crate::random::rand_percent;
 use crate::resources::arena::Arena;
 use crate::resources::avatar::Avatar;
 use crate::resources::diary;
@@ -17,48 +15,103 @@ use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};
 use crate::resources::level::size::LevelSpot;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::event::message::Message;
-use crate::resources::play::event::mon_hit::fight_report;
 use crate::resources::play::state::RunState;
 use crate::score::killed_by;
-use crate::spec_hit::{check_imitator, cough_up};
+use crate::spec_hit::cough_up;
 use crate::throw::Motion;
 
 pub fn rogue_hit(mut game: RunState, mon_id: u64, force_hit: bool, ctx: &mut RunContext) -> RunState {
-	if check_imitator(mon_id, &mut game) {
-		return game;
-	}
-	let hit_chance = if force_hit { 100 } else { get_hit_chance_player(&game) };
-	let hit_chance = if game.wizard() { hit_chance * 2 } else { hit_chance };
-	if !rand_percent(hit_chance) {
-		if game.level.rogue.fight_to_death.is_none() {
-			let diary = game.as_diary_mut();
-			diary.hit_message = Some("you miss".to_string());
-		}
-	} else {
-		let player_exp = game.buffed_exp();
-		let player_debuf = game.debuf_exp();
-		let player_str = game.buffed_strength();
-		let damage = get_weapon_damage(game.weapon(), player_str, player_exp, player_debuf);
-		let damage = if game.wizard() { damage * 3 } else { damage };
-		let (effect, state) = mon_damage(mon_id, damage, game, ctx);
-		match effect {
-			MonDamageEffect::MonsterDies(_) => {
-				// mon_id is no longer in the mash.
-				return state;
+	match roll_strike(mon_id, force_hit, &mut game) {
+		RogueStrike::DefeatsTarget => {
+			game.level.rogue.fight_to_death = None;
+			cough_up(mon_id, &mut game);
+			{
+				let diary = game.as_diary_mut();
+				diary.hit_message = None;
+				let report = format!("defeated the {}", mon_name(mon_id, &game));
+				game = Message::run_await_exit(game, report, true, ctx);
 			}
-			MonDamageEffect::MonsterSurvives => {
-				game = state;
-				if game.level.rogue.fight_to_death.is_none() {
-					let diary = game.as_diary_mut();
-					diary.hit_message = Some("you hit".to_string());
+			let removed = game.level.take_monster(LevelSpot::from(game.as_monster(mon_id).spot)).unwrap();
+			if removed.m_flags.holds {
+				let health = game.as_health_mut();
+				health.being_held = false;
+			}
+			game.as_fighter_mut().exp.add_points(removed.kill_exp());
+			game.as_diary_mut().set_stats_changed(true);
+			game
+		}
+		RogueStrike::RevealsImitator => {
+			game.as_monster_mut(mon_id).wake_up();
+			if game.as_health().blind.is_inactive() {
+				let report = format!("wait, that's a {}!", mon_name(mon_id, &game));
+				game = Message::run_await_exit(game, report, true, ctx);
+				game
+			} else {
+				game
+			}
+		}
+		RogueStrike::DamagesTarget => {
+			// Surviving monster.
+			if game.level.rogue.fight_to_death.is_none() {
+				let diary = game.as_diary_mut();
+				diary.hit_message = Some("you hit".to_string());
+			}
+			alert_surviving_monster(game, mon_id)
+		}
+		RogueStrike::MissesTarget => {
+			if game.level.rogue.fight_to_death.is_none() {
+				let diary = game.as_diary_mut();
+				diary.hit_message = Some("you miss".to_string());
+			}
+			alert_surviving_monster(game, mon_id)
+		}
+	}
+}
+
+pub enum RogueStrike {
+	DefeatsTarget,
+	RevealsImitator,
+	DamagesTarget,
+	MissesTarget,
+}
+
+fn roll_strike(mon_id: u64, force_hit: bool, game: &mut RunState) -> RogueStrike {
+	match game.as_monster(mon_id).imitates() {
+		true => RogueStrike::RevealsImitator,
+		false => match roll_hit_success(force_hit, game) {
+			true => {
+				game.as_monster_mut(mon_id).hp_to_kill -= get_strike_damage(&game);
+				match game.as_monster(mon_id).hp_to_kill <= 0 {
+					true => RogueStrike::DefeatsTarget,
+					false => RogueStrike::DamagesTarget
 				}
 			}
-		}
+			false => RogueStrike::MissesTarget
+		},
 	}
+}
+
+pub fn alert_surviving_monster(mut game: RunState, mon_id: u64) -> RunState {
 	let monster = game.as_monster_mut(mon_id);
 	monster.m_flags.seeks_gold = false;
 	monster.wake_up();
 	game
+}
+
+pub fn get_strike_damage(game: &RunState) -> isize {
+	let player_exp = game.buffed_exp();
+	let player_debuf = game.debuf_exp();
+	let player_str = game.buffed_strength();
+	let damage = get_weapon_damage(game.weapon(), player_str, player_exp, player_debuf);
+	let damage = if game.wizard() { damage * 3 } else { damage };
+	damage
+}
+
+pub fn roll_hit_success(force_hit: bool, game: &mut RunState) -> bool {
+	let hit_chance = if force_hit { 100 } else { get_hit_chance_player(&game) };
+	let hit_chance = if game.wizard() { hit_chance * 2 } else { hit_chance };
+	let is_hit = game.roll_chance(hit_chance);
+	is_hit
 }
 
 pub fn rogue_damage(d: isize, mon_id: u64, game: &mut impl Dungeon) {
@@ -113,35 +166,6 @@ pub fn damage_for_strength(strength: isize) -> isize {
 		return 7;
 	}
 	8
-}
-
-pub enum MonDamageEffect {
-	MonsterDies(Monster),
-	MonsterSurvives,
-}
-
-pub fn mon_damage(mon_id: u64, damage: isize, mut game: RunState, ctx: &mut RunContext) -> (MonDamageEffect, RunState) {
-	game.as_monster_mut(mon_id).hp_to_kill -= damage;
-	if game.as_monster(mon_id).hp_to_kill <= 0 {
-		game.level.rogue.fight_to_death = None;
-		cough_up(mon_id, &mut game);
-		{
-			let monster_report = format!("defeated the {}", mon_name(mon_id, &game));
-			let fight_report = fight_report(monster_report, &mut game);
-			game = Message::run_await_exit(game, fight_report, true, ctx);
-		}
-		add_exp(game.as_monster(mon_id).kill_exp(), true, &mut game, &mut thread_rng());
-		if game.as_monster_flags(mon_id).holds {
-			let health = game.as_health_mut();
-			health.being_held = false;
-		}
-		let removed = {
-			let spot = game.as_monster(mon_id).spot;
-			game.level.take_monster(LevelSpot::from(spot)).unwrap()
-		};
-		return (MonDamageEffect::MonsterDies(removed), game);
-	}
-	(MonDamageEffect::MonsterSurvives, game)
 }
 
 pub fn fight(to_the_death: bool, game: &mut GameState) {
