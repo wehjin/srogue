@@ -10,8 +10,6 @@ use crate::odds::R_TELE_PERCENT;
 use crate::player::Player;
 use crate::prelude::MIN_ROW;
 use crate::render_system;
-use crate::resources::arena::Arena;
-use crate::resources::avatar::Avatar;
 use crate::resources::diary;
 use crate::resources::dice::roll_chance;
 use crate::resources::keyboard::{rgetchar, CANCEL_CHAR};

@@ -35,7 +35,7 @@ impl RegMoveEvent {
 }
 
 impl GameEventVariant for RegMoveEvent {
-	fn into_game_event(self) -> GameEvent { GameEvent::RegMoveTask(self) }
+	fn into_game_event(self) -> GameEvent { GameEvent::RegMove(self) }
 }
 
 impl Dispatch for RegMoveEvent {

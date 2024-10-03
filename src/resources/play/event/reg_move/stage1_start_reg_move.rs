@@ -16,7 +16,7 @@ impl RegMoveStage for Stage1StartRegMove {
 }
 
 impl Dispatch for Stage1StartRegMove {
-	fn dispatch(self, mut state: RunState, _ctx: &mut RunContext) -> RunStep {
+	fn dispatch(self, state: RunState, _ctx: &mut RunContext) -> RunStep {
 		let old_energy = state.rogue_energy();
 		if state.is_max_depth() || state.as_fighter().moves_left <= RogueEnergy::MAX_HUNGRY {
 			Stage2CheckHunger::new(old_energy).into_redirect(state)
