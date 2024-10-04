@@ -1,9 +1,9 @@
 use crate::init::Dungeon;
-use crate::resources::play::event::reg_move::stage3_move_monsters::mv_mons;
 use crate::motion::YOU_CAN_MOVE_AGAIN;
 use crate::resources::avatar::Avatar;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::event::message::Message;
+use crate::resources::play::event::reg_move::stage3_move_monsters::mv_mons;
 use crate::resources::play::state::RunState;
 use crate::resources::rogue::energy::RogueEnergy;
 use rand::Rng;

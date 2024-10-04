@@ -140,6 +140,7 @@ impl Monster {
 	pub fn is_slowed(&self) -> bool { self.m_flags.slowed }
 	pub fn is_confused(&self) -> bool { self.m_flags.confused }
 	pub fn wanders(&self) -> bool { self.m_flags.wanders }
+	pub fn is_defeated(&self) -> bool { self.hp_to_kill <= 0 }
 }
 
 impl Monster {

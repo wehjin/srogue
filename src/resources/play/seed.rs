@@ -17,6 +17,9 @@ impl EventSeed {
 	pub fn create_event(self, state: RunState) -> RunEvent {
 		self.0(state)
 	}
+	pub fn into_redirect(self, state: RunState) -> RunStep {
+		RunStep::Redirect(self.create_event(state))
+	}
 }
 
 pub struct StepSeed(String, Box<dyn FnOnce(RunState) -> RunStep + 'static>);
