@@ -5,7 +5,7 @@ use crate::resources::avatar::Avatar;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::event::game::{Dispatch, GameEvent, GameEventVariant};
 use crate::resources::play::event::RunStep;
-use crate::resources::play::seed::EventSeed;
+use crate::resources::play::seed::StepSeed;
 use crate::resources::play::state::RunState;
 
 impl GameEventVariant for MoveMonstersEvent {
@@ -14,8 +14,14 @@ impl GameEventVariant for MoveMonstersEvent {
 
 #[derive(Debug)]
 pub struct MoveMonstersEvent {
-	pub mon_ids: Option<Vec<u64>>,
-	pub after_move: EventSeed,
+	mon_ids: Option<Vec<u64>>,
+	after_move: StepSeed,
+}
+
+impl MoveMonstersEvent {
+	pub fn new(after_move: impl FnOnce(RunState) -> RunStep + 'static) -> Self {
+		Self { mon_ids: None, after_move: StepSeed::new("move-monster", after_move) }
+	}
 }
 
 impl Dispatch for MoveMonstersEvent {
@@ -29,7 +35,7 @@ impl Dispatch for MoveMonstersEvent {
 			Some(mut mon_ids) => match state.cleaned_up().is_some() {
 				true => state.into_exit(),
 				false => match mon_ids.pop() {
-					None => after_move.into_redirect(state),
+					None => after_move.into_step(state),
 					Some(mon_id) => {
 						let state = match state.as_monster(mon_id).is_defeated() {
 							true => state,

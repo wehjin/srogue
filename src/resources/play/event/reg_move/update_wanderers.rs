@@ -1,7 +1,5 @@
 use crate::init::Dungeon;
 use crate::monster::put_wanderer;
-use crate::resources::play::context::RunContext;
-use crate::resources::play::event::move_monsters;
 use crate::resources::play::state::RunState;
 
 pub fn update_wanderers(mut game: RunState) -> RunState {
@@ -15,14 +13,3 @@ pub fn update_wanderers(mut game: RunState) -> RunState {
 	}
 	game
 }
-
-pub fn mv_mons(mut state: RunState, ctx: &mut RunContext) -> RunState {
-	for mon_id in move_monsters::get_monster_ids_for_movement(&state) {
-		if state.cleaned_up().is_some() {
-			break;
-		}
-		state = move_monsters::mv_one_mon(mon_id, state, ctx);
-	}
-	state
-}
-

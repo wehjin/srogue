@@ -35,7 +35,7 @@ impl StepSeed {
 		Self(name.as_ref().to_string(), Box::new(seed))
 	}
 
-	pub fn create_step(self, state: RunState) -> RunStep {
+	pub fn into_step(self, state: RunState) -> RunStep {
 		self.1(state)
 	}
 }

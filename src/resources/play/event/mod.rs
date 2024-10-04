@@ -49,7 +49,7 @@ impl RunEvent {
 			RunEvent::PlayerOpenInventory(state) => player_open_inventory(state),
 			RunEvent::PrintNextAndStep(mut state, step_seed) => {
 				state.diary.message_line = state.diary.next_message_line.take();
-				step_seed.create_step(state)
+				step_seed.into_step(state)
 			}
 		}
 	}

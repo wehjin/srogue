@@ -42,7 +42,7 @@ impl StateAction for Message {
 				if diary.message_line.is_none() {
 					diary.message_line = Some(text);
 					diary.next_message_line = None;
-					post_step.create_step(state)
+					post_step.into_step(state)
 				} else {
 					diary.next_message_line = Some(text);
 					let on_player_ack = EventSeed::new(|state| {

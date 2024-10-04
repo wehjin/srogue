@@ -1,40 +1,9 @@
 use crate::init::Dungeon;
 use crate::resources::arena::Arena;
 use crate::resources::avatar::Avatar;
-use crate::resources::play::context::RunContext;
-use crate::resources::play::event::game::Dispatch;
-use crate::resources::play::event::reg_move::stage::RegMoveStage;
-use crate::resources::play::event::reg_move::stage5_update_move_result::Stage5UpdateMoveResult;
-use crate::resources::play::event::reg_move::RegMoveEvent;
-use crate::resources::play::event::RunStep;
 use crate::resources::play::state::RunState;
-use crate::resources::rogue::energy::RogueEnergy;
 
-#[derive(Debug)]
-pub(super) struct Stage4UpdateHealth {
-	old_energy: RogueEnergy,
-}
-impl Stage4UpdateHealth {
-	pub fn new(old_energy: RogueEnergy) -> Self {
-		Self { old_energy }
-	}
-}
-
-impl RegMoveStage for Stage4UpdateHealth {
-	fn into_reg_move_event(self) -> RegMoveEvent {
-		RegMoveEvent::UpdateHealth(self)
-	}
-}
-
-impl Dispatch for Stage4UpdateHealth {
-	fn dispatch(self, state: RunState, _ctx: &mut RunContext) -> RunStep {
-		let Self { old_energy } = self;
-		let state = update_health(state);
-		Stage5UpdateMoveResult::new(old_energy).into_redirect(state)
-	}
-}
-
-fn update_health(mut game: RunState) -> RunState {
+pub fn update_health(mut game: RunState) -> RunState {
 	// Take care of hallucinations.
 	if game.as_health().halluc.is_active() {
 		game.as_health_mut().halluc.decr();
