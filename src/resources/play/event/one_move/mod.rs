@@ -40,7 +40,7 @@ impl OneMoveEvent {
 }
 
 impl Dispatch for OneMoveEvent {
-	fn dispatch(self, mut state: RunState, ctx: &mut RunContext) -> RunStep {
+	fn dispatch(self, mut state: RunState, _ctx: &mut RunContext) -> RunStep {
 		match self {
 			Stage1Start { direction, allow_pickup } => {
 				state.move_result = None;
@@ -175,8 +175,18 @@ impl Dispatch for OneMoveEvent {
 				// Pick up objects.
 				let has_object = state.level.try_object(LevelSpot::from(spot)).is_some();
 				if has_object {
-					// [pickup_object] will update [move_result].
-					pickup_object(spot.0, spot.1, allow_pickup, state, ctx)
+					let (row, col) = spot;
+					if allow_pickup {
+						// Pick up the object and complete the move.
+						let spot = LevelSpot::from_i64(row, col);
+						PickUpRegMove(state, PickupType::AfterMove(spot)).into_redirect()
+					} else {
+						// Leave the object alone but stop moving and report we're on top of it. Then complete the move.
+						state.move_result = Some(MoveResult::StoppedOnSomething);
+						let after_report = move |state| RegMoveEvent::new().into_redirect(state);
+						let report = moved_onto_message(row, col, &state);
+						Message::new(state, report, true, after_report).into_redirect()
+					}
 				} else {
 					Stage8CheckStoppedAndTraps { spot }.into_redirect(state)
 				}
@@ -211,20 +221,6 @@ fn get_destination_spot(direction: MoveDirection, from_row: i64, from_col: i64, 
 	let confused = state.as_health().confused.is_active();
 	let confused_direction = if !confused { direction } else { MoveDirection::random(state.rng()) };
 	confused_direction.apply(from_row, from_col)
-}
-
-fn pickup_object(row: i64, col: i64, allow_pickup: bool, mut state: RunState, ctx: &mut RunContext) -> RunStep {
-	if allow_pickup {
-		// Pick up the object and complete the move.
-		let spot = LevelSpot::from_i64(row, col);
-		PickUpRegMove(state, PickupType::AfterMove(spot)).dispatch(ctx)
-	} else {
-		// Leave the object alone but stop moving and report we're on top of it. Then complete the move.
-		state.move_result = Some(MoveResult::StoppedOnSomething);
-		let after_report = move |state| RegMoveEvent::new().into_redirect(state);
-		let report = moved_onto_message(row, col, &state);
-		Message::new(state, report, true, after_report).dispatch(ctx)
-	}
 }
 
 pub fn moved_onto_message(row: i64, col: i64, state: &RunState) -> String {
