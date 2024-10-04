@@ -102,8 +102,15 @@ impl Dispatch for OneMoveEvent {
 					// Monster. Strike monster and finish the move.
 					state.move_result = Some(MoveResult::MoveFailed);
 					let mon_id = state.get_monster_at(to_spot.0, to_spot.1).unwrap();
-					state = rogue_hit(state, mon_id, false, ctx);
-					Stage4AUpgradeRogue.into_redirect(state)
+					state = rogue_hit(state, mon_id, false);
+					if let Some(report) = state.diary.next_message_line.take() {
+						// If there is something to report, report it then finish the move.
+						let after_report = |state| Stage4AUpgradeRogue.into_redirect(state);
+						Message::new(state, report, true, after_report).into_redirect()
+					} else {
+						// Finish the move.
+						Stage4AUpgradeRogue.into_redirect(state)
+					}
 				} else {
 					// No monster. Go to next stage.
 					Stage5AdjustLighting { to_spot, rogue_spot, allow_pickup }.into_redirect(state)
@@ -116,7 +123,7 @@ impl Dispatch for OneMoveEvent {
 					state.upgrade_hp(hp);
 					state.as_fighter_mut().exp.set_level(promotion_level);
 					state.as_diary_mut().set_stats_changed(true);
-					// Send welcome message and try again since we may have more upgrades to consider.
+					// Report the promotion then try again since we may have more upgrades to consider.
 					let post_report = |state| Stage4AUpgradeRogue.into_redirect(state);
 					let report = format!("welcome to level {}", promotion_level);
 					Message::new(state, report, false, post_report).into_redirect()
