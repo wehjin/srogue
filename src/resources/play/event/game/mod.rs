@@ -1,4 +1,5 @@
 use crate::resources::play::context::RunContext;
+use crate::resources::play::event::check_hunger::CheckHungerEvent;
 use crate::resources::play::event::move_monsters::MoveMonstersEvent;
 use crate::resources::play::event::one_move::OneMoveEvent;
 use crate::resources::play::event::reg_move::RegMoveEvent;
@@ -10,6 +11,7 @@ pub enum GameEvent {
 	RegMove(RegMoveEvent),
 	OneMove(OneMoveEvent),
 	MoveMonsters(MoveMonstersEvent),
+	CheckHunger(CheckHungerEvent),
 }
 impl Dispatch for GameEvent {
 	fn dispatch(self, state: RunState, ctx: &mut RunContext) -> RunStep {
@@ -17,6 +19,7 @@ impl Dispatch for GameEvent {
 			GameEvent::RegMove(event) => event.dispatch(state, ctx),
 			GameEvent::OneMove(event) => event.dispatch(state, ctx),
 			GameEvent::MoveMonsters(event) => event.dispatch(state, ctx),
+			GameEvent::CheckHunger(event) => event.dispatch(state, ctx),
 		}
 	}
 }

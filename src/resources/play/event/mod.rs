@@ -11,12 +11,13 @@ use message::Message;
 use rand_chacha::ChaCha8Rng;
 use state_action::StateAction;
 
+pub mod check_hunger;
 pub mod game;
 pub mod message;
 pub mod mon_hit;
+pub mod move_monsters;
 pub mod one_move;
 pub mod pick_up;
-pub mod move_monsters;
 pub mod reg_move;
 pub mod state_action;
 
