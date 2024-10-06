@@ -8,7 +8,7 @@ use crate::resources::play::event::message::Message;
 use crate::resources::play::event::move_monsters::MoveMonstersEvent;
 use crate::resources::play::event::state_action::StateAction;
 use crate::resources::play::event::{RunEvent, RunStep};
-use crate::resources::play::seed::EventSeed;
+use crate::resources::play::seed::event_seed::EventSeed;
 use crate::resources::play::state::RunState;
 use crate::resources::rogue::energy::RogueEnergy;
 use crate::score::killed_by;

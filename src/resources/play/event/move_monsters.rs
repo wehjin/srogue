@@ -5,7 +5,7 @@ use crate::resources::avatar::Avatar;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::event::game::{Dispatch, GameEvent, GameEventVariant};
 use crate::resources::play::event::RunStep;
-use crate::resources::play::seed::StepSeed;
+use crate::resources::play::seed::step_seed::StepSeed;
 use crate::resources::play::state::RunState;
 
 impl GameEventVariant for MoveMonstersEvent {

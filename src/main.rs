@@ -79,6 +79,7 @@ impl TextConsole for TerminalConsole {
 								'?' => PlayerInput::Help,
 								' ' => PlayerInput::Space,
 								'b' => PlayerInput::Arrow(MoveDirection::DownLeft),
+								'd' => PlayerInput::Drop,
 								'h' => PlayerInput::Arrow(MoveDirection::Left),
 								'i' => PlayerInput::Menu,
 								'j' => PlayerInput::Arrow(MoveDirection::Down),
@@ -92,6 +93,13 @@ impl TextConsole for TerminalConsole {
 							_ => PlayerInput::Close,
 						},
 						InputMode::Alert => PlayerInput::Close,
+						InputMode::Menu => match key.code {
+							KeyCode::Char(char) => match char {
+								'a'..='z' => PlayerInput::Select(char),
+								_ => PlayerInput::Close,
+							},
+							_ => PlayerInput::Close,
+						},
 					};
 					return input;
 				}

@@ -5,7 +5,7 @@ use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::game::{Dispatch, GameEvent};
 use crate::resources::play::event::pick_up::PickUpRegMove;
-use crate::resources::play::seed::StepSeed;
+use crate::resources::play::seed::step_seed::StepSeed;
 use crate::resources::play::state::RunState;
 use message::Message;
 use rand_chacha::ChaCha8Rng;
