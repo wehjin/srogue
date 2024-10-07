@@ -113,7 +113,7 @@ impl Default for NoteStatus {
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Object {
-	id: ObjectId,
+	pub id: ObjectId,
 	pub what_is: ObjectWhat,
 	pub which_kind: u16,
 	pub in_use_flags: u16,

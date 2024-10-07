@@ -90,7 +90,7 @@ impl RunState {
 		let obj = self.as_fighter().pack.object(obj_id).unwrap();
 		let obj_ichar = obj.ichar;
 		let obj_desc = get_obj_desc(obj, self);
-		format!("{}({})", obj_desc, obj_ichar)
+		format!("{} ({})", obj_desc.trim(), obj_ichar)
 	}
 }
 

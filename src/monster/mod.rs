@@ -395,7 +395,20 @@ pub fn aggravate(game: &mut GameState) {
 	}
 }
 
-pub fn mv_aquatars(game: &mut GameState) {
+pub fn mv_aquatars(mut game: RunState) -> RunState {
+	for mon_id in game.monster_ids() {
+		if MonsterKind::Aquator == game.as_monster(mon_id).kind
+			&& mon_can_go_and_reach(mon_id, game.rogue_row(), game.rogue_col(), false, &game) {
+			// TODO game = mv_monster(game, mon_id, game.player.rogue.row, game.player.rogue.col, false, rng);
+			let monster = game.as_monster_flags_mut(mon_id);
+			// TODO Make sure already_moved is read somewhere.
+			monster.already_moved = true;
+		}
+	}
+	game
+}
+
+pub fn mv_aquatars_legacy(game: &mut GameState) {
 	let _rng = &mut thread_rng();
 	for mon_id in game.mash.monster_ids() {
 		if MonsterKind::Aquator == game.mash.monster(mon_id).kind

@@ -4,6 +4,7 @@ use crate::objects::{Object, ObjectId, ObjectPack};
 use crate::pack::mask_pack;
 use crate::player::rings::HandUsage;
 use crate::player::{Player, RogueHealth};
+use crate::prelude::item_usage::{BEING_WIELDED, BEING_WORN};
 use crate::prelude::object_what::ObjectWhat;
 use crate::prelude::object_what::PackFilter::Amulets;
 use crate::resources::level::size::LevelSpot;
@@ -81,7 +82,13 @@ pub trait Avatar {
 			None
 		}
 	}
-
+	fn unwield_weapon(&mut self) {
+		if let Some(obj) = self.weapon_mut() {
+			obj.in_use_flags &= !BEING_WIELDED;
+		}
+		let fighter = self.as_fighter_mut();
+		fighter.weapon = None;
+	}
 
 	fn ring_id(&self, hand: PlayerHand) -> Option<ObjectId> {
 		match hand {
@@ -113,6 +120,43 @@ pub trait Avatar {
 			(false, false) => HandUsage::None,
 		}
 	}
+	fn ring_hand(&self, ring_id: ObjectId) -> Option<PlayerHand> {
+		let target = Some(ring_id);
+		for ring_hand in PlayerHand::ALL_HANDS {
+			if self.ring_id(ring_hand) == target {
+				return Some(ring_hand);
+			}
+		}
+		None
+	}
+	fn ring(&self, hand: PlayerHand) -> Option<&Object> {
+		if let Some(id) = self.ring_id(hand) {
+			self.as_rogue_pack().object(id)
+		} else {
+			None
+		}
+	}
+	fn ring_mut(&mut self, hand: PlayerHand) -> Option<&mut Object> {
+		if let Some(id) = self.ring_id(hand) {
+			self.as_rogue_pack_mut().object_mut(id)
+		} else {
+			None
+		}
+	}
+	fn check_ring(&self, hand: PlayerHand, f: impl Fn(&Object) -> bool) -> bool {
+		if let Some(ring) = self.ring(hand) {
+			f(ring)
+		} else {
+			false
+		}
+	}
+	fn un_put_ring(&mut self, hand: PlayerHand) {
+		if let Some(ring) = self.ring_mut(hand) {
+			ring.in_use_flags &= !hand.use_flag();
+		};
+		self.clear_ring_id(hand);
+		// TODO ring_stats(true, game);
+	}
 	fn as_rogue_pack(&self) -> &ObjectPack {
 		&self.as_fighter().pack
 	}
@@ -126,6 +170,20 @@ pub trait Avatar {
 			None => None,
 		}
 	}
+	fn armor_mut(&mut self) -> Option<&mut Object> {
+		match self.as_fighter().armor {
+			Some(id) => self.as_rogue_pack_mut().object_if_what_mut(id, ObjectWhat::Armor),
+			None => None,
+		}
+	}
+	fn unwear_armor(&mut self) {
+		if let Some(armor) = self.armor_mut() {
+			armor.in_use_flags &= !BEING_WORN;
+		}
+		let fighter = self.as_fighter_mut();
+		fighter.armor = None;
+	}
+
 	fn pack_weight_with_new_object(&self, new_obj: Option<&Object>) -> usize {
 		// TODO Revisit. This is kind of screwed up.
 		let mut weight = 0;

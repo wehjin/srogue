@@ -1,9 +1,16 @@
+use crate::init::Dungeon;
+use crate::inventory::get_obj_desc;
+use crate::monster::mv_aquatars;
+use crate::objects::{Object, ObjectId};
+use crate::pack::{take_from_pack, CURSE_MESSAGE};
+use crate::prelude::object_what::ObjectWhat;
 use crate::resources::avatar::Avatar;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::game::{Dispatch, GameEvent, GameEventVariant};
 use crate::resources::play::event::message::Message;
+use crate::resources::play::event::reg_move::RegMoveEvent;
 use crate::resources::play::event::state_action::StateAction;
 use crate::resources::play::event::RunStep;
 use crate::resources::play::seed::menu_event_seed::MenuInput;
@@ -18,7 +25,11 @@ impl GameEventVariant for DropItemEvent {
 #[derive(Debug)]
 pub enum DropItemEvent {
 	S1Start,
-	S2Search(LevelSpot, MenuInput),
+	S2SearchPack(LevelSpot, MenuInput),
+	S3CheckWeapon(ObjectId),
+	S4CheckArmor(ObjectId),
+	S5CheckRing(ObjectId),
+	S6DropItem(ObjectId),
 }
 
 impl DropItemEvent {
@@ -30,7 +41,7 @@ impl DropItemEvent {
 impl Dispatch for DropItemEvent {
 	fn dispatch(self, mut state: RunState, ctx: &mut RunContext) -> RunStep {
 		match self {
-			DropItemEvent::S1Start => {
+			Self::S1Start => {
 				state.diary.clear_message_lines();
 				match check_drop(&state) {
 					CheckDrop::NowhereToDrop => {
@@ -46,70 +57,111 @@ impl Dispatch for DropItemEvent {
 					CheckDrop::CanDrop(spot) => {
 						state.diary.message_line = Some("drop what?".into());
 						let effect = RunEffect::await_menu("drop item", move |state, input| {
-							DropItemEvent::S2Search(spot, input).into_run_event(state)
+							DropItemEvent::S2SearchPack(spot, input).into_run_event(state)
 						});
 						state.into_effect(effect)
 					}
 				}
 			}
-			DropItemEvent::S2Search(spot, input) => {
+			Self::S2SearchPack(spot, input) => {
 				state.diary.clear_message_lines();
 				match input {
 					MenuInput::Close => {
 						state.into_effect(RunEffect::AwaitMove)
 					}
-					MenuInput::Item(ch) => {
-						state.diary.message_line = Some(format!("Picked {} to drop", ch));
-						state.into_effect(RunEffect::AwaitMove)
-					}
+					MenuInput::Item(ch) => match state.level.rogue.obj_id_if_letter(ch) {
+						None => {
+							state.diary.message_line = Some("no such item.".to_string());
+							state.into_effect(RunEffect::AwaitMove)
+						}
+						Some(obj_id) => {
+							Self::S6DropItem(obj_id).into_redirect(state)
+						}
+					},
 				}
 			}
+			Self::S3CheckWeapon(obj_id) => {
+				state.diary.clear_message_lines();
+				let wielded = state.level.rogue.check_object(obj_id, Object::is_being_wielded);
+				match wielded {
+					true => {
+						let cursed = state.level.rogue.check_object(obj_id, Object::is_cursed);
+						if cursed {
+							state.diary.message_line = Some(CURSE_MESSAGE.to_string());
+							state.into_effect(RunEffect::AwaitMove)
+						} else {
+							state.unwield_weapon();
+							Self::S6DropItem(obj_id).into_redirect(state)
+						}
+					}
+					false => Self::S4CheckArmor(obj_id).into_redirect(state),
+				}
+			}
+			Self::S4CheckArmor(obj_id) => {
+				state.diary.clear_message_lines();
+				let worn = state.level.rogue.check_object(obj_id, Object::is_being_worn);
+				match worn {
+					true => {
+						let cursed = state.level.rogue.check_object(obj_id, Object::is_cursed);
+						if cursed {
+							state.diary.message_line = Some(CURSE_MESSAGE.to_string());
+							state.into_effect(RunEffect::AwaitMove)
+						} else {
+							let mut state = mv_aquatars(state);
+							state.unwear_armor();
+							state.as_diary_mut().set_stats_changed(true);
+							Self::S6DropItem(obj_id).into_redirect(state)
+						}
+					}
+					false => Self::S5CheckRing(obj_id).into_redirect(state),
+				}
+			}
+			Self::S5CheckRing(obj_id) => {
+				let ring_hand = state.ring_hand(obj_id);
+				match ring_hand {
+					Some(hand) => {
+						let cursed = state.check_ring(hand, Object::is_cursed);
+						if cursed {
+							state.diary.message_line = Some(CURSE_MESSAGE.to_string());
+							state.into_effect(RunEffect::AwaitMove)
+						} else {
+							state.un_put_ring(hand);
+							Self::S6DropItem(obj_id).into_redirect(state)
+						}
+					}
+					None => Self::S6DropItem(obj_id).into_redirect(state),
+				}
+			}
+			Self::S6DropItem(obj_id) => {
+				let object = take_object(obj_id, &mut state);
+				let object_desc = get_obj_desc(&object, &state);
+				let spot = *state.level.rogue.spot.as_spot();
+				state.level.put_object(spot, object);
+				let report = format!("dropped {}", object_desc);
+				let after_report = |state| RegMoveEvent::new().into_redirect(state);
+				Message::new(state, report, false, after_report).into_redirect()
+			}
 		}
-		// match game.player.object_id_with_letter(ch) {
-		// 	None => {
-		// 		game.diary.add_entry("no such item.")
-		// 	}
-		// 	Some(obj_id) => {
-		// 		if game.player.check_object(obj_id, Object::is_being_wielded) {
-		// 			if game.player.check_object(obj_id, Object::is_cursed) {
-		// 				game.diary.add_entry(CURSE_MESSAGE);
-		// 				return;
-		// 			}
-		// 			pack::unwield(&mut game.player);
-		// 		} else if game.player.check_object(obj_id, Object::is_being_worn) {
-		// 			if game.player.check_object(obj_id, Object::is_cursed) {
-		// 				game.diary.add_entry(CURSE_MESSAGE);
-		// 				return;
-		// 			}
-		// 			mv_aquatars(game);
-		// 			pack::unwear(&mut game.player);
-		// 			game.as_diary_mut().set_stats_changed(true);
-		// 		} else if let Some(hand) = game.player.ring_hand(obj_id) {
-		// 			if game.player.check_ring(hand, Object::is_cursed) {
-		// 				game.diary.add_entry(CURSE_MESSAGE);
-		// 				return;
-		// 			}
-		// 			un_put_hand(hand, game);
-		// 		}
-		// 		let place_obj = if let Some(obj) = game.player.pack_mut().object_if_mut(obj_id, |obj| obj.quantity > 1 && obj.what_is != Weapon) {
-		// 			obj.quantity -= 1;
-		// 			let mut new = obj.clone_with_new_id(&mut thread_rng());
-		// 			new.quantity = 1;
-		// 			new
-		// 		} else {
-		// 			let mut obj = pack::take_from_pack(obj_id, &mut game.player.rogue.pack).expect("take from pack");
-		// 			obj.ichar = 'L';
-		// 			obj
-		// 		};
-		// 		let obj_desc = get_obj_desc_legacy(&place_obj, game.player.settings.fruit.to_string(), &game.player);
-		// 		place_at(place_obj, game.player.rogue.row, game.player.rogue.col, &mut game.level, &mut game.ground);
-		// 		game.diary.add_entry(&format!("dropped {}", obj_desc));
-		// 		todo!("reg_move(game);");
-		// 	}
-		// }
 	}
 }
 
+fn take_object(obj_id: ObjectId, state: &mut RunState) -> Object {
+	let can_lower_quantity = |obj: &Object| obj.quantity > 1 && obj.what_is != ObjectWhat::Weapon;
+	match state.as_rogue_pack_mut().object_if_mut(obj_id, can_lower_quantity) {
+		Some(obj) => {
+			obj.quantity -= 1;
+			let mut new = obj.clone();
+			new.id = ObjectId::random(state.rng());
+			new.quantity = 1;
+			new
+		}
+		None => {
+			let mut obj = take_from_pack(obj_id, state.as_rogue_pack_mut()).expect("take from pack");
+			obj.ichar = 'L';
+			obj
+		}
+	}
+}
 
 enum CheckDrop {
 	NowhereToDrop,

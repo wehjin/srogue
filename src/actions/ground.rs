@@ -1,7 +1,7 @@
 use crate::actions::GameUpdater;
 use crate::init::{Dungeon, GameState};
 use crate::inventory::get_obj_desc_legacy;
-use crate::monster::mv_aquatars;
+use crate::monster::mv_aquatars_legacy;
 use crate::motion::MoveDirection;
 use crate::objects::{place_at, Object};
 use crate::pack::{kick_into_pack, CURSE_MESSAGE};
@@ -62,7 +62,7 @@ fn drop_item(game: &mut GameState) {
 					game.diary.add_entry(CURSE_MESSAGE);
 					return;
 				}
-				mv_aquatars(game);
+				mv_aquatars_legacy(game);
 				pack::unwear(&mut game.player);
 				game.as_diary_mut().set_stats_changed(true);
 			} else if let Some(hand) = game.player.ring_hand(obj_id) {

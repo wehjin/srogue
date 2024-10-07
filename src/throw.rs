@@ -4,7 +4,7 @@ use rand::{thread_rng, Rng};
 use crate::hit::{get_hit_chance, get_weapon_damage};
 use crate::init::{Dungeon, GameState};
 use crate::level::DungeonCell;
-use crate::monster::{mv_aquatars, MonsterIndex};
+use crate::monster::{mv_aquatars_legacy, MonsterIndex};
 use crate::motion::{get_dir_or_cancel, is_passable};
 use crate::objects::{place_at, Object, ObjectId};
 use crate::pack::{pack_letter, unwear, unwield, CURSE_MESSAGE};
@@ -75,7 +75,7 @@ pub fn throw(game: &mut GameState) {
 			if game.player.check_object(obj_id, |it| it.is_being_wielded() && it.quantity <= 1) {
 				unwield(&mut game.player);
 			} else if game.player.check_object(obj_id, |it| it.is_being_worn()) {
-				mv_aquatars(game);
+				mv_aquatars_legacy(game);
 				unwear(&mut game.player);
 				game.as_diary_mut().set_stats_changed(true);
 			} else if let Some(hand) = game.player.ring_hand(obj_id) {

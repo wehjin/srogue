@@ -1,4 +1,5 @@
 use crate::objects::note_tables::NoteTables;
+use crate::objects::{Object, ObjectId};
 use crate::player::RogueHealth;
 use crate::resources::rogue::depth::RogueDepth;
 use crate::ring::effects::RingEffects;
@@ -47,6 +48,15 @@ impl Rogue {
 	pub fn descend(&mut self) {
 		self.depth.descend();
 		self.spot = RogueSpot::None;
+	}
+	pub fn obj_id_if_letter(&self, ch: char) -> Option<ObjectId> {
+		self.obj_id_if(|obj| obj.ichar == ch)
+	}
+	pub fn obj_id_if(&self, f: impl Fn(&Object) -> bool) -> Option<ObjectId> {
+		self.fighter.pack.find_id(f)
+	}
+	pub fn check_object(&self, obj_id: ObjectId, f: impl Fn(&Object) -> bool) -> bool {
+		self.fighter.pack.check_object(obj_id, f)
 	}
 }
 

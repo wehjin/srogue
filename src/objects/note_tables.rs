@@ -30,8 +30,12 @@ impl NoteTables {
 	}
 	fn make_scroll_titles(&mut self) {
 		for i in 0..SCROLLS {
-			let syllables = Self::random_scroll_syllables();
-			let joined = format!("'{}' ", syllables.join("")).trim().to_string();
+			let syllables = Self::random_scroll_syllables()
+				.into_iter()
+				.map(|it| it.trim().to_string())
+				.collect::<Vec<_>>()
+				;
+			let joined = format!("'{}' ", syllables.join(" "));
 			self.scrolls[i].title = Title::SyllableString(joined);
 		}
 	}

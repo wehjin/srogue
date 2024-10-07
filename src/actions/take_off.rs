@@ -1,6 +1,6 @@
 use crate::actions::GameUpdater;
 use crate::init::{Dungeon, GameState};
-use crate::monster::mv_aquatars;
+use crate::monster::mv_aquatars_legacy;
 use crate::objects::Object;
 use crate::pack::{unwear, CURSE_MESSAGE};
 use crate::resources::avatar::Avatar;
@@ -14,7 +14,7 @@ impl GameUpdater for TakeOff {
 			if game.as_rogue_pack().check_object(armor_id, Object::is_cursed) {
 				game.diary.add_entry(CURSE_MESSAGE);
 			} else {
-				mv_aquatars(game);
+				mv_aquatars_legacy(game);
 				if let Some(armor) = unwear(&mut game.player) {
 					let armor_id = armor.id();
 					let obj_desc = game.player.get_obj_desc(armor_id);
