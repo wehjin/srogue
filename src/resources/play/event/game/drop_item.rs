@@ -26,10 +26,10 @@ impl GameEventVariant for DropItemEvent {
 pub enum DropItemEvent {
 	S1Start,
 	S2SearchPack(LevelSpot, MenuInput),
-	S3CheckWeapon(ObjectId),
-	S4CheckArmor(ObjectId),
-	S5CheckRing(ObjectId),
-	S6DropItem(ObjectId),
+	S3CheckWeapon(LevelSpot, ObjectId),
+	S4CheckArmor(LevelSpot, ObjectId),
+	S5CheckRing(LevelSpot, ObjectId),
+	S6DropItem(LevelSpot, ObjectId),
 }
 
 impl DropItemEvent {
@@ -39,7 +39,7 @@ impl DropItemEvent {
 }
 
 impl Dispatch for DropItemEvent {
-	fn dispatch(self, mut state: RunState, ctx: &mut RunContext) -> RunStep {
+	fn dispatch(self, mut state: RunState, _ctx: &mut RunContext) -> RunStep {
 		match self {
 			Self::S1Start => {
 				state.diary.clear_message_lines();
@@ -75,12 +75,12 @@ impl Dispatch for DropItemEvent {
 							state.into_effect(RunEffect::AwaitMove)
 						}
 						Some(obj_id) => {
-							Self::S6DropItem(obj_id).into_redirect(state)
+							Self::S6DropItem(spot, obj_id).into_redirect(state)
 						}
 					},
 				}
 			}
-			Self::S3CheckWeapon(obj_id) => {
+			Self::S3CheckWeapon(spot, obj_id) => {
 				state.diary.clear_message_lines();
 				let wielded = state.level.rogue.check_object(obj_id, Object::is_being_wielded);
 				match wielded {
@@ -91,13 +91,13 @@ impl Dispatch for DropItemEvent {
 							state.into_effect(RunEffect::AwaitMove)
 						} else {
 							state.unwield_weapon();
-							Self::S6DropItem(obj_id).into_redirect(state)
+							Self::S6DropItem(spot, obj_id).into_redirect(state)
 						}
 					}
-					false => Self::S4CheckArmor(obj_id).into_redirect(state),
+					false => Self::S4CheckArmor(spot, obj_id).into_redirect(state),
 				}
 			}
-			Self::S4CheckArmor(obj_id) => {
+			Self::S4CheckArmor(spot, obj_id) => {
 				state.diary.clear_message_lines();
 				let worn = state.level.rogue.check_object(obj_id, Object::is_being_worn);
 				match worn {
@@ -110,13 +110,13 @@ impl Dispatch for DropItemEvent {
 							let mut state = mv_aquatars(state);
 							state.unwear_armor();
 							state.as_diary_mut().set_stats_changed(true);
-							Self::S6DropItem(obj_id).into_redirect(state)
+							Self::S6DropItem(spot, obj_id).into_redirect(state)
 						}
 					}
-					false => Self::S5CheckRing(obj_id).into_redirect(state),
+					false => Self::S5CheckRing(spot, obj_id).into_redirect(state),
 				}
 			}
-			Self::S5CheckRing(obj_id) => {
+			Self::S5CheckRing(spot, obj_id) => {
 				let ring_hand = state.ring_hand(obj_id);
 				match ring_hand {
 					Some(hand) => {
@@ -126,16 +126,15 @@ impl Dispatch for DropItemEvent {
 							state.into_effect(RunEffect::AwaitMove)
 						} else {
 							state.un_put_ring(hand);
-							Self::S6DropItem(obj_id).into_redirect(state)
+							Self::S6DropItem(spot, obj_id).into_redirect(state)
 						}
 					}
-					None => Self::S6DropItem(obj_id).into_redirect(state),
+					None => Self::S6DropItem(spot, obj_id).into_redirect(state),
 				}
 			}
-			Self::S6DropItem(obj_id) => {
+			Self::S6DropItem(spot, obj_id) => {
 				let object = take_object(obj_id, &mut state);
 				let object_desc = get_obj_desc(&object, &state);
-				let spot = *state.level.rogue.spot.as_spot();
 				state.level.put_object(spot, object);
 				let report = format!("dropped {}", object_desc);
 				let after_report = |state| RegMoveEvent::new().into_redirect(state);

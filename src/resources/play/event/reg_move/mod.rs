@@ -8,7 +8,6 @@ use crate::resources::play::event::move_monsters::MoveMonstersEvent;
 use crate::resources::play::event::reg_move::update_health::update_health;
 use crate::resources::play::event::reg_move::update_move_result::update_move_result;
 use crate::resources::play::event::reg_move::update_wanderers::update_wanderers;
-use crate::resources::play::event::state_action::StateAction;
 use crate::resources::play::event::RunStep;
 use crate::resources::play::state::RunState;
 use crate::resources::rogue::energy::RogueEnergy;

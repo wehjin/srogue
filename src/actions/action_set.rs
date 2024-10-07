@@ -5,8 +5,8 @@ use lazy_static::lazy_static;
 use crate::actions::action_set::PlayerEvent::{MoveRogue, Update};
 use crate::actions::eat::Eat;
 use crate::actions::fight::{FightHeavy, FightLight, Throw, Zap};
+use crate::actions::ground::KickIntoPack;
 use crate::actions::ground::MoveOnto;
-use crate::actions::ground::{DropItem, KickIntoPack};
 use crate::actions::inventory::{InventoryArmor, InventoryGround, InventoryOne, InventoryRings, InventoryWeapons};
 use crate::actions::motion::{Ascend, Descend};
 use crate::actions::put_on_ring::PutOnRing;
@@ -28,12 +28,11 @@ use crate::resources::keyboard::{CTRL_A, CTRL_C, CTRL_I, CTRL_M, CTRL_O, CTRL_S,
 use crate::systems::play_level::{LevelResult, UNKNOWN_COMMAND};
 use keyboard::{CTRL_B, CTRL_H, CTRL_J, CTRL_K, CTRL_L, CTRL_N, CTRL_P, CTRL_U, CTRL_Y};
 
-const ROGUE_ACTIONS: [(&[char], UpdateGameFn); 38] = [
+const ROGUE_ACTIONS: [(&[char], UpdateGameFn); 37] = [
 	(&['<'], Ascend::update),
 	(&['c'], CallIt::update),
 	(&['>'], Descend::update),
 	(&[CTRL_S], DrawMagicMap::update),
-	(&['d'], DropItem::update),
 	(&['e'], Eat::update),
 	(&['F'], FightHeavy::update),
 	(&['f'], FightLight::update),
