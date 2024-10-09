@@ -1,58 +1,121 @@
-use crate::actions::GameUpdater;
-use crate::init::{Dungeon, GameState};
-use crate::level::add_exp;
-use crate::pack::pack_letter;
+use crate::objects::ObjectId;
 use crate::prelude::food_kind::{FRUIT, RATION};
-use crate::prelude::object_what::ObjectWhat::Food;
-use crate::prelude::object_what::PackFilter::Foods;
-use crate::random::{get_rand, rand_percent};
-use crate::resources::keyboard::CANCEL_CHAR;
-use crate::systems::play_level::LevelResult;
-use rand::thread_rng;
+use crate::prelude::object_what::ObjectWhat;
+use crate::resources::avatar::Avatar;
+use crate::resources::play::context::RunContext;
+use crate::resources::play::effect::RunEffect;
+use crate::resources::play::event::game::{Dispatch, GameEvent, GameEventVariant};
+use crate::resources::play::event::reg_move::RegMoveEvent;
+use crate::resources::play::event::upgrade_rogue::UpgradeRogueEvent;
+use crate::resources::play::event::RunStep;
+use crate::resources::play::seed::menu_event_seed::MenuInput;
+use crate::resources::play::state::RunState;
+use rand::Rng;
 
-pub struct Eat;
+impl GameEventVariant for EatMealEvent {
+	fn into_game_event(self) -> GameEvent { GameEvent::EatMeal(self) }
+}
 
-impl GameUpdater for Eat {
-	fn update(game: &mut GameState) -> Option<LevelResult> {
-		eat(game);
-		None
+#[derive(Debug)]
+pub enum EatMealEvent {
+	S1Start,
+	S2Select(MenuInput),
+	S3Chew(ObjectId),
+	S4Swallow(ObjectId),
+}
+
+impl EatMealEvent {
+	pub fn new() -> Self { Self::S1Start }
+}
+
+impl Dispatch for EatMealEvent {
+	fn dispatch(self, mut state: RunState, _ctx: &mut RunContext) -> RunStep {
+		match self {
+			Self::S1Start => {
+				state.diary.clear_message_lines();
+				state.diary.message_line = Some("eat what?".to_string());
+				state.into_effect(
+					RunEffect::await_menu(
+						"eat",
+						|state, input| Self::S2Select(input).into_run_event(state),
+					)
+				)
+			}
+			Self::S2Select(input) => {
+				match input {
+					MenuInput::Close => state.into_effect(RunEffect::AwaitMove),
+					MenuInput::Item(ch) => {
+						match state.level.rogue.obj_id_if_letter(ch) {
+							None => {
+								state.diary.message_line = Some("no such item.".to_string());
+								state.into_effect(RunEffect::AwaitMove)
+							}
+							Some(obj_id) => {
+								Self::S3Chew(obj_id).into_redirect(state)
+							}
+						}
+					}
+				}
+			}
+			Self::S3Chew(obj_id) => {
+				if state.pack_object(obj_id).what_is != ObjectWhat::Food {
+					state.diary.message_line = Some("you can't eat that".to_string());
+					state.into_effect(RunEffect::AwaitMove)
+				} else {
+					Self::S4Swallow(obj_id).into_redirect(state)
+				}
+			}
+			Self::S4Swallow(obj_id) => {
+				let meal = Meal::prepare(state.pack_object(obj_id).which_kind, &mut state);
+				{
+					let fighter = state.as_fighter_mut();
+					fighter.moves_left = fighter.moves_left / 3 + meal.calories;
+					state.diary.set_stats_changed(true);
+				}
+				if state.pack_object(obj_id).quantity > 1 {
+					let object = state.pack_object_mut(obj_id);
+					object.quantity -= 1;
+				} else {
+					let pack = state.as_rogue_pack_mut();
+					pack.remove(obj_id);
+				}
+				state.diary.message_line = Some(meal.message);
+				if meal.gains_exp {
+					state.as_fighter_mut().exp.add_points(2);
+					let after_report = |state| RegMoveEvent::new().into_redirect(state);
+					UpgradeRogueEvent::new(after_report).into_redirect(state)
+				} else {
+					RegMoveEvent::new().into_redirect(state)
+				}
+			}
+		}
 	}
 }
 
+struct Meal {
+	calories: isize,
+	message: String,
+	gains_exp: bool,
+}
 
-fn eat(game: &mut GameState) {
-	let ch = pack_letter("eat what?", Foods, game);
-	if ch == CANCEL_CHAR {
-		return;
-	}
-	match game.player.object_id_with_letter(ch) {
-		None => {
-			game.diary.add_entry("no such item.");
-			return;
-		}
-		Some(obj_id) => {
-			if game.player.object_what(obj_id) != Food {
-				game.diary.add_entry("you can't eat that");
-				return;
-			}
-			let kind = game.player.object_kind(obj_id);
-			let moves = if kind == FRUIT || rand_percent(60) {
-				let msg = if kind == RATION {
+impl Meal {
+	pub fn prepare(kind: u16, state: &mut RunState) -> Self {
+		if kind == FRUIT || state.roll_chance(60) {
+			Self {
+				calories: state.rng.gen_range(900..=1100),
+				message: if kind == RATION {
 					"yum, that tasted good".to_string()
 				} else {
-					format!("my, that was a yummy {}", &game.player.settings.fruit)
-				};
-				game.diary.add_entry(&msg);
-				get_rand(900, 1100)
-			} else {
-				game.diary.add_entry("yuk, that food tasted awful");
-				add_exp(2, true, game, &mut thread_rng());
-				get_rand(700, 900)
-			};
-			game.player.rogue.moves_left /= 3;
-			game.player.rogue.moves_left += moves;
-			game.as_diary_mut().set_stats_changed(true);
-			crate::r#use::vanish(obj_id, true, game);
+					format!("my, that was a yummy {}", &state.settings.fruit)
+				},
+				gains_exp: false,
+			}
+		} else {
+			Self {
+				calories: state.rng.gen_range(700..=900),
+				message: "yuk, that food tasted awful".to_string(),
+				gains_exp: true,
+			}
 		}
 	}
 }

@@ -1,7 +1,6 @@
 use crate::hit::rogue_hit;
 use crate::init::Dungeon;
 use crate::inventory::get_obj_desc;
-use crate::level::hp_raise;
 use crate::motion::{MoveDirection, MoveResult};
 use crate::odds::R_TELE_PERCENT;
 use crate::resources::arena::Arena;
@@ -11,11 +10,12 @@ use crate::resources::level::wake::{wake_room, WakeType};
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::game::{Dispatch, GameEvent, GameEventVariant};
-use crate::resources::play::event::message::Message;
+use crate::resources::play::event::message::MessageEvent;
 use crate::resources::play::event::one_move::OneMoveEvent::{Stage1Start, Stage2CheckStuck, Stage3CheckTeleport, Stage4AUpgradeRogue, Stage4CheckMonster, Stage5AdjustLighting, Stage6MoveRogue, Stage7PickupObjects, Stage8CheckStoppedAndTraps};
 use crate::resources::play::event::pick_up::{PickUpRegMove, PickupType};
 use crate::resources::play::event::reg_move::RegMoveEvent;
 use crate::resources::play::event::state_action::{redirect, StateAction};
+use crate::resources::play::event::upgrade_rogue::UpgradeRogueEvent;
 use crate::resources::play::event::RunStep;
 use crate::resources::play::state::RunState;
 use crate::resources::rogue::spot::RogueSpot;
@@ -70,13 +70,13 @@ impl Dispatch for OneMoveEvent {
 					state.move_result = Some(MoveResult::MoveFailed);
 					let after_report = |state| RunStep::Effect(state, RunEffect::AwaitMove);
 					let report = "you are being held";
-					redirect(Message::new(state, report, true, after_report))
+					redirect(MessageEvent::new(state, report, true, after_report))
 				} else if in_bear_trap && no_monster_at_spot {
 					// Report bear trap and do a regular move so that the bear trap counts down.
 					state.move_result = Some(MoveResult::MoveFailed);
 					let after_report = |state| RegMoveEvent::new().into_redirect(state);
 					let report = "you are still stuck in the bear trap";
-					redirect(Message::new(state, report, true, after_report))
+					redirect(MessageEvent::new(state, report, true, after_report))
 				} else {
 					// On to the next stage.
 					Stage3CheckTeleport { to_spot, rogue_spot, allow_pickup }.into_redirect(state)
@@ -106,7 +106,7 @@ impl Dispatch for OneMoveEvent {
 					if let Some(report) = state.diary.next_message_line.take() {
 						// If there is something to report, report it then finish the move.
 						let after_report = |state| Stage4AUpgradeRogue.into_redirect(state);
-						Message::new(state, report, true, after_report).into_redirect()
+						MessageEvent::new(state, report, true, after_report).into_redirect()
 					} else {
 						// Finish the move.
 						Stage4AUpgradeRogue.into_redirect(state)
@@ -117,20 +117,8 @@ impl Dispatch for OneMoveEvent {
 				}
 			}
 			Stage4AUpgradeRogue => {
-				if let Some(promotion_level) = state.as_fighter().exp.can_promote() {
-					// Update rogue's hp and exp level.
-					let hp = hp_raise(state.wizard(), state.rng());
-					state.upgrade_hp(hp);
-					state.as_fighter_mut().exp.set_level(promotion_level);
-					state.as_diary_mut().set_stats_changed(true);
-					// Report the promotion then try again since we may have more upgrades to consider.
-					let post_report = |state| Stage4AUpgradeRogue.into_redirect(state);
-					let report = format!("welcome to level {}", promotion_level);
-					Message::new(state, report, false, post_report).into_redirect()
-				} else {
-					// Done upgrading.
-					RegMoveEvent::new().into_redirect(state)
-				}
+				let after_upgrade = |state| RegMoveEvent::new().into_redirect(state);
+				UpgradeRogueEvent::new(after_upgrade).into_redirect(state)
 			}
 			Stage5AdjustLighting { to_spot, rogue_spot, allow_pickup } => {
 				// Adjust lighting.
@@ -185,7 +173,7 @@ impl Dispatch for OneMoveEvent {
 						state.move_result = Some(MoveResult::StoppedOnSomething);
 						let after_report = move |state| RegMoveEvent::new().into_redirect(state);
 						let report = moved_onto_message(row, col, &state);
-						Message::new(state, report, true, after_report).into_redirect()
+						MessageEvent::new(state, report, true, after_report).into_redirect()
 					}
 				} else {
 					Stage8CheckStoppedAndTraps { spot }.into_redirect(state)

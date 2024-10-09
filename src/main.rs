@@ -80,6 +80,7 @@ impl TextConsole for TerminalConsole {
 								' ' => PlayerInput::Space,
 								'b' => PlayerInput::Arrow(MoveDirection::DownLeft),
 								'd' => PlayerInput::Drop,
+								'e' => PlayerInput::Eat,
 								'h' => PlayerInput::Arrow(MoveDirection::Left),
 								'i' => PlayerInput::Menu,
 								'j' => PlayerInput::Arrow(MoveDirection::Down),

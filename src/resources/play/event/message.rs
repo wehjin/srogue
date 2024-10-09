@@ -8,24 +8,24 @@ use crate::resources::play::seed::event_seed::EventSeed;
 use crate::resources::play::state::RunState;
 
 #[derive(Debug)]
-pub struct Message {
+pub struct MessageEvent {
 	state: RunState,
 	text: String,
 	interrupt: bool,
 	post_step: StepSeed,
 }
 
-impl Message {
-	pub fn new(state: RunState, text: impl AsRef<str>, interrupt: bool, post_step: impl FnOnce(RunState) -> RunStep + 'static) -> Message {
+impl MessageEvent {
+	pub fn new(state: RunState, text: impl AsRef<str>, interrupt: bool, post_step: impl FnOnce(RunState) -> RunStep + 'static) -> MessageEvent {
 		Self { state, text: text.as_ref().to_string(), interrupt, post_step: StepSeed::new("post-print", post_step) }
 	}
 	pub fn run_await_exit(state: RunState, text: impl AsRef<str>, interrupt: bool, ctx: &mut RunContext) -> RunState {
-		let action = Message::new(state, text, interrupt, RunStep::Exit);
+		let action = MessageEvent::new(state, text, interrupt, RunStep::Exit);
 		ctx.run_action_await_exit(action)
 	}
 }
 
-impl StateAction for Message {
+impl StateAction for MessageEvent {
 	fn into_event(self) -> RunEvent {
 		RunEvent::Message(self)
 	}
@@ -59,7 +59,7 @@ impl StateAction for Message {
 #[cfg(test)]
 mod tests {
 	use crate::resources::play::context::RunContext;
-	use crate::resources::play::event::message::Message;
+	use crate::resources::play::event::message::MessageEvent;
 	use crate::resources::play::state::RunState;
 	use crate::resources::play::TextConsole;
 	use crate::resources::player::{InputMode, PlayerInput};
@@ -79,7 +79,7 @@ mod tests {
 		let rng = ChaCha8Rng::seed_from_u64(17);
 		let mut ctx = RunContext::new(TestConsole);
 		let state = RunState::init(rng);
-		let new_state = Message::run_await_exit(state, "Hello", true, &mut ctx);
+		let new_state = MessageEvent::run_await_exit(state, "Hello", true, &mut ctx);
 		assert_eq!(Some("Hello".to_string()), new_state.diary.message_line);
 		assert!(new_state.diary.interrupted);
 	}
@@ -89,7 +89,7 @@ mod tests {
 		let mut ctx = RunContext::new(TestConsole);
 		let mut state = RunState::init(rng);
 		state.diary.message_line = Some("Hello".to_string());
-		let new_state = Message::run_await_exit(state, "World", false, &mut ctx);
+		let new_state = MessageEvent::run_await_exit(state, "World", false, &mut ctx);
 		assert_eq!(Some("World".to_string()), new_state.diary.message_line);
 		assert!(!new_state.diary.interrupted);
 	}

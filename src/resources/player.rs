@@ -4,6 +4,7 @@ pub enum PlayerInput {
 	Arrow(MoveDirection),
 	Close,
 	Drop,
+	Eat,
 	Help,
 	Menu,
 	Select(char),

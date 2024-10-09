@@ -9,7 +9,7 @@ use crate::resources::level::size::LevelSpot;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::game::{Dispatch, GameEvent, GameEventVariant};
-use crate::resources::play::event::message::Message;
+use crate::resources::play::event::message::MessageEvent;
 use crate::resources::play::event::reg_move::RegMoveEvent;
 use crate::resources::play::event::state_action::StateAction;
 use crate::resources::play::event::RunStep;
@@ -47,12 +47,12 @@ impl Dispatch for DropItemEvent {
 					CheckDrop::NowhereToDrop => {
 						let after_report = |state: RunState| state.into_effect(RunEffect::AwaitMove);
 						let report = "there's already something there";
-						Message::new(state, report, false, after_report).into_redirect()
+						MessageEvent::new(state, report, false, after_report).into_redirect()
 					}
 					CheckDrop::NothingToDrop => {
 						let after_report = |state: RunState| state.into_effect(RunEffect::AwaitMove);
 						let report = "you have nothing to drop";
-						Message::new(state, report, false, after_report).into_redirect()
+						MessageEvent::new(state, report, false, after_report).into_redirect()
 					}
 					CheckDrop::CanDrop(spot) => {
 						state.diary.message_line = Some("drop what?".into());
@@ -138,7 +138,7 @@ impl Dispatch for DropItemEvent {
 				state.level.put_object(spot, object);
 				let report = format!("dropped {}", object_desc);
 				let after_report = |state| RegMoveEvent::new().into_redirect(state);
-				Message::new(state, report, false, after_report).into_redirect()
+				MessageEvent::new(state, report, false, after_report).into_redirect()
 			}
 		}
 	}

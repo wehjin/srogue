@@ -7,7 +7,7 @@ use crate::resources::play::event::game::{Dispatch, GameEvent};
 use crate::resources::play::event::pick_up::PickUpRegMove;
 use crate::resources::play::seed::step_seed::StepSeed;
 use crate::resources::play::state::RunState;
-use message::Message;
+use message::MessageEvent;
 use rand_chacha::ChaCha8Rng;
 use state_action::StateAction;
 
@@ -20,13 +20,14 @@ pub mod one_move;
 pub mod pick_up;
 pub mod reg_move;
 pub mod state_action;
+pub mod upgrade_rogue;
 
 #[derive(Debug)]
 pub enum RunEvent {
 	Init(ChaCha8Rng),
 	Game(RunState, GameEvent),
 	PlayerQuit(RunState),
-	Message(Message),
+	Message(MessageEvent),
 	PickUp(PickUpRegMove),
 
 	PlayerCloseModal(RunState),

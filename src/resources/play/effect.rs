@@ -1,3 +1,4 @@
+use crate::actions::eat::EatMealEvent;
 use crate::resources::play::event::game::drop_item::DropItemEvent;
 use crate::resources::play::event::game::GameEventVariant;
 use crate::resources::play::event::one_move::OneMoveEvent;
@@ -48,6 +49,7 @@ fn await_player_move(state: RunState, console: &impl TextConsole) -> RunEvent {
 	match console.get_input(InputMode::Any) {
 		PlayerInput::Arrow(direction) => OneMoveEvent::new(direction, true).into_run_event(state),
 		PlayerInput::Drop => DropItemEvent::new().into_run_event(state),
+		PlayerInput::Eat => EatMealEvent::new().into_run_event(state),
 		PlayerInput::Help => RunEvent::PlayerOpenHelp(state),
 		PlayerInput::Menu => RunEvent::PlayerOpenInventory(state),
 		_ => RunEvent::PlayerQuit(state),

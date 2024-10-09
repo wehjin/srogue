@@ -18,6 +18,13 @@ use crate::settings::Settings;
 use crate::weapons::kind::WeaponKind;
 
 pub trait Avatar {
+	fn pack_object(&self, obj_id: ObjectId) -> &Object {
+		self.as_rogue_pack().object(obj_id).unwrap()
+	}
+	fn pack_object_mut(&mut self, obj_id: ObjectId) -> &mut Object {
+		self.as_rogue_pack_mut().object_mut(obj_id).unwrap()
+	}
+
 	fn as_settings(&self) -> &Settings;
 	fn as_settings_mut(&mut self) -> &mut Settings;
 	fn rogue_energy(&self) -> RogueEnergy {

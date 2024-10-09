@@ -8,7 +8,7 @@ use crate::resources::level::size::LevelSpot;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::game::{Dispatch, GameEventVariant};
-use crate::resources::play::event::message::Message;
+use crate::resources::play::event::message::MessageEvent;
 use crate::resources::play::event::one_move::moved_onto_message;
 use crate::resources::play::event::reg_move::RegMoveEvent;
 use crate::resources::play::event::state_action::StateAction;
@@ -68,14 +68,14 @@ fn register_move(state: RunState, ctx: &mut RunContext) -> RunStep {
 fn print_message_register_move(report: impl AsRef<str>, mut state: RunState, ctx: &mut RunContext) -> RunStep {
 	state.move_result = Some(MoveResult::StoppedOnSomething);
 	let after_report = move |state| RegMoveEvent::new().into_redirect(state);
-	Message::new(state, report, true, after_report).dispatch(ctx)
+	MessageEvent::new(state, report, true, after_report).dispatch(ctx)
 }
 
 fn pick_up(row: i64, col: i64, mut state: RunState, ctx: &mut RunContext) -> (PickUpResult, RunState) {
 	let obj = state.try_object_at(row, col).unwrap();
 	if obj.is_used_scare_monster_scroll() {
 		let report = "the scroll turns to dust as you pick it up";
-		let mut state = Message::run_await_exit(state, report, false, ctx);
+		let mut state = MessageEvent::run_await_exit(state, report, false, ctx);
 		state.level.remove_object(LevelSpot::from_i64(row, col));
 		if state.as_notes().scrolls[ScareMonster.to_index()].status == Unidentified {
 			let notes = state.as_notes_mut();
@@ -91,7 +91,7 @@ fn pick_up(row: i64, col: i64, mut state: RunState, ctx: &mut RunContext) -> (Pi
 	}
 	if state.pack_weight_with_new_object(Some(obj)) >= MAX_PACK_COUNT {
 		let report = "pack too full";
-		let state = Message::run_await_exit(state, report, true, ctx);
+		let state = MessageEvent::run_await_exit(state, report, true, ctx);
 		return (PickUpResult::PackTooFull, state);
 	}
 	let removed = state.level.remove_object(LevelSpot::from_i64(row, col)).unwrap();

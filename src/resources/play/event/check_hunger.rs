@@ -4,7 +4,7 @@ use crate::prelude::ending::Ending;
 use crate::resources::avatar::Avatar;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::event::game::{Dispatch, GameEvent, GameEventVariant};
-use crate::resources::play::event::message::Message;
+use crate::resources::play::event::message::MessageEvent;
 use crate::resources::play::event::move_monsters::MoveMonstersEvent;
 use crate::resources::play::event::state_action::StateAction;
 use crate::resources::play::event::{RunEvent, RunStep};
@@ -62,7 +62,7 @@ impl Dispatch for CheckHungerEvent {
 									// from the current energy level.
 									Self::InspectEnergy { after_check }.into_redirect(state)
 								};
-								Message::new(state, report, interrupt, post_report).into_redirect()
+								MessageEvent::new(state, report, interrupt, post_report).into_redirect()
 							}
 						}
 					}
@@ -103,7 +103,7 @@ impl Dispatch for CheckHungerEvent {
 							// After reporting the faint, execute [duration] rounds of fainting.
 							Self::EnactFaint { duration: Some(duration), after_check }.into_redirect(state)
 						};
-						Message::new(state, report, true, post_report).into_redirect()
+						MessageEvent::new(state, report, true, post_report).into_redirect()
 					}
 				}
 				Some(duration) => if duration == 0 {
@@ -113,7 +113,7 @@ impl Dispatch for CheckHungerEvent {
 						// After report our rogue's recovery, Do whatever comes next.
 						after_check.into_redirect(state)
 					};
-					Message::new(state, report, true, post_report).into_redirect()
+					MessageEvent::new(state, report, true, post_report).into_redirect()
 				} else {
 					// Fainting continues. Toss for monster movement.
 					let coin_toss = state.rng.gen_bool(0.5);

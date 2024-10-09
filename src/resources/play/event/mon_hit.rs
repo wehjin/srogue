@@ -8,7 +8,7 @@ use crate::random::rand_percent;
 use crate::resources::arena::Arena;
 use crate::resources::avatar::Avatar;
 use crate::resources::play::context::RunContext;
-use crate::resources::play::event::message::Message;
+use crate::resources::play::event::message::MessageEvent;
 use crate::resources::play::state::RunState;
 use crate::spec_hit::special_hit;
 
@@ -43,14 +43,14 @@ pub fn mon_hit(mut game: RunState, mon_id: u64, flame: Option<&'static str>, ctx
 		if game.fight_to_death().is_none() {
 			let monster_miss = format!("the {} misses", monster_name);
 			let fight_report = fight_report(monster_miss, &mut game);
-			game = Message::run_await_exit(game, fight_report, true, ctx);
+			game = MessageEvent::run_await_exit(game, fight_report, true, ctx);
 		}
 		return game;
 	}
 	if game.fight_to_death().is_none() {
 		let monster_hit = format!("the {} hit", monster_name);
 		let fight_report = fight_report(monster_hit, &mut game);
-		game = Message::run_await_exit(game, fight_report, true, ctx);
+		game = MessageEvent::run_await_exit(game, fight_report, true, ctx);
 	}
 	let mut damage: isize = if !game.as_monster_flags(mon_id).stationary {
 		let mut damage = hit::get_damage(game.as_monster(mon_id).m_damage(), DamageEffect::Roll);
