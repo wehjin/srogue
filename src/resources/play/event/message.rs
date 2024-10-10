@@ -3,21 +3,38 @@ use crate::resources::play::context::RunContext;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::state_action::StateAction;
 use crate::resources::play::event::{RunEvent, RunStep};
-use crate::resources::play::seed::step_seed::StepSeed;
 use crate::resources::play::seed::event_seed::EventSeed;
+use crate::resources::play::seed::step_seed::StepSeed;
 use crate::resources::play::state::RunState;
+use std::collections::VecDeque;
 
 #[derive(Debug)]
 pub struct MessageEvent {
 	state: RunState,
-	text: String,
+	reports: VecDeque<String>,
 	interrupt: bool,
 	post_step: StepSeed,
+	first_round: bool,
 }
 
 impl MessageEvent {
 	pub fn new(state: RunState, text: impl AsRef<str>, interrupt: bool, post_step: impl FnOnce(RunState) -> RunStep + 'static) -> MessageEvent {
-		Self { state, text: text.as_ref().to_string(), interrupt, post_step: StepSeed::new("post-print", post_step) }
+		Self {
+			state,
+			reports: VecDeque::from(vec![text.as_ref().to_string()]),
+			interrupt,
+			post_step: StepSeed::new("post-print", post_step),
+			first_round: true,
+		}
+	}
+	pub fn multiple(state: RunState, text: Vec<String>, interrupt: bool, post_step: impl FnOnce(RunState) -> RunStep + 'static) -> MessageEvent {
+		Self {
+			state,
+			reports: VecDeque::from(text),
+			interrupt,
+			post_step: StepSeed::new("post-print", post_step),
+			first_round: true,
+		}
 	}
 	pub fn run_await_exit(state: RunState, text: impl AsRef<str>, interrupt: bool, ctx: &mut RunContext) -> RunState {
 		let action = MessageEvent::new(state, text, interrupt, RunStep::Exit);
@@ -32,24 +49,31 @@ impl StateAction for MessageEvent {
 
 	fn dispatch(self, _ctx: &mut RunContext) -> RunStep {
 		match self {
-			Self { mut state, text, interrupt, post_step } => {
+			Self { mut state, mut reports, interrupt, post_step, first_round } => {
 				// TODO if !save_is_interactive {return;}
 				let diary = state.as_diary_mut();
 				if interrupt {
 					diary.interrupted = true;
 					// TODO md_slurp().
 				}
-				let diary = state.as_diary_mut();
-				if diary.message_line.is_none() {
-					diary.message_line = Some(text);
-					diary.next_message_line = None;
+				if first_round {
+					if diary.message_line.is_none() {
+						diary.message_line = reports.pop_front();
+						diary.next_message_line = reports.pop_front();
+					} else {
+						diary.next_message_line = reports.pop_front();
+					}
+				} else {
+					diary.message_line = diary.next_message_line.take();
+					diary.next_message_line = reports.pop_front();
+				}
+				if diary.next_message_line.is_none() {
 					post_step.into_step(state)
 				} else {
-					diary.next_message_line = Some(text);
-					let on_player_ack = EventSeed::new(|state| {
-						RunEvent::PrintNextAndStep(state, post_step)
+					let after_ack = EventSeed::new(move |state| {
+						Self { state, reports, interrupt, post_step, first_round: false }.into_event()
 					});
-					RunStep::Effect(state, RunEffect::AwaitAck(on_player_ack))
+					state.into_effect(RunEffect::AwaitAck(after_ack))
 				}
 			}
 		}

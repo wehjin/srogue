@@ -87,6 +87,7 @@ impl TextConsole for TerminalConsole {
 								'k' => PlayerInput::Arrow(MoveDirection::Up),
 								'l' => PlayerInput::Arrow(MoveDirection::Right),
 								'n' => PlayerInput::Arrow(MoveDirection::DownRight),
+								'q' => PlayerInput::Quaff,
 								'u' => PlayerInput::Arrow(MoveDirection::UpRight),
 								'y' => PlayerInput::Arrow(MoveDirection::UpLeft),
 								_ => PlayerInput::Close,
@@ -96,7 +97,7 @@ impl TextConsole for TerminalConsole {
 						InputMode::Alert => PlayerInput::Close,
 						InputMode::Menu => match key.code {
 							KeyCode::Char(char) => match char {
-								'a'..='z' => PlayerInput::Select(char),
+								'a'..='z' => PlayerInput::MenuSelect(char),
 								_ => PlayerInput::Close,
 							},
 							_ => PlayerInput::Close,
@@ -131,16 +132,16 @@ pub fn main_legacy() -> anyhow::Result<()> {
 
 	let settings = match settings::load() {
 		Ok(settings) => settings,
-		Err(e) => match e {
+		Err(e) => return match e {
 			SettingsError::LoginName => {
 				println!("Hey!  Who are you?");
-				return Ok(());
+				Ok(())
 			}
 		},
 	};
 	let result = match init(settings) {
 		Ok(result) => result,
-		Err(error) => match error {
+		Err(error) => return match error {
 			InitError::NoConsole(error) => {
 				match error {
 					ConsoleError::ScreenTooSmall { min_rows, min_cols } => {
@@ -148,13 +149,13 @@ pub fn main_legacy() -> anyhow::Result<()> {
 						println!("must be played on {} x {} or better screen", min_rows, min_cols);
 					}
 				}
-				return Ok(());
+				Ok(())
 			}
 			InitError::BadRestore(exit) => {
 				if let Some(exit) = exit {
 					eprintln!("\n{}", exit);
 				}
-				return Ok(());
+				Ok(())
 			}
 		},
 	};

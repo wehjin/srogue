@@ -1,104 +1,123 @@
 use crate::actions::quaff::STRANGE_FEELING;
-use crate::init::GameState;
-use crate::level::add_exp;
-use crate::monster::show_monsters;
-use crate::objects::show_objects;
+use crate::init::{Dungeon, GameState};
 use crate::potions::kind::PotionKind;
-use crate::random::get_rand;
-use crate::render_system::RenderAction::MonstersFloorAndPlayer;
+use crate::prelude::MAX_STRENGTH;
 use crate::resources::avatar::Avatar;
-use rand::thread_rng;
+pub enum PotionEffect {
+	None,
+	Report(Vec<String>),
+	Upgrade,
+}
+impl PotionEffect {
+	pub fn none() -> Self { Self::None }
+	pub fn report(report: impl AsRef<str>) -> Self { Self::Report(vec![report.as_ref().to_string()]) }
+	pub fn upgrade() -> Self { Self::Upgrade }
+}
 
-pub fn quaff_potion(potion_kind: PotionKind, game: &mut GameState) {
+pub fn quaff_potion(potion_kind: PotionKind, game: &mut impl Dungeon) -> PotionEffect {
 	match potion_kind {
 		PotionKind::IncreaseStrength => {
-			game.diary.add_entry("you feel stronger now, what bulging muscles!");
-			game.player.raise_strength();
+			let fighter = game.as_fighter_mut();
+			fighter.str_current = (fighter.str_current + 1).min(MAX_STRENGTH);
+			fighter.str_max = fighter.str_max.max(fighter.str_current);
+			PotionEffect::report("you feel stronger now, what bulging muscles!")
 		}
 		PotionKind::RestoreStrength => {
-			game.player.rogue.str_current = game.player.rogue.str_max;
-			game.diary.add_entry("this tastes great, you feel warm all over");
+			let fighter = game.as_fighter_mut();
+			fighter.str_current = fighter.str_max;
+			PotionEffect::report("this tastes great, you feel warm all over")
 		}
 		PotionKind::Healing => {
-			game.diary.add_entry("you begin to feel better");
-			potion_heal(false, game);
+			// TODO potion_heal(false, game);
+			PotionEffect::report("you begin to feel better")
 		}
 		PotionKind::ExtraHealing => {
-			game.diary.add_entry("you begin to feel much better");
-			potion_heal(true, game);
+			// TODO potion_heal(true, game);
+			PotionEffect::report("you begin to feel much better")
 		}
 		PotionKind::Poison => {
-			if !game.player.ring_effects.has_sustain_strength() {
-				game.player.rogue.str_current -= get_rand(1, 3);
-				if game.player.rogue.str_current < 1 {
-					game.player.rogue.str_current = 1;
-				}
+			if !game.as_ring_effects().has_sustain_strength() {
+				let amount = game.roll_range(1..=3);
+				let fighter = game.as_fighter_mut();
+				fighter.str_current = (fighter.str_current - amount).max(1);
 			}
-			game.diary.add_entry("you feel very sick now");
-			if game.player.health.halluc.is_active() {
-				crate::r#use::unhallucinate(game);
+			let poison_report = "you feel very u now".to_string();
+			if game.as_health().halluc.is_active() {
+				// TODO crate::r#use::unhallucinate(game);
 			}
+			let unhalluc_report = "".to_string();  // TODO set unhalloc report.
+			PotionEffect::Report(vec![poison_report, unhalluc_report])
 		}
 		PotionKind::RaiseLevel => {
 			let fighter = game.as_fighter_mut();
 			fighter.exp.raise_level();
-			add_exp(1, true, game, &mut thread_rng());
+			fighter.exp.add_points(1);
+			PotionEffect::upgrade()
 		}
 		PotionKind::Blindness => {
-			if game.player.health.blind.is_inactive() {
-				game.diary.add_entry("a cloak of darkness falls around you");
-			}
-			game.player.health.blind.extend(get_rand(500, 800));
-			show_blind(game);
+			let reports = if game.as_health().blind.is_inactive() {
+				vec!["a cloak of darkness falls around you".to_string()]
+			} else {
+				vec![]
+			};
+			let amount = game.roll_range(500..=800);
+			game.as_health_mut().blind.extend(amount);
+			// TODO Make sure blind is rendered correctly. show_blind(game)
+			PotionEffect::Report(reports)
 		}
 		PotionKind::Hallucination => {
-			game.diary.add_entry("oh wow, everything seems so cosmic");
-			let amount = get_rand(500, 800);
-			game.player.health.halluc.extend(amount);
+			let amount = game.roll_range(500..=800);
+			game.as_health_mut().halluc.extend(amount);
+			PotionEffect::report("oh wow, everything seems so cosmic")
 		}
 		PotionKind::DetectMonster => {
-			show_monsters(game);
-			if game.mash.is_empty() {
-				game.diary.add_entry(STRANGE_FEELING);
+			// todo!("Mark the level or rogue as showing monsters and respect value when printing. show_monsters(game);");
+			if game.monster_ids().is_empty() {
+				PotionEffect::report(STRANGE_FEELING)
+			} else {
+				PotionEffect::none()
 			}
 		}
 		PotionKind::DetectObjects => {
-			if game.ground.is_empty() {
-				game.diary.add_entry(STRANGE_FEELING);
+			if game.object_ids().is_empty() {
+				PotionEffect::report(STRANGE_FEELING)
 			} else {
-				if game.player.health.blind.is_inactive() {
-					show_objects(game);
+				if game.as_health().blind.is_inactive() {
+					// todo!("Make sure objects are visible. show_objects(game);");
 				}
+				PotionEffect::none()
 			}
 		}
 		PotionKind::Confusion => {
-			let msg = if game.player.health.halluc.is_active() {
-				"what a trippy feeling"
-			} else {
-				"you feel confused"
-			};
-			game.diary.add_entry(msg);
 			crate::r#use::confuse(game);
+			let report = if game.as_health().halluc.is_active() { "what a trippy feeling" } else { "you feel confused" };
+			PotionEffect::report(report)
 		}
 		PotionKind::Levitation => {
-			game.diary.add_entry("you start to float in the air");
-			game.player.health.levitate.extend(get_rand(15, 30));
+			let amount = game.roll_range(15..=30);
 			let health = game.as_health_mut();
+			health.levitate.extend(amount);
 			health.bear_trap = 0;
 			health.being_held = false;
+			PotionEffect::report("you start to float in the air")
 		}
 		PotionKind::HasteSelf => {
-			game.diary.add_entry("you feel yourself moving much faster");
-			game.player.health.haste_self.extend(get_rand(11, 21));
-			game.player.health.haste_self.ensure_half_active();
+			let amount = game.roll_range(11..=21);
+			let health = game.as_health_mut();
+			health.haste_self.extend(amount);
+			health.haste_self.ensure_half_active();
+			PotionEffect::report("you feel yourself moving much faster")
 		}
 		PotionKind::SeeInvisible => {
-			game.diary.add_entry(&format!("hmm, this potion tastes like {} juice", game.player.settings.fruit.trim()));
-			if game.player.health.blind.is_active() {
-				crate::r#use::unblind(game);
+			let mut reports = vec![format!("hmm, this potion tastes like {} juice", game.as_settings().fruit.trim())];
+			if game.as_health().blind.is_active() {
+				// TODO crate::r#use::unblind(game);
+				let unblind_report = "".to_string(); // TODO Get report from unblind"
+				reports.push(unblind_report)
 			}
-			game.level.see_invisible = true;
-			crate::r#use::relight(game);
+			game.set_see_invisible(true);
+			// TODO Make sure room and . crate::r#use::relight(game);
+			PotionEffect::Report(reports)
 		}
 	}
 }
@@ -143,8 +162,4 @@ fn potion_heal(extra: bool, game: &mut GameState) {
 			game.player.health.halluc.halve();
 		}
 	}
-}
-
-fn show_blind(game: &mut GameState) {
-	game.render(&[MonstersFloorAndPlayer]);
 }

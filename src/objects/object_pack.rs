@@ -44,6 +44,14 @@ impl ObjectPack {
 			None
 		}
 	}
+	pub fn reduce_quantity_or_remove(&mut self, obj_id: ObjectId) {
+		if self.as_object(obj_id).quantity > 1 {
+			let object = self.as_object_mut(obj_id);
+			object.quantity -= 1;
+		} else {
+			self.remove(obj_id).unwrap();
+		}
+	}
 }
 
 impl ObjectPack {
@@ -116,6 +124,9 @@ impl ObjectPack {
 
 	pub fn as_object(&self, obj_id: ObjectId) -> &Object {
 		self.object(obj_id).unwrap()
+	}
+	pub fn as_object_mut(&mut self, obj_id: ObjectId) -> &mut Object {
+		self.object_mut(obj_id).unwrap()
 	}
 	pub fn object(&self, obj_id: ObjectId) -> Option<&Object> {
 		if let Some(position) = self.obj_position(obj_id) {

@@ -6,7 +6,7 @@ use crate::level::Level;
 use crate::machdep::md_heed_signals;
 use crate::monster::{aim_monster, Monster, MonsterIndex, MonsterMash};
 use crate::motion::{can_move, is_passable};
-use crate::objects::{Object, ObjectPack};
+use crate::objects::{Object, ObjectId, ObjectPack};
 use crate::player::Player;
 use crate::prelude::DungeonSpot;
 use crate::random::get_rand;
@@ -24,9 +24,11 @@ use crate::room::{dr_course_legacy, gr_spot_without_rogue, RoomBounds};
 use crate::save::restore;
 use crate::score::put_scores;
 use crate::settings::Settings;
+use rand::distributions::uniform::SampleUniform;
 use rand::{thread_rng, Rng};
 use std::io;
 use std::io::Write;
+use std::ops::RangeInclusive;
 
 //pub static mut save_is_interactive: bool = true;
 //pub const ERROR_FILE: &'static str = "player.rogue.esave";
@@ -101,6 +103,7 @@ pub struct GameState {
 }
 
 pub trait Dungeon: Avatar + Infra + Arena {
+	fn roll_range<T: SampleUniform + PartialOrd>(&mut self, range: RangeInclusive<T>) -> T;
 	fn move_mon_to(&mut self, mon_id: u64, row: i64, col: i64);
 	fn set_interrupted(&mut self, value: bool);
 	fn rogue_can_move(&self, row: i64, col: i64) -> bool;
@@ -121,6 +124,7 @@ pub trait Dungeon: Avatar + Infra + Arena {
 	fn is_passable_at(&self, row: i64, col: i64) -> bool;
 	fn has_object_at(&self, row: i64, col: i64) -> bool;
 	fn try_object_at(&self, row: i64, col: i64) -> Option<&Object>;
+	fn object_ids(&self) -> Vec<ObjectId>;
 	fn shows_skull(&self) -> bool;
 	fn player_name(&self) -> String;
 	fn monster_ids(&self) -> Vec<u64>;
@@ -142,6 +146,9 @@ impl GameState {
 }
 
 impl Dungeon for GameState {
+	fn roll_range<T: SampleUniform + PartialOrd>(&mut self, range: RangeInclusive<T>) -> T {
+		thread_rng().gen_range(range)
+	}
 	fn move_mon_to(&mut self, mon_id: u64, row: i64, col: i64) {
 		let to_spot = DungeonSpot { row, col };
 		let from_spot = self.as_monster(mon_id).spot;
@@ -180,6 +187,7 @@ impl Dungeon for GameState {
 	fn is_passable_at(&self, row: i64, col: i64) -> bool { is_passable(row, col, &self.level) }
 	fn has_object_at(&self, row: i64, col: i64) -> bool { self.level.dungeon[row as usize][col as usize].has_object() }
 	fn try_object_at(&self, row: i64, col: i64) -> Option<&Object> { self.ground.find_object_at(row, col) }
+	fn object_ids(&self) -> Vec<ObjectId> { self.ground.object_ids() }
 	fn shows_skull(&self) -> bool { self.player.settings.show_skull }
 	fn player_name(&self) -> String { self.player.settings.player_name().to_string() }
 	fn monster_ids(&self) -> Vec<u64> { self.mash.monster_ids() }

@@ -1,4 +1,5 @@
 use crate::actions::eat::EatMealEvent;
+use crate::actions::quaff::QuaffPotionEvent;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::event::check_hunger::CheckHungerEvent;
 use crate::resources::play::event::game::drop_item::DropItemEvent;
@@ -18,18 +19,20 @@ pub enum GameEvent {
 	CheckHunger(CheckHungerEvent),
 	DropItem(DropItemEvent),
 	EatMeal(EatMealEvent),
+	QuaffPotion(QuaffPotionEvent),
 	UpgradeRogue(UpgradeRogueEvent),
 }
 impl Dispatch for GameEvent {
 	fn dispatch(self, state: RunState, ctx: &mut RunContext) -> RunStep {
 		match self {
-			GameEvent::CheckHunger(event) => event.dispatch(state, ctx),
-			GameEvent::DropItem(event) => event.dispatch(state, ctx),
-			GameEvent::MoveMonsters(event) => event.dispatch(state, ctx),
-			GameEvent::OneMove(event) => event.dispatch(state, ctx),
-			GameEvent::RegMove(event) => event.dispatch(state, ctx),
-			GameEvent::EatMeal(event) => event.dispatch(state, ctx),
-			GameEvent::UpgradeRogue(event) => event.dispatch(state, ctx),
+			Self::CheckHunger(event) => event.dispatch(state, ctx),
+			Self::DropItem(event) => event.dispatch(state, ctx),
+			Self::MoveMonsters(event) => event.dispatch(state, ctx),
+			Self::OneMove(event) => event.dispatch(state, ctx),
+			Self::RegMove(event) => event.dispatch(state, ctx),
+			Self::EatMeal(event) => event.dispatch(state, ctx),
+			Self::QuaffPotion(event) => event.dispatch(state, ctx),
+			Self::UpgradeRogue(event) => event.dispatch(state, ctx),
 		}
 	}
 }

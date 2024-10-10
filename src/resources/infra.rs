@@ -11,6 +11,7 @@ pub trait Infra {
 	fn get_room_at(&self, row: i64, col: i64) -> Option<RoomId>;
 	fn room_bounds(&self, room_id: RoomId) -> RoomBounds;
 	fn see_invisible(&self) -> bool;
+	fn set_see_invisible(&mut self, value: bool);
 	fn detect_monster(&self) -> bool;
 }
 
@@ -38,6 +39,8 @@ impl Infra for Level {
 		self.see_invisible
 	}
 
+	fn set_see_invisible(&mut self, value: bool) { self.see_invisible = value }
+
 	fn detect_monster(&self) -> bool {
 		self.detect_monster
 	}
@@ -53,6 +56,8 @@ impl Infra for GameState {
 	fn see_invisible(&self) -> bool {
 		self.level.see_invisible()
 	}
+
+	fn set_see_invisible(&mut self, value: bool) { self.level.set_see_invisible(value) }
 
 	fn detect_monster(&self) -> bool {
 		self.level.detect_monster()
@@ -71,6 +76,8 @@ impl Infra for RunState {
 	fn see_invisible(&self) -> bool {
 		self.level.see_invisible
 	}
+
+	fn set_see_invisible(&mut self, value: bool) { self.level.see_invisible = value }
 
 	fn detect_monster(&self) -> bool {
 		self.level.detect_monster

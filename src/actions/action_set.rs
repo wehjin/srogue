@@ -9,7 +9,6 @@ use crate::actions::ground::MoveOnto;
 use crate::actions::inventory::{InventoryArmor, InventoryGround, InventoryOne, InventoryRings, InventoryWeapons};
 use crate::actions::motion::{Ascend, Descend};
 use crate::actions::put_on_ring::PutOnRing;
-use crate::actions::quaff::Quaff;
 use crate::actions::read_scroll::ReadScroll;
 use crate::actions::remove_ring::RemoveRing;
 use crate::actions::rest::{CallIt, Ignore, Quit, Rest, SaveGame, ShowAverageHp, Version};
@@ -27,7 +26,7 @@ use crate::resources::keyboard::{CTRL_A, CTRL_C, CTRL_I, CTRL_M, CTRL_O, CTRL_S,
 use crate::systems::play_level::{LevelResult, UNKNOWN_COMMAND};
 use keyboard::{CTRL_B, CTRL_H, CTRL_J, CTRL_K, CTRL_L, CTRL_N, CTRL_P, CTRL_U, CTRL_Y};
 
-const ROGUE_ACTIONS: [(&[char], UpdateGameFn); 36] = [
+const ROGUE_ACTIONS: [(&[char], UpdateGameFn); 35] = [
 	(&['<'], Ascend::update),
 	(&['c'], CallIt::update),
 	(&['>'], Descend::update),
@@ -45,7 +44,6 @@ const ROGUE_ACTIONS: [(&[char], UpdateGameFn); 36] = [
 	(&['m'], MoveOnto::update),
 	(&[CTRL_C], NewObjectForWizard::update),
 	(&['P'], PutOnRing::update),
-	(&['q'], Quaff::update),
 	(&['Q'], Quit::update),
 	(&['r'], ReadScroll::update),
 	(&[CTRL_P], ReMessage::update),

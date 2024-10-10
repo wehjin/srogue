@@ -1,4 +1,5 @@
 use crate::actions::eat::EatMealEvent;
+use crate::actions::quaff::QuaffPotionEvent;
 use crate::resources::play::event::game::drop_item::DropItemEvent;
 use crate::resources::play::event::game::GameEventVariant;
 use crate::resources::play::event::one_move::OneMoveEvent;
@@ -32,7 +33,7 @@ impl RunEffect {
 			Self::AwaitMenu(event_seed) => {
 				let input = console.get_input(InputMode::Menu);
 				match input {
-					PlayerInput::Select(ch) => event_seed.create_event(state, MenuInput::Item(ch)),
+					PlayerInput::MenuSelect(ch) => event_seed.create_event(state, MenuInput::Item(ch)),
 					_ => event_seed.create_event(state, MenuInput::Close),
 				}
 			}
@@ -52,6 +53,7 @@ fn await_player_move(state: RunState, console: &impl TextConsole) -> RunEvent {
 		PlayerInput::Eat => EatMealEvent::new().into_run_event(state),
 		PlayerInput::Help => RunEvent::PlayerOpenHelp(state),
 		PlayerInput::Menu => RunEvent::PlayerOpenInventory(state),
-		_ => RunEvent::PlayerQuit(state),
+		PlayerInput::Quaff => QuaffPotionEvent::new().into_run_event(state),
+		PlayerInput::Close | PlayerInput::MenuSelect(_) | PlayerInput::Space => RunEvent::PlayerQuit(state),
 	}
 }

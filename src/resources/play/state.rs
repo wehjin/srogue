@@ -2,29 +2,30 @@ use crate::actions::instruct::instruction_lines;
 use crate::init::Dungeon;
 use crate::inventory::{get_obj_desc, inventory};
 use crate::monster::Monster;
+use crate::motion::MoveResult;
 use crate::objects::{Object, ObjectId};
 use crate::prelude::object_what::PackFilter;
+use crate::prelude::DungeonSpot;
+use crate::render_system::stats::format_stats;
+use crate::resources::arena::Arena;
+use crate::resources::avatar::Avatar;
+use crate::resources::course::dr_course;
 use crate::resources::diary::Diary;
+use crate::resources::dice::roll_chance;
 use crate::resources::dungeon::stats::DungeonStats;
 use crate::resources::dungeon::DungeonVisor;
 use crate::resources::level::setup::roll_level;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::level::{DungeonLevel, PartyType};
 use crate::resources::physics::rogue_sees_spot;
-use crate::resources::rogue::Rogue;
-
-use crate::motion::MoveResult;
-use crate::prelude::DungeonSpot;
-use crate::render_system::stats::format_stats;
-use crate::resources::arena::Arena;
-use crate::resources::avatar::Avatar;
-use crate::resources::course::dr_course;
-use crate::resources::dice::roll_chance;
 use crate::resources::play::effect::RunEffect;
 use crate::resources::play::event::RunStep;
+use crate::resources::rogue::Rogue;
 use crate::settings::Settings;
+use rand::distributions::uniform::SampleUniform;
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
+use std::ops::RangeInclusive;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RunState {
@@ -95,6 +96,10 @@ impl RunState {
 }
 
 impl Dungeon for RunState {
+	fn roll_range<T: SampleUniform + PartialOrd>(&mut self, range: RangeInclusive<T>) -> T {
+		self.rng.gen_range(range)
+	}
+
 	fn move_mon_to(&mut self, mon_id: u64, row: i64, col: i64) {
 		let to_spot = DungeonSpot { row, col };
 		let from_spot = self.as_monster(mon_id).spot;
@@ -189,6 +194,9 @@ impl Dungeon for RunState {
 
 	fn try_object_at(&self, row: i64, col: i64) -> Option<&Object> {
 		self.level.try_object(LevelSpot::from_i64(row, col))
+	}
+	fn object_ids(&self) -> Vec<ObjectId> {
+		self.level.objects.values().map(|it| it.id).collect()
 	}
 
 	fn shows_skull(&self) -> bool {

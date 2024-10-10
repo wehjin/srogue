@@ -72,13 +72,7 @@ impl Dispatch for EatMealEvent {
 					fighter.moves_left = fighter.moves_left / 3 + meal.calories;
 					state.diary.set_stats_changed(true);
 				}
-				if state.pack_object(obj_id).quantity > 1 {
-					let object = state.pack_object_mut(obj_id);
-					object.quantity -= 1;
-				} else {
-					let pack = state.as_rogue_pack_mut();
-					pack.remove(obj_id);
-				}
+				state.as_rogue_pack_mut().reduce_quantity_or_remove(obj_id);
 				state.diary.message_line = Some(meal.message);
 				if meal.gains_exp {
 					state.as_fighter_mut().exp.add_points(2);

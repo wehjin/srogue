@@ -7,7 +7,8 @@ pub enum PlayerInput {
 	Eat,
 	Help,
 	Menu,
-	Select(char),
+	Quaff,
+	MenuSelect(char),
 	Space,
 }
 

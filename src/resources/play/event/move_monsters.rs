@@ -58,6 +58,7 @@ pub fn get_monster_ids_for_movement(state: &RunState) -> Vec<u64> {
 }
 
 pub fn mv_one_mon(mon_id: u64, mut game: RunState, ctx: &mut RunContext) -> RunState {
+	// TODO Make this into an event so that mv_monster can become an event. MoveEnhancedMonster.
 	let mut done_with_monster = false;
 	if game.as_monster(mon_id).is_hasted() {
 		let rogue_row = game.rogue_row();
