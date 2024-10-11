@@ -3,7 +3,7 @@ use crate::actions::quaff::QuaffPotionEvent;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::event::check_hunger::CheckHungerEvent;
 use crate::resources::play::event::game::drop_item::DropItemEvent;
-use crate::resources::play::event::move_monsters::MoveMonstersEvent;
+use crate::resources::play::event::move_monsters::{MoveMonsterFullEvent, MoveMonstersEvent};
 use crate::resources::play::event::one_move::OneMoveEvent;
 use crate::resources::play::event::reg_move::RegMoveEvent;
 use crate::resources::play::event::upgrade_rogue::UpgradeRogueEvent;
@@ -16,6 +16,7 @@ pub enum GameEvent {
 	RegMove(RegMoveEvent),
 	OneMove(OneMoveEvent),
 	MoveMonsters(MoveMonstersEvent),
+	MoveMonsterFull(MoveMonsterFullEvent),
 	CheckHunger(CheckHungerEvent),
 	DropItem(DropItemEvent),
 	EatMeal(EatMealEvent),
@@ -28,6 +29,7 @@ impl Dispatch for GameEvent {
 			Self::CheckHunger(event) => event.dispatch(state, ctx),
 			Self::DropItem(event) => event.dispatch(state, ctx),
 			Self::MoveMonsters(event) => event.dispatch(state, ctx),
+			Self::MoveMonsterFull(event) => event.dispatch(state, ctx),
 			Self::OneMove(event) => event.dispatch(state, ctx),
 			Self::RegMove(event) => event.dispatch(state, ctx),
 			Self::EatMeal(event) => event.dispatch(state, ctx),
