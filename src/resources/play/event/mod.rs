@@ -16,6 +16,7 @@ pub mod game;
 pub mod message;
 pub mod mon_hit;
 pub mod move_monsters;
+pub mod move_monster_step;
 pub mod one_move;
 pub mod pick_up;
 pub mod reg_move;

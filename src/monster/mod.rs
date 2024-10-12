@@ -1,24 +1,18 @@
 use rand::{thread_rng, Rng};
 
 use crate::init::{Dungeon, GameState};
-use crate::level::constants::{DCOLS, DROWS};
 use crate::level::Level;
 use crate::odds;
 use crate::prelude::object_what::ObjectWhat::Scroll;
 use crate::prelude::*;
-use crate::random::{coin_toss, get_rand, get_rand_indices, rand_percent};
+use crate::random::{coin_toss, get_rand, rand_percent};
 use crate::resources::arena::Arena;
-use crate::resources::avatar::Avatar;
-use crate::resources::dice::roll_chance;
 use crate::resources::level::setup::npc;
 use crate::resources::physics;
-use crate::resources::play::context::RunContext;
-use crate::resources::play::event::mon_hit::mon_hit;
 use crate::resources::play::state::RunState;
 use crate::room::{get_room_number, gr_spot};
 use crate::scrolls::ScrollKind;
 use crate::scrolls::ScrollKind::ScareMonster;
-use crate::spec_hit::{flame_broil, m_confuse, seek_gold};
 use crate::throw::RandomWalk;
 pub use flags::MonsterFlags;
 pub use kind::*;
@@ -69,104 +63,6 @@ pub fn party_monsters(rn: usize, n: usize, level_depth: usize, game: &mut GameSt
 			game.airdrop_monster_at(row, col, monster);
 		}
 	}
-}
-
-pub fn mv_monster(mut game: RunState, mon_id: u64, row: i64, col: i64, allow_any_direction: bool, ctx: &mut RunContext) -> RunState {
-	if game.as_monster(mon_id).m_flags.asleep {
-		if game.as_monster(mon_id).m_flags.napping {
-			game.as_monster_mut(mon_id).do_nap();
-			return game;
-		}
-		let chance = odds::WAKE_PERCENT;
-		let monster = game.as_monster(mon_id);
-		let row1 = monster.spot.row;
-		let col1 = monster.spot.col;
-		if (monster.m_flags.wakens)
-			&& game.rogue_is_near(row1, col1)
-			&& roll_chance(game.as_ring_effects().apply_stealthy(chance), game.rng()) {
-			game.as_monster_mut(mon_id).wake_up();
-		}
-		return game;
-	} else if game.as_monster(mon_id).m_flags.already_moved {
-		let monster = game.as_monster_mut(mon_id);
-		monster.m_flags.already_moved = false;
-		return game;
-	}
-	if game.as_monster(mon_id).m_flags.flits && flit(mon_id, allow_any_direction, &mut game) {
-		return game;
-	}
-	if game.as_monster(mon_id).m_flags.stationary
-		&& !mon_can_go_and_reach(mon_id, game.rogue_row(), game.rogue_col(), allow_any_direction, &mut game) {
-		return game;
-	}
-	if game.as_monster(mon_id).m_flags.freezing_rogue {
-		return game;
-	}
-	if game.as_monster(mon_id).m_flags.confuses && m_confuse(mon_id, &mut game) {
-		return game;
-	}
-	if mon_can_go_and_reach(mon_id, game.rogue_row(), game.rogue_col(), allow_any_direction, &mut game) {
-		game = mon_hit(game, mon_id, None, ctx);
-		return game;
-	}
-	if game.as_monster(mon_id).m_flags.flames {
-		let (broiled, after_broil) = flame_broil(game, mon_id, ctx);
-		if broiled {
-			return after_broil;
-		}
-		game = after_broil;
-	}
-	if game.as_monster(mon_id).m_flags.seeks_gold {
-		let (seeked, after_seek) = seek_gold(game, mon_id, ctx);
-		if seeked {
-			return after_seek;
-		}
-		game = after_seek;
-	}
-	game.as_monster_mut(mon_id).clear_target_spot_if_reached();
-	let target_spot = game.as_monster(mon_id).target_spot_or(DungeonSpot { row, col });
-	let monster_spot = game.as_monster(mon_id).spot;
-	let row = monster_spot.next_closest_row(target_spot.row);
-	if game.is_any_door_at(row, monster_spot.col) && mtry(mon_id, row, monster_spot.col, allow_any_direction, &mut game) {
-		return game;
-	}
-	let col = monster_spot.next_closest_col(target_spot.col);
-	if game.is_any_door_at(monster_spot.row, col) && mtry(mon_id, monster_spot.row, col, allow_any_direction, &mut game) {
-		return game;
-	}
-	if mtry(mon_id, row, col, allow_any_direction, &mut game) {
-		return game;
-	}
-	for kind in get_rand_indices(6) {
-		match kind {
-			0 => if mtry(mon_id, row, monster_spot.col - 1, allow_any_direction, &mut game) { break; }
-			1 => if mtry(mon_id, row, monster_spot.col, allow_any_direction, &mut game) { break; }
-			2 => if mtry(mon_id, row, monster_spot.col + 1, allow_any_direction, &mut game) { break; }
-			3 => if mtry(mon_id, monster_spot.row - 1, col, allow_any_direction, &mut game) { break; }
-			4 => if mtry(mon_id, monster_spot.row, col, allow_any_direction, &mut game) { break; }
-			5 => if mtry(mon_id, monster_spot.row + 1, col, allow_any_direction, &mut game) { break; }
-			_ => unreachable!("0 <= n  <= 5")
-		}
-	}
-
-	// No possible moves
-	let monster = game.as_monster_mut(mon_id);
-	monster.stuck_counter.log_row_col(monster_spot.row, monster_spot.col);
-	if monster.stuck_counter.count > 4 {
-		let no_target = monster.target_spot.is_none();
-		let cant_see_rogue = !game.monster_sees_rogue(mon_id);
-		if no_target && cant_see_rogue {
-			let monster = game.as_monster_mut(mon_id);
-			monster.set_target_spot(
-				get_rand(1, (DROWS - 2) as i64),
-				get_rand(0, (DCOLS - 1) as i64),
-			);
-		} else {
-			let monster = game.as_monster_mut(mon_id);
-			monster.clear_target_reset_stuck();
-		}
-	}
-	game
 }
 
 pub fn mtry(mon_id: MonsterIndex, row: i64, col: i64, allow_any_direction: bool, game: &mut impl Dungeon) -> bool {

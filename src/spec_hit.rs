@@ -3,7 +3,7 @@ use crate::init::{Dungeon, GameState};
 use crate::inventory::get_obj_desc_legacy;
 use crate::level::constants::{DCOLS, DROWS};
 use crate::level::{add_exp, hp_raise, Level, LEVEL_POINTS};
-use crate::monster::{mon_can_go_and_reach, mon_name, mv_monster, MonsterMash};
+use crate::monster::{mon_can_go_and_reach, mon_name, MonsterMash};
 use crate::motion::YOU_CAN_MOVE_AGAIN;
 use crate::objects::{alloc_object, get_armor_class, Object};
 use crate::prelude::ending::Ending;
@@ -235,42 +235,38 @@ fn try_to_cough(row: i64, col: i64, obj: &Object, game: &mut RunState) -> bool {
 	}
 }
 
-pub fn seek_gold(mut game: RunState, mon_id: u64, ctx: &mut RunContext) -> (bool, RunState) {
+pub enum GoldSearch {
+	Failed,
+	FoundAndReached,
+	FoundButUnreachable(LevelSpot),
+}
+
+pub fn seek_gold(mon_id: u64, game: &mut RunState) -> GoldSearch {
 	let room = {
 		let monster = game.as_monster(mon_id);
 		let monster_row = monster.spot.row;
 		let monster_col = monster.spot.col;
 		game.get_room_at(monster_row, monster_col)
 	};
-	if room.is_none() {
-		return (false, game);
-	}
-	let room = room.unwrap();
-	let bounds = game.room_bounds(room).inset(1, 1);
-	for spot in bounds.to_spots() {
-		let (row, col) = spot.i64();
-		if gold_at(row, col, &game) && !game.has_monster_at(row, col) {
-			if mon_can_go_and_reach(mon_id, row, col, true, &game) {
-				game.move_mon_to(mon_id, row, col);
-				let flags = game.as_monster_flags_mut(mon_id);
-				flags.asleep = true;
-				flags.wakens = false;
-				flags.seeks_gold = false;
-				return (true, game);
+	if let Some(room) = room {
+		let bounds = game.room_bounds(room).inset(1, 1);
+		for spot in bounds.to_spots() {
+			let (row, col) = spot.i64();
+			if gold_at(row, col, game) && !game.has_monster_at(row, col) {
+				if mon_can_go_and_reach(mon_id, row, col, true, game) {
+					game.move_mon_to(mon_id, row, col);
+					let flags = game.as_monster_flags_mut(mon_id);
+					flags.asleep = true;
+					flags.wakens = false;
+					flags.seeks_gold = false;
+					return GoldSearch::FoundAndReached;
+				} else {
+					return GoldSearch::FoundButUnreachable(spot);
+				}
 			}
-			{
-				let flags = game.as_monster_flags_mut(mon_id);
-				flags.seeks_gold = false;
-			}
-			game = mv_monster(game, mon_id, row, col, true, ctx);
-			{
-				let flags = game.as_monster_flags_mut(mon_id);
-				flags.seeks_gold = true;
-			}
-			return (true, game);
 		}
 	}
-	(false, game)
+	GoldSearch::Failed
 }
 
 fn gold_at(row: i64, col: i64, game: &impl Dungeon) -> bool {
