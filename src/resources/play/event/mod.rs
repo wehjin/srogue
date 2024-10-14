@@ -14,7 +14,7 @@ use state_action::StateAction;
 pub mod check_hunger;
 pub mod game;
 pub mod message;
-pub mod mon_hit;
+pub mod monster_hit;
 pub mod move_monsters;
 pub mod move_monster_step;
 pub mod one_move;

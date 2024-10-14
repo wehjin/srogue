@@ -7,7 +7,7 @@ use crate::resources::dice::roll_chance;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::event::game::{Dispatch, GameEvent, GameEventVariant};
-use crate::resources::play::event::mon_hit::mon_hit;
+use crate::resources::play::event::monster_hit::MonsterHitEvent;
 use crate::resources::play::event::RunStep;
 use crate::resources::play::seed::step_seed::StepSeed;
 use crate::resources::play::state::RunState;
@@ -112,8 +112,8 @@ impl Dispatch for MoveMonsterStepEvent {
 			}
 			Self::NoConfusesCheckHit { mon_id, to, any_direction, after_move } => {
 				if mon_can_go_and_reach(mon_id, state.rogue_row(), state.rogue_col(), any_direction, &mut state) {
-					let state = mon_hit(state, mon_id, None, ctx);
-					after_move.into_step(state)
+					let after_hit = move |state| after_move.into_step(state);
+					MonsterHitEvent::new(mon_id, None, after_hit).into_redirect(state)
 				} else {
 					Self::NoHitCheckFlames { mon_id, to, any_direction, after_move }.into_redirect(state)
 				}

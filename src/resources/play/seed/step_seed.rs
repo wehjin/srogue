@@ -1,6 +1,6 @@
-use std::fmt::{Debug, Formatter};
 use crate::resources::play::event::RunStep;
 use crate::resources::play::state::RunState;
+use std::fmt::{Debug, Formatter};
 
 pub struct StepSeed(String, Box<dyn FnOnce(RunState) -> RunStep + 'static>);
 

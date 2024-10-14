@@ -20,7 +20,6 @@ use crate::resources::level::feature_grid::feature::Feature;
 use crate::resources::level::setup::roll_object;
 use crate::resources::level::size::LevelSpot;
 use crate::resources::play::context::RunContext;
-use crate::resources::play::event::mon_hit::mon_hit;
 use crate::resources::play::state::RunState;
 use crate::score::killed_by;
 use rand::{thread_rng, Rng};
@@ -397,6 +396,6 @@ pub fn flame_broil(mut game: RunState, mon_id: u64, ctx: &mut RunContext) -> (bo
 		let path = mon_spot.path_to(player_spot);
 		animate_flame_broil(&path);
 	}
-	game = mon_hit(game, mon_id, Some(FLAME_NAME), ctx);
+	todo!("Use MonsterHitEvent: game = mon_hit(game, mon_id, Some(FLAME_NAME), ctx);");
 	(true, game)
 }

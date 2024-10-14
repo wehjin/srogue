@@ -3,6 +3,7 @@ use crate::actions::quaff::QuaffPotionEvent;
 use crate::resources::play::context::RunContext;
 use crate::resources::play::event::check_hunger::CheckHungerEvent;
 use crate::resources::play::event::game::drop_item::DropItemEvent;
+use crate::resources::play::event::monster_hit::MonsterHitEvent;
 use crate::resources::play::event::move_monster_step::MoveMonsterStepEvent;
 use crate::resources::play::event::move_monsters::{MoveMonsterWalkEvent, MoveMonstersEvent};
 use crate::resources::play::event::one_move::OneMoveEvent;
@@ -24,12 +25,14 @@ pub enum GameEvent {
 	EatMeal(EatMealEvent),
 	QuaffPotion(QuaffPotionEvent),
 	UpgradeRogue(UpgradeRogueEvent),
+	MonsterHit(MonsterHitEvent),
 }
 impl Dispatch for GameEvent {
 	fn dispatch(self, state: RunState, ctx: &mut RunContext) -> RunStep {
 		match self {
 			Self::CheckHunger(event) => event.dispatch(state, ctx),
 			Self::DropItem(event) => event.dispatch(state, ctx),
+			Self::MonsterHit(event) => event.dispatch(state, ctx),
 			Self::MoveMonsters(event) => event.dispatch(state, ctx),
 			Self::MoveMonsterWalk(event) => event.dispatch(state, ctx),
 			Self::MoveMonsterStep(event) => event.dispatch(state, ctx),
